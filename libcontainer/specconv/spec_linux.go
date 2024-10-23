@@ -697,7 +697,7 @@ func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
 	return sp, nil
 }
 
-func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*configs.Cgroup, error) {
+func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*cgroups.Cgroup, error) {
 	var (
 		myCgroupPath string
 
@@ -706,10 +706,10 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 		name             = opts.CgroupName
 	)
 
-	c := &configs.Cgroup{
+	c := &cgroups.Cgroup{
 		Systemd:   useSystemdCgroup,
 		Rootless:  opts.RootlessCgroups,
-		Resources: &configs.Resources{},
+		Resources: &cgroups.Resources{},
 	}
 
 	if useSystemdCgroup {
@@ -853,40 +853,40 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 					if wd.LeafWeight != nil {
 						leafWeight = *wd.LeafWeight
 					}
-					weightDevice := configs.NewWeightDevice(wd.Major, wd.Minor, weight, leafWeight)
+					weightDevice := cgroups.NewWeightDevice(wd.Major, wd.Minor, weight, leafWeight)
 					c.Resources.BlkioWeightDevice = append(c.Resources.BlkioWeightDevice, weightDevice)
 				}
 				for _, td := range r.BlockIO.ThrottleReadBpsDevice {
 					rate := td.Rate
-					throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
+					throttleDevice := cgroups.NewThrottleDevice(td.Major, td.Minor, rate)
 					c.Resources.BlkioThrottleReadBpsDevice = append(c.Resources.BlkioThrottleReadBpsDevice, throttleDevice)
 				}
 				for _, td := range r.BlockIO.ThrottleWriteBpsDevice {
 					rate := td.Rate
-					throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
+					throttleDevice := cgroups.NewThrottleDevice(td.Major, td.Minor, rate)
 					c.Resources.BlkioThrottleWriteBpsDevice = append(c.Resources.BlkioThrottleWriteBpsDevice, throttleDevice)
 				}
 				for _, td := range r.BlockIO.ThrottleReadIOPSDevice {
 					rate := td.Rate
-					throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
+					throttleDevice := cgroups.NewThrottleDevice(td.Major, td.Minor, rate)
 					c.Resources.BlkioThrottleReadIOPSDevice = append(c.Resources.BlkioThrottleReadIOPSDevice, throttleDevice)
 				}
 				for _, td := range r.BlockIO.ThrottleWriteIOPSDevice {
 					rate := td.Rate
-					throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
+					throttleDevice := cgroups.NewThrottleDevice(td.Major, td.Minor, rate)
 					c.Resources.BlkioThrottleWriteIOPSDevice = append(c.Resources.BlkioThrottleWriteIOPSDevice, throttleDevice)
 				}
 			}
 			for _, l := range r.HugepageLimits {
-				c.Resources.HugetlbLimit = append(c.Resources.HugetlbLimit, &configs.HugepageLimit{
+				c.Resources.HugetlbLimit = append(c.Resources.HugetlbLimit, &cgroups.HugepageLimit{
 					Pagesize: l.Pagesize,
 					Limit:    l.Limit,
 				})
 			}
 			if len(r.Rdma) > 0 {
-				c.Resources.Rdma = make(map[string]configs.LinuxRdma, len(r.Rdma))
+				c.Resources.Rdma = make(map[string]cgroups.LinuxRdma, len(r.Rdma))
 				for k, v := range r.Rdma {
-					c.Resources.Rdma[k] = configs.LinuxRdma{
+					c.Resources.Rdma[k] = cgroups.LinuxRdma{
 						HcaHandles: v.HcaHandles,
 						HcaObjects: v.HcaObjects,
 					}
@@ -897,7 +897,7 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 					c.Resources.NetClsClassid = *r.Network.ClassID
 				}
 				for _, m := range r.Network.Priorities {
-					c.Resources.NetPrioIfpriomap = append(c.Resources.NetPrioIfpriomap, &configs.IfPrioMap{
+					c.Resources.NetPrioIfpriomap = append(c.Resources.NetPrioIfpriomap, &cgroups.IfPrioMap{
 						Interface: m.Name,
 						Priority:  int64(m.Priority),
 					})
