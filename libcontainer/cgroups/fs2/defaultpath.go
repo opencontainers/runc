@@ -83,16 +83,9 @@ func parseCgroupFile(path string) (string, error) {
 func parseCgroupFromReader(r io.Reader) (string, error) {
 	s := bufio.NewScanner(r)
 	for s.Scan() {
-		var (
-			text  = s.Text()
-			parts = strings.SplitN(text, ":", 3)
-		)
-		if len(parts) < 3 {
-			return "", fmt.Errorf("invalid cgroup entry: %q", text)
-		}
-		// text is like "0::/user.slice/user-1001.slice/session-1.scope"
-		if parts[0] == "0" && parts[1] == "" {
-			return parts[2], nil
+		// "0::/user.slice/user-1001.slice/session-1.scope"
+		if path, ok := strings.CutPrefix(s.Text(), "0::"); ok {
+			return path, nil
 		}
 	}
 	if err := s.Err(); err != nil {
