@@ -112,7 +112,6 @@ func getPercpuUsage(path string) ([]uint64, error) {
 	if err != nil {
 		return percpuUsage, err
 	}
-	// TODO: use strings.SplitN instead.
 	for _, value := range strings.Fields(data) {
 		value, err := strconv.ParseUint(value, 10, 64)
 		if err != nil {
