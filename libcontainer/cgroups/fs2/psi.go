@@ -58,12 +58,12 @@ func statPSI(dirPath string, file string) (*cgroups.PSIStats, error) {
 func parsePSIData(psi []string) (cgroups.PSIData, error) {
 	data := cgroups.PSIData{}
 	for _, f := range psi {
-		kv := strings.SplitN(f, "=", 2)
-		if len(kv) != 2 {
+		key, val, ok := strings.Cut(f, "=")
+		if !ok {
 			return data, fmt.Errorf("invalid psi data: %q", f)
 		}
 		var pv *float64
-		switch kv[0] {
+		switch key {
 		case "avg10":
 			pv = &data.Avg10
 		case "avg60":
@@ -71,16 +71,16 @@ func parsePSIData(psi []string) (cgroups.PSIData, error) {
 		case "avg300":
 			pv = &data.Avg300
 		case "total":
-			v, err := strconv.ParseUint(kv[1], 10, 64)
+			v, err := strconv.ParseUint(val, 10, 64)
 			if err != nil {
-				return data, fmt.Errorf("invalid %s PSI value: %w", kv[0], err)
+				return data, fmt.Errorf("invalid %s PSI value: %w", key, err)
 			}
 			data.Total = v
 		}
 		if pv != nil {
-			v, err := strconv.ParseFloat(kv[1], 64)
+			v, err := strconv.ParseFloat(val, 64)
 			if err != nil {
-				return data, fmt.Errorf("invalid %s PSI value: %w", kv[0], err)
+				return data, fmt.Errorf("invalid %s PSI value: %w", key, err)
 			}
 			*pv = v
 		}
