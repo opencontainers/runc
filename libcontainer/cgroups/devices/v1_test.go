@@ -9,7 +9,6 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
-	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
@@ -35,7 +34,7 @@ func TestSetV1Allow(t *testing.T) {
 		}
 	}
 
-	r := &configs.Resources{
+	r := &cgroups.Resources{
 		Devices: []*devices.Rule{
 			{
 				Type:        devices.CharDevice,

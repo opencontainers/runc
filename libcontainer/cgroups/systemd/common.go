@@ -16,7 +16,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 const (
@@ -38,7 +37,7 @@ var (
 	// [github.com/opencontainers/runc/libcontainer/cgroups/devices]
 	// package is imported, it is set to nil, so cgroup managers can't
 	// configure devices.
-	GenerateDeviceProps func(r *configs.Resources, sdVer int) ([]systemdDbus.Property, error)
+	GenerateDeviceProps func(r *cgroups.Resources, sdVer int) ([]systemdDbus.Property, error)
 )
 
 // NOTE: This function comes from package github.com/coreos/go-systemd/util
@@ -97,7 +96,7 @@ func newProp(name string, units interface{}) systemdDbus.Property {
 	}
 }
 
-func getUnitName(c *configs.Cgroup) string {
+func getUnitName(c *cgroups.Cgroup) string {
 	// by default, we create a scope unless the user explicitly asks for a slice.
 	if !strings.HasSuffix(c.Name, ".slice") {
 		return c.ScopePrefix + "-" + c.Name + ".scope"
@@ -351,7 +350,7 @@ func addCpuset(cm *dbusConnManager, props *[]systemdDbus.Property, cpus, mems st
 
 // generateDeviceProperties takes the configured device rules and generates a
 // corresponding set of systemd properties to configure the devices correctly.
-func generateDeviceProperties(r *configs.Resources, cm *dbusConnManager) ([]systemdDbus.Property, error) {
+func generateDeviceProperties(r *cgroups.Resources, cm *dbusConnManager) ([]systemdDbus.Property, error) {
 	if GenerateDeviceProps == nil {
 		if len(r.Devices) > 0 {
 			return nil, cgroups.ErrDevicesUnsupported
