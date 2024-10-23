@@ -17,13 +17,11 @@ import (
 func parseRdmaKV(raw string, entry *cgroups.RdmaEntry) error {
 	var value uint32
 
-	parts := strings.SplitN(raw, "=", 3)
+	k, v, ok := strings.Cut(raw, "=")
 
-	if len(parts) != 2 {
+	if !ok {
 		return errors.New("Unable to parse RDMA entry")
 	}
-
-	k, v := parts[0], parts[1]
 
 	if v == "max" {
 		value = math.MaxUint32
@@ -34,9 +32,10 @@ func parseRdmaKV(raw string, entry *cgroups.RdmaEntry) error {
 		}
 		value = uint32(val64)
 	}
-	if k == "hca_handle" {
+	switch k {
+	case "hca_handle":
 		entry.HcaHandles = value
-	} else if k == "hca_object" {
+	case "hca_object":
 		entry.HcaObjects = value
 	}
 
