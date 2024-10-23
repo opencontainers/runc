@@ -11,14 +11,7 @@ import (
 )
 
 const (
-	cgroupCpuacctStat     = "cpuacct.stat"
-	cgroupCpuacctUsageAll = "cpuacct.usage_all"
-
-	nanosecondsInSecond = 1000000000
-
-	userModeColumn              = 1
-	kernelModeColumn            = 2
-	cuacctUsageAllColumnsNumber = 3
+	nsInSec = 1000000000
 
 	// The value comes from `C.sysconf(C._SC_CLK_TCK)`, and
 	// on Linux it's a constant which is safe to be hard coded,
@@ -80,7 +73,7 @@ func getCpuUsageBreakdown(path string) (uint64, uint64, error) {
 	const (
 		userField   = "user"
 		systemField = "system"
-		file        = cgroupCpuacctStat
+		file        = "cpuacct.stat"
 	)
 
 	// Expected format:
@@ -102,7 +95,7 @@ func getCpuUsageBreakdown(path string) (uint64, uint64, error) {
 		return 0, 0, &parseError{Path: path, File: file, Err: err}
 	}
 
-	return (userModeUsage * nanosecondsInSecond) / clockTicks, (kernelModeUsage * nanosecondsInSecond) / clockTicks, nil
+	return (userModeUsage * nsInSec) / clockTicks, (kernelModeUsage * nsInSec) / clockTicks, nil
 }
 
 func getPercpuUsage(path string) ([]uint64, error) {
@@ -125,7 +118,7 @@ func getPercpuUsage(path string) ([]uint64, error) {
 func getPercpuUsageInModes(path string) ([]uint64, []uint64, error) {
 	usageKernelMode := []uint64{}
 	usageUserMode := []uint64{}
-	const file = cgroupCpuacctUsageAll
+	const file = "cpuacct.usage_all"
 
 	fd, err := cgroups.OpenFile(path, file, os.O_RDONLY)
 	if os.IsNotExist(err) {
@@ -139,22 +132,23 @@ func getPercpuUsageInModes(path string) ([]uint64, []uint64, error) {
 	scanner.Scan() // skipping header line
 
 	for scanner.Scan() {
-		lineFields := strings.SplitN(scanner.Text(), " ", cuacctUsageAllColumnsNumber+1)
-		if len(lineFields) != cuacctUsageAllColumnsNumber {
+		// Each line is: cpu user system
+		fields := strings.SplitN(scanner.Text(), " ", 3)
+		if len(fields) != 3 {
 			continue
 		}
 
-		usageInKernelMode, err := strconv.ParseUint(lineFields[kernelModeColumn], 10, 64)
+		user, err := strconv.ParseUint(fields[1], 10, 64)
 		if err != nil {
 			return nil, nil, &parseError{Path: path, File: file, Err: err}
 		}
-		usageKernelMode = append(usageKernelMode, usageInKernelMode)
+		usageUserMode = append(usageUserMode, user)
 
-		usageInUserMode, err := strconv.ParseUint(lineFields[userModeColumn], 10, 64)
+		kernel, err := strconv.ParseUint(fields[2], 10, 64)
 		if err != nil {
 			return nil, nil, &parseError{Path: path, File: file, Err: err}
 		}
-		usageUserMode = append(usageUserMode, usageInUserMode)
+		usageKernelMode = append(usageKernelMode, kernel)
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, nil, &parseError{Path: path, File: file, Err: err}
