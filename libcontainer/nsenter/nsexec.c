@@ -505,6 +505,12 @@ void join_namespaces(char *nslist)
 		if (setns(ns->fd, flag) < 0)
 			bail("failed to setns into %s namespace", ns->type);
 
+		/* See https://github.com/opencontainers/runc/issues/4466. */
+		if (flag == CLONE_NEWUSER) {
+			if (setresuid(0, 0, 0) < 0)
+				bail("failed to become root in user namespace");
+		}
+
 		close(ns->fd);
 	}
 
