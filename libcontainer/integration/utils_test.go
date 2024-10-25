@@ -85,7 +85,7 @@ func ok(t testing.TB, err error) {
 	}
 }
 
-func waitProcess(p *libcontainer.Process, t *testing.T) {
+func waitProcess(p *libcontainer.Process, t testing.TB) {
 	t.Helper()
 	status, err := p.Wait()
 	if err != nil {
@@ -99,7 +99,7 @@ func waitProcess(p *libcontainer.Process, t *testing.T) {
 
 // newRootfs creates a new tmp directory and copies the busybox root
 // filesystem to it.
-func newRootfs(t *testing.T) string {
+func newRootfs(t testing.TB) string {
 	t.Helper()
 	dir := t.TempDir()
 	if err := copyBusybox(dir); err != nil {
@@ -165,7 +165,7 @@ func copyBusybox(dest string) error {
 	return nil
 }
 
-func newContainer(t *testing.T, config *configs.Config) (*libcontainer.Container, error) {
+func newContainer(t testing.TB, config *configs.Config) (*libcontainer.Container, error) {
 	name := strings.ReplaceAll(t.Name(), "/", "_") + strconv.FormatInt(-int64(time.Now().Nanosecond()), 35)
 	root := t.TempDir()
 
@@ -176,7 +176,7 @@ func newContainer(t *testing.T, config *configs.Config) (*libcontainer.Container
 //
 // buffers are returned containing the STDOUT and STDERR output for the run
 // along with the exit code and any go error
-func runContainer(t *testing.T, config *configs.Config, args ...string) (buffers *stdBuffers, exitCode int, err error) {
+func runContainer(t testing.TB, config *configs.Config, args ...string) (buffers *stdBuffers, exitCode int, err error) {
 	container, err := newContainer(t, config)
 	if err != nil {
 		return nil, -1, err
@@ -214,7 +214,7 @@ func runContainer(t *testing.T, config *configs.Config, args ...string) (buffers
 
 // runContainerOk is a wrapper for runContainer, simplifying its use for cases
 // when the run is expected to succeed and return exit code of 0.
-func runContainerOk(t *testing.T, config *configs.Config, args ...string) *stdBuffers {
+func runContainerOk(t testing.TB, config *configs.Config, args ...string) *stdBuffers {
 	buffers, exitCode, err := runContainer(t, config, args...)
 
 	t.Helper()
