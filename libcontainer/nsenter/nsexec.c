@@ -505,17 +505,6 @@ void join_namespaces(char *nslist)
 		if (setns(ns->fd, flag) < 0)
 			bail("failed to setns into %s namespace", ns->type);
 
-		/*
-		 * If we change user namespaces, make sure we switch to root in the
-		 * namespace (this matches the logic for unshare(CLONE_NEWUSER)), lots
-		 * of things can break if we aren't the right user. See
-		 * <https://github.com/opencontainers/runc/issues/4466> for one example.
-		 */
-		if (flag == CLONE_NEWUSER) {
-			if (setresuid(0, 0, 0) < 0)
-				bail("failed to become root in user namespace");
-		}
-
 		close(ns->fd);
 	}
 
