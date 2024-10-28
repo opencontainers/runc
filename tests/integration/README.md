@@ -15,20 +15,20 @@ framework.
 ## Running integration tests
 
 The easiest way to run integration tests is with Docker:
-```
-$ make integration
+```bash
+make integration
 ```
 Alternatively, you can run integration tests directly on your host through make:
-```
-$ sudo make localintegration
+```bash
+sudo make localintegration
 ```
 Or you can just run them directly using bats
-```
-$ sudo bats tests/integration
+```bash
+sudo bats tests/integration
 ```
 To run a single test bucket:
-```
-$ make integration TESTPATH="/checkpoint.bats"
+```bash
+make integration TESTPATH="/checkpoint.bats"
 ```
 
 
@@ -36,11 +36,11 @@ To run them on your host, you need to set up a development environment plus
 [bats (Bash Automated Testing System)](https://github.com/bats-core/bats-core#installing-bats-from-source).
 
 For example:
-```
-$ cd ~/go/src/github.com
-$ git clone https://github.com/bats-core/bats-core.git
-$ cd bats-core
-$ ./install.sh /usr/local
+```bash
+cd ~/go/src/github.com
+git clone https://github.com/bats-core/bats-core.git
+cd bats-core
+./install.sh /usr/local
 ```
 
 > **Note**: There are known issues running the integration tests using

@@ -34,18 +34,18 @@ The recommended systemd version is 244 or later. Older systemd does not support 
 
 Make sure you also have the `dbus-user-session` (Debian/Ubuntu) or `dbus-daemon` (CentOS/Fedora) package installed, and that `dbus` is running. On Debian-flavored distros, this can be accomplished like so:
 
-```console
-$ sudo apt install -y dbus-user-session
-$ systemctl --user start dbus
+```bash
+sudo apt install -y dbus-user-session
+systemctl --user start dbus
 ```
 
 ## Rootless
 On cgroup v2 hosts, rootless runc can talk to systemd to get cgroup permissions to be delegated.
 
-```console
-$ runc spec --rootless
-$ jq '.linux.cgroupsPath="user.slice:runc:foo"' config.json | sponge config.json
-$ runc --systemd-cgroup run foo
+```bash
+runc spec --rootless
+jq '.linux.cgroupsPath="user.slice:runc:foo"' config.json | sponge config.json
+runc --systemd-cgroup run foo
 ```
 
 The container processes are executed in a cgroup like `/user.slice/user-$(id -u).slice/user@$(id -u).service/user.slice/runc-foo.scope`.
@@ -60,11 +60,11 @@ memory pids
 
 To allow delegation of other controllers, you need to change the systemd configuration as follows:
 
-```console
-# mkdir -p /etc/systemd/system/user@.service.d
-# cat > /etc/systemd/system/user@.service.d/delegate.conf << EOF
+```bash
+sudo mkdir -p /etc/systemd/system/user@.service.d
+cat <<EOF | sudo tee /etc/systemd/system/user@.service.d/delegate.conf
 [Service]
 Delegate=cpu cpuset io memory pids
 EOF
-# systemctl daemon-reload
+sudo systemctl daemon-reload
 ```

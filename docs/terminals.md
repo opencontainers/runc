@@ -35,8 +35,8 @@ descriptors to preserve. Instead, it takes how many file descriptors (not
 including `stdio` or `LISTEN_FDS`) should be passed to the container. In the
 following example:
 
-```
-% runc run --preserve-fds 5 <container>
+```bash
+runc run --preserve-fds 5 <container>
 ```
 
 `runc` will pass the first `5` file descriptors (`3`, `4`, `5`, `6`, and `7` --
@@ -46,8 +46,8 @@ In addition to `--preserve-fds`, `LISTEN_FDS` file descriptors are passed
 automatically to allow for `systemd`-style socket activation. To extend the
 above example:
 
-```
-% LISTEN_PID=$pid_of_runc LISTEN_FDS=3 runc run --preserve-fds 5 <container>
+```bash
+LISTEN_PID=$pid_of_runc LISTEN_FDS=3 runc run --preserve-fds 5 <container>
 ```
 
 `runc` will now pass the first `8` file descriptors (and it will also pass
@@ -136,8 +136,8 @@ not a terminal (some `ssh` implementations only look for a terminal on stdin).
 
 Another way is to run runc under the `script` utility, like this
 
-```console
-$ script -e -c 'runc run <container>'
+```bash
+script -e -c 'runc run <container>'
 ```
 
 [tty_ioctl(4)]: https://linux.die.net/man/4/tty_ioctl
@@ -150,8 +150,8 @@ the contained process (this is not necessarily the same as `--preserve-fds`'s
 passing of file descriptors -- [details below](#runc-modes)). As an example
 (assuming that `terminal: false` is set in `config.json`):
 
-```
-% echo input | runc run some_container > /tmp/log.out 2> /tmp/log.err
+```bash
+echo input | runc run some_container > /tmp/log.out 2> /tmp/log.err
 ```
 
 Here the container's various `stdio` file descriptors will be substituted with
