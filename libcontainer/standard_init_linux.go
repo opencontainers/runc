@@ -26,7 +26,6 @@ type linuxStandardInit struct {
 	parentPid     int
 	fifoFile      *os.File
 	logPipe       *os.File
-	dmzExe        *os.File
 	config        *initConfig
 }
 
@@ -275,10 +274,6 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 
-	if l.dmzExe != nil {
-		l.config.Args[0] = name
-		return system.Fexecve(l.dmzExe.Fd(), l.config.Args, os.Environ())
-	}
 	// Close all file descriptors we are not passing to the container. This is
 	// necessary because the execve target could use internal runc fds as the
 	// execve path, potentially giving access to binary files from the host
