@@ -8,8 +8,10 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"golang.org/x/sys/unix"
 )
 
@@ -79,6 +81,24 @@ func testCheckpoint(t *testing.T, userns bool) {
 	tmp := t.TempDir()
 	var parentImage string
 
+	retryCheckpoint := func(opts *libcontainer.CriuOpts) error {
+		err := container.Checkpoint(opts)
+		// Cgroup v1 freezer is flaky; v2 is fine.
+		if err == nil || cgroups.IsCgroup2UnifiedMode() {
+			return err
+		}
+
+		const retries = 2
+		for i := 1; i <= retries; i++ {
+			time.Sleep(time.Second << i)
+			t.Logf("cgroup v1 checkpointing is flaky, retry %d of %d", i, retries)
+			if err = container.Checkpoint(opts); err == nil {
+				return nil
+			}
+		}
+		return err
+	}
+
 	// Test pre-dump if mem_dirty_track is available.
 	if criuFeature("mem_dirty_track") {
 		parentImage = "../criu-parent"
@@ -89,7 +109,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 			PreDump:         true,
 		}
 
-		if err := container.Checkpoint(preDumpOpts); err != nil {
+		if err := retryCheckpoint(preDumpOpts); err != nil {
 			t.Fatal(err)
 		}
 
@@ -109,7 +129,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 		ParentImage:     parentImage,
 	}
 
-	if err := container.Checkpoint(checkpointOpts); err != nil {
+	if err := retryCheckpoint(checkpointOpts); err != nil {
 		t.Fatal(err)
 	}
 
