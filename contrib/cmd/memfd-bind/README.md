@@ -1,8 +1,8 @@
 ## memfd-bind ##
 
-`runc` normally has to make a binary copy of itself (or of a smaller helper
-binary called `runc-dmz`) when constructing a container process in order to
-defend against certain container runtime attacks such as CVE-2019-5736.
+`runc` normally has to make a binary copy of itself when constructing a
+container process in order to defend against certain container runtime attacks
+such as CVE-2019-5736.
 
 This cloned binary only exists until the container process starts (this means
 for `runc run` and `runc exec`, it only exists for a few hundred milliseconds
@@ -33,15 +33,6 @@ much memory usage they can use:
 
 * `memfd-bind` only creates a single in-memory copy of the `runc` binary (about
   10MB), regardless of how many containers are running.
-
-* `runc-dmz` is (depending on which libc it was compiled with) between 10kB and
-  1MB in size, and a copy is created once per process spawned inside a
-  container by runc (both the pid1 and every `runc exec`). The `RUNC_DMZ=true`
-  environment variable needs to be set to opt-in. There are circumstances where
-  using `runc-dmz` will fail in ways that runc cannot predict ahead of time (such
-  as restrictive LSMs applied to containers).  `runc-dmz` also requires an
-  additional `execve` over the other options, though since the binary is so small
-  the cost is probably not even noticeable.
 
 * The classic method of making a copy of the entire `runc` binary during
   container process setup takes up about 10MB per process spawned inside the

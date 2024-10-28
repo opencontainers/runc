@@ -6,3 +6,4 @@ Feature                                  | Experimental release | Graduation rel
 ---------------------------------------- | -------------------- | ------------------
 cgroup v2                                | v1.0.0-rc91          | v1.0.0-rc93
 The `runc features` command              | v1.1.0               | v1.2.0
+runc-dmz                                 | v1.2.0-rc1           | Dropped in v1.2.1

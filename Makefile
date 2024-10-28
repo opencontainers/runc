@@ -3,9 +3,6 @@ SHELL = /bin/bash
 CONTAINER_ENGINE := docker
 GO ?= go
 
-# Get CC values for cross-compilation.
-include cc_platform.mk
-
 PREFIX ?= /usr/local
 BINDIR := $(PREFIX)/sbin
 MANDIR := $(PREFIX)/share/man
@@ -73,10 +70,10 @@ endif
 .DEFAULT: runc
 
 .PHONY: runc
-runc: runc-bin verify-dmz-arch
+runc: runc-bin
 
 .PHONY: runc-bin
-runc-bin: runc-dmz
+runc-bin:
 	$(GO_BUILD) -o runc .
 
 .PHONY: all
@@ -92,7 +89,7 @@ recvtty sd-helper seccompagent fs-idmap pidfd-kill remap-rootfs:
 
 .PHONY: clean
 clean:
-	rm -f runc runc-* libcontainer/dmz/binary/runc-dmz
+	rm -f runc runc-*
 	rm -f contrib/cmd/memfd-bind/memfd-bind
 	rm -f tests/cmd/recvtty/recvtty
 	rm -f tests/cmd/sd-helper/sd-helper
@@ -104,16 +101,11 @@ clean:
 	rm -rf man/man8
 
 .PHONY: static
-static: static-bin verify-dmz-arch
+static: static-bin
 
 .PHONY: static-bin
-static-bin: runc-dmz
+static-bin:
 	$(GO_BUILD_STATIC) -o runc .
-
-.PHONY: runc-dmz
-runc-dmz:
-	rm -f libcontainer/dmz/binary/runc-dmz
-	$(GO) generate -tags "$(BUILDTAGS)" ./libcontainer/dmz
 
 .PHONY: releaseall
 releaseall: RELEASE_ARGS := "-a 386 -a amd64 -a arm64 -a armel -a armhf -a ppc64le -a riscv64 -a s390x"
@@ -252,16 +244,6 @@ verify-dependencies: vendor
 	@test -z "$$(git status --porcelain -- go.mod go.sum vendor/)" \
 		|| (echo -e "git status:\n $$(git status -- go.mod go.sum vendor/)\nerror: vendor/, go.mod and/or go.sum not up to date. Run \"make vendor\" to update"; exit 1) \
 		&& echo "all vendor files are up to date."
-
-.PHONY: verify-dmz-arch
-verify-dmz-arch:
-	@if test -s libcontainer/dmz/binary/runc-dmz; then \
-		set -Eeuo pipefail; \
-		export LC_ALL=C; \
-		diff -u \
-			<(readelf -h runc | grep -E "(Machine|Flags):") \
-			<(readelf -h libcontainer/dmz/binary/runc-dmz | grep -E "(Machine|Flags):"); \
-	fi
 
 .PHONY: validate-keyring
 validate-keyring:

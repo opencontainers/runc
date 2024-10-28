@@ -28,7 +28,6 @@ jobs:
         rootless: ["rootless", ""]
         race: ["-race", ""]
         criu: ["", "criu-dev"]
-        dmz: ["", "runc_nodmz"]
         exclude:
           # Disable most of criu-dev jobs, as they are expensive
           # (need to compile criu) and don't add much value/coverage.
@@ -38,25 +37,11 @@ jobs:
             rootless: rootless
           - criu: criu-dev
             race: -race
-          - criu: criu-dev
-            dmz: runc_nodmz
-          # Disable most of runc_nodmz jobs, as they don't add much value
-          # (as dmz is disabled by default anyway).
-          - dmz: runc_nodmz
-            os: ubuntu-20.04
-          - dmz: runc_nodmz
-            go-version: 1.22.x
-          - dmz: runc_nodmz
-            rootless: rootless
-          - dmz: runc_nodmz
-            race: -race
           - go-version: 1.22.x
             os: actuated-arm64-6cpu-8gb
           - race: "-race"
             os: actuated-arm64-6cpu-8gb
           - criu: criu-dev
-            os: actuated-arm64-6cpu-8gb
-          - dmz: runc_nodmz
             os: actuated-arm64-6cpu-8gb
 
     runs-on: ${{ matrix.os }}
@@ -150,8 +135,6 @@ jobs:
         check-latest: true
 
     - name: build
-      env:
-        EXTRA_BUILDTAGS: ${{ matrix.dmz }}
       run: sudo -E PATH="$PATH" make EXTRA_FLAGS="${{ matrix.race }}" all
 
     - name: Setup Bats and bats libs
@@ -171,8 +154,6 @@ jobs:
 
     - name: unit test
       if: matrix.rootless != 'rootless'
-      env:
-        EXTRA_BUILDTAGS: ${{ matrix.dmz }}
       run: sudo -E PATH="$PATH" -- make TESTFLAGS="${{ matrix.race }}" localunittest
 
     - name: add rootless user
@@ -209,8 +190,6 @@ jobs:
     timeout-minutes: 15
     strategy:
       fail-fast: false
-      matrix:
-        dmz: ["", "runc_nodmz"]
     runs-on: ubuntu-22.04
 
     steps:
@@ -234,8 +213,6 @@ jobs:
         check-latest: true
 
     - name: unit test
-      env:
-        EXTRA_BUILDTAGS: ${{ matrix.dmz }}
       run: sudo -E PATH="$PATH" -- make GOARCH=386 localunittest
 
   all-done:
