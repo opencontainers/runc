@@ -105,7 +105,7 @@ jobs:
     - name: install deps
       run: |
         sudo apt update
-        sudo apt -y install libseccomp-dev sshfs uidmap
+        sudo apt -y install cpio libseccomp-dev qemu-kvm sshfs uidmap
 
     - name: install CRIU
       if: ${{ matrix.criu == '' }}

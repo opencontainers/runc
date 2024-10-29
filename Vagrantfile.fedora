@@ -24,7 +24,7 @@ Vagrant.configure("2") do |config|
       cat << EOF | dnf -y --exclude=kernel,kernel-core shell && break
 config install_weak_deps false
 update
-install iptables gcc golang-go make glibc-static libseccomp-devel bats jq git-core criu fuse-sshfs container-selinux
+install cpio iptables gcc golang-go make qemu-kvm glibc-static libseccomp-devel bats jq git-core criu fuse-sshfs container-selinux
 ts run
 EOF
     done
