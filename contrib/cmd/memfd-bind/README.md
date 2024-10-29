@@ -24,8 +24,8 @@ but for most users the security benefit is identical.
 The provided `memfd-bind@.service` file can be used to get systemd to manage
 this daemon. You can supply the path like so:
 
-```
-% systemctl start memfd-bind@$(systemd-escape -p /usr/bin/runc)
+```bash
+systemctl start memfd-bind@$(systemd-escape -p /usr/bin/runc)
 ```
 
 Thus, there are three ways of protecting against CVE-2019-5736, in order of how
