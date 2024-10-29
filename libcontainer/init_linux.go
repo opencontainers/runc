@@ -374,7 +374,7 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 	// used to change the owner of the slave path, but since the /dev/pts mount
 	// can have gid=X set (at the users' option). So touching the owner of the
 	// slave PTY is not necessary, as the kernel will handle that for us. Note
-	// however, that setupUser (specifically fixStdioPermissions) *will* change
+	// however, that setupUser (specifically FixStdioPermissions) *will* change
 	// the UID owner of the console to be the user the process will run as (so
 	// they can actually control their console).
 
@@ -503,7 +503,7 @@ func setupUser(config *initConfig) error {
 
 	// Before we change to the container's user make sure that the processes
 	// STDIO is correctly owned by the user that we are switching to.
-	if err := fixStdioPermissions(execUser); err != nil {
+	if err := FixStdioPermissions(execUser.Uid); err != nil {
 		return err
 	}
 
@@ -550,10 +550,10 @@ func setupUser(config *initConfig) error {
 	return nil
 }
 
-// fixStdioPermissions fixes the permissions of PID 1's STDIO within the container to the specified user.
+// FixStdioPermissions fixes the permissions of STDIO within the container to the specified user.
 // The ownership needs to match because it is created outside of the container and needs to be
 // localized.
-func fixStdioPermissions(u *user.ExecUser) error {
+func FixStdioPermissions(uid int) error {
 	var null unix.Stat_t
 	if err := unix.Stat("/dev/null", &null); err != nil {
 		return &os.PathError{Op: "stat", Path: "/dev/null", Err: err}
@@ -566,7 +566,7 @@ func fixStdioPermissions(u *user.ExecUser) error {
 
 		// Skip chown if uid is already the one we want or any of the STDIO descriptors
 		// were redirected to /dev/null.
-		if int(s.Uid) == u.Uid || s.Rdev == null.Rdev {
+		if int(s.Uid) == uid || s.Rdev == null.Rdev {
 			continue
 		}
 
@@ -576,7 +576,7 @@ func fixStdioPermissions(u *user.ExecUser) error {
 		// that users expect to be able to actually use their console. Without
 		// this code, you couldn't effectively run as a non-root user inside a
 		// container and also have a console set up.
-		if err := file.Chown(u.Uid, int(s.Gid)); err != nil {
+		if err := file.Chown(uid, int(s.Gid)); err != nil {
 			// If we've hit an EINVAL then s.Gid isn't mapped in the user
 			// namespace. If we've hit an EPERM then the inode's current owner
 			// is not mapped in our user namespace (in particular,
