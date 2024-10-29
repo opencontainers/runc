@@ -208,6 +208,68 @@ function teardown() {
 	grep -E '^boottime\s+1337\s+3141519$' <<<"$output"
 }
 
+# issue: https://github.com/opencontainers/runc/issues/4390
+@test "runc run [joining more than one container namespaces]" {
+	requires timens root
+
+	update_config '.process.args = ["sleep", "infinity"]'
+
+	if [ $EUID -eq 0 ]; then
+		update_config '.linux.namespaces += [{"type": "user"}]
+			| .linux.uidMappings = [{"containerID": 0, "hostID": 100000, "size": 100}]
+			| .linux.gidMappings = [{"containerID": 0, "hostID": 200000, "size": 200}]'
+		remap_rootfs
+	fi
+	runc run -d --console-socket "$CONSOLE_SOCKET" target_ctr1
+	[ "$status" -eq 0 ]
+	pid1="$(__runc state target_ctr1 | jq .pid)"
+
+	update_config '.linux.namespaces += [{"type": "time"}]
+		| .linux.timeOffsets = {
+			"monotonic": { "secs": 7881, "nanosecs": 2718281 },
+			"boottime": { "secs": 1337, "nanosecs": 3141519 }
+		}'
+	runc run -d --console-socket "$CONSOLE_SOCKET" target_ctr2
+	[ "$status" -eq 0 ]
+	pid2="$(__runc state target_ctr2 | jq .pid)"
+
+	update_config '.linux.namespaces |= map_values(.path = if .type == "user" then "/proc/'"$pid1"'/ns/user"
+		 elif .type == "pid" then "/proc/'"$pid1"'/ns/pid"
+		 elif .type == "time" then "/proc/'"$pid2"'/ns/time"
+		 else "" end)'
+	# Remove the userns and timens configuration (they cannot be changed).
+	update_config '.linux |= (del(.uidMappings) | del(.gidMappings) | del(.timeOffsets))'
+	runc run -d --console-socket "$CONSOLE_SOCKET" attached_ctr
+	[ "$status" -eq 0 ]
+
+	# Make sure there are two sleep processes in our container.
+	runc exec attached_ctr ps aux
+	[ "$status" -eq 0 ]
+	run -0 grep "sleep infinity" <<<"$output"
+	[ "${#lines[@]}" -eq 2 ]
+
+	# ... that the userns mappings are the same...
+	runc exec attached_ctr cat /proc/self/uid_map
+	[ "$status" -eq 0 ]
+	if [ $EUID -eq 0 ]; then
+		grep -E '^\s+0\s+100000\s+100$' <<<"$output"
+	else
+		grep -E '^\s+0\s+'$EUID'\s+1$' <<<"$output"
+	fi
+	runc exec attached_ctr cat /proc/self/gid_map
+	[ "$status" -eq 0 ]
+	if [ $EUID -eq 0 ]; then
+		grep -E '^\s+0\s+200000\s+200$' <<<"$output"
+	else
+		grep -E '^\s+0\s+'$EUID'\s+1$' <<<"$output"
+	fi
+
+	# ... as well as the timens offsets.
+	runc exec attached_ctr cat /proc/self/timens_offsets
+	grep -E '^monotonic\s+7881\s+2718281$' <<<"$output"
+	grep -E '^boottime\s+1337\s+3141519$' <<<"$output"
+}
+
 @test "runc run [execve error]" {
 	cat <<EOF >rootfs/run.sh
 #!/mmnnttbb foo bar
