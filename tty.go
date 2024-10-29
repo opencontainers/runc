@@ -31,8 +31,8 @@ func (t *tty) copyIO(w io.Writer, r io.ReadCloser) {
 
 // setup pipes for the process so that advanced features like c/r are able to easily checkpoint
 // and restore the process's IO without depending on a host specific path or device
-func setupProcessPipes(p *libcontainer.Process, rootuid, rootgid int) (*tty, error) {
-	i, err := p.InitializeIO(rootuid, rootgid)
+func setupProcessPipes(p *libcontainer.Process, containerUID, containerGID int) (*tty, error) {
+	i, err := p.InitializeIO(containerUID, containerGID)
 	if err != nil {
 		return nil, err
 	}
