@@ -322,30 +322,6 @@ static int clone_parent(jmp_buf *env, int jmpval)
 	return clone(child_func, ca.stack_ptr, CLONE_PARENT | SIGCHLD, &ca);
 }
 
-/* Returns the clone(2) flag for a namespace, given the name of a namespace. */
-static int nsflag(char *name)
-{
-	if (!strcmp(name, "cgroup"))
-		return CLONE_NEWCGROUP;
-	else if (!strcmp(name, "ipc"))
-		return CLONE_NEWIPC;
-	else if (!strcmp(name, "mnt"))
-		return CLONE_NEWNS;
-	else if (!strcmp(name, "net"))
-		return CLONE_NEWNET;
-	else if (!strcmp(name, "pid"))
-		return CLONE_NEWPID;
-	else if (!strcmp(name, "user"))
-		return CLONE_NEWUSER;
-	else if (!strcmp(name, "uts"))
-		return CLONE_NEWUTS;
-	else if (!strcmp(name, "time"))
-		return CLONE_NEWTIME;
-
-	/* If we don't recognise a name, fallback to 0. */
-	return 0;
-}
-
 static uint32_t readint32(char *buf)
 {
 	return *(uint32_t *) buf;
@@ -444,6 +420,37 @@ void nl_free(struct nlconfig_t *config)
 	free(config->data);
 }
 
+static struct nstype_t {
+	int type;
+	char *name;
+} all_ns_types[] = {
+	{ CLONE_NEWCGROUP, "cgroup" },
+	{ CLONE_NEWIPC, "ipc" },
+	{ CLONE_NEWNS, "mnt" },
+	{ CLONE_NEWNET, "net" },
+	{ CLONE_NEWPID, "pid" },
+	{ CLONE_NEWTIME, "time" },
+	{ CLONE_NEWUSER, "user" },
+	{ CLONE_NEWUTS, "uts" },
+	{ },			/* null terminator */
+};
+
+/* Returns the clone(2) flag for a namespace, given the name of a namespace. */
+static int nstype(char *name)
+{
+	for (struct nstype_t * ns = all_ns_types; ns->name != NULL; ns++)
+		if (!strcmp(name, ns->name))
+			return ns->type;
+	/*
+	 * setns(2) lets us join namespaces without knowing the type, but
+	 * namespaces usually require special handling of some kind (so joining
+	 * a namespace without knowing its type or joining a new namespace type
+	 * without corresponding handling could result in broken behaviour) and
+	 * the rest of runc doesn't allow unknown namespace types anyway.
+	 */
+	bail("unknown namespace type %s", name);
+}
+
 void join_namespaces(char *nslist)
 {
 	int num = 0, i;
@@ -499,10 +506,10 @@ void join_namespaces(char *nslist)
 
 	for (i = 0; i < num; i++) {
 		struct namespace_t *ns = &namespaces[i];
-		int flag = nsflag(ns->type);
+		int type = nstype(ns->type);
 
-		write_log(DEBUG, "setns(%#x) into %s namespace (with path %s)", flag, ns->type, ns->path);
-		if (setns(ns->fd, flag) < 0)
+		write_log(DEBUG, "setns(%#x) into %s namespace (with path %s)", type, ns->type, ns->path);
+		if (setns(ns->fd, type) < 0)
 			bail("failed to setns into %s namespace", ns->type);
 
 		/*
@@ -511,7 +518,7 @@ void join_namespaces(char *nslist)
 		 * of things can break if we aren't the right user. See
 		 * <https://github.com/opencontainers/runc/issues/4466> for one example.
 		 */
-		if (flag == CLONE_NEWUSER) {
+		if (type == CLONE_NEWUSER) {
 			if (setresuid(0, 0, 0) < 0)
 				bail("failed to become root in user namespace");
 		}
