@@ -492,9 +492,10 @@ void join_namespaces(char *nslist)
 
 	/*
 	 * The ordering in which we join namespaces is important. We should
-	 * always join the user namespace *first*. This is all guaranteed
-	 * from the container_linux.go side of this, so we're just going to
-	 * follow the order given to us.
+	 * always join the user namespace *first* for rootless container, but
+	 * join the user namespace *last* for rootful container. This is all
+	 * guaranteed from the container_linux.go side of this, so we're just
+	 *  going to follow the order given to us.
 	 */
 
 	for (i = 0; i < num; i++) {

@@ -959,9 +959,13 @@ func (c *Container) currentOCIState() (*specs.State, error) {
 
 // orderNamespacePaths sorts namespace paths into a list of paths that we
 // can setns in order.
-func (c *Container) orderNamespacePaths(namespaces map[configs.NamespaceType]string) ([]string, error) {
+func (c *Container) orderNamespacePaths(namespaces map[configs.NamespaceType]string, rootless bool) ([]string, error) {
 	paths := []string{}
-	for _, ns := range configs.NamespaceTypes() {
+	nsTypes := configs.NamespaceTypes()
+	if !rootless {
+		nsTypes = append(nsTypes[1:], nsTypes[0])
+	}
+	for _, ns := range nsTypes {
 
 		// Remove namespaces that we don't need to join.
 		if !c.config.Namespaces.Contains(ns) {
@@ -1037,7 +1041,7 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 
 	// write custom namespace paths
 	if len(nsMaps) > 0 {
-		nsPaths, err := c.orderNamespacePaths(nsMaps)
+		nsPaths, err := c.orderNamespacePaths(nsMaps, c.config.RootlessEUID)
 		if err != nil {
 			return nil, err
 		}
