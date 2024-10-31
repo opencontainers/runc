@@ -23,7 +23,6 @@ var featuresCommand = &cli.Command{
    See https://github.com/opencontainers/runtime-spec/blob/main/features.md for the type definition.
 `,
 	Action: func(context *cli.Context) error {
-
 		t := true
 
 		feat := features.Features{
