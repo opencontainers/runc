@@ -58,7 +58,7 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 		},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+		if err := checkArgs(context, 1, minArgs); err != nil {
 			return err
 		}
 		status, err := startContainer(context, CT_ACT_CREATE, nil)

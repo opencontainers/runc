@@ -77,9 +77,6 @@ created by an unprivileged user.
 		},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 0, exactArgs); err != nil {
-			return err
-		}
 		spec := specconv.Example()
 
 		rootless := context.Bool("rootless")

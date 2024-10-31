@@ -23,9 +23,6 @@ var featuresCommand = &cli.Command{
    See https://github.com/opencontainers/runtime-spec/blob/main/features.md for the type definition.
 `,
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 0, exactArgs); err != nil {
-			return err
-		}
 
 		t := true
 

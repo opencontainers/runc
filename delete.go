@@ -45,7 +45,7 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 		},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+		if err := checkArgs(context, 1, minArgs); err != nil {
 			return err
 		}
 

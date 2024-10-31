@@ -16,7 +16,7 @@ paused. `,
 
 Use runc list to identify instances of containers and their current status.`,
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+		if err := checkArgs(context, 1, minArgs); err != nil {
 			return err
 		}
 		rootlessCg, err := shouldUseRootlessCgroupManager(context)
@@ -45,7 +45,7 @@ resumed.`,
 
 Use runc list to identify instances of containers and their current status.`,
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+		if err := checkArgs(context, 1, minArgs); err != nil {
 			return err
 		}
 		rootlessCg, err := shouldUseRootlessCgroupManager(context)

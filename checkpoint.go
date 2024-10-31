@@ -44,7 +44,7 @@ checkpointed.`,
 		&cli.BoolFlag{Name: "auto-dedup", Usage: "enable auto deduplication of memory images"},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+		if err := checkArgs(context, 1, minArgs); err != nil {
 			return err
 		}
 		// XXX: Currently this is untested with rootless containers.

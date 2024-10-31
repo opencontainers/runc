@@ -18,7 +18,7 @@ Where "<container-id>" is your name for the instance of the container.`,
 	Description: `The state command outputs current state information for the
 instance of a container.`,
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+		if err := checkArgs(context, 1, minArgs); err != nil {
 			return err
 		}
 		container, err := getContainer(context)
