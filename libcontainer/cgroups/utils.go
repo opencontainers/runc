@@ -217,6 +217,50 @@ func parseCgroupFromReader(r io.Reader) (map[string]string, error) {
 	return cgroups, nil
 }
 
+// ParseCgroupFileUnified returns legacy subsystem paths as the first value,
+// and returns the unified path as the second value.
+func ParseCgroupFileUnified(path string) (map[string]string, string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, "", err
+	}
+	defer f.Close()
+	return parseCgroupFromReaderUnified(f)
+}
+
+// helper function for ParseCgroupFileUnified to make testing easier.
+func parseCgroupFromReaderUnified(r io.Reader) (map[string]string, string, error) {
+	var (
+		cgroups = make(map[string]string)
+		unified = ""
+		s       = bufio.NewScanner(r)
+	)
+	for s.Scan() {
+		text := s.Text()
+		// from cgroups(7):
+		// /proc/[pid]/cgroup
+		// ...
+		// For each cgroup hierarchy ... there is one entry
+		// containing three colon-separated fields of the form:
+		//     hierarchy-ID:subsystem-list:cgroup-path
+		parts := strings.SplitN(text, ":", 3)
+		if len(parts) < 3 {
+			return nil, "", fmt.Errorf("invalid cgroup entry: must contain at least two colons: %v", text)
+		}
+		for _, subs := range strings.Split(parts[1], ",") {
+			if subs == "" {
+				unified = parts[2]
+			} else {
+				cgroups[subs] = parts[2]
+			}
+		}
+	}
+	if err := s.Err(); err != nil {
+		return nil, unified, err
+	}
+	return cgroups, unified, nil
+}
+
 func PathExists(path string) bool {
 	if _, err := os.Stat(path); err != nil {
 		return false
