@@ -44,8 +44,9 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			Usage: "specify the file to write the process id to",
 		},
 		cli.BoolFlag{
-			Name:  "no-pivot",
-			Usage: "do not use pivot root to jail process inside rootfs to work around limitations when running in an initramfs (this option is deprecated, insecure, and unnecessary now that pivot_root works with initramfs -- see <https://github.com/opencontainers/runc/issues/4435>)",
+			Name:   "no-pivot",
+			Usage:  "(deprecated; do not use)",
+			Hidden: true,
 		},
 		cli.BoolFlag{
 			Name:  "no-new-keyring",
