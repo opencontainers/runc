@@ -10,18 +10,19 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
-var psCommand = cli.Command{
+var psCommand = &cli.Command{
 	Name:      "ps",
 	Usage:     "ps displays the processes running inside a container",
 	ArgsUsage: `<container-id> [ps options]`,
 	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "format, f",
-			Value: "table",
-			Usage: `select one of: ` + formatOptions,
+		&cli.StringFlag{
+			Name:    "format",
+			Aliases: []string{"f"},
+			Value:   "table",
+			Usage:   `select one of: ` + formatOptions,
 		},
 	},
 	Action: func(context *cli.Context) error {
@@ -58,7 +59,7 @@ var psCommand = cli.Command{
 		// context.Args(): [container_id ps_arg1 ps_arg2 ...]
 		// psArgs:         [ps_arg1 ps_arg2 ...]
 		//
-		psArgs := context.Args()[1:]
+		psArgs := context.Args().Slice()[1:]
 		if len(psArgs) == 0 {
 			psArgs = []string{"-ef"}
 		}
@@ -95,7 +96,6 @@ var psCommand = cli.Command{
 		}
 		return nil
 	},
-	SkipArgReorder: true,
 }
 
 func getPidIndex(title string) (int, error) {

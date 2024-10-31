@@ -12,7 +12,7 @@ import (
 	"github.com/moby/sys/user"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 const formatOptions = `table or json`
@@ -40,7 +40,7 @@ type containerState struct {
 	Owner string `json:"owner"`
 }
 
-var listCommand = cli.Command{
+var listCommand = &cli.Command{
 	Name:  "list",
 	Usage: "lists containers started by runc with the given root",
 	ArgsUsage: `
@@ -56,14 +56,16 @@ EXAMPLE 2:
 To list containers created using a non-default value for "--root":
        # runc --root value list`,
 	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "format, f",
-			Value: "table",
-			Usage: `select one of: ` + formatOptions,
+		&cli.StringFlag{
+			Name:    "format",
+			Aliases: []string{"f"},
+			Value:   "table",
+			Usage:   `select one of: ` + formatOptions,
 		},
-		cli.BoolFlag{
-			Name:  "quiet, q",
-			Usage: "display only container IDs",
+		&cli.BoolFlag{
+			Name:    "quiet",
+			Aliases: []string{"q"},
+			Usage:   "display only container IDs",
 		},
 	},
 	Action: func(context *cli.Context) error {
@@ -110,7 +112,7 @@ To list containers created using a non-default value for "--root":
 }
 
 func getContainers(context *cli.Context) ([]containerState, error) {
-	root := context.GlobalString("root")
+	root := context.String("root")
 	list, err := os.ReadDir(root)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) && context.IsSet("root") {

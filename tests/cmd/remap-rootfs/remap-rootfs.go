@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -102,7 +102,7 @@ func main() {
 	app.Usage = usage
 
 	app.Action = func(ctx *cli.Context) error {
-		args := ctx.Args()
+		args := ctx.Args().Slice()
 		if len(args) != 1 {
 			return errors.New("exactly one bundle argument must be provided")
 		}

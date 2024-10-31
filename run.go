@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 // default action is to start a container
-var runCommand = cli.Command{
+var runCommand = &cli.Command{
 	Name:  "run",
 	Usage: "create and run a container",
 	ArgsUsage: `<container-id>
@@ -25,46 +25,48 @@ to specify command(s) that get run when the container is started. To change the
 command(s) that get executed on start, edit the args parameter of the spec. See
 "runc spec --help" for more explanation.`,
 	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "bundle, b",
-			Value: "",
-			Usage: `path to the root of the bundle directory, defaults to the current directory`,
+		&cli.StringFlag{
+			Name:    "bundle",
+			Aliases: []string{"b"},
+			Value:   "",
+			Usage:   `path to the root of the bundle directory, defaults to the current directory`,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "console-socket",
 			Value: "",
 			Usage: "path to an AF_UNIX socket which will receive a file descriptor referencing the master end of the console's pseudoterminal",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "pidfd-socket",
 			Usage: "path to an AF_UNIX socket which will receive a file descriptor referencing the init process",
 		},
-		cli.BoolFlag{
-			Name:  "detach, d",
-			Usage: "detach from the container's process",
+		&cli.BoolFlag{
+			Name:    "detach",
+			Aliases: []string{"d"},
+			Usage:   "detach from the container's process",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "keep",
 			Usage: "do not delete the container after it exits",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "pid-file",
 			Value: "",
 			Usage: "specify the file to write the process id to",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "no-subreaper",
 			Usage: "disable the use of the subreaper used to reap reparented processes",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "no-pivot",
 			Usage: "do not use pivot root to jail process inside rootfs.  This should be used whenever the rootfs is on top of a ramdisk",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "no-new-keyring",
 			Usage: "do not create a new session keyring for the container.  This will cause the container to inherit the calling processes session key",
 		},
-		cli.IntFlag{
+		&cli.IntFlag{
 			Name:  "preserve-fds",
 			Usage: "Pass N additional file descriptors to the container (stdio + $LISTEN_FDS + N in total)",
 		},

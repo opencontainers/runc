@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer/utils"
@@ -33,12 +33,12 @@ func main() {
 	app.Usage = usage
 
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "signal",
 			Value: "SIGKILL",
 			Usage: "Signal to send to the init process",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "pid-file",
 			Value: "",
 			Usage: "Path to write the pidfd-kill process ID to",
@@ -46,12 +46,12 @@ func main() {
 	}
 
 	app.Action = func(ctx *cli.Context) error {
-		args := ctx.Args()
+		args := ctx.Args().Slice()
 		if len(args) != 1 {
 			return errors.New("required a single socket path")
 		}
 
-		socketFile := ctx.Args()[0]
+		socketFile := ctx.Args().Slice()[0]
 
 		pidFile := ctx.String("pid-file")
 		if pidFile != "" {

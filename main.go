@@ -16,7 +16,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 // version must be set from the contents of VERSION file by go build's
@@ -82,41 +82,41 @@ func main() {
 	}
 
 	app.Flags = []cli.Flag{
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "debug",
 			Usage: "enable debug logging",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "log",
 			Value: "",
 			Usage: "set the log file to write runc logs to (default is '/dev/stderr')",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "log-format",
 			Value: "text",
 			Usage: "set the log format ('text' (default), or 'json')",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "root",
 			Value: root,
 			Usage: "root directory for storage of container state (this should be located in tmpfs)",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:   "criu",
 			Usage:  "(obsoleted; do not use)",
 			Hidden: true,
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "systemd-cgroup",
 			Usage: "enable systemd cgroup support, expects cgroupsPath to be of form \"slice:prefix:name\" for e.g. \"system.slice:runc:434234\"",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "rootless",
 			Value: "auto",
 			Usage: "ignore cgroup permission errors ('true', 'false', or 'auto')",
 		},
 	}
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		checkpointCommand,
 		createCommand,
 		deleteCommand,
@@ -182,7 +182,7 @@ func (f *FatalWriter) Write(p []byte) (n int, err error) {
 }
 
 func configLogrus(context *cli.Context) error {
-	if context.GlobalBool("debug") {
+	if context.Bool("debug") {
 		logrus.SetLevel(logrus.DebugLevel)
 		logrus.SetReportCaller(true)
 		// Shorten function and file names reported by the logger, by
@@ -199,7 +199,7 @@ func configLogrus(context *cli.Context) error {
 		})
 	}
 
-	switch f := context.GlobalString("log-format"); f {
+	switch f := context.String("log-format"); f {
 	case "":
 		// do nothing
 	case "text":
@@ -210,7 +210,7 @@ func configLogrus(context *cli.Context) error {
 		return errors.New("invalid log-format: " + f)
 	}
 
-	if file := context.GlobalString("log"); file != "" {
+	if file := context.String("log"); file != "" {
 		f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_SYNC, 0o644)
 		if err != nil {
 			return err

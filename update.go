@@ -14,7 +14,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 func i64Ptr(i int64) *int64   { return &i }
@@ -22,14 +22,15 @@ func u64Ptr(i uint64) *uint64 { return &i }
 func u16Ptr(i uint16) *uint16 { return &i }
 func boolPtr(b bool) *bool    { return &b }
 
-var updateCommand = cli.Command{
+var updateCommand = &cli.Command{
 	Name:      "update",
 	Usage:     "update container resource constraints",
 	ArgsUsage: `<container-id>`,
 	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "resources, r",
-			Value: "",
+		&cli.StringFlag{
+			Name:    "resources",
+			Aliases: []string{"r"},
+			Value:   "",
 			Usage: `path to the file containing the resources to update or '-' to read from the standard input
 
 The accepted format is as follow (unchanged values can be omitted):
@@ -62,77 +63,77 @@ other options are ignored.
 `,
 		},
 
-		cli.IntFlag{
+		&cli.IntFlag{
 			Name:  "blkio-weight",
 			Usage: "Specifies per cgroup weight, range is from 10 to 1000",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpu-period",
 			Usage: "CPU CFS period to be used for hardcapping (in usecs). 0 to use system default",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpu-quota",
 			Usage: "CPU CFS hardcap limit (in usecs). Allowed cpu time in a given period",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpu-burst",
 			Usage: "CPU CFS hardcap burst limit (in usecs). Allowed accumulated cpu time additionally for burst a given period",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpu-share",
 			Usage: "CPU shares (relative weight vs. other containers)",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpu-rt-period",
 			Usage: "CPU realtime period to be used for hardcapping (in usecs). 0 to use system default",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpu-rt-runtime",
 			Usage: "CPU realtime hardcap limit (in usecs). Allowed cpu time in a given period",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpuset-cpus",
 			Usage: "CPU(s) to use",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpuset-mems",
 			Usage: "Memory node(s) to use",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:   "kernel-memory",
 			Usage:  "(obsoleted; do not use)",
 			Hidden: true,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:   "kernel-memory-tcp",
 			Usage:  "(obsoleted; do not use)",
 			Hidden: true,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "memory",
 			Usage: "Memory limit (in bytes)",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpu-idle",
 			Usage: "set cgroup SCHED_IDLE or not, 0: default behavior, 1: SCHED_IDLE",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "memory-reservation",
 			Usage: "Memory reservation or soft_limit (in bytes)",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "memory-swap",
 			Usage: "Total memory usage (memory + swap); set '-1' to enable unlimited swap",
 		},
-		cli.IntFlag{
+		&cli.IntFlag{
 			Name:  "pids-limit",
 			Usage: "Maximum number of pids allowed in the container",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "l3-cache-schema",
 			Usage: "The string of Intel RDT/CAT L3 cache schema",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "mem-bw-schema",
 			Usage: "The string of Intel RDT/MBA memory bandwidth schema",
 		},

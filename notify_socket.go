@@ -14,7 +14,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/sys/unix"
 )
 
@@ -29,7 +29,7 @@ func newNotifySocket(context *cli.Context, notifySocketHost string, id string) *
 		return nil
 	}
 
-	root := filepath.Join(context.GlobalString("root"), id)
+	root := filepath.Join(context.String("root"), id)
 	socketPath := filepath.Join(root, "notify", "notify.sock")
 
 	notifySocket := &notifySocket{

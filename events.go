@@ -14,10 +14,10 @@ import (
 	"github.com/opencontainers/runc/types"
 
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
-var eventsCommand = cli.Command{
+var eventsCommand = &cli.Command{
 	Name:  "events",
 	Usage: "display container events such as OOM notifications, cpu, memory, and IO usage statistics",
 	ArgsUsage: `<container-id>
@@ -26,8 +26,8 @@ Where "<container-id>" is the name for the instance of the container.`,
 	Description: `The events command displays information about the container. By default the
 information is displayed once every 5 seconds.`,
 	Flags: []cli.Flag{
-		cli.DurationFlag{Name: "interval", Value: 5 * time.Second, Usage: "set the stats collection interval"},
-		cli.BoolFlag{Name: "stats", Usage: "display the container's stats then exit"},
+		&cli.DurationFlag{Name: "interval", Value: 5 * time.Second, Usage: "set the stats collection interval"},
+		&cli.BoolFlag{Name: "stats", Usage: "display the container's stats then exit"},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 1, exactArgs); err != nil {

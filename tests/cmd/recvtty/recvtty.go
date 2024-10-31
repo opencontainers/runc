@@ -27,7 +27,7 @@ import (
 
 	"github.com/containerd/console"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 // version will be populated by the Makefile, read from
@@ -198,28 +198,29 @@ func main() {
 
 	// Set the flags.
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "mode, m",
-			Value: "single",
-			Usage: "Mode of operation (single or null)",
+		&cli.StringFlag{
+			Name:    "mode",
+			Aliases: []string{"m"},
+			Value:   "single",
+			Usage:   "Mode of operation (single or null)",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "pid-file",
 			Value: "",
 			Usage: "Path to write daemon process ID to",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "no-stdin",
 			Usage: "Disable stdin handling (no-op for null mode)",
 		},
 	}
 
 	app.Action = func(ctx *cli.Context) error {
-		args := ctx.Args()
+		args := ctx.Args().Slice()
 		if len(args) != 1 {
 			return errors.New("need to specify a single socket path")
 		}
-		path := ctx.Args()[0]
+		path := ctx.Args().Slice()[0]
 
 		pidPath := ctx.String("pid-file")
 		if pidPath != "" {

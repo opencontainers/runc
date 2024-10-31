@@ -30,7 +30,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/dmz"
 
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/sys/unix"
 )
 
@@ -205,22 +205,22 @@ func main() {
 
 	// Set the flags.
 	app.Flags = []cli.Flag{
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "cleanup",
 			Usage: "Do not create a new memfd-sealed file, only clean up an existing one at <path>.",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "debug",
 			Usage: "Enable debug logging.",
 		},
 	}
 
 	app.Action = func(ctx *cli.Context) error {
-		args := ctx.Args()
+		args := ctx.Args().Slice()
 		if len(args) != 1 {
 			return errors.New("need to specify a single path to the runc binary")
 		}
-		path := ctx.Args()[0]
+		path := ctx.Args().Slice()[0]
 
 		if ctx.Bool("debug") {
 			logrus.SetLevel(logrus.DebugLevel)

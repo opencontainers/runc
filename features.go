@@ -11,10 +11,10 @@ import (
 	runcfeatures "github.com/opencontainers/runc/types/features"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/opencontainers/runtime-spec/specs-go/features"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
-var featuresCommand = cli.Command{
+var featuresCommand = &cli.Command{
 	Name:      "features",
 	Usage:     "show the enabled features",
 	ArgsUsage: "",

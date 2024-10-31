@@ -2,10 +2,10 @@ package main
 
 import (
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
-var pauseCommand = cli.Command{
+var pauseCommand = &cli.Command{
 	Name:  "pause",
 	Usage: "pause suspends all processes inside the container",
 	ArgsUsage: `<container-id>
@@ -34,7 +34,7 @@ Use runc list to identify instances of containers and their current status.`,
 	},
 }
 
-var resumeCommand = cli.Command{
+var resumeCommand = &cli.Command{
 	Name:  "resume",
 	Usage: "resumes all processes that have been previously paused",
 	ArgsUsage: `<container-id>

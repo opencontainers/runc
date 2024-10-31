@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/sys/unix"
 )
 
-var killCommand = cli.Command{
+var killCommand = &cli.Command{
 	Name:  "kill",
 	Usage: "kill sends the specified signal (default: SIGTERM) to the container's init process",
 	ArgsUsage: `<container-id> [signal]
@@ -25,10 +25,11 @@ signal to the init process of the "ubuntu01" container:
 
        # runc kill ubuntu01 KILL`,
 	Flags: []cli.Flag{
-		cli.BoolFlag{
-			Name:   "all, a",
-			Usage:  "(obsoleted, do not use)",
-			Hidden: true,
+		&cli.BoolFlag{
+			Name:    "all",
+			Aliases: []string{"a"},
+			Usage:   "(obsoleted, do not use)",
+			Hidden:  true,
 		},
 	},
 	Action: func(context *cli.Context) error {

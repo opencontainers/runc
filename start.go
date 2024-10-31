@@ -6,10 +6,10 @@ import (
 	"os"
 
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
-var startCommand = cli.Command{
+var startCommand = &cli.Command{
 	Name:  "start",
 	Usage: "executes the user defined process in a created container",
 	ArgsUsage: `<container-id>

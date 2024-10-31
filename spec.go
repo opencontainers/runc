@@ -9,10 +9,10 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
-var specCommand = cli.Command{
+var specCommand = &cli.Command{
 	Name:      "spec",
 	Usage:     "create a new specification file",
 	ArgsUsage: "",
@@ -65,12 +65,13 @@ Note that --rootless is not needed when you execute runc as the root in a user n
 created by an unprivileged user.
 `,
 	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "bundle, b",
-			Value: "",
-			Usage: "path to the root of the bundle directory",
+		&cli.StringFlag{
+			Name:    "bundle",
+			Aliases: []string{"b"},
+			Value:   "",
+			Usage:   "path to the root of the bundle directory",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "rootless",
 			Usage: "generate a configuration for a rootless container",
 		},

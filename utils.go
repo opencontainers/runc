@@ -11,7 +11,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -104,7 +104,7 @@ func reviseRootDir(context *cli.Context) error {
 	if !context.IsSet("root") {
 		return nil
 	}
-	root, err := filepath.Abs(context.GlobalString("root"))
+	root, err := filepath.Abs(context.String("root"))
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func reviseRootDir(context *cli.Context) error {
 		return errors.New("Option --root argument should not be set to /")
 	}
 
-	return context.GlobalSet("root", root)
+	return context.Set("root", root)
 }
 
 // parseBoolOrAuto returns (nil, nil) if s is empty or "auto"

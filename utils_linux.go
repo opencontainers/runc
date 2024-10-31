@@ -12,7 +12,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	selinux "github.com/opencontainers/selinux/go-selinux"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer"
@@ -31,7 +31,7 @@ func getContainer(context *cli.Context) (*libcontainer.Container, error) {
 	if id == "" {
 		return nil, errEmptyID
 	}
-	root := context.GlobalString("root")
+	root := context.String("root")
 	return libcontainer.Load(root, id)
 }
 
@@ -173,7 +173,7 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (*libcon
 	}
 	config, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
 		CgroupName:       id,
-		UseSystemdCgroup: context.GlobalBool("systemd-cgroup"),
+		UseSystemdCgroup: context.Bool("systemd-cgroup"),
 		NoPivotRoot:      context.Bool("no-pivot"),
 		NoNewKeyring:     context.Bool("no-new-keyring"),
 		Spec:             spec,
@@ -184,7 +184,7 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (*libcon
 		return nil, err
 	}
 
-	root := context.GlobalString("root")
+	root := context.String("root")
 	return libcontainer.Create(root, id, config)
 }
 

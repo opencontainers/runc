@@ -6,10 +6,10 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
-var stateCommand = cli.Command{
+var stateCommand = &cli.Command{
 	Name:  "state",
 	Usage: "output the state of a container",
 	ArgsUsage: `<container-id>
