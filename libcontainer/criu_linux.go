@@ -186,7 +186,7 @@ func criuNsToKey(t configs.NamespaceType) string {
 
 func (c *Container) handleCheckpointingExternalNamespaces(rpcOpts *criurpc.CriuOpts, t configs.NamespaceType) error {
 	if !c.criuSupportsExtNS(t) {
-		return nil
+		return fmt.Errorf("criu lacks support for external %s namespace during checkpointing process (old criu version?)", configs.NsName(t))
 	}
 
 	nsPath := c.config.Namespaces.PathOf(t)
@@ -246,7 +246,7 @@ func (c *Container) handleRestoringNamespaces(rpcOpts *criurpc.CriuOpts, extraFi
 
 func (c *Container) handleRestoringExternalNamespaces(rpcOpts *criurpc.CriuOpts, extraFiles *[]*os.File, t configs.NamespaceType) error {
 	if !c.criuSupportsExtNS(t) {
-		return nil
+		return fmt.Errorf("criu lacks support for external %s namespace during the restoration process (old criu version?)", configs.NsName(t))
 	}
 
 	nsPath := c.config.Namespaces.PathOf(t)
