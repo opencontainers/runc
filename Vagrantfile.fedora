@@ -15,18 +15,12 @@ Vagrant.configure("2") do |config|
   end
   config.vm.provision "shell", inline: <<-SHELL
     set -e -u -o pipefail
-    # Work around dnf mirror failures by retrying a few times
+    DNF_OPTS="-y --setopt=install_weak_deps=False --setopt=tsflags=nodocs --exclude=kernel,kernel-core"
+    RPMS="bats git-core glibc-static golang jq libseccomp-devel make"
+    # Work around dnf mirror failures by retrying a few times.
     for i in $(seq 0 2); do
       sleep $i
-      # "config exclude" dnf shell command is not working in Fedora 35
-      # (see https://bugzilla.redhat.com/show_bug.cgi?id=2022571);
-      # the workaround is to specify it as an option.
-      cat << EOF | dnf -y --exclude=kernel,kernel-core shell && break
-config install_weak_deps false
-update
-install iptables gcc golang-go make glibc-static libseccomp-devel bats jq git-core criu fuse-sshfs container-selinux
-ts run
-EOF
+      dnf $DNF_OPTS update && dnf $DNF_OPTS install $RPMS && break
     done
     dnf clean all
 
