@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.2.z]
 
+## [1.2.1] - 2024-11-01
+
+>  No existe una escuela que enseñe a vivir.
+
+### Fixed
+ * Became root after joining an existing user namespace. Otherwise, runc
+   won't have permissions to configure some mounts when running under
+   SELinux and runc is not creating the user namespace. (#4466, #4477)
+
+### Removed
+ * Remove dependency on `golang.org/x/sys/execabs` from go.mod. (#4480)
+ * Remove runc-dmz, that had many limitations, and is mostly made obsolete by
+   the new protection mechanism added in v1.2.0. Note that runc-dmz was only
+   available only in the 1.2.0 release and required to set an environment variable
+   to opt-in. (#4488)
+
+### Added
+ * The `script/check-config.sh` script now checks for overlayfs support. (#4494)
+ * When using cgroups v2, allow to set or update memory limit to "unlimited"
+   and swap limit to a specific value. (#4501)
+
 ## [1.2.0] - 2024-10-22
 
 > できるときにできることをやるんだ。それが今だ。
@@ -900,7 +921,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.1.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.1.0-rc.1
 
 <!-- 1.2.z patch releases -->
-[Unreleased 1.2.z]: https://github.com/opencontainers/runc/compare/v1.2.0...release-1.2
+[Unreleased 1.2.z]: https://github.com/opencontainers/runc/compare/v1.2.1...release-1.2
+[1.2.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.2.1
 [1.2.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.2...v1.2.0-rc.3
 [1.2.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.1...v1.2.0-rc.2
 [1.2.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.2.0-rc.1
