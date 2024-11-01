@@ -241,6 +241,9 @@ flags=(
 
 	# required for bind-mounting /dev/mqueue into containers
 	POSIX_MQUEUE
+
+	# Most containers use overlayfs, and now runc itself uses it.
+	OVERLAY_FS
 )
 check_flags "${flags[@]}"
 
