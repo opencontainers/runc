@@ -57,8 +57,9 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			Usage: "disable the use of the subreaper used to reap reparented processes",
 		},
 		cli.BoolFlag{
-			Name:  "no-pivot",
-			Usage: "do not use pivot root to jail process inside rootfs.  This should be used whenever the rootfs is on top of a ramdisk",
+			Name:   "no-pivot",
+			Usage:  "(deprecated; do not use)",
+			Hidden: true,
 		},
 		cli.BoolFlag{
 			Name:  "no-new-keyring",

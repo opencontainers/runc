@@ -39,16 +39,52 @@ ARCH=$(uname -m)
 # Seccomp agent socket.
 SECCCOMP_AGENT_SOCKET="$BATS_TMPDIR/seccomp-agent.sock"
 
-# Wrapper for runc.
-function runc() {
-	run __runc "$@"
+function sane_run() { # --pipe --timeout=<timeout>
+	local getopt
+	getopt="$(getopt -o + --long pipe,timeout: -- "$@")"
+	eval set -- "$getopt"
+
+	pipe=
+	timeout=
+	while true; do
+		case "$1" in
+		--pipe)
+			pipe=1
+			shift
+			;;
+		--timeout)
+			timeout="$2"
+			shift 2
+			;;
+		--)
+			shift
+			break
+			;;
+		*)
+			fail "unknown argument $1 ${2:-} to sane_run"
+			;;
+		esac
+	done
+	cmd_prefix=()
+	[ -n "$pipe" ] && cmd_prefix+=("bats_pipe")
+	[ -n "$timeout" ] && cmd_prefix+=("timeout" "--foreground" "--signal=KILL" "$timeout")
+
+	local cmd="$1"
+	shift
+
+	run "${cmd_prefix[@]}" "$cmd" "$@"
 
 	# Some debug information to make life easier. bats will only print it if the
 	# test failed, in which case the output is useful.
 	# shellcheck disable=SC2154
-	echo "$(basename "$RUNC") $* (status=$status):" >&2
+	echo "$cmd $* (status=$status):" >&2
 	# shellcheck disable=SC2154
 	echo "$output" >&2
+}
+
+# Wrapper for runc.
+function runc() {
+	sane_run __runc "$@"
 }
 
 # Raw wrapper for runc.

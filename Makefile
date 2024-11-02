@@ -164,6 +164,7 @@ localunittest: all
 integration: runcimage
 	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
 		-t --privileged --rm \
+		-v /boot:/boot:ro \
 		-v /lib/modules:/lib/modules:ro \
 		-v $(CURDIR):/go/src/$(PROJECT) \
 		$(RUNC_IMAGE) make localintegration TESTPATH="$(TESTPATH)"

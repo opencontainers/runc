@@ -1,5 +1,5 @@
 ARG GO_VERSION=1.23
-ARG BATS_VERSION=v1.9.0
+ARG BATS_VERSION=v1.11.0
 ARG LIBSECCOMP_VERSION=2.5.5
 
 FROM golang:${GO_VERSION}-bookworm
@@ -16,6 +16,7 @@ RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
         criu \
         gcc \
         gcc-multilib \
+        cpio \
         curl \
         gawk \
         gperf \
@@ -24,6 +25,7 @@ RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
         kmod \
         pkg-config \
         python3-minimal \
+        qemu-kvm \
         sshfs \
         sudo \
         uidmap \

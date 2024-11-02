@@ -202,10 +202,19 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		return err
 	}
 
-	if config.NoPivotRoot {
-		err = msMoveRoot(config.Rootfs)
-	} else if config.Namespaces.Contains(configs.NEWNS) {
+	if config.Namespaces.Contains(configs.NEWNS) {
 		err = pivotRoot(config.Rootfs)
+		if config.NoPivotRoot {
+			logrus.Warnf("--no-pivot is deprecated and may be removed or silently ignored in a future version of runc -- see <https://github.com/opencontainers/runc/issues/4435> for more details")
+			if err != nil {
+				// Always try to do pivot_root(2) because it's safe, and only fallback
+				// to the unsafe MS_MOVE+chroot(2) dance if pivot_root(2) fails.
+				logrus.Warnf("your container failed to start with pivot_root(2) (%v) -- please open a bug report to let us know about your usecase", err)
+				err = msMoveRoot(config.Rootfs)
+			} else {
+				logrus.Warnf("despite setting --no-pivot, this container successfully started using pivot_root(2) -- consider removing the --no-pivot flag")
+			}
+		}
 	} else {
 		err = chroot()
 	}
@@ -1068,19 +1077,58 @@ func pivotRoot(rootfs string) error {
 	}
 	defer unix.Close(oldroot) //nolint: errcheck
 
-	newroot, err := unix.Open(rootfs, unix.O_DIRECTORY|unix.O_RDONLY, 0)
-	if err != nil {
-		return &os.PathError{Op: "open", Path: rootfs, Err: err}
-	}
-	defer unix.Close(newroot) //nolint: errcheck
-
 	// Change to the new root so that the pivot_root actually acts on it.
-	if err := unix.Fchdir(newroot); err != nil {
-		return &os.PathError{Op: "fchdir", Path: "fd " + strconv.Itoa(newroot), Err: err}
+	if err := os.Chdir(rootfs); err != nil {
+		return err
 	}
 
-	if err := unix.PivotRoot(".", "."); err != nil {
-		return &os.PathError{Op: "pivot_root", Path: ".", Err: err}
+	pivotErr := unix.PivotRoot(".", ".")
+	if errors.Is(pivotErr, unix.EINVAL) {
+		// If pivot_root(2) failed with -EINVAL, one of the possible reasons is
+		// that we are in early boot and trying pivot_root on top of the
+		// initramfs (which isn't allowed because initramfs/rootfs doesn't have
+		// a parent mount).
+		//
+		// Traditionally, users were told to pass --no-pivot (which used chroot
+		// instead) but this is very insecure (even with the hardenings we've
+		// put into our chroot() wrapper).
+		//
+		// A much better solution is to create a bind-mount clone of / (which
+		// would have a parent) and then chroot into that clone so that we are
+		// properly rooted within a mount that has a parent mount. Then we can
+		// retry the pivot_root().
+
+		// Clone / on top of . to create a version of / that has a parent and
+		// so can be pivot-rooted.
+		if err := unix.Mount("/", ".", "", unix.MS_BIND|unix.MS_REC, ""); err != nil {
+			err := &os.PathError{Op: "make clone of / mount", Path: rootfs, Err: err}
+			return fmt.Errorf("error during fallback for failed pivot_root (%w): %w", pivotErr, err)
+		}
+		// Switch to the cloned mount. We have to use the full path here
+		// because we need to get the kernel to move us into the new mount
+		// (chdir(".") will keep us in the old non-cloned / mount).
+		if err := os.Chdir(rootfs); err != nil {
+			return fmt.Errorf("error during fallback for failed pivot_root (%w): switch to cloned mount: %w", pivotErr, err)
+		}
+		// Move the cloned mount to /.
+		if err := unix.Mount(".", "/", "", unix.MS_MOVE, ""); err != nil {
+			err := &os.PathError{Op: "move / clone mount to /", Path: rootfs, Err: err}
+			return fmt.Errorf("error during fallback for failed pivot_root (%w): %w", pivotErr, err)
+		}
+		// Update current->fs->root to be the cloned / (to be pivot_root'd).
+		if err := unix.Chroot("."); err != nil {
+			err := &os.PathError{Op: "chroot into cloned /", Path: rootfs, Err: err}
+			return fmt.Errorf("error during fallback for failed pivot_root (%w): %w", pivotErr, err)
+		}
+
+		// Go back to the container rootfs and retry pivot_root.
+		if err := os.Chdir(rootfs); err != nil {
+			return fmt.Errorf("error during fallback for failed pivot_root (%w): %w", pivotErr, err)
+		}
+		pivotErr = unix.PivotRoot(".", ".")
+	}
+	if pivotErr != nil {
+		return &os.PathError{Op: "pivot_root", Path: rootfs, Err: pivotErr}
 	}
 
 	// Currently our "." is oldroot (according to the current kernel code).
