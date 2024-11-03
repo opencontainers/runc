@@ -122,6 +122,7 @@ var flags = []string{
 	flagTsync,
 	string(specs.LinuxSeccompFlagSpecAllow),
 	string(specs.LinuxSeccompFlagLog),
+	string(specs.LinuxSeccompFlagWaitKillableRecv),
 }
 
 // KnownFlags returns the list of the known filter flags.
