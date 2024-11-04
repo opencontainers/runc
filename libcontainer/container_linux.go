@@ -597,13 +597,7 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 
 func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, comm *processComm) (*initProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initStandard))
-	nsMaps := make(map[configs.NamespaceType]string)
-	for _, ns := range c.config.Namespaces {
-		if ns.Path != "" {
-			nsMaps[ns.Type] = ns.Path
-		}
-	}
-	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps)
+	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags())
 	if err != nil {
 		return nil, err
 	}
@@ -627,7 +621,7 @@ func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, comm *processComm
 	state := c.currentState()
 	// for setns process, we don't have to set cloneflags as the process namespaces
 	// will only be set via setns syscall
-	data, err := c.bootstrapData(0, state.NamespacePaths)
+	data, err := c.bootstrapData(0)
 	if err != nil {
 		return nil, err
 	}
@@ -962,35 +956,47 @@ func (c *Container) currentOCIState() (*specs.State, error) {
 
 // orderNamespacePaths sorts namespace paths into a list of paths that we
 // can setns in order.
-func (c *Container) orderNamespacePaths(namespaces map[configs.NamespaceType]string) ([]string, error) {
-	paths := []string{}
-	for _, ns := range configs.NamespaceTypes() {
-
-		// Remove namespaces that we don't need to join.
-		if !c.config.Namespaces.Contains(ns) {
-			continue
+func (c *Container) orderNamespacePaths() (list []byte, hasUsernsPath bool, _ error) {
+	appendPath := func(t configs.NamespaceType, path string) error {
+		// Check if the requested namespace is supported.
+		if !configs.IsNamespaceSupported(t) {
+			return fmt.Errorf("namespace %s is not supported", t)
 		}
-
-		if p, ok := namespaces[ns]; ok && p != "" {
-			// check if the requested namespace is supported
-			if !configs.IsNamespaceSupported(ns) {
-				return nil, fmt.Errorf("namespace %s is not supported", ns)
-			}
-			// only set to join this namespace if it exists
-			if _, err := os.Lstat(p); err != nil {
-				return nil, fmt.Errorf("namespace path: %w", err)
-			}
-			// do not allow namespace path with comma as we use it to separate
-			// the namespace paths
-			if strings.ContainsRune(p, ',') {
-				return nil, fmt.Errorf("invalid namespace path %s", p)
-			}
-			paths = append(paths, fmt.Sprintf("%s:%s", configs.NsName(ns), p))
+		// Only set to join this namespace if it exists.
+		if _, err := os.Lstat(path); err != nil {
+			return fmt.Errorf("namespace path: %w", err)
 		}
+		// Do not allow namespace path with comma as we use it to separate
+		// the namespace paths,
+		if strings.IndexByte(path, ',') != -1 {
+			return fmt.Errorf("invalid namespace path %s", path)
+		}
+		if list != nil {
+			list = append(list, ',')
+		}
+		list = append(list, []byte(configs.NsName(t)+":"+path)...)
 
+		return nil
 	}
 
-	return paths, nil
+	// It is crucial to place user namespace first
+	// (see join_namespaces() in nsenter/nsexec.c).
+	if p := c.config.Namespaces.PathOf(configs.NEWUSER); p != "" {
+		if err := appendPath(configs.NEWUSER, p); err != nil {
+			return nil, false, err
+		}
+		hasUsernsPath = true
+	}
+	for _, ns := range c.config.Namespaces {
+		if ns.Path == "" || ns.Type == configs.NEWUSER {
+			continue
+		}
+		if err := appendPath(ns.Type, ns.Path); err != nil {
+			return nil, false, err
+		}
+	}
+
+	return list, hasUsernsPath, nil
 }
 
 func encodeIDMapping(idMap []configs.IDMap) ([]byte, error) {
@@ -1015,7 +1021,7 @@ type netlinkError struct{ error }
 // such as one that uses nsenter package to bootstrap the container's
 // init process correctly, i.e. with correct namespaces, uid/gid
 // mapping etc.
-func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string) (_ io.Reader, Err error) {
+func (c *Container) bootstrapData(cloneFlags uintptr) (_ io.Reader, Err error) {
 	// create the netlink message
 	r := nl.NewNetlinkRequest(int(InitMsg), 0)
 
@@ -1038,20 +1044,19 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 		Value: uint32(cloneFlags),
 	})
 
-	// write custom namespace paths
-	if len(nsMaps) > 0 {
-		nsPaths, err := c.orderNamespacePaths(nsMaps)
-		if err != nil {
-			return nil, err
-		}
+	// Write custom namespace paths.
+	nsPaths, joinExistingUser, err := c.orderNamespacePaths()
+	if err != nil {
+		return nil, err
+	}
+	if nsPaths != nil {
 		r.AddData(&Bytemsg{
 			Type:  NsPathsAttr,
-			Value: []byte(strings.Join(nsPaths, ",")),
+			Value: nsPaths,
 		})
 	}
 
-	// write namespace paths only when we are not joining an existing user ns
-	_, joinExistingUser := nsMaps[configs.NEWUSER]
+	// Write namespace paths only when we are not joining an existing user ns.
 	if !joinExistingUser {
 		// write uid mappings
 		if len(c.config.UIDMappings) > 0 {
