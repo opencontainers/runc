@@ -889,6 +889,13 @@ func (c *Container) isPaused() (bool, error) {
 	return state == configs.Frozen, nil
 }
 
+func (c *Container) intelRdtPath() string {
+	if c.intelRdtManager == nil {
+		return ""
+	}
+	return c.intelRdtManager.GetPath()
+}
+
 func (c *Container) currentState() *State {
 	var (
 		startTime           uint64
@@ -901,10 +908,6 @@ func (c *Container) currentState() *State {
 		externalDescriptors = c.initProcess.externalDescriptors()
 	}
 
-	intelRdtPath := ""
-	if c.intelRdtManager != nil {
-		intelRdtPath = c.intelRdtManager.GetPath()
-	}
 	state := &State{
 		BaseState: BaseState{
 			ID:                   c.ID(),
@@ -915,7 +918,7 @@ func (c *Container) currentState() *State {
 		},
 		Rootless:            c.config.RootlessEUID && c.config.RootlessCgroups,
 		CgroupPaths:         c.cgroupManager.GetPaths(),
-		IntelRdtPath:        intelRdtPath,
+		IntelRdtPath:        c.intelRdtPath(),
 		NamespacePaths:      make(map[configs.NamespaceType]string),
 		ExternalDescriptors: externalDescriptors,
 	}
