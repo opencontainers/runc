@@ -84,6 +84,13 @@ func sealedOverlayfs(binPath, tmpDir string) (_ *os.File, Err error) {
 		return nil, fmt.Errorf("fsconfig set overlayfs lowerdir=%s: %w", lowerDirStr, err)
 	}
 
+	// We don't care about xino (Linux 4.17) but it will be auto-enabled on
+	// some systems (if /run/runc and /usr/bin are on different filesystems)
+	// and this produces spurious dmesg log entries. We can safely ignore
+	// errors when disabling this because we don't actually care about the
+	// setting and we're just opportunistically disabling it.
+	_ = unix.FsconfigSetString(int(overlayCtx.Fd()), "xino", "off")
+
 	// Get an actual handle to the overlayfs.
 	if err := unix.FsconfigCreate(int(overlayCtx.Fd())); err != nil {
 		return nil, os.NewSyscallError("fsconfig create overlayfs", err)
