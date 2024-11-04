@@ -597,7 +597,7 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 
 func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, comm *processComm) (*initProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initStandard))
-	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags())
+	data, err := c.bootstrapData(true)
 	if err != nil {
 		return nil, err
 	}
@@ -618,9 +618,7 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, comm *processComm)
 
 func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, comm *processComm) (*setnsProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initSetns))
-	// for setns process, we don't have to set cloneflags as the process namespaces
-	// will only be set via setns syscall
-	data, err := c.bootstrapData(0)
+	data, err := c.bootstrapData(false)
 	if err != nil {
 		return nil, err
 	}
@@ -1020,7 +1018,7 @@ type netlinkError struct{ error }
 // such as one that uses nsenter package to bootstrap the container's
 // init process correctly, i.e. with correct namespaces, uid/gid
 // mapping etc.
-func (c *Container) bootstrapData(cloneFlags uintptr) (_ io.Reader, Err error) {
+func (c *Container) bootstrapData(init bool) (_ io.Reader, Err error) {
 	// create the netlink message
 	r := nl.NewNetlinkRequest(int(InitMsg), 0)
 
@@ -1037,11 +1035,14 @@ func (c *Container) bootstrapData(cloneFlags uintptr) (_ io.Reader, Err error) {
 		}
 	}()
 
-	// write cloneFlags
-	r.AddData(&Int32msg{
-		Type:  CloneFlagsAttr,
-		Value: uint32(cloneFlags),
-	})
+	// Write cloneFlags for init only. For setns process, namespaces will
+	// only be set via setns syscall.
+	if init {
+		r.AddData(&Int32msg{
+			Type:  CloneFlagsAttr,
+			Value: uint32(c.config.Namespaces.CloneFlags()),
+		})
+	}
 
 	// Write custom namespace paths.
 	nsPaths, joinExistingUser, err := c.orderNamespacePaths()
