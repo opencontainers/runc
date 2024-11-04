@@ -618,7 +618,6 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, comm *processComm)
 
 func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, comm *processComm) (*setnsProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initSetns))
-	state := c.currentState()
 	// for setns process, we don't have to set cloneflags as the process namespaces
 	// will only be set via setns syscall
 	data, err := c.bootstrapData(0)
@@ -627,15 +626,15 @@ func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, comm *processComm
 	}
 	proc := &setnsProcess{
 		cmd:             cmd,
-		cgroupPaths:     state.CgroupPaths,
+		cgroupPaths:     c.cgroupManager.GetPaths(),
 		rootlessCgroups: c.config.RootlessCgroups,
-		intelRdtPath:    state.IntelRdtPath,
+		intelRdtPath:    c.intelRdtPath(),
 		comm:            comm,
 		manager:         c.cgroupManager,
 		config:          c.newInitConfig(p),
 		process:         p,
 		bootstrapData:   data,
-		initProcessPid:  state.InitProcessPid,
+		initProcessPid:  c.initProcess.pid(),
 	}
 	if len(p.SubCgroupPaths) > 0 {
 		if add, ok := p.SubCgroupPaths[""]; ok {
