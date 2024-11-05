@@ -15,8 +15,8 @@ import (
 
 func killContainer(container *libcontainer.Container) error {
 	_ = container.Signal(unix.SIGKILL)
-	for i := 0; i < 100; i++ {
-		time.Sleep(100 * time.Millisecond)
+	for i := 0; i < 12; i++ {
+		time.Sleep((1 << i) * time.Millisecond)
 		if err := container.Signal(unix.Signal(0)); err != nil {
 			return container.Destroy()
 		}
