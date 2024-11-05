@@ -488,6 +488,15 @@ func (c *Container) killViaPidfd() error {
 
 func (c *Container) kill() error {
 	_ = c.Signal(unix.SIGKILL)
+
+	// For containers running in a low load machine, we only need to wait about 1ms.
+	time.Sleep(time.Millisecond)
+	if err := c.Signal(unix.Signal(0)); err != nil {
+		return nil
+	}
+
+	// For some containers in a heavy load machine, we need to wait more time.
+	logrus.Debugln("We need more time to wait the init process exit.")
 	for i := 0; i < 100; i++ {
 		time.Sleep(100 * time.Millisecond)
 		if err := c.Signal(unix.Signal(0)); err != nil {

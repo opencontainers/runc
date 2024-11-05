@@ -10,13 +10,6 @@ import (
 	"github.com/urfave/cli"
 )
 
-func killAndDestroy(container *libcontainer.Container) error {
-	if err := container.EnsureKilled(); err != nil {
-		return err
-	}
-	return container.Destroy()
-}
-
 var deleteCommand = cli.Command{
 	Name:  "delete",
 	Usage: "delete any resources held by the container often used with detached container",
@@ -58,25 +51,27 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 			}
 			return err
 		}
-		// When --force is given, we kill all container processes and
-		// then destroy the container. This is done even for a stopped
-		// container, because (in case it does not have its own PID
-		// namespace) there may be some leftover processes in the
-		// container's cgroup.
-		if force {
-			return killAndDestroy(container)
-		}
 		s, err := container.Status()
 		if err != nil {
 			return err
 		}
 		switch s {
 		case libcontainer.Stopped:
-			return container.Destroy()
+			// If the container is stopped, we can just destroy it.
 		case libcontainer.Created:
-			return killAndDestroy(container)
+			if err := container.EnsureKilled(); err != nil {
+				return err
+			}
 		default:
-			return fmt.Errorf("cannot delete container %s that is not stopped: %s", id, s)
+			if !force {
+				return fmt.Errorf("cannot delete container %s that is not stopped: %s", id, s)
+			}
+			// When --force is given, we kill all container processes and
+			// then destroy the container.
+			if err := container.EnsureKilled(); err != nil {
+				return err
+			}
 		}
+		return container.Destroy()
 	},
 }
