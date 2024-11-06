@@ -42,7 +42,8 @@ task:
     echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
     sudo sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
     apt-get update
-    apt-get install -y libvirt-daemon libvirt-daemon-system vagrant
+    # Temporary set vagrant to 2.4.1-1  because of https://github.com/hashicorp/vagrant/pull/13532
+    apt-get install -y libvirt-daemon libvirt-daemon-system vagrant=2.4.1-1
     systemctl enable --now libvirtd
     apt-get build-dep -y vagrant ruby-libvirt
     apt-get install -y --no-install-recommends libxslt-dev libxml2-dev libvirt-dev ruby-bundler ruby-dev zlib1g-dev
