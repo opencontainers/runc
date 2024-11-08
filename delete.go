@@ -5,23 +5,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/urfave/cli"
-
-	"golang.org/x/sys/unix"
 )
 
-func killContainer(container *libcontainer.Container) error {
-	_ = container.Signal(unix.SIGKILL)
-	for range 100 {
-		time.Sleep(100 * time.Millisecond)
-		if err := container.Signal(unix.Signal(0)); err != nil {
-			return container.Destroy()
-		}
+func killAndDestroy(container *libcontainer.Container) error {
+	if err := container.EnsureKilled(); err != nil {
+		return err
 	}
-	return errors.New("container init still running")
+	return container.Destroy()
 }
 
 var deleteCommand = cli.Command{
@@ -71,7 +64,7 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 		// namespace) there may be some leftover processes in the
 		// container's cgroup.
 		if force {
-			return killContainer(container)
+			return killAndDestroy(container)
 		}
 		s, err := container.Status()
 		if err != nil {
@@ -81,7 +74,7 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 		case libcontainer.Stopped:
 			return container.Destroy()
 		case libcontainer.Created:
-			return killContainer(container)
+			return killAndDestroy(container)
 		default:
 			return fmt.Errorf("cannot delete container %s that is not stopped: %s", id, s)
 		}
