@@ -116,11 +116,7 @@ func (p *containerProcess) startTime() (uint64, error) {
 }
 
 func (p *containerProcess) signal(sig os.Signal) error {
-	s, ok := sig.(unix.Signal)
-	if !ok {
-		return errors.New("os: unsupported signal type")
-	}
-	return unix.Kill(p.pid(), s)
+	return p.cmd.Process.Signal(sig)
 }
 
 func (p *containerProcess) externalDescriptors() []string {
