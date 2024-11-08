@@ -21,6 +21,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/cgroups"
+	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/exeseal"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
@@ -377,9 +378,13 @@ func (c *Container) start(process *Process) (retErr error) {
 
 // Signal sends a specified signal to container's init.
 //
-// When s is SIGKILL and the container does not have its own PID namespace, all
-// the container's processes are killed. In this scenario, the libcontainer
+// When s is SIGKILL:
+// 1. If the container does not have its own PID namespace, all the
+// container's processes are killed. In this scenario, the libcontainer
 // user may be required to implement a proper child reaper.
+// 2. Otherwise, we just send the SIGKILL signal to the init process,
+// but we don't wait for the init process to disappear. If you want to
+// wait, please use c.EnsureKilled instead.
 func (c *Container) Signal(s os.Signal) error {
 	c.m.Lock()
 	defer c.m.Unlock()
@@ -429,6 +434,82 @@ func (c *Container) signal(s os.Signal) error {
 		}
 	}
 	return nil
+}
+
+func (c *Container) killViaPidfd() error {
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	// To avoid a PID reuse attack, don't kill non-running container.
+	if !c.hasInit() {
+		return ErrNotRunning
+	}
+
+	pidfd, err := unix.PidfdOpen(c.initProcess.pid(), 0)
+	if err != nil {
+		return err
+	}
+	defer unix.Close(pidfd)
+
+	epollfd, err := unix.EpollCreate1(unix.EPOLL_CLOEXEC)
+	if err != nil {
+		return err
+	}
+	defer unix.Close(epollfd)
+
+	event := unix.EpollEvent{
+		Events: unix.EPOLLIN,
+		Fd:     int32(pidfd),
+	}
+	if err := unix.EpollCtl(epollfd, unix.EPOLL_CTL_ADD, pidfd, &event); err != nil {
+		return err
+	}
+
+	if err := unix.PidfdSendSignal(pidfd, unix.SIGKILL, nil, 0); err != nil {
+		return err
+	}
+
+	events := make([]unix.EpollEvent, 1)
+	// Set the timeout to 10s, the same as in kill below.
+	n, err := linux.EpollWait(epollfd, events, 10000)
+	if err != nil {
+		return err
+	}
+	if n > 0 {
+		for i := range n {
+			event := events[i]
+			if event.Fd == int32(pidfd) {
+				return nil
+			}
+		}
+	}
+	return errors.New("container init still running")
+}
+
+func (c *Container) kill() error {
+	_ = c.Signal(unix.SIGKILL)
+	for i := 0; i < 100; i++ {
+		time.Sleep(100 * time.Millisecond)
+		if err := c.Signal(unix.Signal(0)); err != nil {
+			return nil
+		}
+	}
+	return errors.New("container init still running")
+}
+
+// EnsureKilled kills the container and waits for the kernel to finish killing it.
+func (c *Container) EnsureKilled() error {
+	// When a container doesn't have a private pidns, we have to kill all processes
+	// in the cgroup, it's more simpler to use `cgroup.kill` or `unix.Kill`.
+	if c.config.Namespaces.IsPrivate(configs.NEWPID) {
+		var err error
+		if err = c.killViaPidfd(); err == nil {
+			return nil
+		}
+
+		logrus.Debugf("pidfd & epoll failed, falling back to unix.Signal: %v", err)
+	}
+	return c.kill()
 }
 
 func (c *Container) createExecFifo() (retErr error) {

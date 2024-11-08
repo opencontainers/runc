@@ -72,3 +72,14 @@ func Sendmsg(fd int, p, oob []byte, to unix.Sockaddr, flags int) error {
 	})
 	return os.NewSyscallError("sendmsg", err)
 }
+
+// EpollWait wraps [unix.EpollWait].
+func EpollWait(epfd int, events []unix.EpollEvent, msec int) (n int, err error) {
+	n, err = retryOnEINTR2(func() (int, error) {
+		return unix.EpollWait(epfd, events, msec)
+	})
+	if err != nil {
+		return 0, os.NewSyscallError("epollwait", err)
+	}
+	return n, nil
+}
