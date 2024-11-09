@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opencontainers/runc/internal/testutil"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -27,8 +26,6 @@ func TestPodSkipDevicesUpdate(t *testing.T) {
 	if os.Geteuid() != 0 {
 		t.Skip("Test requires root.")
 	}
-	// https://github.com/opencontainers/runc/issues/3743.
-	testutil.SkipOnCentOS(t, "Flaky (#3743)", 7)
 
 	podName := "system-runc_test_pod" + t.Name() + ".slice"
 	podConfig := &configs.Cgroup{
@@ -126,8 +123,6 @@ func testSkipDevices(t *testing.T, skipDevices bool, expected []string) {
 	if os.Geteuid() != 0 {
 		t.Skip("Test requires root.")
 	}
-	// https://github.com/opencontainers/runc/issues/3743.
-	testutil.SkipOnCentOS(t, "Flaky (#3743)", 7)
 
 	podConfig := &configs.Cgroup{
 		Parent: "system.slice",
