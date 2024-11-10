@@ -257,7 +257,13 @@ func RemovePath(path string) error {
 	}
 
 	infos, err := os.ReadDir(path)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Please keep this error eraser, or else it will return ErrNotExist
+			// for cgroupv2.
+			// Please see https://github.com/opencontainers/runc/issues/4518
+			return nil
+		}
 		return err
 	}
 	for _, info := range infos {
