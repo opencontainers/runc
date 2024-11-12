@@ -267,14 +267,11 @@ func RemovePath(path string) error {
 		if info.IsDir() {
 			// We should remove subcgroup first.
 			if err = RemovePath(filepath.Join(path, info.Name())); err != nil {
-				break
+				return err
 			}
 		}
 	}
-	if err == nil {
-		err = rmdir(path, true)
-	}
-	return err
+	return rmdir(path, true)
 }
 
 // RemovePaths iterates over the provided paths removing them.
