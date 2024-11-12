@@ -257,7 +257,10 @@ func RemovePath(path string) error {
 	}
 
 	infos, err := os.ReadDir(path)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return err
 	}
 	for _, info := range infos {
