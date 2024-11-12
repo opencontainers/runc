@@ -267,11 +267,12 @@ func RemovePath(path string) error {
 		return err
 	}
 	for _, info := range infos {
-		if info.IsDir() {
-			// We should remove subcgroup first.
-			if err = RemovePath(filepath.Join(path, info.Name())); err != nil {
-				break
-			}
+		if !info.IsDir() {
+			continue
+		}
+		// We should remove subcgroup first.
+		if err = RemovePath(filepath.Join(path, info.Name())); err != nil {
+			return err
 		}
 	}
 	if err == nil {
