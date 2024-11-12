@@ -15,6 +15,18 @@ function setup() {
 	[ "$status" -eq 0 ]
 }
 
+# https://github.com/opencontainers/runc/issues/4518
+@test "runc delete (no cgrouppath + no permission) succeeds" {
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
+	[ "$status" -eq 0 ]
+
+	runc kill test_cgroups_permissions KILL
+	[ "$status" -eq 0 ]
+
+	runc delete test_cgroups_permissions
+	[ "$status" -eq 0 ]
+}
+
 @test "runc create (rootless + no limits + cgrouppath + no permission) fails with permission error" {
 	requires rootless rootless_no_cgroup
 
