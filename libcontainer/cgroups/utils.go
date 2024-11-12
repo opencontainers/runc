@@ -230,6 +230,11 @@ func rmdir(path string, retry bool) error {
 	tries := 10
 
 again:
+	// If we remove a non-exist dir in a ro mount point, it will
+	// return EROFS in `unix.Rmdir`, so we need to check first.
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil
+	}
 	err := unix.Rmdir(path)
 	switch err { // nolint:errorlint // unix errors are bare
 	case nil, unix.ENOENT:
