@@ -1,13 +1,13 @@
 ## memfd-bind ##
 
 > **NOTE**: Since runc 1.2.0, runc will now use a private overlayfs mount to
-> protect the runc binary. This protection is far more light-weight than
-> memfd-bind, and for most users this should obviate the need for `memfd-bind`
-> entirely. Rootless containers will still make a memfd copy (unless you are
-> using `runc` itself inside a user namespace -- a-la
-> [`rootlesskit`][rootlesskit]), but `memfd-bind` is not particularly useful
-> for rootless container users anyway (see [Caveats](#Caveats) for more
-> details).
+> protect the runc binary (if you are on Linux 5.1 or later). This protection
+> is far more light-weight than memfd-bind, and for most users this should
+> obviate the need for `memfd-bind` entirely. Rootless containers will still
+> make a memfd copy (unless you are using `runc` itself inside a user namespace
+> -- a-la [`rootlesskit`][rootlesskit] -- and are on Linux 5.11 or later), but
+> `memfd-bind` is not particularly useful for rootless container users anyway
+> (see [Caveats](#Caveats) for more details).
 
 `runc` sometimes has to make a binary copy of itself when constructing a
 container process in order to defend against certain container runtime attacks
