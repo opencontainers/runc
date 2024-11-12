@@ -3,11 +3,13 @@ package cgroups
 import (
 	"bytes"
 	"errors"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/moby/sys/mountinfo"
+	"golang.org/x/sys/unix"
 )
 
 const fedoraMountinfo = `15 35 0:3 / /proc rw,nosuid,nodev,noexec,relatime shared:5 - proc proc rw
@@ -659,5 +661,31 @@ func TestConvertBlkIOToIOWeightValue(t *testing.T) {
 		if got != expected {
 			t.Errorf("expected ConvertBlkIOToIOWeightValue(%d) to be %d, got %d", i, expected, got)
 		}
+	}
+}
+
+// TestRemovePathReadOnly is to test remove a non-existent dir in a ro mount point.
+// The similar issue example: https://github.com/opencontainers/runc/issues/4518
+func TestRemovePathReadOnly(t *testing.T) {
+	dirTo := t.TempDir()
+	err := unix.Mount(t.TempDir(), dirTo, "", unix.MS_BIND, "")
+	if err != nil {
+		t.Skip("no permission of mount")
+	}
+	defer func() {
+		_ = unix.Unmount(dirTo, 0)
+	}()
+	err = unix.Mount("", dirTo, "", unix.MS_REMOUNT|unix.MS_BIND|unix.MS_RDONLY, "")
+	if err != nil {
+		t.Skip("no permission of mount")
+	}
+	nonExistentDir := filepath.Join(dirTo, "non-existent-dir")
+	err = rmdir(nonExistentDir, true)
+	if !errors.Is(err, unix.EROFS) {
+		t.Fatalf("expected the error of removing a non-existent dir %s in a ro mount point with rmdir to be unix.EROFS, but got: %v", nonExistentDir, err)
+	}
+	err = RemovePath(nonExistentDir)
+	if err != nil {
+		t.Fatalf("expected the error of removing a non-existent dir %s in a ro mount point with RemovePath to be nil, but got: %v", nonExistentDir, err)
 	}
 }
