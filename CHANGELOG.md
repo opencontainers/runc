@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.2.z]
 
+## [1.2.2] - 2024-11-15
+
+> Specialization is for insects.
+
+### Fixed
+ * Fixed the failure of `runc delete` on a rootless container with no
+   dedicated cgroup on a system with read-only `/sys/fs/cgroup` mount.
+   This is a regression in runc 1.2.0, causing a failure when using
+   rootless buildkit. (#4518, #4531)
+ * Using runc on a system where /run/runc and /usr/bin are on different
+   filesystems no longer results in harmless but annoying messages
+   ("overlayfs: "xino" feature enabled using 3 upper inode bits")
+   appearing in the kernel log. (#4508, #4530)
+
+### Changed
+ * Better memfd-bind documentation. (#4530)
+ * CI: bump Fedora 40 -> 41. (#4528)
+
 ## [1.2.1] - 2024-11-01
 
 >  No existe una escuela que enseñe a vivir.
@@ -921,7 +939,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.1.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.1.0-rc.1
 
 <!-- 1.2.z patch releases -->
-[Unreleased 1.2.z]: https://github.com/opencontainers/runc/compare/v1.2.1...release-1.2
+[Unreleased 1.2.z]: https://github.com/opencontainers/runc/compare/v1.2.2...release-1.2
+[1.2.2]: https://github.com/opencontainers/runc/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.2.1
 [1.2.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.2...v1.2.0-rc.3
 [1.2.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.1...v1.2.0-rc.2
