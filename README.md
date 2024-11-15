@@ -113,8 +113,6 @@ The following build tags were used earlier, but are now obsoleted:
  - **apparmor** (since runc v1.0.0-rc93 the feature is always enabled)
  - **selinux**  (since runc v1.0.0-rc93 the feature is always enabled)
 
- [contrib-memfd-bind]: /contrib/cmd/memfd-bind/README.md
-
 ### Running the test suite
 
 `runc` currently supports running its test suite via Docker.
