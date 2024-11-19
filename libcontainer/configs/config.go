@@ -115,6 +115,9 @@ type Config struct {
 	// The device nodes that should be automatically created within the container upon container start.  Note, make sure that the node is marked as allowed in the cgroup as well!
 	Devices []*devices.Device `json:"devices"`
 
+	// NetDevices are key-value pairs, keyed by network device name, moved to the container's network namespace.
+	NetDevices map[string]*LinuxNetDevice `json:"netDevices"`
+
 	MountLabel string `json:"mount_label"`
 
 	// Hostname optionally sets the container's hostname if provided
