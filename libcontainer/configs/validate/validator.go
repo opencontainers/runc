@@ -3,6 +3,8 @@ package validate
 import (
 	"errors"
 	"fmt"
+	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,6 +26,7 @@ func Validate(config *configs.Config) error {
 		cgroupsCheck,
 		rootfs,
 		network,
+		netdevices,
 		uts,
 		security,
 		namespaces,
@@ -66,6 +69,58 @@ func rootfs(config *configs.Config) error {
 	}
 	if filepath.Clean(config.Rootfs) != cleaned {
 		return errors.New("invalid rootfs: not an absolute path, or a symlink")
+	}
+	return nil
+}
+
+// https://elixir.bootlin.com/linux/v6.12/source/net/core/dev.c#L1066
+func devValidName(name string) bool {
+	if len(name) == 0 || len(name) > unix.IFNAMSIZ {
+		return false
+	}
+	if (name == ".") || (name == "..") {
+		return false
+	}
+	if strings.Contains(name, "/") || strings.Contains(name, ":") || strings.Contains(name, " ") {
+		return false
+	}
+	return true
+}
+
+func netdevices(config *configs.Config) error {
+	if len(config.NetDevices) == 0 {
+		return nil
+	}
+	if !config.Namespaces.Contains(configs.NEWNET) {
+		return errors.New("unable to move network devices without a private NET namespace")
+	}
+	path := config.Namespaces.PathOf(configs.NEWNET)
+	if path == "" {
+		return errors.New("unable to move network devices without a private NET namespace")
+	}
+	if config.RootlessEUID || config.RootlessCgroups {
+		return errors.New("network devices are not supported for rootless containers")
+	}
+
+	for name, netdev := range config.NetDevices {
+		if !devValidName(name) {
+			return fmt.Errorf("invalid network device name %q", name)
+		}
+		if netdev.Name != "" {
+			if !devValidName(netdev.Name) {
+				return fmt.Errorf("invalid network device name %q", netdev.Name)
+			}
+		}
+		for _, address := range netdev.Addresses {
+			if _, err := netip.ParsePrefix(address); err != nil {
+				return fmt.Errorf("invalid network IP address %q", address)
+			}
+		}
+		if netdev.HardwareAddress != "" {
+			if _, err := net.ParseMAC(netdev.HardwareAddress); err != nil {
+				return fmt.Errorf("invalid hardware address %q", netdev.HardwareAddress)
+			}
+		}
 	}
 	return nil
 }
