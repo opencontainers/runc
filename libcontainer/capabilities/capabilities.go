@@ -3,7 +3,8 @@
 package capabilities
 
 import (
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -66,7 +67,7 @@ func New(capConfig *configs.Capabilities) (*Caps, error) {
 		return nil, err
 	}
 	if len(unknownCaps) > 0 {
-		logrus.Warn("ignoring unknown or unavailable capabilities: ", mapKeys(unknownCaps))
+		logrus.Warn("ignoring unknown or unavailable capabilities: ", slices.Sorted(maps.Keys(unknownCaps)))
 	}
 	return &c, nil
 }
@@ -84,16 +85,6 @@ func capSlice(caps []string, unknownCaps map[string]struct{}) []capability.Cap {
 		}
 	}
 	return out
-}
-
-// mapKeys returns the keys of input in sorted order
-func mapKeys(input map[string]struct{}) []string {
-	var keys []string
-	for c := range input {
-		keys = append(keys, c)
-	}
-	sort.Strings(keys)
-	return keys
 }
 
 // Caps holds the capabilities for a container.
