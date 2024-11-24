@@ -1146,7 +1146,7 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 		}
 		// create a timestamp indicating when the restored checkpoint was started
 		c.created = time.Now().UTC()
-		if _, err := c.updateState(r); err != nil {
+		if _, err := c.updateState(r, false); err != nil {
 			return err
 		}
 		if err := os.Remove(filepath.Join(c.stateDir, "checkpoint")); err != nil {

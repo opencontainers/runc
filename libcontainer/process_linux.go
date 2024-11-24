@@ -561,6 +561,24 @@ func (p *initProcess) start() (retErr error) {
 		}
 	}()
 
+	// runc might receive a SIGKILL before creating the state.json, which
+	// would cause the runc delete command to fail.
+	// Generating this file in advance also introduces issues, such as:
+	// 1. The pid data might be inaccurate.
+	// 2. Other runc commands might load this incomplete state.json file.
+
+	// Fortunately, as long as the cgroup path is known, cleanup operations
+	// can still be performed. To handle this, a temporary file named
+	// creating-state.json is generated, containing the same content as
+	// state.json. Once the state.json file is successfully created, the
+	// creating-state.json file is deleted. This ensures that other commands
+	// cannot use the temporary file, allowing only the runc delete command
+	// to access it.
+	_, err = p.container.updateState(p, true)
+	if err != nil {
+		return fmt.Errorf("unable to store creating state: %w", err)
+	}
+
 	// Do this before syncing with child so that no children can escape the
 	// cgroup. We don't need to worry about not doing this and not being root
 	// because we'd be using the rootless cgroup manager in that case.
@@ -730,9 +748,13 @@ func (p *initProcess) start() (retErr error) {
 			// In order to cleanup the runc-init[2:stage] by
 			// runc-delete/stop, we should store the status before
 			// procRun sync.
-			state, uerr := p.container.updateState(p)
+			state, uerr := p.container.updateState(p, false)
 			if uerr != nil {
 				return fmt.Errorf("unable to store init state: %w", uerr)
+			}
+			// now delete creating-state.json
+			if err := p.container.clearCreatingState(); err != nil {
+				return fmt.Errorf("unable to remove creating state: %w", err)
 			}
 			p.container.initProcessStartTime = state.InitProcessStartTime
 

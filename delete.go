@@ -24,6 +24,29 @@ func killContainer(container *libcontainer.Container) error {
 	return errors.New("container init still running")
 }
 
+// tryDeleteCreatingState is responsible for deleting
+// containers that failed during the creation process.
+func tryDeleteCreatingState(context *cli.Context) error {
+	id := context.Args().First()
+	if id == "" {
+		return errEmptyID
+	}
+	root := context.GlobalString("root")
+	abs, err := filepath.Abs(root)
+	if err != nil {
+		return err
+	}
+	state, err := libcontainer.LoadCreatingState(abs)
+	if err != nil {
+		return err
+	}
+	if err := libcontainer.DestroyCreating(state, id); err != nil {
+		return err
+	}
+	// load creating state
+	return nil
+}
+
 var deleteCommand = cli.Command{
 	Name:  "delete",
 	Usage: "delete any resources held by the container often used with detached container",
@@ -53,6 +76,9 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 		container, err := getContainer(context)
 		if err != nil {
 			if errors.Is(err, libcontainer.ErrNotExist) {
+				if err := tryDeleteCreatingState(context); err != nil {
+					fmt.Fprintf(os.Stderr, "try clear creating state failed: %v", err)
+				}
 				// if there was an aborted start or something of the sort then the container's directory could exist but
 				// libcontainer does not see it because the state.json file inside that directory was never created.
 				path := filepath.Join(context.GlobalString("root"), id)
