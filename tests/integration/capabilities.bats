@@ -116,3 +116,17 @@ function teardown() {
 	[[ "${output}" == *"CapBnd:	0000000400000021"* ]]
 	[[ "${output}" == *"CapAmb:	0000000400000001"* ]]
 }
+
+@test "runc run [ambient caps not set in inheritable result in a warning]" {
+	update_config '   .process.capabilities.inheritable = ["CAP_KILL"]
+                       | .process.capabilities.ambient = ["CAP_KILL", "CAP_CHOWN"]'
+	runc run test_amb
+	[ "$status" -eq 0 ]
+	# This should result in CAP_KILL set in ambient,
+	# and a warning about inability to set CAP_CHOWN.
+	#
+	# CAP_CHOWN is 0, the bit mask is 0x1 (1 << 0)
+	# CAP_KILL is 5, the bit mask is 0x20 (1 << 5).
+	[[ "$output" == *"can't raise ambient capability CAP_CHOWN: "* ]]
+	[[ "${output}" == *"CapAmb:	0000000000000020"* ]]
+}
