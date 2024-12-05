@@ -801,7 +801,7 @@ EOF
 	TMP_RECVTTY_PID="$TMP_RECVTTY_DIR/recvtty.pid"
 	TMP_CONSOLE_SOCKET="$TMP_RECVTTY_DIR/console.sock"
 	CONTAINER_OUTPUT="$TMP_RECVTTY_DIR/output"
-	("$RECVTTY" --no-stdin --pid-file "$TMP_RECVTTY_PID" \
+	("$TESTBINDIR/recvtty" --no-stdin --pid-file "$TMP_RECVTTY_PID" \
 		--mode single "$TMP_CONSOLE_SOCKET" &>"$CONTAINER_OUTPUT") &
 	retry 10 0.1 [ -e "$TMP_CONSOLE_SOCKET" ]
 
