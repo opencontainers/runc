@@ -406,5 +406,13 @@ func ioPriority(config *configs.Config) error {
 	if priority < 0 || priority > 7 {
 		return fmt.Errorf("invalid ioPriority.Priority: %d", priority)
 	}
+
+	switch config.IOPriority.Class {
+	case specs.IOPRIO_CLASS_RT, specs.IOPRIO_CLASS_BE, specs.IOPRIO_CLASS_IDLE:
+		// do nothing
+	default:
+		return fmt.Errorf("invalid ioPriority.Class: %q", config.IOPriority.Class)
+	}
+
 	return nil
 }
