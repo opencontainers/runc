@@ -886,17 +886,17 @@ func TestCreateDevices(t *testing.T) {
 
 	conf := &configs.Config{}
 
-	defaultDevs, err := createDevices(spec, conf)
+	err := createDevices(spec, conf)
 	if err != nil {
 		t.Errorf("failed to create devices: %v", err)
 	}
 
-	// Verify the returned default devices has the /dev/tty entry deduplicated
+	// Verify the returned devices has the /dev/tty entry deduplicated
 	found := false
-	for _, d := range defaultDevs {
+	for _, d := range conf.Devices {
 		if d.Path == "/dev/tty" {
 			if found {
-				t.Errorf("createDevices failed: returned a duplicated device entry: %v", defaultDevs)
+				t.Errorf("createDevices failed: returned a duplicated device entry: %v", conf.Devices)
 			}
 			found = true
 		}

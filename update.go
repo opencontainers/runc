@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/sirupsen/logrus"
 
 	"github.com/docker/go-units"
@@ -340,6 +341,24 @@ other options are ignored.
 		config.Cgroups.Resources.PidsLimit = r.Pids.Limit
 		config.Cgroups.Resources.Unified = r.Unified
 
+		if len(r.Devices) > 0 {
+			config.Cgroups.Resources.Devices = nil
+			defaultAllowedDevices := specconv.CreateDefaultDevicesCgroups(&config)
+
+			err = specconv.CreateCgroupDeviceConfig(config.Cgroups.Resources, &r, defaultAllowedDevices)
+			if err != nil {
+				return err
+			}
+			config.Cgroups.SkipDevices = false
+		} else {
+			// If "runc update" is not changing device configuration, add
+			// this to skip device update.
+			// This helps in case an extra plugin (nvidia GPU) applies some
+			// configuration on top of what runc does.
+			// Note this field is not saved into container's state.json.
+			config.Cgroups.SkipDevices = true
+		}
+
 		// Update Intel RDT
 		l3CacheSchema := context.String("l3-cache-schema")
 		memBwSchema := context.String("mem-bw-schema")
@@ -370,13 +389,6 @@ other options are ignored.
 			config.IntelRdt.L3CacheSchema = l3CacheSchema
 			config.IntelRdt.MemBwSchema = memBwSchema
 		}
-
-		// XXX(kolyshkin@): currently "runc update" is unable to change
-		// device configuration, so add this to skip device update.
-		// This helps in case an extra plugin (nvidia GPU) applies some
-		// configuration on top of what runc does.
-		// Note this field is not saved into container's state.json.
-		config.Cgroups.SkipDevices = true
 
 		return container.Set(config)
 	},
