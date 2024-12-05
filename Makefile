@@ -207,7 +207,7 @@ install-man: man
 .PHONY: cfmt
 cfmt: C_SRC=$(shell git ls-files '*.c' | grep -v '^vendor/')
 cfmt:
-	indent -linux -l120 -il0 -ppi2 -cp1 -T size_t -T jmp_buf $(C_SRC)
+	indent -linux -l120 -il0 -ppi2 -cp1 -sar -T size_t -T jmp_buf $(C_SRC)
 
 .PHONY: shellcheck
 shellcheck:
