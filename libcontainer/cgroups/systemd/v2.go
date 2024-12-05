@@ -209,12 +209,7 @@ func genV2ResourcesProperties(dirPath string, r *configs.Resources, cm *dbusConn
 
 	var properties []systemdDbus.Property
 
-	// NOTE: This is of questionable correctness because we insert our own
-	//       devices eBPF program later. Two programs with identical rules
-	//       aren't the end of the world, but it is a bit concerning. However
-	//       it's unclear if systemd removes all eBPF programs attached when
-	//       doing SetUnitProperties...
-	deviceProperties, err := generateDeviceProperties(r, cm)
+	deviceProperties, err := generateDeviceProperties(r, cm, 2)
 	if err != nil {
 		return nil, err
 	}
