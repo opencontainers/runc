@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,7 +25,24 @@ func OpenFile(dir, file string, flags int) (*os.File, error) {
 	if dir == "" {
 		return nil, fmt.Errorf("no directory specified for %s", file)
 	}
-	return openFile(dir, file, flags)
+	path := filepath.Join(dir, utils.CleanPath(file))
+	dir = filepath.Dir(path)
+	try := 0
+	const maxRetries = 3
+	for {
+		fd, err := openFile(path, flags)
+		switch {
+		case err == nil:
+			return fd, nil
+		case errors.Is(err, unix.ENOENT) || errors.Is(err, unix.ENODEV):
+			if try > maxRetries || unix.Access(dir, unix.F_OK) != nil {
+				return nil, err
+			}
+			try++
+		default:
+			return nil, err
+		}
+	}
 }
 
 // ReadFile reads data from a cgroup file in dir.
@@ -140,14 +157,13 @@ func prepareOpenat2() error {
 	return prepErr
 }
 
-func openFile(dir, file string, flags int) (*os.File, error) {
+func openFile(path string, flags int) (*os.File, error) {
 	mode := os.FileMode(0)
 	if TestMode && flags&os.O_WRONLY != 0 {
 		// "emulate" cgroup fs for unit tests
 		flags |= os.O_TRUNC | os.O_CREATE
 		mode = 0o600
 	}
-	path := path.Join(dir, utils.CleanPath(file))
 	if prepareOpenat2() != nil {
 		return openFallback(path, flags, mode)
 	}
