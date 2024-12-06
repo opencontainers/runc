@@ -133,11 +133,10 @@ func haveBpfProgReplace() bool {
 			Attach:  ebpf.AttachCGroupDevice,
 			Flags:   unix.BPF_F_ALLOW_MULTI,
 		})
-		if errors.Is(err, unix.EINVAL) {
+		if errors.Is(err, ebpf.ErrNotSupported) || errors.Is(err, unix.EINVAL) {
 			// not supported
 			return
 		}
-		// attach_flags test succeeded.
 		if !errors.Is(err, unix.EBADF) {
 			logrus.Debugf("checking for BPF_F_REPLACE: got unexpected (not EBADF or EINVAL) error: %v", err)
 		}
