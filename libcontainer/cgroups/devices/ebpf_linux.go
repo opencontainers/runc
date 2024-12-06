@@ -107,14 +107,14 @@ func haveBpfProgReplace() bool {
 			},
 		})
 		if err != nil {
-			logrus.Debugf("checking for BPF_F_REPLACE support: ebpf.NewProgram failed: %v", err)
+			logrus.Warnf("checking for BPF_F_REPLACE support: ebpf.NewProgram failed: %v", err)
 			return
 		}
 		defer prog.Close()
 
 		devnull, err := os.Open("/dev/null")
 		if err != nil {
-			logrus.Debugf("checking for BPF_F_REPLACE support: open dummy target fd: %v", err)
+			logrus.Warnf("checking for BPF_F_REPLACE support: open dummy target fd: %v", err)
 			return
 		}
 		defer devnull.Close()
@@ -138,7 +138,11 @@ func haveBpfProgReplace() bool {
 			return
 		}
 		if !errors.Is(err, unix.EBADF) {
-			logrus.Debugf("checking for BPF_F_REPLACE: got unexpected (not EBADF or EINVAL) error: %v", err)
+			// If we see any new errors here, it's possible that there is a
+			// regression due to a cilium/ebpf update and the above EINVAL
+			// checks are not working. So, be loud about it so someone notices
+			// and we can get the issue fixed quicker.
+			logrus.Warnf("checking for BPF_F_REPLACE: got unexpected (not EBADF or EINVAL) error: %v", err)
 		}
 		haveBpfProgReplaceBool = true
 	})
