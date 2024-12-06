@@ -123,12 +123,15 @@ func haveBpfProgReplace() bool {
 		// BPF_CGROUP_DEVICE programs. If passing BPF_F_REPLACE gives us EINVAL
 		// we know that the feature isn't present.
 		err = link.RawAttachProgram(link.RawAttachProgramOptions{
-			// We rely on this fd being checked after attachFlags.
+			// We rely on this fd being checked after attachFlags in the kernel.
 			Target: int(devnull.Fd()),
-			// Attempt to "replace" bad fds with this program.
+			// Attempt to "replace" our BPF program with itself. This will
+			// always fail, but we should get -EINVAL if BPF_F_REPLACE is not
+			// supported.
+			Anchor:  link.ReplaceProgram(prog),
 			Program: prog,
 			Attach:  ebpf.AttachCGroupDevice,
-			Flags:   unix.BPF_F_ALLOW_MULTI | unix.BPF_F_REPLACE,
+			Flags:   unix.BPF_F_ALLOW_MULTI,
 		})
 		if errors.Is(err, unix.EINVAL) {
 			// not supported
