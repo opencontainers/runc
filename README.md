@@ -103,9 +103,17 @@ e.g. to disable seccomp:
 make BUILDTAGS=""
 ```
 
+To add some more build tags to the default set, use the `EXTRA_BUILDTAGS`
+make variable, e.g. to disable checkpoint/restore:
+
+```bash
+make EXTRA_BUILDTAGS="runc_nocriu"
+```
+
 | Build Tag     | Feature                               | Enabled by Default | Dependencies        |
 |---------------|---------------------------------------|--------------------|---------------------|
 | `seccomp`     | Syscall filtering using `libseccomp`. | yes                | `libseccomp`        |
+| `runc_nocriu` | **Disables** runc checkpoint/restore. | no                 | `criu`              |
 
 The following build tags were used earlier, but are now obsoleted:
  - **runc_nodmz** (since runc v1.2.1 runc dmz binary is dropped)

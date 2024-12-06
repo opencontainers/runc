@@ -76,8 +76,14 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "${{ env.GO_VERSION }}"
+      - name: install deps
+        run: |
+          sudo apt update
+          sudo apt -y install libseccomp-dev
       - name: compile with no build tags
         run: make BUILDTAGS=""
+      - name: compile with runc_nocriu build tag
+        run: make EXTRA_BUILDTAGS="runc_nocriu"
 
   codespell:
     runs-on: ubuntu-24.04

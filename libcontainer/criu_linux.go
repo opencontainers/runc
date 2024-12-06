@@ -1,3 +1,5 @@
+//go:build !runc_nocriu
+
 package libcontainer
 
 import (
