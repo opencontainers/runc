@@ -23,6 +23,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/capabilities"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	cgConfig "github.com/opencontainers/runc/libcontainer/cgroups/configs"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
@@ -696,12 +697,12 @@ func signalAllProcesses(m cgroups.Manager, s unix.Signal) error {
 		}
 	}
 
-	if err := m.Freeze(configs.Frozen); err != nil {
+	if err := m.Freeze(cgConfig.Frozen); err != nil {
 		logrus.Warn(err)
 	}
 	pids, err := m.GetAllPids()
 	if err != nil {
-		if err := m.Freeze(configs.Thawed); err != nil {
+		if err := m.Freeze(cgConfig.Thawed); err != nil {
 			logrus.Warn(err)
 		}
 		return err
@@ -712,7 +713,7 @@ func signalAllProcesses(m cgroups.Manager, s unix.Signal) error {
 			logrus.Warnf("kill %d: %v", pid, err)
 		}
 	}
-	if err := m.Freeze(configs.Thawed); err != nil {
+	if err := m.Freeze(cgConfig.Thawed); err != nil {
 		logrus.Warn(err)
 	}
 

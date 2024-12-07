@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	cgConfig "github.com/opencontainers/runc/libcontainer/cgroups/configs"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
@@ -185,7 +186,7 @@ func (p *pausedState) destroy() error {
 	if p.c.hasInit() {
 		return ErrPaused
 	}
-	if err := p.c.cgroupManager.Freeze(configs.Thawed); err != nil {
+	if err := p.c.cgroupManager.Freeze(cgConfig.Thawed); err != nil {
 		return err
 	}
 	return destroy(p.c)

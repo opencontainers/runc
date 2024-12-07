@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	cgConfig "github.com/opencontainers/runc/libcontainer/cgroups/configs"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/system"
 )
@@ -32,7 +33,7 @@ func (m *mockCgroupManager) Apply(pid int) error {
 	return nil
 }
 
-func (m *mockCgroupManager) Set(_ *configs.Resources) error {
+func (m *mockCgroupManager) Set(_ *cgConfig.Resources) error {
 	return nil
 }
 
@@ -57,16 +58,16 @@ func (m *mockCgroupManager) Path(subsys string) string {
 	return m.paths[subsys]
 }
 
-func (m *mockCgroupManager) Freeze(state configs.FreezerState) error {
+func (m *mockCgroupManager) Freeze(_ cgConfig.FreezerState) error {
 	return nil
 }
 
-func (m *mockCgroupManager) GetCgroups() (*configs.Cgroup, error) {
+func (m *mockCgroupManager) GetCgroups() (*cgConfig.Cgroup, error) {
 	return nil, nil
 }
 
-func (m *mockCgroupManager) GetFreezerState() (configs.FreezerState, error) {
-	return configs.Thawed, nil
+func (m *mockCgroupManager) GetFreezerState() (cgConfig.FreezerState, error) {
+	return cgConfig.Thawed, nil
 }
 
 type mockProcess struct {
@@ -243,8 +244,8 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
 				{Type: configs.NEWUTS},
 				{Type: configs.NEWIPC},
 			},
-			Cgroups: &configs.Cgroup{
-				Resources: &configs.Resources{
+			Cgroups: &cgConfig.Cgroup{
+				Resources: &cgConfig.Resources{
 					Memory: 1024,
 				},
 			},
