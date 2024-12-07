@@ -90,6 +90,18 @@ func Create(root, id string, config *configs.Config) (*Container, error) {
 	if err := os.Mkdir(stateDir, 0o711); err != nil {
 		return nil, err
 	}
+
+	// move the specified devices to the container network namespace
+	nsPath := getNetns(config)
+	if nsPath != "" {
+		for name, netDevice := range config.NetDevices {
+			err := netnsAttach(name, nsPath, *netDevice)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	c := &Container{
 		id:              id,
 		stateDir:        stateDir,
