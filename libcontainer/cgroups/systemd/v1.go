@@ -1,3 +1,5 @@
+//go:build linux && !runc_nosd
+
 package systemd
 
 import (
@@ -72,8 +74,8 @@ var legacySubsystems = []subsystem{
 	&fs.NameGroup{GroupName: "misc"},
 }
 
-func genV1ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]systemdDbus.Property, error) {
-	var properties []systemdDbus.Property
+func genV1ResourcesProperties(r *configs.Resources, cm *dbusConnManager) (configs.SdProperties, error) {
+	var properties configs.SdProperties
 
 	deviceProperties, err := generateDeviceProperties(r, cm)
 	if err != nil {
@@ -91,7 +93,7 @@ func genV1ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]syst
 			newProp("CPUShares", r.CpuShares))
 	}
 
-	addCpuQuota(cm, &properties, r.CpuQuota, r.CpuPeriod)
+	addCPUQuota(cm, &properties, r.CpuQuota, r.CpuPeriod)
 
 	if r.BlkioWeight != 0 {
 		properties = append(properties,
@@ -163,7 +165,7 @@ func (m *LegacyManager) Apply(pid int) error {
 		c          = m.cgroups
 		unitName   = getUnitName(c)
 		slice      = "system.slice"
-		properties []systemdDbus.Property
+		properties configs.SdProperties
 	)
 
 	m.mu.Lock()

@@ -106,6 +106,7 @@ make BUILDTAGS=""
 | Build Tag     | Feature                               | Enabled by Default | Dependencies        |
 |---------------|---------------------------------------|--------------------|---------------------|
 | `seccomp`     | Syscall filtering using `libseccomp`. | yes                | `libseccomp`        |
+| `runc_nosd`   | Disable systemd cgroup managers       | no                 | systemd             |
 
 The following build tags were used earlier, but are now obsoleted:
  - **runc_nodmz** (since runc v1.2.1 runc dmz binary is dropped)
