@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	stateFilename    = "state.json"
-	execFifoFilename = "exec.fifo"
+	stateFilename         = "state.json"
+	creatingStateFilename = "creating-state.json"
+	execFifoFilename      = "exec.fifo"
 )
 
 // Create creates a new container with the given id inside a given state

@@ -2,6 +2,7 @@ package libcontainer
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -15,12 +16,14 @@ import (
 	"sync"
 	"time"
 
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/cgroups/manager"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/dmz"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
@@ -192,7 +195,7 @@ func (c *Container) Set(config configs.Config) error {
 	}
 	// After config setting succeed, update config and states
 	c.config = &config
-	_, err = c.updateState(nil)
+	_, err = c.updateState(nil, false)
 	return err
 }
 
@@ -798,18 +801,18 @@ func (c *Container) NotifyMemoryPressure(level PressureLevel) (<-chan struct{}, 
 	return notifyMemoryPressure(c.cgroupManager.Path("memory"), level)
 }
 
-func (c *Container) updateState(process parentProcess) (*State, error) {
+func (c *Container) updateState(process parentProcess, isCreating bool) (*State, error) {
 	if process != nil {
 		c.initProcess = process
 	}
 	state := c.currentState()
-	if err := c.saveState(state); err != nil {
+	if err := c.saveState(state, isCreating); err != nil {
 		return nil, err
 	}
 	return state, nil
 }
 
-func (c *Container) saveState(s *State) (retErr error) {
+func (c *Container) saveState(s *State, isCreating bool) (retErr error) {
 	tmpFile, err := os.CreateTemp(c.stateDir, "state-")
 	if err != nil {
 		return err
@@ -831,8 +834,25 @@ func (c *Container) saveState(s *State) (retErr error) {
 		return err
 	}
 
-	stateFilePath := filepath.Join(c.stateDir, stateFilename)
+	var stateFilePath string
+	if isCreating {
+		stateFilePath = filepath.Join(c.stateDir, creatingStateFilename)
+	} else {
+		stateFilePath = filepath.Join(c.stateDir, stateFilename)
+	}
 	return os.Rename(tmpFile.Name(), stateFilePath)
+}
+
+func (c *Container) clearCreatingState() error {
+	creatingStateFilePath := filepath.Join(c.stateDir, creatingStateFilename)
+	err := os.Remove(creatingStateFilePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			logrus.Warnf("%s is not exist", creatingStateFilePath)
+			return nil
+		}
+	}
+	return err
 }
 
 func (c *Container) currentStatus() (Status, error) {
@@ -1159,4 +1179,49 @@ func requiresRootOrMappingTool(c *configs.Config) bool {
 		{ContainerID: 0, HostID: int64(os.Getegid()), Size: 1},
 	}
 	return !reflect.DeepEqual(c.GIDMappings, gidMap)
+}
+
+// LoadCreatingState loads the creating-state.json file into the State structure.
+func LoadCreatingState(root string) (*State, error) {
+	stateFilePath, err := securejoin.SecureJoin(root, creatingStateFilename)
+	if err != nil {
+		return nil, err
+	}
+	f, err := os.Open(stateFilePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, ErrNotExist
+		}
+		return nil, err
+	}
+	defer f.Close()
+	var state *State
+	if err := json.NewDecoder(f).Decode(&state); err != nil {
+		return nil, err
+	}
+	return state, nil
+}
+
+// DestroyCreating handles the cleanup of containers that failed during
+// the creation process.
+func DestroyCreating(state *State, id string) error {
+	cm, err := manager.NewWithPaths(state.Config.Cgroups, state.CgroupPaths)
+	if err != nil {
+		return err
+	}
+	intelRdtManager := intelrdt.NewManager(&state.Config, id, state.IntelRdtPath)
+
+	// Before the cgroup is created, the creating-state.json file cannot accurately
+	// record the PID of the container's init process. To ensure the cgroup can be
+	// deleted, the PIDs are retrieved from cgroup.procs and terminated one by one.
+	if err := signalAllProcesses(cm, unix.SIGKILL); err != nil {
+		logrus.Warn(err)
+	}
+	err = cm.Destroy()
+	if intelRdtManager != nil {
+		if ierr := intelRdtManager.Destroy(); err == nil {
+			err = ierr
+		}
+	}
+	return err
 }
