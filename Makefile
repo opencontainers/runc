@@ -77,26 +77,27 @@ runc-bin:
 	$(GO_BUILD) -o runc .
 
 .PHONY: all
-all: runc memfd-bind recvtty sd-helper seccompagent fs-idmap pidfd-kill remap-rootfs
+all: runc memfd-bind
 
 .PHONY: memfd-bind
 memfd-bind:
 	$(GO_BUILD) -o contrib/cmd/$@/$@ ./contrib/cmd/$@
 
-.PHONY: recvtty sd-helper seccompagent fs-idmap pidfd-kill remap-rootfs
-recvtty sd-helper seccompagent fs-idmap pidfd-kill remap-rootfs:
-	$(GO_BUILD) -o tests/cmd/$@/$@ ./tests/cmd/$@
+TESTBINDIR := tests/cmd/_bin
+$(TESTBINDIR):
+	mkdir $(TESTBINDIR)
+
+TESTBINS := recvtty sd-helper seccompagent fs-idmap pidfd-kill remap-rootfs
+.PHONY: test-binaries $(TESTBINS)
+test-binaries: $(TESTBINS)
+$(TESTBINS): $(TESTBINDIR)
+	$(GO_BUILD) -o $(TESTBINDIR) ./tests/cmd/$@
 
 .PHONY: clean
 clean:
 	rm -f runc runc-*
 	rm -f contrib/cmd/memfd-bind/memfd-bind
-	rm -f tests/cmd/recvtty/recvtty
-	rm -f tests/cmd/sd-helper/sd-helper
-	rm -f tests/cmd/seccompagent/seccompagent
-	rm -f tests/cmd/fs-idmap/fs-idmap
-	rm -f tests/cmd/pidfd-kill/pidfd-kill
-	rm -f tests/cmd/remap-rootfs/remap-rootfs
+	rm -fr $(TESTBINDIR)
 	sudo rm -rf release
 	rm -rf man/man8
 
@@ -128,7 +129,7 @@ dbuild: runcimage
 	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
 		--privileged --rm \
 		-v $(CURDIR):/go/src/$(PROJECT) \
-		$(RUNC_IMAGE) make clean all
+		$(RUNC_IMAGE) make clean runc test-binaries
 
 .PHONY: lint
 lint:
@@ -157,7 +158,7 @@ unittest: runcimage
 		$(RUNC_IMAGE) make localunittest TESTFLAGS="$(TESTFLAGS)"
 
 .PHONY: localunittest
-localunittest: all
+localunittest: test-binaries
 	$(GO) test -timeout 3m -tags "$(BUILDTAGS)" $(TESTFLAGS) -v ./...
 
 .PHONY: integration
@@ -169,7 +170,7 @@ integration: runcimage
 		$(RUNC_IMAGE) make localintegration TESTPATH="$(TESTPATH)"
 
 .PHONY: localintegration
-localintegration: all
+localintegration: runc test-binaries
 	bats -t tests/integration$(TESTPATH)
 
 .PHONY: rootlessintegration
@@ -181,7 +182,7 @@ rootlessintegration: runcimage
 		$(RUNC_IMAGE) make localrootlessintegration
 
 .PHONY: localrootlessintegration
-localrootlessintegration: all
+localrootlessintegration: runc test-binaries
 	tests/rootless.sh
 
 .PHONY: shell
