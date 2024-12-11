@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.2.z]
 
+## [1.2.3] - 2024-12-12
+
+> Winter is not a season, it's a celebration.
+
+### Fixed
+ * Fixed a regression in use of securejoin.MkdirAll, where multiple
+   runc processes racing to create the same mountpoint in a shared rootfs
+   would result in spurious EEXIST errors. In particular, this regression
+   caused issues with BuildKit. (#4543, #4550)
+ * Fixed a regression in eBPF support for pre-5.6 kernels after upgrading
+   Cilium's eBPF library version to 0.16 in runc. (#3008, #4551)
+
 ## [1.2.2] - 2024-11-15
 
 > Specialization is for insects.
@@ -939,7 +951,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.1.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.1.0-rc.1
 
 <!-- 1.2.z patch releases -->
-[Unreleased 1.2.z]: https://github.com/opencontainers/runc/compare/v1.2.2...release-1.2
+[Unreleased 1.2.z]: https://github.com/opencontainers/runc/compare/v1.2.3...release-1.2
+[1.2.3]: https://github.com/opencontainers/runc/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/opencontainers/runc/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.2.1
 [1.2.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.2...v1.2.0-rc.3
