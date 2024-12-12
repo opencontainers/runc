@@ -84,6 +84,8 @@ jobs:
         run: make BUILDTAGS=""
       - name: compile with runc_nocriu build tag
         run: make EXTRA_BUILDTAGS="runc_nocriu"
+      - name: compile with runc_nosd tag added
+        run: make EXTRA_BUILDTAGS="runc_nosd"
 
   codespell:
     runs-on: ubuntu-24.04

@@ -1,3 +1,5 @@
+//go:build linux && !runc_nosd
+
 package systemd
 
 import (
@@ -69,7 +71,7 @@ func shouldSetCPUIdle(cm *dbusConnManager, v string) bool {
 // For the list of keys, see https://www.kernel.org/doc/Documentation/cgroup-v2.txt
 //
 // For the list of systemd unit properties, see systemd.resource-control(5).
-func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props []systemdDbus.Property, _ error) {
+func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props configs.SdProperties, _ error) {
 	var err error
 
 	for k, v := range res {
@@ -94,7 +96,7 @@ func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props
 
 		case "cpu.max":
 			// value: quota [period]
-			quota := int64(0) // 0 means "unlimited" for addCpuQuota, if period is set
+			quota := int64(0) // 0 means "unlimited" for addCPUQuota, if period is set
 			period := defCPUQuotaPeriod
 			sv := strings.Fields(v)
 			if len(sv) < 1 || len(sv) > 2 {
@@ -114,7 +116,7 @@ func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props
 					return nil, fmt.Errorf("unified resource %q quota value conversion error: %w", k, err)
 				}
 			}
-			addCpuQuota(cm, &props, quota, period)
+			addCPUQuota(cm, &props, quota, period)
 
 		case "cpu.weight":
 			if shouldSetCPUIdle(cm, strings.TrimSpace(res["cpu.idle"])) {
@@ -199,7 +201,7 @@ func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props
 	return props, nil
 }
 
-func genV2ResourcesProperties(dirPath string, r *configs.Resources, cm *dbusConnManager) ([]systemdDbus.Property, error) {
+func genV2ResourcesProperties(dirPath string, r *configs.Resources, cm *dbusConnManager) (configs.SdProperties, error) {
 	// We need this check before setting systemd properties, otherwise
 	// the container is OOM-killed and the systemd unit is removed
 	// before we get to fsMgr.Set().
@@ -207,7 +209,7 @@ func genV2ResourcesProperties(dirPath string, r *configs.Resources, cm *dbusConn
 		return nil, err
 	}
 
-	var properties []systemdDbus.Property
+	var properties configs.SdProperties
 
 	// NOTE: This is of questionable correctness because we insert our own
 	//       devices eBPF program later. Two programs with identical rules
@@ -255,7 +257,7 @@ func genV2ResourcesProperties(dirPath string, r *configs.Resources, cm *dbusConn
 		}
 	}
 
-	addCpuQuota(cm, &properties, r.CpuQuota, r.CpuPeriod)
+	addCPUQuota(cm, &properties, r.CpuQuota, r.CpuPeriod)
 
 	if r.PidsLimit > 0 || r.PidsLimit == -1 {
 		properties = append(properties,
@@ -285,7 +287,7 @@ func (m *UnifiedManager) Apply(pid int) error {
 	var (
 		c          = m.cgroups
 		unitName   = getUnitName(c)
-		properties []systemdDbus.Property
+		properties configs.SdProperties
 	)
 
 	slice := "system.slice"
