@@ -182,7 +182,7 @@ func (m *Manager) Set(r *configs.Resources) error {
 		return err
 	}
 	// cpu (since kernel 4.15)
-	if err := setCpu(m.dirPath, r); err != nil {
+	if err := setCPU(m.dirPath, r); err != nil {
 		return err
 	}
 	// devices (since kernel 4.15, pseudo-controller)

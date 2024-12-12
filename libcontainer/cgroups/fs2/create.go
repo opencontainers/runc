@@ -48,7 +48,7 @@ func needAnyControllers(r *configs.Resources) (bool, error) {
 	if isIoSet(r) && have("io") {
 		return true, nil
 	}
-	if isCpuSet(r) && have("cpu") {
+	if isCPUSet(r) && have("cpu") {
 		return true, nil
 	}
 	if isCpusetSet(r) && have("cpuset") {
@@ -65,7 +65,7 @@ func needAnyControllers(r *configs.Resources) (bool, error) {
 // Refer to: http://man7.org/linux/man-pages/man7/cgroups.7.html
 // As at Linux 4.19, the following controllers are threaded: cpu, perf_event, and pids.
 func containsDomainController(r *configs.Resources) bool {
-	return isMemorySet(r) || isIoSet(r) || isCpuSet(r) || isHugeTlbSet(r)
+	return isMemorySet(r) || isIoSet(r) || isCPUSet(r) || isHugeTlbSet(r)
 }
 
 // CreateCgroupPath creates cgroupv2 path, enabling all the supported controllers.
