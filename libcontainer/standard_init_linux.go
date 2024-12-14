@@ -27,6 +27,7 @@ type linuxStandardInit struct {
 	fifoFile      *os.File
 	logPipe       *os.File
 	config        *initConfig
+	addHome       bool
 }
 
 func (l *linuxStandardInit) getSessionRingParams() (string, uint32, uint32) {
@@ -189,7 +190,7 @@ func (l *linuxStandardInit) Init() error {
 			return err
 		}
 	}
-	if err := finalizeNamespace(l.config); err != nil {
+	if err := finalizeNamespace(l.config, l.addHome); err != nil {
 		return err
 	}
 	// finalizeNamespace can change user/group which clears the parent death
@@ -287,5 +288,5 @@ func (l *linuxStandardInit) Init() error {
 	if err := utils.UnsafeCloseFrom(l.config.PassedFilesCount + 3); err != nil {
 		return err
 	}
-	return system.Exec(name, l.config.Args, os.Environ())
+	return system.Exec(name, l.config.Args, l.config.Env)
 }
