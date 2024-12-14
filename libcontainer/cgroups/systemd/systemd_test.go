@@ -7,10 +7,9 @@ import (
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-func newManager(t *testing.T, config *configs.Cgroup) (m cgroups.Manager) {
+func newManager(t *testing.T, config *cgroups.Cgroup) (m cgroups.Manager) {
 	t.Helper()
 	var err error
 
@@ -82,10 +81,10 @@ func TestUnitExistsIgnored(t *testing.T) {
 		t.Skip("Test requires root.")
 	}
 
-	podConfig := &configs.Cgroup{
+	podConfig := &cgroups.Cgroup{
 		Parent:    "system.slice",
 		Name:      "system-runc_test_exists.slice",
-		Resources: &configs.Resources{},
+		Resources: &cgroups.Resources{},
 	}
 	// Create "pods" cgroup (a systemd slice to hold containers).
 	pm := newManager(t, podConfig)

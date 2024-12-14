@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
-	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 const (
@@ -20,7 +20,7 @@ func TestNetClsSetClassid(t *testing.T) {
 		"net_cls.classid": strconv.FormatUint(classidBefore, 10),
 	})
 
-	r := &configs.Resources{
+	r := &cgroups.Resources{
 		NetClsClassid: classidAfter,
 	}
 	netcls := &NetClsGroup{}

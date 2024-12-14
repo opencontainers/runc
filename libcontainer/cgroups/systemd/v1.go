@@ -12,17 +12,16 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
-	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 type LegacyManager struct {
 	mu      sync.Mutex
-	cgroups *configs.Cgroup
+	cgroups *cgroups.Cgroup
 	paths   map[string]string
 	dbus    *dbusConnManager
 }
 
-func NewLegacyManager(cg *configs.Cgroup, paths map[string]string) (*LegacyManager, error) {
+func NewLegacyManager(cg *cgroups.Cgroup, paths map[string]string) (*LegacyManager, error) {
 	if cg.Rootless {
 		return nil, errors.New("cannot use rootless systemd cgroups manager on cgroup v1")
 	}
@@ -49,7 +48,7 @@ type subsystem interface {
 	// GetStats returns the stats, as 'stats', corresponding to the cgroup under 'path'.
 	GetStats(path string, stats *cgroups.Stats) error
 	// Set sets cgroup resource limits.
-	Set(path string, r *configs.Resources) error
+	Set(path string, r *cgroups.Resources) error
 }
 
 var errSubsystemDoesNotExist = errors.New("cgroup: subsystem does not exist")
@@ -72,7 +71,7 @@ var legacySubsystems = []subsystem{
 	&fs.NameGroup{GroupName: "misc"},
 }
 
-func genV1ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]systemdDbus.Property, error) {
+func genV1ResourcesProperties(r *cgroups.Resources, cm *dbusConnManager) ([]systemdDbus.Property, error) {
 	var properties []systemdDbus.Property
 
 	deviceProperties, err := generateDeviceProperties(r, cm)
@@ -112,7 +111,7 @@ func genV1ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]syst
 }
 
 // initPaths figures out and returns paths to cgroups.
-func initPaths(c *configs.Cgroup) (map[string]string, error) {
+func initPaths(c *cgroups.Cgroup) (map[string]string, error) {
 	slice := "system.slice"
 	if c.Parent != "" {
 		var err error
@@ -275,7 +274,7 @@ func getSubsystemPath(slice, unit, subsystem string) (string, error) {
 	return filepath.Join(mountpoint, slice, unit), nil
 }
 
-func (m *LegacyManager) Freeze(state configs.FreezerState) error {
+func (m *LegacyManager) Freeze(state cgroups.FreezerState) error {
 	err := m.doFreeze(state)
 	if err == nil {
 		m.cgroups.Resources.Freezer = state
@@ -285,13 +284,13 @@ func (m *LegacyManager) Freeze(state configs.FreezerState) error {
 
 // doFreeze is the same as Freeze but without
 // changing the m.cgroups.Resources.Frozen field.
-func (m *LegacyManager) doFreeze(state configs.FreezerState) error {
+func (m *LegacyManager) doFreeze(state cgroups.FreezerState) error {
 	path, ok := m.paths["freezer"]
 	if !ok {
 		return errSubsystemDoesNotExist
 	}
 	freezer := &fs.FreezerGroup{}
-	resources := &configs.Resources{Freezer: state}
+	resources := &cgroups.Resources{Freezer: state}
 	return freezer.Set(path, resources)
 }
 
@@ -328,7 +327,7 @@ func (m *LegacyManager) GetStats() (*cgroups.Stats, error) {
 	return stats, nil
 }
 
-func (m *LegacyManager) Set(r *configs.Resources) error {
+func (m *LegacyManager) Set(r *cgroups.Resources) error {
 	if r == nil {
 		return nil
 	}
@@ -347,13 +346,13 @@ func (m *LegacyManager) Set(r *configs.Resources) error {
 	}
 
 	if needsFreeze {
-		if err := m.doFreeze(configs.Frozen); err != nil {
+		if err := m.doFreeze(cgroups.Frozen); err != nil {
 			// If freezer cgroup isn't supported, we just warn about it.
 			logrus.Infof("freeze container before SetUnitProperties failed: %v", err)
 			// skip update the cgroup while frozen failed. #3803
 			if !errors.Is(err, errSubsystemDoesNotExist) {
 				if needsThaw {
-					if thawErr := m.doFreeze(configs.Thawed); thawErr != nil {
+					if thawErr := m.doFreeze(cgroups.Thawed); thawErr != nil {
 						logrus.Infof("thaw container after doFreeze failed: %v", thawErr)
 					}
 				}
@@ -363,7 +362,7 @@ func (m *LegacyManager) Set(r *configs.Resources) error {
 	}
 	setErr := setUnitProperties(m.dbus, unitName, properties...)
 	if needsThaw {
-		if err := m.doFreeze(configs.Thawed); err != nil {
+		if err := m.doFreeze(cgroups.Thawed); err != nil {
 			logrus.Infof("thaw container after SetUnitProperties failed: %v", err)
 		}
 	}
@@ -391,14 +390,14 @@ func (m *LegacyManager) GetPaths() map[string]string {
 	return m.paths
 }
 
-func (m *LegacyManager) GetCgroups() (*configs.Cgroup, error) {
+func (m *LegacyManager) GetCgroups() (*cgroups.Cgroup, error) {
 	return m.cgroups, nil
 }
 
-func (m *LegacyManager) GetFreezerState() (configs.FreezerState, error) {
+func (m *LegacyManager) GetFreezerState() (cgroups.FreezerState, error) {
 	path, ok := m.paths["freezer"]
 	if !ok {
-		return configs.Undefined, nil
+		return cgroups.Undefined, nil
 	}
 	freezer := &fs.FreezerGroup{}
 	return freezer.GetState(path)

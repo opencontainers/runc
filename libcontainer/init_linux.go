@@ -696,12 +696,12 @@ func signalAllProcesses(m cgroups.Manager, s unix.Signal) error {
 		}
 	}
 
-	if err := m.Freeze(configs.Frozen); err != nil {
+	if err := m.Freeze(cgroups.Frozen); err != nil {
 		logrus.Warn(err)
 	}
 	pids, err := m.GetAllPids()
 	if err != nil {
-		if err := m.Freeze(configs.Thawed); err != nil {
+		if err := m.Freeze(cgroups.Thawed); err != nil {
 			logrus.Warn(err)
 		}
 		return err
@@ -712,7 +712,7 @@ func signalAllProcesses(m cgroups.Manager, s unix.Signal) error {
 			logrus.Warnf("kill %d: %v", pid, err)
 		}
 	}
-	if err := m.Freeze(configs.Thawed); err != nil {
+	if err := m.Freeze(cgroups.Thawed); err != nil {
 		logrus.Warn(err)
 	}
 

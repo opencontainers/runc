@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 func BenchmarkGetStats(b *testing.B) {
@@ -19,9 +18,9 @@ func BenchmarkGetStats(b *testing.B) {
 		cgroups.TestMode = true
 	}()
 
-	cg := &configs.Cgroup{
+	cg := &cgroups.Cgroup{
 		Path:      "/some/kind/of/a/path/here",
-		Resources: &configs.Resources{},
+		Resources: &cgroups.Resources{},
 	}
 	m, err := NewManager(cg, nil)
 	if err != nil {

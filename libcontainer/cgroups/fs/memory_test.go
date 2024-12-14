@@ -6,7 +6,6 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
-	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 const (
@@ -53,7 +52,7 @@ func TestMemorySetMemory(t *testing.T) {
 		"memory.soft_limit_in_bytes": strconv.Itoa(reservationBefore),
 	})
 
-	r := &configs.Resources{
+	r := &cgroups.Resources{
 		Memory:            memoryAfter,
 		MemoryReservation: reservationAfter,
 	}
@@ -91,7 +90,7 @@ func TestMemorySetMemoryswap(t *testing.T) {
 		"memory.memsw.limit_in_bytes": strconv.Itoa(memoryswapBefore),
 	})
 
-	r := &configs.Resources{
+	r := &cgroups.Resources{
 		MemorySwap: memoryswapAfter,
 	}
 	memory := &MemoryGroup{}
@@ -128,7 +127,7 @@ func TestMemorySetMemoryLargerThanSwap(t *testing.T) {
 		"memory.failcnt":            "0",
 	})
 
-	r := &configs.Resources{
+	r := &cgroups.Resources{
 		Memory:     memoryAfter,
 		MemorySwap: memoryswapAfter,
 	}
@@ -169,7 +168,7 @@ func TestMemorySetSwapSmallerThanMemory(t *testing.T) {
 		"memory.memsw.limit_in_bytes": strconv.Itoa(memoryswapBefore),
 	})
 
-	r := &configs.Resources{
+	r := &cgroups.Resources{
 		Memory:     memoryAfter,
 		MemorySwap: memoryswapAfter,
 	}
@@ -205,7 +204,7 @@ func TestMemorySetMemorySwappinessDefault(t *testing.T) {
 		"memory.swappiness": strconv.Itoa(swappinessBefore),
 	})
 
-	r := &configs.Resources{
+	r := &cgroups.Resources{
 		MemorySwappiness: &swappinessAfter,
 	}
 	memory := &MemoryGroup{}
@@ -418,7 +417,7 @@ func TestMemorySetOomControl(t *testing.T) {
 	})
 
 	memory := &MemoryGroup{}
-	r := &configs.Resources{}
+	r := &cgroups.Resources{}
 	if err := memory.Set(path, r); err != nil {
 		t.Fatal(err)
 	}

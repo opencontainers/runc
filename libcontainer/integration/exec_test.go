@@ -472,7 +472,7 @@ func testFreeze(t *testing.T, withSystemd bool, useSet bool) {
 	if !useSet {
 		err = container.Pause()
 	} else {
-		config.Cgroups.Resources.Freezer = configs.Frozen
+		config.Cgroups.Resources.Freezer = cgroups.Frozen
 		err = container.Set(*config)
 	}
 	ok(t, err)
@@ -486,7 +486,7 @@ func testFreeze(t *testing.T, withSystemd bool, useSet bool) {
 	if !useSet {
 		err = container.Resume()
 	} else {
-		config.Cgroups.Resources.Freezer = configs.Thawed
+		config.Cgroups.Resources.Freezer = cgroups.Thawed
 		err = container.Set(*config)
 	}
 	ok(t, err)

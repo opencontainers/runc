@@ -6,7 +6,7 @@ import (
 	"github.com/moby/sys/userns"
 	"golang.org/x/sys/unix"
 
-	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
@@ -27,7 +27,7 @@ func isRWM(perms devices.Permissions) bool {
 
 // This is similar to the logic applied in crun for handling errors from bpf(2)
 // <https://github.com/containers/crun/blob/0.17/src/libcrun/cgroup.c#L2438-L2470>.
-func canSkipEBPFError(r *configs.Resources) bool {
+func canSkipEBPFError(r *cgroups.Resources) bool {
 	// If we're running in a user namespace we can ignore eBPF rules because we
 	// usually cannot use bpf(2), as well as rootless containers usually don't
 	// have the necessary privileges to mknod(2) device inodes or access
@@ -51,7 +51,7 @@ func canSkipEBPFError(r *configs.Resources) bool {
 	return true
 }
 
-func setV2(dirPath string, r *configs.Resources) error {
+func setV2(dirPath string, r *cgroups.Resources) error {
 	if r.SkipDevices {
 		return nil
 	}

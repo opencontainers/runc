@@ -6,7 +6,6 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
-	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 const (
@@ -49,7 +48,7 @@ func TestCPUSetSetCpus(t *testing.T) {
 		"cpuset.cpus": cpusBefore,
 	})
 
-	r := &configs.Resources{
+	r := &cgroups.Resources{
 		CpusetCpus: cpusAfter,
 	}
 	cpuset := &CpusetGroup{}
@@ -78,7 +77,7 @@ func TestCPUSetSetMems(t *testing.T) {
 		"cpuset.mems": memsBefore,
 	})
 
-	r := &configs.Resources{
+	r := &cgroups.Resources{
 		CpusetMems: memsAfter,
 	}
 	cpuset := &CpusetGroup{}

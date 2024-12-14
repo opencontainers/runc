@@ -11,13 +11,13 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/sirupsen/logrus"
 
-	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
 // systemdProperties takes the configured device rules and generates a
 // corresponding set of systemd properties to configure the devices correctly.
-func systemdProperties(r *configs.Resources, sdVer int) ([]systemdDbus.Property, error) {
+func systemdProperties(r *cgroups.Resources, sdVer int) ([]systemdDbus.Property, error) {
 	if r.SkipDevices {
 		return nil, nil
 	}

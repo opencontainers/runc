@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 /* Roadmap for future */
@@ -27,8 +27,8 @@ func TestRdmaSet(t *testing.T) {
 	maxHandles := uint32(100)
 	maxObjects := uint32(300)
 
-	rdmaStubResource := &configs.Resources{
-		Rdma: map[string]configs.LinuxRdma{
+	rdmaStubResource := &cgroups.Resources{
+		Rdma: map[string]cgroups.LinuxRdma{
 			rdmaDevice: {
 				HcaHandles: &maxHandles,
 				HcaObjects: &maxObjects,

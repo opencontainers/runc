@@ -7,7 +7,6 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
-	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 const (
@@ -42,9 +41,9 @@ func TestHugetlbSetHugetlb(t *testing.T) {
 		})
 	}
 
-	r := &configs.Resources{}
+	r := &cgroups.Resources{}
 	for _, pageSize := range cgroups.HugePageSizes() {
-		r.HugetlbLimit = []*configs.HugepageLimit{
+		r.HugetlbLimit = []*cgroups.HugepageLimit{
 			{
 				Pagesize: pageSize,
 				Limit:    hugetlbAfter,

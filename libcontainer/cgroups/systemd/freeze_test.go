@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/configs"
 	"golang.org/x/sys/unix"
 )
 
@@ -19,7 +18,7 @@ func TestFreezeBeforeSet(t *testing.T) {
 	testCases := []struct {
 		desc string
 		// Test input.
-		cg        *configs.Cgroup
+		cg        *cgroups.Cgroup
 		preFreeze bool
 		// Expected values.
 		// Before unit creation (Apply).
@@ -30,10 +29,10 @@ func TestFreezeBeforeSet(t *testing.T) {
 		{
 			// A slice with SkipDevices.
 			desc: "slice,skip-devices",
-			cg: &configs.Cgroup{
+			cg: &cgroups.Cgroup{
 				Name:   "system-runc_test_freeze_1.slice",
 				Parent: "system.slice",
-				Resources: &configs.Resources{
+				Resources: &cgroups.Resources{
 					SkipDevices: true,
 				},
 			},
@@ -48,11 +47,11 @@ func TestFreezeBeforeSet(t *testing.T) {
 			// (as container can't have SkipDevices == true), but possible
 			// for a standalone cgroup manager.
 			desc: "scope,skip-devices",
-			cg: &configs.Cgroup{
+			cg: &cgroups.Cgroup{
 				ScopePrefix: "test",
 				Name:        "testFreeze2",
 				Parent:      "system.slice",
-				Resources: &configs.Resources{
+				Resources: &cgroups.Resources{
 					SkipDevices: true,
 				},
 			},
@@ -65,11 +64,11 @@ func TestFreezeBeforeSet(t *testing.T) {
 		{
 			// A slice that is about to be frozen in Set.
 			desc: "slice,will-freeze",
-			cg: &configs.Cgroup{
+			cg: &cgroups.Cgroup{
 				Name:   "system-runc_test_freeze_3.slice",
 				Parent: "system.slice",
-				Resources: &configs.Resources{
-					Freezer: configs.Frozen,
+				Resources: &cgroups.Resources{
+					Freezer: cgroups.Frozen,
 				},
 			},
 			// Expected.
@@ -81,11 +80,11 @@ func TestFreezeBeforeSet(t *testing.T) {
 		{
 			// A pre-frozen slice that should stay frozen.
 			desc: "slice,pre-frozen,will-freeze",
-			cg: &configs.Cgroup{
+			cg: &cgroups.Cgroup{
 				Name:   "system-runc_test_freeze_4.slice",
 				Parent: "system.slice",
-				Resources: &configs.Resources{
-					Freezer: configs.Frozen,
+				Resources: &cgroups.Resources{
+					Freezer: cgroups.Frozen,
 				},
 			},
 			preFreeze: true,
@@ -98,11 +97,11 @@ func TestFreezeBeforeSet(t *testing.T) {
 		{
 			// A pre-frozen scope with skip devices set.
 			desc: "scope,pre-frozen,skip-devices",
-			cg: &configs.Cgroup{
+			cg: &cgroups.Cgroup{
 				ScopePrefix: "test",
 				Name:        "testFreeze5",
 				Parent:      "system.slice",
-				Resources: &configs.Resources{
+				Resources: &cgroups.Resources{
 					SkipDevices: true,
 				},
 			},
@@ -116,11 +115,11 @@ func TestFreezeBeforeSet(t *testing.T) {
 		{
 			// A pre-frozen scope which will be thawed.
 			desc: "scope,pre-frozen",
-			cg: &configs.Cgroup{
+			cg: &cgroups.Cgroup{
 				ScopePrefix: "test",
 				Name:        "testFreeze6",
 				Parent:      "system.slice",
-				Resources:   &configs.Resources{},
+				Resources:   &cgroups.Resources{},
 			},
 			preFreeze: true,
 			// Expected.
@@ -170,7 +169,7 @@ func TestFreezeBeforeSet(t *testing.T) {
 				t.Fatal(err)
 			}
 			if tc.preFreeze {
-				if err := m.Freeze(configs.Frozen); err != nil {
+				if err := m.Freeze(cgroups.Frozen); err != nil {
 					t.Error(err)
 					return // no more checks
 				}
@@ -186,7 +185,7 @@ func TestFreezeBeforeSet(t *testing.T) {
 			}
 			// Destroy() timeouts on a frozen container, so we need to thaw it.
 			if tc.preFreeze {
-				if err := m.Freeze(configs.Thawed); err != nil {
+				if err := m.Freeze(cgroups.Thawed); err != nil {
 					t.Error(err)
 				}
 			}
@@ -227,12 +226,12 @@ func TestFreezePodCgroup(t *testing.T) {
 		t.Skip("Test requires root.")
 	}
 
-	podConfig := &configs.Cgroup{
+	podConfig := &cgroups.Cgroup{
 		Parent: "system.slice",
 		Name:   "system-runc_test_pod.slice",
-		Resources: &configs.Resources{
+		Resources: &cgroups.Resources{
 			SkipDevices: true,
-			Freezer:     configs.Frozen,
+			Freezer:     cgroups.Frozen,
 		},
 	}
 	// Create a "pod" cgroup (a systemd slice to hold containers),
@@ -251,17 +250,17 @@ func TestFreezePodCgroup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pf != configs.Frozen {
+	if pf != cgroups.Frozen {
 		t.Fatalf("expected pod to be frozen, got %v", pf)
 	}
 
 	// Create a "container" within the "pod" cgroup.
 	// This is not a real container, just a process in the cgroup.
-	containerConfig := &configs.Cgroup{
+	containerConfig := &cgroups.Cgroup{
 		Parent:      "system-runc_test_pod.slice",
 		ScopePrefix: "test",
 		Name:        "inner-container",
-		Resources:   &configs.Resources{},
+		Resources:   &cgroups.Resources{},
 	}
 
 	cmd := exec.Command("bash", "-c", "while read; do echo $REPLY; done")
@@ -322,12 +321,12 @@ func TestFreezePodCgroup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cf != configs.Thawed {
+	if cf != cgroups.Thawed {
 		t.Fatalf("expected container to be thawed, got %v", cf)
 	}
 
 	// Unfreeze the pod.
-	if err := pm.Freeze(configs.Thawed); err != nil {
+	if err := pm.Freeze(cgroups.Thawed); err != nil {
 		t.Fatal(err)
 	}
 
@@ -335,7 +334,7 @@ func TestFreezePodCgroup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cf != configs.Thawed {
+	if cf != cgroups.Thawed {
 		t.Fatalf("expected container to be thawed, got %v", cf)
 	}
 
