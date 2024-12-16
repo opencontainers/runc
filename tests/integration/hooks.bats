@@ -42,3 +42,42 @@ function teardown() {
 		[[ "$output" == *"error running $hook hook #1:"* ]]
 	done
 }
+
+@test "runc run [hook with env property]" {
+	update_config '.process.args = ["/bin/true"]'
+	update_config '.process.env = ["TEST_VAR=val"]'
+	# All hooks except Poststop.
+	for hook in prestart createRuntime createContainer startContainer poststart; do
+		echo "testing hook $hook"
+		# shellcheck disable=SC2016
+		update_config '.hooks = {
+			"'$hook'": [{
+				"path": "/bin/sh",
+				"args": ["/bin/sh", "-c", "[ \"$TEST_VAR\"==\"val\" ] && echo yes, we got val from the env TEST_VAR && exit 1 || exit 0"],
+				"env": ["TEST_VAR=val"]
+			}]
+		}'
+		TEST_VAR="val" runc run "test_hook-$hook"
+		[ "$status" -ne 0 ]
+		[[ "$output" == *"yes, we got val from the env TEST_VAR"* ]]
+	done
+}
+
+# https://github.com/opencontainers/runtime-spec/blob/v1.0.1/config.md#posix-platform-hooks
+@test "runc run [hook without env property should not inherit host env]" {
+	update_config '.process.args = ["/bin/true"]'
+	update_config '.process.env = ["TEST_VAR=val"]'
+	# All hooks except Poststop.
+	for hook in prestart createRuntime createContainer startContainer poststart; do
+		echo "testing hook $hook"
+		# shellcheck disable=SC2016
+		update_config '.hooks = {
+			"'$hook'": [{
+				"path": "/bin/sh",
+				"args": ["/bin/sh", "-c", "[[ \"$TEST_VAR\" == \"val\" ]] && echo \"$TEST_VAR\" && exit 1 || exit 0"]
+			}]
+		}'
+		TEST_VAR="val" runc run "test_hook-$hook"
+		[ "$status" -eq 0 ]
+	done
+}
