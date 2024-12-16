@@ -315,6 +315,23 @@ var AllowedDevices = []*devices.Device{
 			Allow:       true,
 		},
 	},
+	// The following entry for /dev/net/tun device was there from the
+	// very early days of Docker, but got removed in runc 1.2.0-rc1,
+	// causing a number of regressions for users (see
+	// https://github.com/opencontainers/runc/pull/3468).
+	//
+	// Some upper-level orcherstration tools makes it either impossible
+	// or cumbersome to supply additional device rules, so we have to
+	// keep this for the sake of backward compatibility.
+	{
+		Rule: devices.Rule{
+			Type:        devices.CharDevice,
+			Major:       10,
+			Minor:       200,
+			Permissions: "rwm",
+			Allow:       true,
+		},
+	},
 }
 
 type CreateOpts struct {
