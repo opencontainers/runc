@@ -159,7 +159,7 @@ unittest: runcimage
 
 .PHONY: localunittest
 localunittest: test-binaries
-	$(GO) test -timeout 3m -tags "$(BUILDTAGS)" $(TESTFLAGS) -v ./...
+	$(GO) test -timeout 3m -count 1 -tags "$(BUILDTAGS)" $(TESTFLAGS) -v ./...
 
 .PHONY: integration
 integration: runcimage
