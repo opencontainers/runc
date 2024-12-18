@@ -127,7 +127,7 @@ jobs:
         run : ./script/check-config.sh
 
   space-at-eol:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - run: rm -fr vendor
