@@ -423,6 +423,89 @@ func (c *Container) signal(s os.Signal) error {
 	return nil
 }
 
+func (c *Container) killViaPidfd() error {
+	pidfd, err := unix.PidfdOpen(c.initProcess.pid(), 0)
+	if err != nil {
+		return err
+	}
+	defer unix.Close(pidfd)
+
+	epollfd, err := unix.EpollCreate1(unix.EPOLL_CLOEXEC)
+	if err != nil {
+		return err
+	}
+	defer unix.Close(epollfd)
+
+	event := unix.EpollEvent{
+		Events: unix.EPOLLIN,
+		Fd:     int32(pidfd),
+	}
+	if err := unix.EpollCtl(epollfd, unix.EPOLL_CTL_ADD, pidfd, &event); err != nil {
+		return err
+	}
+
+	// We don't need unix.PidfdSendSignal because go runtime will use it if possible.
+	_ = c.Signal(unix.SIGKILL)
+
+	events := make([]unix.EpollEvent, 1)
+	for {
+		// Set the timeout to 10s, the same as in kill below.
+		n, err := unix.EpollWait(epollfd, events, 10000)
+		if err != nil {
+			if err == unix.EINTR {
+				continue
+			}
+			return err
+		}
+
+		if n == 0 {
+			return errors.New("container init still running")
+		}
+
+		if n > 0 {
+			event := events[0]
+			if event.Fd == int32(pidfd) {
+				return nil
+			}
+		}
+	}
+}
+
+func (c *Container) kill() error {
+	_ = c.Signal(unix.SIGKILL)
+
+	// For containers running in a low load machine, we only need to wait about 1ms.
+	time.Sleep(time.Millisecond)
+	if err := c.Signal(unix.Signal(0)); err != nil {
+		return nil
+	}
+
+	// For some containers in a heavy load machine, we need to wait more time.
+	logrus.Debugln("We need more time to wait the init process exit.")
+	for i := 0; i < 100; i++ {
+		time.Sleep(100 * time.Millisecond)
+		if err := c.Signal(unix.Signal(0)); err != nil {
+			return nil
+		}
+	}
+	return errors.New("container init still running")
+}
+
+// Kill kills the container and waits for the init process to exit.
+func (c *Container) Kill() error {
+	// When a container doesn't have a private pidns, we have to kill all processes
+	// in the cgroup, it's more simpler to use `cgroup.kill` or `unix.Kill`.
+	if c.config.Namespaces.IsPrivate(configs.NEWPID) {
+		err := c.killViaPidfd()
+		if err == nil {
+			return nil
+		}
+
+		logrus.Debugf("pidfd & epoll failed, falling back to unix.Signal: %v", err)
+	}
+	return c.kill()
+}
+
 func (c *Container) createExecFifo() (retErr error) {
 	rootuid, err := c.Config().HostRootUID()
 	if err != nil {

@@ -115,11 +115,7 @@ func (p *setnsProcess) startTime() (uint64, error) {
 }
 
 func (p *setnsProcess) signal(sig os.Signal) error {
-	s, ok := sig.(unix.Signal)
-	if !ok {
-		return errors.New("os: unsupported signal type")
-	}
-	return unix.Kill(p.pid(), s)
+	return p.cmd.Process.Signal(sig)
 }
 
 func (p *setnsProcess) start() (retErr error) {
@@ -838,11 +834,7 @@ func (p *initProcess) createNetworkInterfaces() error {
 }
 
 func (p *initProcess) signal(sig os.Signal) error {
-	s, ok := sig.(unix.Signal)
-	if !ok {
-		return errors.New("os: unsupported signal type")
-	}
-	return unix.Kill(p.pid(), s)
+	return p.cmd.Process.Signal(sig)
 }
 
 func (p *initProcess) setExternalDescriptors(newFds []string) {
