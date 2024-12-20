@@ -286,12 +286,6 @@ func ToSchedAttr(scheduler *Scheduler) (*unix.SchedAttr, error) {
 	}, nil
 }
 
-var IOPrioClassMapping = map[specs.IOPriorityClass]int{
-	specs.IOPRIO_CLASS_RT:   1,
-	specs.IOPRIO_CLASS_BE:   2,
-	specs.IOPRIO_CLASS_IDLE: 3,
-}
-
 type IOPriority = specs.LinuxIOPriority
 
 type (
