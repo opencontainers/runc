@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -345,16 +346,20 @@ func TestExecInEnvironment(t *testing.T) {
 	defer stdinW.Close() //nolint: errcheck
 	ok(t, err)
 
+	execEnv := []string{
+		"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+		// The below line is added to check the deduplication feature:
+		// if a variable with the same name appears more than once,
+		// only the last value should be added to the environment.
+		"DEBUG=true",
+		"DEBUG=false",
+		"ENV=test",
+	}
 	buffers := newStdBuffers()
 	process2 := &libcontainer.Process{
-		Cwd:  "/",
-		Args: []string{"env"},
-		Env: []string{
-			"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-			"DEBUG=true",
-			"DEBUG=false",
-			"ENV=test",
-		},
+		Cwd:    "/",
+		Args:   []string{"/bin/env"},
+		Env:    execEnv,
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
@@ -366,14 +371,24 @@ func TestExecInEnvironment(t *testing.T) {
 	_ = stdinW.Close()
 	waitProcess(process, t)
 
-	out := buffers.Stdout.String()
-	// check execin's process environment
-	if !strings.Contains(out, "DEBUG=false") ||
-		!strings.Contains(out, "ENV=test") ||
-		!strings.Contains(out, "HOME=/root") ||
-		!strings.Contains(out, "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin") ||
-		strings.Contains(out, "DEBUG=true") {
-		t.Fatalf("unexpected running process, output %q", out)
+	// Check exec process environment.
+	t.Logf("exec output:\n%s", buffers.Stdout.String())
+	out := strings.Fields(buffers.Stdout.String())
+	// If not present in the Process.Env, runc should add $HOME,
+	// which is deduced by parsing container's /etc/passwd.
+	// We use a known image in the test, so we know its value.
+	for _, e := range append(execEnv, "HOME=/root") {
+		if e == "DEBUG=true" { // This one should be dedup'ed out.
+			continue
+		}
+		if !slices.Contains(out, e) {
+			t.Errorf("Expected env %s not found in exec output", e)
+		}
+	}
+	// Check that there are no extra variables. We have 1 env ("DEBUG=true")
+	// removed and 1 env ("HOME=root") added, resulting in the same number.
+	if got, want := len(out), len(execEnv); want != got {
+		t.Errorf("Mismatched number of variables: want %d, got %d", want, got)
 	}
 }
 
