@@ -56,24 +56,24 @@ func ParseUint(s string, base, bitSize int) (uint64, error) {
 
 // ParseKeyValue parses a space-separated "name value" kind of cgroup
 // parameter and returns its key as a string, and its value as uint64
-// (ParseUint is used to convert the value). For example,
+// (using [ParseUint] to convert the value). For example,
 // "io_service_bytes 1234" will be returned as "io_service_bytes", 1234.
 func ParseKeyValue(t string) (string, uint64, error) {
-	parts := strings.SplitN(t, " ", 3)
-	if len(parts) != 2 {
+	key, val, ok := strings.Cut(t, " ")
+	if !ok {
 		return "", 0, fmt.Errorf("line %q is not in key value format", t)
 	}
 
-	value, err := ParseUint(parts[1], 10, 64)
+	value, err := ParseUint(val, 10, 64)
 	if err != nil {
 		return "", 0, err
 	}
 
-	return parts[0], value, nil
+	return key, value, nil
 }
 
 // GetValueByKey reads a key-value pairs from the specified cgroup file,
-// and returns a value of the specified key. ParseUint is used for value
+// and returns a value of the specified key. [ParseUint] is used for value
 // conversion.
 func GetValueByKey(path, file, key string) (uint64, error) {
 	content, err := cgroups.ReadFile(path, file)
@@ -83,9 +83,9 @@ func GetValueByKey(path, file, key string) (uint64, error) {
 
 	lines := strings.Split(content, "\n")
 	for _, line := range lines {
-		arr := strings.Split(line, " ")
-		if len(arr) == 2 && arr[0] == key {
-			val, err := ParseUint(arr[1], 10, 64)
+		k, v, ok := strings.Cut(line, " ")
+		if ok && k == key {
+			val, err := ParseUint(v, 10, 64)
 			if err != nil {
 				err = &ParseError{Path: path, File: file, Err: err}
 			}
