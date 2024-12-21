@@ -267,11 +267,12 @@ func (l *linuxStandardInit) Init() error {
 	// https://github.com/torvalds/linux/blob/v4.9/fs/exec.c#L1290-L1318
 	_ = l.fifoFile.Close()
 
-	s := l.config.SpecState
-	s.Pid = unix.Getpid()
-	s.Status = specs.StateCreated
-	if err := l.config.Config.Hooks.Run(configs.StartContainer, s); err != nil {
-		return err
+	if s := l.config.SpecState; s != nil {
+		s.Pid = unix.Getpid()
+		s.Status = specs.StateCreated
+		if err := l.config.Config.Hooks.Run(configs.StartContainer, s); err != nil {
+			return err
+		}
 	}
 
 	// Close all file descriptors we are not passing to the container. This is

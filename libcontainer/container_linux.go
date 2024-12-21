@@ -350,7 +350,7 @@ func (c *Container) start(process *Process) (retErr error) {
 
 	if process.Init {
 		c.fifo.Close()
-		if c.config.Hooks != nil {
+		if c.config.HasHook(configs.Poststart) {
 			s, err := c.currentOCIState()
 			if err != nil {
 				return err
