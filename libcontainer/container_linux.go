@@ -609,14 +609,16 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, comm *processComm)
 	}
 
 	init := &initProcess{
-		cmd:             cmd,
-		comm:            comm,
-		manager:         c.cgroupManager,
+		containerProcess: containerProcess{
+			cmd:           cmd,
+			comm:          comm,
+			manager:       c.cgroupManager,
+			config:        c.newInitConfig(p),
+			process:       p,
+			bootstrapData: data,
+			container:     c,
+		},
 		intelRdtManager: c.intelRdtManager,
-		config:          c.newInitConfig(p),
-		container:       c,
-		process:         p,
-		bootstrapData:   data,
 	}
 	c.initProcess = init
 	return init, nil
@@ -632,15 +634,18 @@ func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, comm *processComm
 		return nil, err
 	}
 	proc := &setnsProcess{
-		cmd:             cmd,
+		containerProcess: containerProcess{
+			cmd:           cmd,
+			comm:          comm,
+			manager:       c.cgroupManager,
+			config:        c.newInitConfig(p),
+			process:       p,
+			bootstrapData: data,
+			container:     c,
+		},
 		cgroupPaths:     state.CgroupPaths,
 		rootlessCgroups: c.config.RootlessCgroups,
 		intelRdtPath:    state.IntelRdtPath,
-		comm:            comm,
-		manager:         c.cgroupManager,
-		config:          c.newInitConfig(p),
-		process:         p,
-		bootstrapData:   data,
 		initProcessPid:  state.InitProcessPid,
 	}
 	if len(p.SubCgroupPaths) > 0 {

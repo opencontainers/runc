@@ -95,31 +95,72 @@ func (c *processComm) closeParent() {
 	// c.logPipeParent is kept alive for ForwardLogs
 }
 
-type setnsProcess struct {
-	cmd             *exec.Cmd
-	comm            *processComm
-	cgroupPaths     map[string]string
-	rootlessCgroups bool
-	manager         cgroups.Manager
-	intelRdtPath    string
-	config          *initConfig
-	fds             []string
-	process         *Process
-	bootstrapData   io.Reader
-	initProcessPid  int
+type containerProcess struct {
+	cmd           *exec.Cmd
+	comm          *processComm
+	config        *initConfig
+	manager       cgroups.Manager
+	fds           []string
+	process       *Process
+	bootstrapData io.Reader
+	container     *Container
 }
 
-func (p *setnsProcess) startTime() (uint64, error) {
+func (p *containerProcess) pid() int {
+	return p.cmd.Process.Pid
+}
+
+func (p *containerProcess) startTime() (uint64, error) {
 	stat, err := system.Stat(p.pid())
 	return stat.StartTime, err
 }
 
-func (p *setnsProcess) signal(sig os.Signal) error {
+func (p *containerProcess) signal(sig os.Signal) error {
 	s, ok := sig.(unix.Signal)
 	if !ok {
 		return errors.New("os: unsupported signal type")
 	}
 	return unix.Kill(p.pid(), s)
+}
+
+func (p *containerProcess) externalDescriptors() []string {
+	return p.fds
+}
+
+func (p *containerProcess) setExternalDescriptors(newFds []string) {
+	p.fds = newFds
+}
+
+func (p *containerProcess) forwardChildLogs() chan error {
+	return logs.ForwardLogs(p.comm.logPipeParent)
+}
+
+// terminate sends a SIGKILL to the forked process for the setns routine then waits to
+// avoid the process becoming a zombie.
+func (p *containerProcess) terminate() error {
+	if p.cmd.Process == nil {
+		return nil
+	}
+	err := p.cmd.Process.Kill()
+	if _, werr := p.wait(); err == nil {
+		err = werr
+	}
+	return err
+}
+
+func (p *containerProcess) wait() (*os.ProcessState, error) { //nolint:unparam
+	err := p.cmd.Wait()
+
+	// Return actual ProcessState even on Wait error
+	return p.cmd.ProcessState, err
+}
+
+type setnsProcess struct {
+	containerProcess
+	cgroupPaths     map[string]string
+	rootlessCgroups bool
+	intelRdtPath    string
+	initProcessPid  int
 }
 
 func (p *setnsProcess) start() (retErr error) {
@@ -318,60 +359,9 @@ func (p *setnsProcess) execSetns() error {
 	return nil
 }
 
-// terminate sends a SIGKILL to the forked process for the setns routine then waits to
-// avoid the process becoming a zombie.
-func (p *setnsProcess) terminate() error {
-	if p.cmd.Process == nil {
-		return nil
-	}
-	err := p.cmd.Process.Kill()
-	if _, werr := p.wait(); err == nil {
-		err = werr
-	}
-	return err
-}
-
-func (p *setnsProcess) wait() (*os.ProcessState, error) {
-	err := p.cmd.Wait()
-
-	// Return actual ProcessState even on Wait error
-	return p.cmd.ProcessState, err
-}
-
-func (p *setnsProcess) pid() int {
-	return p.cmd.Process.Pid
-}
-
-func (p *setnsProcess) externalDescriptors() []string {
-	return p.fds
-}
-
-func (p *setnsProcess) setExternalDescriptors(newFds []string) {
-	p.fds = newFds
-}
-
-func (p *setnsProcess) forwardChildLogs() chan error {
-	return logs.ForwardLogs(p.comm.logPipeParent)
-}
-
 type initProcess struct {
-	cmd             *exec.Cmd
-	comm            *processComm
-	config          *initConfig
-	manager         cgroups.Manager
+	containerProcess
 	intelRdtManager *intelrdt.Manager
-	container       *Container
-	fds             []string
-	process         *Process
-	bootstrapData   io.Reader
-}
-
-func (p *initProcess) pid() int {
-	return p.cmd.Process.Pid
-}
-
-func (p *initProcess) externalDescriptors() []string {
-	return p.fds
 }
 
 // getChildPid receives the final child's pid over the provided pipe.
@@ -789,27 +779,6 @@ func (p *initProcess) start() (retErr error) {
 	return nil
 }
 
-func (p *initProcess) wait() (*os.ProcessState, error) {
-	err := p.cmd.Wait()
-	return p.cmd.ProcessState, err
-}
-
-func (p *initProcess) terminate() error {
-	if p.cmd.Process == nil {
-		return nil
-	}
-	err := p.cmd.Process.Kill()
-	if _, werr := p.wait(); err == nil {
-		err = werr
-	}
-	return err
-}
-
-func (p *initProcess) startTime() (uint64, error) {
-	stat, err := system.Stat(p.pid())
-	return stat.StartTime, err
-}
-
 func (p *initProcess) updateSpecState() error {
 	s, err := p.container.currentOCIState()
 	if err != nil {
@@ -835,22 +804,6 @@ func (p *initProcess) createNetworkInterfaces() error {
 		p.config.Networks = append(p.config.Networks, n)
 	}
 	return nil
-}
-
-func (p *initProcess) signal(sig os.Signal) error {
-	s, ok := sig.(unix.Signal)
-	if !ok {
-		return errors.New("os: unsupported signal type")
-	}
-	return unix.Kill(p.pid(), s)
-}
-
-func (p *initProcess) setExternalDescriptors(newFds []string) {
-	p.fds = newFds
-}
-
-func (p *initProcess) forwardChildLogs() chan error {
-	return logs.ForwardLogs(p.comm.logPipeParent)
 }
 
 func pidGetFd(pid, srcFd int) (*os.File, error) {
