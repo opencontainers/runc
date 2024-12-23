@@ -434,6 +434,16 @@ func (hooks Hooks) Run(name HookName, state *specs.State) error {
 	return nil
 }
 
+// SetDefaultEnv sets the environment for those CommandHook entries
+// that do not have one set.
+func (hooks HookList) SetDefaultEnv(env []string) {
+	for _, h := range hooks {
+		if ch, ok := h.(CommandHook); ok && len(ch.Env) == 0 {
+			ch.Env = env
+		}
+	}
+}
+
 type Hook interface {
 	// Run executes the hook with the provided state.
 	Run(*specs.State) error
@@ -463,17 +473,17 @@ type Command struct {
 }
 
 // NewCommandHook will execute the provided command when the hook is run.
-func NewCommandHook(cmd Command) CommandHook {
+func NewCommandHook(cmd *Command) CommandHook {
 	return CommandHook{
 		Command: cmd,
 	}
 }
 
 type CommandHook struct {
-	Command
+	*Command
 }
 
-func (c Command) Run(s *specs.State) error {
+func (c *Command) Run(s *specs.State) error {
 	b, err := json.Marshal(s)
 	if err != nil {
 		return err
