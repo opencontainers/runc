@@ -1256,8 +1256,8 @@ func createHooks(rspec *specs.Spec, config *configs.Config) {
 	}
 }
 
-func createCommandHook(h specs.Hook) configs.Command {
-	cmd := configs.Command{
+func createCommandHook(h specs.Hook) *configs.Command {
+	cmd := &configs.Command{
 		Path: h.Path,
 		Args: h.Args,
 		Env:  h.Env,
