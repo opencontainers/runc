@@ -2,10 +2,12 @@ package specconv
 
 import (
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
 	dbus "github.com/godbus/dbus/v5"
+	ll "github.com/landlock-lsm/go-landlock/landlock"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"github.com/opencontainers/runc/libcontainer/devices"
@@ -182,6 +184,107 @@ func TestSetupSeccompWrongArchitecture(t *testing.T) {
 	_, err := SetupSeccomp(conf)
 	if err == nil {
 		t.Error("Expected error")
+	}
+}
+
+func TestSetupLandlock(t *testing.T) {
+	conf := &specs.Landlock{
+		Ruleset: &specs.LandlockRuleset{
+			HandledAccessFS: []specs.LandlockFSAction{
+				specs.FSActExecute,
+				specs.FSActWriteFile,
+				specs.FSActReadFile,
+				specs.FSActReadDir,
+				specs.FSActRemoveDir,
+				specs.FSActRemoveFile,
+				specs.FSActMakeChar,
+				specs.FSActMakeDir,
+				specs.FSActMakeReg,
+				specs.FSActMakeSock,
+				specs.FSActMakeFifo,
+				specs.FSActMakeBlock,
+				specs.FSActMakeSym,
+			},
+		},
+		Rules: &specs.LandlockRules{
+			PathBeneath: []specs.LandlockRulePathBeneath{
+				{
+					AllowedAccess: []specs.LandlockFSAction{
+						specs.FSActExecute,
+						specs.FSActReadFile,
+						specs.FSActReadDir,
+					},
+					Paths: []string{
+						"/usr",
+						"/bin",
+					},
+				},
+				{
+					AllowedAccess: []specs.LandlockFSAction{
+						specs.FSActExecute,
+						specs.FSActWriteFile,
+						specs.FSActReadFile,
+						specs.FSActRemoveFile,
+						specs.FSActMakeChar,
+						specs.FSActMakeReg,
+						specs.FSActMakeSock,
+						specs.FSActMakeFifo,
+						specs.FSActMakeBlock,
+						specs.FSActMakeSym,
+					},
+					Paths: []string{
+						"/tmp",
+					},
+				},
+			},
+		},
+		DisableBestEffort: false,
+	}
+
+	landlock, err := SetupLandlock(conf)
+	if err != nil {
+		t.Errorf("Couldn't create Landlock config: %v", err)
+	}
+
+	// Execute | WriteFile | ReadFile | ReadDir | RemoveDir | RemoveFile | MakeChar |
+	// MakeDir | MakeReg | MakeSock | MakeFifo | MakeBlock | MakeSym
+	expectedRulesetAccess := ll.AccessFSSet(0x1FFF)
+	ruleset := landlock.Ruleset
+	if ruleset.HandledAccessFS != expectedRulesetAccess {
+		t.Errorf("Expected ruleset not found, expected %v, got: %v",
+			expectedRulesetAccess, ruleset.HandledAccessFS)
+	}
+
+	pathRules := landlock.Rules.PathBeneath
+
+	pathRulesLength := len(pathRules)
+	if pathRulesLength != 2 {
+		t.Errorf("Expected 2 path beneath rules, got :%d", pathRulesLength)
+	}
+
+	expectedPathRulesAccess := []configs.RulePathBeneath{
+		{
+			// Execute | ReadFile | ReadDir
+			AllowedAccess: 0xD,
+			Paths:         []string{"/usr", "/bin"},
+		},
+		{
+			// Execute | WriteFile | ReadFile | RemoveFile | MakeChar | MakeReg | MakeSock | MakeFifo |
+			// MakeBlock | MakeSym
+			AllowedAccess: 0x1F67,
+			Paths:         []string{"/tmp"},
+		},
+	}
+
+	for i, rule := range pathRules {
+		if !reflect.DeepEqual(*rule, expectedPathRulesAccess[i]) {
+			t.Errorf("Wrong rule conversion for the rule %d under test, expected %v, got: %v",
+				i, expectedPathRulesAccess[i], rule)
+		}
+	}
+
+	if landlock.DisableBestEffort {
+		t.Error("Wrong conversion for DisableBestEffort")
 	}
 }
 

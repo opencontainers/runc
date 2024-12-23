@@ -14,6 +14,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/keys"
+	"github.com/opencontainers/runc/libcontainer/landlock"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
@@ -266,6 +267,13 @@ func (l *linuxStandardInit) Init() error {
 	// since been resolved.
 	// https://github.com/torvalds/linux/blob/v4.9/fs/exec.c#L1290-L1318
 	_ = l.fifoFile.Close()
+
+	// NoNewPrivileges must be enabled to use Landlock.
+	if l.config.Config.Landlock != nil && l.config.NoNewPrivileges {
+		if err := landlock.InitLandlock(l.config.Config.Landlock); err != nil {
+			return fmt.Errorf("unable to init Landlock: %w", err)
+		}
+	}
 
 	s := l.config.SpecState
 	s.Pid = unix.Getpid()

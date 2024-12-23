@@ -33,6 +33,8 @@ require (
 
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
+	github.com/landlock-lsm/go-landlock v0.0.0-20210828133255-ec6c6b87a946
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/vishvananda/netns v0.0.4 // indirect
+	kernel.org/pub/linux/libs/security/libcap/psx v1.2.51 // indirect
 )
