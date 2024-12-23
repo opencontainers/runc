@@ -15,7 +15,7 @@ import (
 func TestUnmarshalHooks(t *testing.T) {
 	timeout := time.Second
 
-	hookCmd := configs.NewCommandHook(configs.Command{
+	hookCmd := configs.NewCommandHook(&configs.Command{
 		Path:    "/var/vcap/hooks/hook",
 		Args:    []string{"--pid=123"},
 		Env:     []string{"FOO=BAR"},
@@ -52,7 +52,7 @@ func TestUnmarshalHooksWithInvalidData(t *testing.T) {
 func TestMarshalHooks(t *testing.T) {
 	timeout := time.Second
 
-	hookCmd := configs.NewCommandHook(configs.Command{
+	hookCmd := configs.NewCommandHook(&configs.Command{
 		Path:    "/var/vcap/hooks/hook",
 		Args:    []string{"--pid=123"},
 		Env:     []string{"FOO=BAR"},
@@ -84,7 +84,7 @@ func TestMarshalHooks(t *testing.T) {
 func TestMarshalUnmarshalHooks(t *testing.T) {
 	timeout := time.Second
 
-	hookCmd := configs.NewCommandHook(configs.Command{
+	hookCmd := configs.NewCommandHook(&configs.Command{
 		Path:    "/var/vcap/hooks/hook",
 		Args:    []string{"--pid=123"},
 		Env:     []string{"FOO=BAR"},
@@ -194,7 +194,7 @@ exit 0
 	}
 	defer os.Remove(filename)
 
-	cmdHook := configs.NewCommandHook(configs.Command{
+	cmdHook := configs.NewCommandHook(&configs.Command{
 		Path: filename,
 		Args: []string{filename, "testarg"},
 		Env:  []string{"FOO=BAR"},
@@ -216,7 +216,7 @@ func TestCommandHookRunTimeout(t *testing.T) {
 	}
 	timeout := 100 * time.Millisecond
 
-	cmdHook := configs.NewCommandHook(configs.Command{
+	cmdHook := configs.NewCommandHook(&configs.Command{
 		Path:    "/bin/sleep",
 		Args:    []string{"/bin/sleep", "1"},
 		Timeout: &timeout,
