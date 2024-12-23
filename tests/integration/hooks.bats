@@ -42,3 +42,24 @@ function teardown() {
 		[[ "$output" == *"error running $hook hook #1:"* ]]
 	done
 }
+
+# While runtime-spec does not say what environment variables hooks should have,
+# if not explicitly specified, historically the StartContainer hook inherited
+# the process environment specified for init.
+#
+# Check this behavior is preserved.
+@test "runc run [startContainer hook should inherit process environment]" {
+	cat >"rootfs/check-env.sh" <<-'EOF'
+		#!/bin/sh -ue
+		test $ONE = two
+		test $FOO = bar
+		echo $HOME # Test HOME is set w/o checking the value.
+	EOF
+	chmod +x "rootfs/check-env.sh"
+
+	update_config '	  .process.args = ["/bin/true"]
+			| .process.env = ["ONE=two", "FOO=bar"]
+			| .hooks |= {"startContainer": [{"path": "/check-env.sh"}]}'
+	runc run ct1
+	[ "$status" -eq 0 ]
+}
