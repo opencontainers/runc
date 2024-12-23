@@ -1113,7 +1113,7 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 			return err
 		}
 	case "setup-namespaces":
-		if c.config.Hooks != nil {
+		if c.config.HasHook(configs.Prestart, configs.CreateRuntime) {
 			s, err := c.currentOCIState()
 			if err != nil {
 				return nil

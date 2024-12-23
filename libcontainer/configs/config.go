@@ -332,6 +332,19 @@ const (
 	Poststop HookName = "poststop"
 )
 
+// HasHook checks if config has any hooks with any given names configured.
+func (c *Config) HasHook(names ...HookName) bool {
+	if c.Hooks == nil {
+		return false
+	}
+	for _, h := range names {
+		if len(c.Hooks[h]) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // KnownHookNames returns the known hook names.
 // Used by `runc features`.
 func KnownHookNames() []string {
