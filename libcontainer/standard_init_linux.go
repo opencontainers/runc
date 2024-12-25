@@ -155,15 +155,12 @@ func (l *linuxStandardInit) Init() error {
 		}
 	}
 
-	if l.config.Config.Scheduler != nil {
-		if err := setupScheduler(l.config.Config); err != nil {
-			return err
-		}
+	if err := setupScheduler(l.config.Config); err != nil {
+		return err
 	}
-	if l.config.Config.IOPriority != nil {
-		if err := setIOPriority(l.config.Config.IOPriority); err != nil {
-			return err
-		}
+
+	if err := setupIOPriority(l.config.Config); err != nil {
+		return err
 	}
 
 	// Tell our parent that we're ready to exec. This must be done before the

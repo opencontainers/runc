@@ -166,12 +166,6 @@ type setnsProcess struct {
 func (p *setnsProcess) start() (retErr error) {
 	defer p.comm.closeParent()
 
-	if p.process.IOPriority != nil {
-		if err := setIOPriority(p.process.IOPriority); err != nil {
-			return err
-		}
-	}
-
 	// get the "before" value of oom kill count
 	oom, _ := p.manager.OOMKillCount()
 	err := p.cmd.Start()
@@ -904,22 +898,4 @@ func (p *Process) InitializeIO(rootuid, rootgid int) (i *IO, err error) {
 		}
 	}
 	return i, nil
-}
-
-func setIOPriority(ioprio *configs.IOPriority) error {
-	const ioprioWhoPgrp = 1
-
-	class, ok := configs.IOPrioClassMapping[ioprio.Class]
-	if !ok {
-		return fmt.Errorf("invalid io priority class: %s", ioprio.Class)
-	}
-
-	// Combine class and priority into a single value
-	// https://github.com/torvalds/linux/blob/v5.18/include/uapi/linux/ioprio.h#L5-L17
-	iop := (class << 13) | ioprio.Priority
-	_, _, errno := unix.RawSyscall(unix.SYS_IOPRIO_SET, ioprioWhoPgrp, 0, uintptr(iop))
-	if errno != 0 {
-		return fmt.Errorf("failed to set io priority: %w", errno)
-	}
-	return nil
 }
