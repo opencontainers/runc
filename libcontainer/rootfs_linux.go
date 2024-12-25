@@ -195,11 +195,12 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		return &os.PathError{Op: "chdir", Path: config.Rootfs, Err: err}
 	}
 
-	s := iConfig.SpecState
-	s.Pid = unix.Getpid()
-	s.Status = specs.StateCreating
-	if err := iConfig.Config.Hooks.Run(configs.CreateContainer, s); err != nil {
-		return err
+	if s := iConfig.SpecState; s != nil {
+		s.Pid = unix.Getpid()
+		s.Status = specs.StateCreating
+		if err := iConfig.Config.Hooks.Run(configs.CreateContainer, s); err != nil {
+			return err
+		}
 	}
 
 	if config.NoPivotRoot {
