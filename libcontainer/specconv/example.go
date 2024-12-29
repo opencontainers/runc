@@ -144,6 +144,9 @@ func Example() *specs.Spec {
 				{
 					Type: specs.MountNamespace,
 				},
+				{
+					Type: specs.TimeNamespace,
+				},
 			},
 		},
 	}
