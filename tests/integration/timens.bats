@@ -28,8 +28,7 @@ function teardown() {
 	requires timens
 
 	update_config '.process.args = ["cat", "/proc/self/timens_offsets"]'
-	update_config '.linux.namespaces += [{"type": "time"}]
-		| .linux.timeOffsets = null'
+	update_config '.linux.timeOffsets = null'
 
 	runc run test_busybox
 	[ "$status" -eq 0 ]
@@ -42,8 +41,7 @@ function teardown() {
 	requires timens
 
 	update_config '.process.args = ["cat", "/proc/self/timens_offsets"]'
-	update_config '.linux.namespaces += [{"type": "time"}]
-		| .linux.timeOffsets = {
+	update_config '.linux.timeOffsets = {
 			"monotonic": { "secs": 7881, "nanosecs": 2718281 },
 			"boottime": { "secs": 1337, "nanosecs": 3141519 }
 		}'
@@ -64,8 +62,7 @@ function teardown() {
 	remap_rootfs
 
 	update_config '.process.args = ["cat", "/proc/self/timens_offsets"]'
-	update_config '.linux.namespaces += [{"type": "time"}]
-		| .linux.timeOffsets = {
+	update_config '.linux.timeOffsets = {
 			"monotonic": { "secs": 7881, "nanosecs": 2718281 },
 			"boottime": { "secs": 1337, "nanosecs": 3141519 }
 		}'

@@ -142,16 +142,14 @@ function teardown() {
 	requires timens
 
 	# Create a detached container with the namespaces we want. We notably want
-	# to include both userns and timens, which require config-related
-	# configuration.
+	# to include userns, which require config-related configuration.
 	if [ $EUID -eq 0 ]; then
 		update_config '.linux.namespaces += [{"type": "user"}]
 			| .linux.uidMappings += [{"containerID": 0, "hostID": 100000, "size": 100}]
 			| .linux.gidMappings += [{"containerID": 0, "hostID": 200000, "size": 200}]'
 		remap_rootfs
 	fi
-	update_config '.linux.namespaces += [{"type": "time"}]
-		| .linux.timeOffsets = {
+	update_config '.linux.timeOffsets = {
 			"monotonic": { "secs": 7881, "nanosecs": 2718281 },
 			"boottime": { "secs": 1337, "nanosecs": 3141519 }
 		}'
