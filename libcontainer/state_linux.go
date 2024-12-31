@@ -8,6 +8,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
@@ -48,6 +49,22 @@ func destroy(c *Container) error {
 		// Likely to fail when c.config.RootlessCgroups is true
 		_ = signalAllProcesses(c.cgroupManager, unix.SIGKILL)
 	}
+
+	// restore network devices
+	nsPath := c.config.Namespaces.PathOf(configs.NEWNET)
+
+	if nsPath != "" {
+		for name, netDevice := range c.config.NetDevices {
+			err := netnsDettach(name, nsPath, *netDevice)
+			if err != nil {
+				// don't fail on the interface detachment to avoid problems with the container shutdown.
+				// In the worst case the OS will handle the cleanup, hardware interfaces will be back on the
+				// root namespace and virtual devices will be destroyed.
+				logrus.WithError(err).Warnf("failed to restore network device %s from network namespace %s", name, nsPath)
+			}
+		}
+	}
+
 	if err := c.cgroupManager.Destroy(); err != nil {
 		return fmt.Errorf("unable to remove container's cgroup: %w", err)
 	}
