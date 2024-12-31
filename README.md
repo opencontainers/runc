@@ -27,7 +27,7 @@ A third party security audit was performed by Cure53, you can see the full repor
 
 ## Building
 
-`runc` only supports Linux. See the header of [`go.mod`](./go mod) for the required Go version.
+`runc` only supports Linux. See the header of [`go.mod`](./go.mod) for the required Go version.
 
 ### Pre-Requisites
 
