@@ -861,7 +861,7 @@ func getPipeFds(pid int) ([]string, error) {
 // opposite side for each. Do not use this if you want to have a pseudoterminal
 // set up for you by libcontainer (TODO: fix that too).
 // TODO: This is mostly unnecessary, and should be handled by clients.
-func (p *Process) InitializeIO(rootuid, rootgid int) (i *IO, err error) {
+func (p *Process) InitializeIO(containerUID, containerGID int) (i *IO, err error) {
 	var fds []uintptr
 	i = &IO{}
 	// cleanup in case of an error
@@ -893,7 +893,11 @@ func (p *Process) InitializeIO(rootuid, rootgid int) (i *IO, err error) {
 	p.Stderr, i.Stderr = w, r
 	// change ownership of the pipes in case we are in a user namespace
 	for _, fd := range fds {
-		if err := unix.Fchown(int(fd), rootuid, rootgid); err != nil {
+		if err := unix.Fchown(int(fd), containerUID, containerGID); err != nil {
+			if errors.Is(err, unix.EINVAL) || errors.Is(err, unix.EPERM) || errors.Is(err, unix.EROFS) {
+				// Let's wait to do chown in the container init
+				continue
+			}
 			return nil, &os.PathError{Op: "fchown", Path: "fd " + strconv.Itoa(int(fd)), Err: err}
 		}
 	}
