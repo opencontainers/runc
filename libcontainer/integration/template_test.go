@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	devices "github.com/opencontainers/runc/libcontainer/cgroups/devices/config"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/specconv"
 	"golang.org/x/sys/unix"
 )

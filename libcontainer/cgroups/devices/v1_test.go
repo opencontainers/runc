@@ -8,8 +8,8 @@ import (
 	"github.com/moby/sys/userns"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	devices "github.com/opencontainers/runc/libcontainer/cgroups/devices/config"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
-	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
 func init() {

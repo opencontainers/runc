@@ -7,7 +7,7 @@ import (
 
 	"github.com/moby/sys/userns"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/devices"
+	devices "github.com/opencontainers/runc/libcontainer/cgroups/devices/config"
 )
 
 var testingSkipFinalCheck bool
