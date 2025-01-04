@@ -31,14 +31,14 @@ func TestFactoryLoadContainer(t *testing.T) {
 		id            = "1"
 		expectedHooks = configs.Hooks{
 			configs.Prestart: configs.HookList{
-				configs.CommandHook{Command: configs.Command{Path: "prestart-hook"}},
+				configs.CommandHook{Command: &configs.Command{Path: "prestart-hook"}},
 			},
 			configs.Poststart: configs.HookList{
-				configs.CommandHook{Command: configs.Command{Path: "poststart-hook"}},
+				configs.CommandHook{Command: &configs.Command{Path: "poststart-hook"}},
 			},
 			configs.Poststop: configs.HookList{
 				unserializableHook{},
-				configs.CommandHook{Command: configs.Command{Path: "poststop-hook"}},
+				configs.CommandHook{Command: &configs.Command{Path: "poststop-hook"}},
 			},
 		}
 		expectedConfig = &configs.Config{
