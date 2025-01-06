@@ -60,8 +60,8 @@ func ParseUint(s string, base, bitSize int) (uint64, error) {
 // "io_service_bytes 1234" will be returned as "io_service_bytes", 1234.
 func ParseKeyValue(t string) (string, uint64, error) {
 	key, val, ok := strings.Cut(t, " ")
-	if !ok {
-		return "", 0, fmt.Errorf("line %q is not in key value format", t)
+	if !ok || key == "" || val == "" {
+		return "", 0, fmt.Errorf(`line %q is not in "key value" format`, t)
 	}
 
 	value, err := ParseUint(val, 10, 64)
