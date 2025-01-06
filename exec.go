@@ -117,6 +117,12 @@ following will output a list of processes running in the container:
 	SkipArgReorder: true,
 }
 
+// getSubCgroupPaths parses --cgroup arguments, which can either be
+//   - a single "path" argument (for cgroup v2);
+//   - one or more controller[,controller[,...]]:path arguments (for cgroup v1).
+//
+// Returns a controller to path map. For cgroup v2, it's a single entity map
+// with empty controller value.
 func getSubCgroupPaths(args []string) (map[string]string, error) {
 	if len(args) == 0 {
 		return nil, nil
@@ -127,10 +133,16 @@ func getSubCgroupPaths(args []string) (map[string]string, error) {
 		if ctr, path, ok := strings.Cut(c, ":"); ok {
 			// There may be a few comma-separated controllers.
 			for _, ctrl := range strings.Split(ctr, ",") {
+				if ctrl == "" {
+					return nil, fmt.Errorf("invalid --cgroup argument: %s (empty <controller> prefix)", c)
+				}
+				if _, ok := paths[ctrl]; ok {
+					return nil, fmt.Errorf("invalid --cgroup argument(s): controller %s specified multiple times", ctrl)
+				}
 				paths[ctrl] = path
 			}
 		} else {
-			// No controller: prefix.
+			// No "controller:" prefix (cgroup v2, a single path).
 			if len(args) != 1 {
 				return nil, fmt.Errorf("invalid --cgroup argument: %s (missing <controller>: prefix)", c)
 			}
