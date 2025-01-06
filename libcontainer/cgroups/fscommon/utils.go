@@ -104,7 +104,6 @@ func GetCgroupParamUint(path, file string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	contents = strings.TrimSpace(contents)
 	if contents == "max" {
 		return math.MaxUint64, nil
 	}
@@ -119,11 +118,10 @@ func GetCgroupParamUint(path, file string) (uint64, error) {
 // GetCgroupParamInt reads a single int64 value from specified cgroup file.
 // If the value read is "max", the math.MaxInt64 is returned.
 func GetCgroupParamInt(path, file string) (int64, error) {
-	contents, err := cgroups.ReadFile(path, file)
+	contents, err := GetCgroupParamString(path, file)
 	if err != nil {
 		return 0, err
 	}
-	contents = strings.TrimSpace(contents)
 	if contents == "max" {
 		return math.MaxInt64, nil
 	}
