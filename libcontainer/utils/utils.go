@@ -88,8 +88,8 @@ func stripRoot(root, path string) string {
 func SearchLabels(labels []string, key string) (string, bool) {
 	key += "="
 	for _, s := range labels {
-		if strings.HasPrefix(s, key) {
-			return s[len(key):], true
+		if val, ok := strings.CutPrefix(s, key); ok {
+			return val, true
 		}
 	}
 	return "", false
