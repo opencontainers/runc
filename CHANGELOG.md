@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.2.z]
 
+## [1.2.4] - 2025-01-07
+
+> Христос се роди!
+
+### Fixed
+ * Re-add tun/tap devices to built-in allowed devices lists.
+
+   In runc 1.2.0 we removed these devices from the default allow-list (which
+   were added seemingly by accident early in Docker's history) as a precaution
+   in order to try to reduce the attack surface of device inodes available to
+   most containers (#3468). At the time we thought that the vast majority of
+   users using tun/tap would already be specifying what devices they need (such
+   as by using `--device` with Docker/Podman) as opposed to doing the `mknod`
+   manually, and thus there would've been no user-visible change.
+
+   Unfortunately, it seems that this regressed a noticeable number of users
+   (and not all higher-level tools provide easy ways to specify devices to
+   allow) and so this change needed to be reverted. Users that do not need
+   these devices are recommended to explicitly disable them by adding deny
+   rules in their container configuration. (#4555, #4556)
+
 ## [1.2.3] - 2024-12-12
 
 > Winter is not a season, it's a celebration.
@@ -951,7 +972,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.1.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.1.0-rc.1
 
 <!-- 1.2.z patch releases -->
-[Unreleased 1.2.z]: https://github.com/opencontainers/runc/compare/v1.2.3...release-1.2
+[Unreleased 1.2.z]: https://github.com/opencontainers/runc/compare/v1.2.4...release-1.2
+[1.2.4]: https://github.com/opencontainers/runc/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/opencontainers/runc/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/opencontainers/runc/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.2.1
