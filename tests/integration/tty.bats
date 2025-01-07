@@ -153,8 +153,7 @@ function teardown() {
 	# make sure we're running
 	testcontainer test_busybox running
 
-	tty_info_with_consize_size=$(
-		cat <<EOF
+	tty_info_with_consize_size='
 {
     "terminal": true,
     "consoleSize": {
@@ -167,9 +166,7 @@ function teardown() {
 	    "/bin/stty -a > /tmp/tty-info"
     ],
     "cwd": "/"
-}
-EOF
-	)
+}'
 
 	# Run the detached exec.
 	runc exec -t --pid-file pid.txt -d --console-socket "$CONSOLE_SOCKET" -p <(echo "$tty_info_with_consize_size") test_busybox
@@ -179,17 +176,14 @@ EOF
 	# Wait for the exec to finish.
 	wait_pids_gone 100 0.5 "$(cat pid.txt)"
 
-	tty_info=$(
-		cat <<EOF
+	tty_info='
 {
     "args": [
 	"/bin/cat",
 	"/tmp/tty-info"
     ],
     "cwd": "/"
-}
-EOF
-	)
+}'
 
 	# run the exec
 	runc exec -t -p <(echo "$tty_info") test_busybox

@@ -30,13 +30,8 @@ function teardown() {
 	bundle=$(pwd)
 
 	# To mount $HOOKLIBCR we need to do that in the container namespace
-	create_runtime_hook=$(
-		cat <<-EOF
-			pid=\$(cat - | jq -r '.pid')
-			touch "$LIBPATH/$HOOKLIBCR.1.0.0"
-			nsenter -m \$ns -t \$pid mount --bind "$bundle/$HOOKLIBCR.1.0.0" "$LIBPATH/$HOOKLIBCR.1.0.0"
-		EOF
-	)
+	create_runtime_hook="pid=\$(cat - | jq -r '.pid'); touch "$LIBPATH/$HOOKLIBCR.1.0.0" && \
+		nsenter -m \$ns -t \$pid mount --bind "$bundle/$HOOKLIBCR.1.0.0" "$LIBPATH/$HOOKLIBCR.1.0.0""
 
 	create_container_hook="touch ./lib/$HOOKLIBCC.1.0.0 && mount --bind $bundle/$HOOKLIBCC.1.0.0 ./lib/$HOOKLIBCC.1.0.0"
 
