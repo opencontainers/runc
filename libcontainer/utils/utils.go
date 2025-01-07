@@ -77,7 +77,7 @@ func stripRoot(root, path string) string {
 		path = "/"
 	case root == "/":
 		// do nothing
-	case strings.HasPrefix(path, root+"/"):
+	default:
 		path = strings.TrimPrefix(path, root+"/")
 	}
 	return CleanPath("/" + path)
