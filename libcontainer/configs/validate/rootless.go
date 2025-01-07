@@ -56,7 +56,7 @@ func rootlessEUIDMount(config *configs.Config) error {
 		// Check that the options list doesn't contain any uid= or gid= entries
 		// that don't resolve to root.
 		for _, opt := range strings.Split(mount.Data, ",") {
-			if str := strings.TrimPrefix(opt, "uid="); len(str) < len(opt) {
+			if str, ok := strings.CutPrefix(opt, "uid="); ok {
 				uid, err := strconv.Atoi(str)
 				if err != nil {
 					// Ignore unknown mount options.
@@ -65,9 +65,9 @@ func rootlessEUIDMount(config *configs.Config) error {
 				if _, err := config.HostUID(uid); err != nil {
 					return fmt.Errorf("cannot specify uid=%d mount option for rootless container: %w", uid, err)
 				}
+				continue
 			}
-
-			if str := strings.TrimPrefix(opt, "gid="); len(str) < len(opt) {
+			if str, ok := strings.CutPrefix(opt, "gid="); ok {
 				gid, err := strconv.Atoi(str)
 				if err != nil {
 					// Ignore unknown mount options.

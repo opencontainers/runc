@@ -151,8 +151,8 @@ func openFile(dir, file string, flags int) (*os.File, error) {
 	if prepareOpenat2() != nil {
 		return openFallback(path, flags, mode)
 	}
-	relPath := strings.TrimPrefix(path, cgroupfsPrefix)
-	if len(relPath) == len(path) { // non-standard path, old system?
+	relPath, ok := strings.CutPrefix(path, cgroupfsPrefix)
+	if !ok { // Non-standard path, old system?
 		return openFallback(path, flags, mode)
 	}
 
