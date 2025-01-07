@@ -24,8 +24,8 @@ function teardown() {
 
 @test "runc run (hooks library tests)" {
 	# setup some dummy libs
-	gcc -shared -Wl,-soname,librunc-hooks-create-runtime.so.1 -o "$HOOKLIBCR.1.0.0"
-	gcc -shared -Wl,-soname,librunc-hooks-create-container.so.1 -o "$HOOKLIBCC.1.0.0"
+	gcc -shared -Wl,-soname,"$HOOKLIBCR.1" -o "$HOOKLIBCR.1.0.0"
+	gcc -shared -Wl,-soname,"$HOOKLIBCC.1" -o "$HOOKLIBCC.1.0.0"
 
 	bundle=$(pwd)
 
