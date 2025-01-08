@@ -47,6 +47,9 @@ func KnownCapabilities() []string {
 // printing a warning instead.
 func New(capConfig *configs.Capabilities) (*Caps, error) {
 	var c Caps
+	if capConfig == nil {
+		return &c, nil
+	}
 
 	_, err := capMap()
 	if err != nil {
@@ -103,6 +106,9 @@ type Caps struct {
 
 // ApplyBoundingSet sets the capability bounding set to those specified in the whitelist.
 func (c *Caps) ApplyBoundingSet() error {
+	if c.pid == nil {
+		return nil
+	}
 	c.pid.Clear(capability.BOUNDING)
 	c.pid.Set(capability.BOUNDING, c.caps[capability.BOUNDING]...)
 	return c.pid.Apply(capability.BOUNDING)
@@ -110,6 +116,9 @@ func (c *Caps) ApplyBoundingSet() error {
 
 // Apply sets all the capabilities for the current process in the config.
 func (c *Caps) ApplyCaps() error {
+	if c.pid == nil {
+		return nil
+	}
 	c.pid.Clear(capability.CAPS | capability.BOUNDS)
 	for _, g := range []capability.CapType{
 		capability.EFFECTIVE,
