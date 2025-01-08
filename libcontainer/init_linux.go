@@ -81,6 +81,7 @@ type initConfig struct {
 	NoNewPrivileges bool                  `json:"no_new_privileges"`
 	ProcessLabel    string                `json:"process_label"`
 	Rlimits         []configs.Rlimit      `json:"rlimits"`
+	IOPriority      *configs.IOPriority   `json:"io_priority,omitempty"`
 
 	// Miscellaneous properties, filled in by [Container.newInitConfig]
 	// unless documented otherwise.
@@ -623,7 +624,7 @@ func setupScheduler(config *configs.Config) error {
 	return nil
 }
 
-func setupIOPriority(config *configs.Config) error {
+func setupIOPriority(config *initConfig) error {
 	const ioprioWhoPgrp = 1
 
 	ioprio := config.IOPriority

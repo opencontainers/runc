@@ -707,6 +707,7 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 		AppArmorProfile:  c.config.AppArmorProfile,
 		ProcessLabel:     c.config.ProcessLabel,
 		Rlimits:          c.config.Rlimits,
+		IOPriority:       c.config.IOPriority,
 		CreateConsole:    process.ConsoleSocket != nil,
 		ConsoleWidth:     process.ConsoleWidth,
 		ConsoleHeight:    process.ConsoleHeight,
@@ -728,6 +729,9 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 	}
 	if len(process.Rlimits) > 0 {
 		cfg.Rlimits = process.Rlimits
+	}
+	if process.IOPriority != nil {
+		cfg.IOPriority = process.IOPriority
 	}
 
 	// Set misc properties.

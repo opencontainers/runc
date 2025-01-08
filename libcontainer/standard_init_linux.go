@@ -159,7 +159,7 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 
-	if err := setupIOPriority(l.config.Config); err != nil {
+	if err := setupIOPriority(l.config); err != nil {
 		return err
 	}
 

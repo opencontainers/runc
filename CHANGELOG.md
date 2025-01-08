@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    IDs before calling libcontainer; it is recommended to use Go package
    github.com/moby/sys/user for that. (#3999)
 
+### Fixed
+ * `runc exec -p` no longer ignores specified `ioPriority` setting.
+   Similarly, libcontainer's `Container.Start` and `Container.Run`
+   methods no longer ignore `Process.IOPriority` setting. (#4585)
+
 ## [1.2.0] - 2024-10-22
 
 > できるときにできることをやるんだ。それが今だ。
