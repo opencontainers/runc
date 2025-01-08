@@ -689,6 +689,9 @@ func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, comm *processComm
 }
 
 func (c *Container) newInitConfig(process *Process) *initConfig {
+	// Set initial properties. For those properties that exist
+	// both in the container config and the process, use the ones
+	// from the container config first, and override them later.
 	cfg := &initConfig{
 		Config:           c.config,
 		Args:             process.Args,
@@ -710,6 +713,9 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 		ConsoleWidth:     process.ConsoleWidth,
 		ConsoleHeight:    process.ConsoleHeight,
 	}
+
+	// Overwrite config properties with ones from process.
+
 	if process.NoNewPrivileges != nil {
 		cfg.NoNewPrivileges = *process.NoNewPrivileges
 	}
@@ -722,6 +728,9 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 	if len(process.Rlimits) > 0 {
 		cfg.Rlimits = process.Rlimits
 	}
+
+	// Set misc properties.
+
 	if cgroups.IsCgroup2UnifiedMode() {
 		cfg.Cgroup2Path = c.cgroupManager.Path("")
 	}

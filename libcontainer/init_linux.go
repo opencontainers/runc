@@ -47,30 +47,58 @@ type network struct {
 	TempVethPeerName string `json:"temp_veth_peer_name"`
 }
 
-// initConfig is used for transferring parameters from Exec() to Init()
+// initConfig is used for transferring parameters from Exec() to Init().
+// It contains:
+//   - original container config;
+//   - some [Process] properties;
+//   - set of properties merged from the container config ([configs.Config])
+//     and the process ([Process]);
+//   - some properties that come from the container.
+//
+// When adding new fields, please make sure they go into the relevant section.
 type initConfig struct {
-	Args             []string              `json:"args"`
-	Env              []string              `json:"env"`
-	Cwd              string                `json:"cwd"`
-	Capabilities     *configs.Capabilities `json:"capabilities"`
-	ProcessLabel     string                `json:"process_label"`
-	AppArmorProfile  string                `json:"apparmor_profile"`
-	NoNewPrivileges  bool                  `json:"no_new_privileges"`
-	UID              int                   `json:"uid"`
-	GID              int                   `json:"gid"`
-	AdditionalGroups []int                 `json:"additional_groups"`
-	Config           *configs.Config       `json:"config"`
-	Networks         []*network            `json:"network"`
-	PassedFilesCount int                   `json:"passed_files_count"`
-	ContainerID      string                `json:"containerid"`
-	Rlimits          []configs.Rlimit      `json:"rlimits"`
-	CreateConsole    bool                  `json:"create_console"`
-	ConsoleWidth     uint16                `json:"console_width"`
-	ConsoleHeight    uint16                `json:"console_height"`
-	RootlessEUID     bool                  `json:"rootless_euid,omitempty"`
-	RootlessCgroups  bool                  `json:"rootless_cgroups,omitempty"`
-	SpecState        *specs.State          `json:"spec_state,omitempty"`
-	Cgroup2Path      string                `json:"cgroup2_path,omitempty"`
+	// Config is the original container config.
+	Config *configs.Config `json:"config"`
+
+	// Properties that are unique to and come from [Process].
+
+	Args             []string `json:"args"`
+	Env              []string `json:"env"`
+	UID              int      `json:"uid"`
+	GID              int      `json:"gid"`
+	AdditionalGroups []int    `json:"additional_groups"`
+	Cwd              string   `json:"cwd"`
+	CreateConsole    bool     `json:"create_console"`
+	ConsoleWidth     uint16   `json:"console_width"`
+	ConsoleHeight    uint16   `json:"console_height"`
+	PassedFilesCount int      `json:"passed_files_count"`
+
+	// Properties that exists both in the container config and the process,
+	// as merged by [Container.newInitConfig] (process properties has preference).
+
+	AppArmorProfile string                `json:"apparmor_profile"`
+	Capabilities    *configs.Capabilities `json:"capabilities"`
+	NoNewPrivileges bool                  `json:"no_new_privileges"`
+	ProcessLabel    string                `json:"process_label"`
+	Rlimits         []configs.Rlimit      `json:"rlimits"`
+
+	// Properties that only exist in container config.
+	// FIXME: they are also passed in Config above.
+
+	RootlessEUID    bool `json:"rootless_euid,omitempty"`
+	RootlessCgroups bool `json:"rootless_cgroups,omitempty"`
+
+	// Miscellaneous properties, filled in by [Container.newInitConfig]
+	// unless documented otherwise.
+
+	ContainerID string `json:"containerid"`
+	Cgroup2Path string `json:"cgroup2_path,omitempty"`
+
+	// Networks is filled in from container config by [initProcess.createNetworkInterfaces].
+	Networks []*network `json:"network"`
+
+	// SpecState is filled in by [initProcess.Start].
+	SpecState *specs.State `json:"spec_state,omitempty"`
 }
 
 // Init is part of "runc init" implementation.
