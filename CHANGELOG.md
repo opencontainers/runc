@@ -11,9 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    Also, `configs.NewCommandHook` now accepts a `*Command`. (#4325)
 
 ### Fixed
- * `runc exec -p` no longer ignores specified `ioPriority` setting.
-   Similarly, libcontainer's `Container.Start` and `Container.Run`
-   methods no longer ignore `Process.IOPriority` setting. (#4585)
+ * `runc exec -p` no longer ignores specified `ioPriority` and `scheduler`
+   settings. Similarly, libcontainer's `Container.Start` and `Container.Run`
+   methods no longer ignore `Process.IOPriority` and `Process.Scheduler`
+   settings. (#4585)
 
 ## [1.2.0] - 2024-10-22
 
