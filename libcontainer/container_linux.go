@@ -700,7 +700,7 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 		GID:              process.GID,
 		AdditionalGroups: process.AdditionalGroups,
 		Cwd:              process.Cwd,
-		Capabilities:     process.Capabilities,
+		Capabilities:     c.config.Capabilities,
 		PassedFilesCount: len(process.ExtraFiles),
 		ContainerID:      c.ID(),
 		NoNewPrivileges:  c.config.NoNewPrivileges,
@@ -714,6 +714,9 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 
 	// Overwrite config properties with ones from process.
 
+	if process.Capabilities != nil {
+		cfg.Capabilities = process.Capabilities
+	}
 	if process.NoNewPrivileges != nil {
 		cfg.NoNewPrivileges = *process.NoNewPrivileges
 	}

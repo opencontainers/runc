@@ -322,13 +322,7 @@ func finalizeNamespace(config *initConfig) error {
 		}
 	}
 
-	caps := &configs.Capabilities{}
-	if config.Capabilities != nil {
-		caps = config.Capabilities
-	} else if config.Config.Capabilities != nil {
-		caps = config.Config.Capabilities
-	}
-	w, err := capabilities.New(caps)
+	w, err := capabilities.New(config.Capabilities)
 	if err != nil {
 		return err
 	}
