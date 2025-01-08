@@ -114,6 +114,9 @@ type Process struct {
 
 	Scheduler *configs.Scheduler
 
+	// IOPriority is a process I/O priority.
+	//
+	// If not empty, takes precedence over container's [configs.Config.IOPriority].
 	IOPriority *configs.IOPriority
 }
 
