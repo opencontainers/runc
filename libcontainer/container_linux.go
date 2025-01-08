@@ -708,6 +708,7 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 		ProcessLabel:     c.config.ProcessLabel,
 		Rlimits:          c.config.Rlimits,
 		IOPriority:       c.config.IOPriority,
+		Scheduler:        c.config.Scheduler,
 		CreateConsole:    process.ConsoleSocket != nil,
 		ConsoleWidth:     process.ConsoleWidth,
 		ConsoleHeight:    process.ConsoleHeight,
@@ -732,6 +733,9 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 	}
 	if process.IOPriority != nil {
 		cfg.IOPriority = process.IOPriority
+	}
+	if process.Scheduler != nil {
+		cfg.Scheduler = process.Scheduler
 	}
 
 	// Set misc properties.

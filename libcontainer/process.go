@@ -112,6 +112,9 @@ type Process struct {
 	// For cgroup v2, the only key allowed is "".
 	SubCgroupPaths map[string]string
 
+	// Scheduler represents the scheduling attributes for a process.
+	//
+	// If not empty, takes precedence over container's [configs.Config.Scheduler].
 	Scheduler *configs.Scheduler
 
 	// IOPriority is a process I/O priority.

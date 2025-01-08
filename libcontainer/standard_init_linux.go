@@ -155,7 +155,7 @@ func (l *linuxStandardInit) Init() error {
 		}
 	}
 
-	if err := setupScheduler(l.config.Config); err != nil {
+	if err := setupScheduler(l.config); err != nil {
 		return err
 	}
 

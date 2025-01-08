@@ -82,6 +82,7 @@ type initConfig struct {
 	ProcessLabel    string                `json:"process_label"`
 	Rlimits         []configs.Rlimit      `json:"rlimits"`
 	IOPriority      *configs.IOPriority   `json:"io_priority,omitempty"`
+	Scheduler       *configs.Scheduler    `json:"scheduler,omitempty"`
 
 	// Miscellaneous properties, filled in by [Container.newInitConfig]
 	// unless documented otherwise.
@@ -607,7 +608,7 @@ func setupRlimits(limits []configs.Rlimit, pid int) error {
 	return nil
 }
 
-func setupScheduler(config *configs.Config) error {
+func setupScheduler(config *initConfig) error {
 	if config.Scheduler == nil {
 		return nil
 	}
@@ -616,7 +617,7 @@ func setupScheduler(config *configs.Config) error {
 		return err
 	}
 	if err := unix.SchedSetAttr(0, attr, 0); err != nil {
-		if errors.Is(err, unix.EPERM) && config.Cgroups.CpusetCpus != "" {
+		if errors.Is(err, unix.EPERM) && config.Config.Cgroups.CpusetCpus != "" {
 			return errors.New("process scheduler can't be used together with AllowedCPUs")
 		}
 		return fmt.Errorf("error setting scheduler: %w", err)

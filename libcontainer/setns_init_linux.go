@@ -71,7 +71,7 @@ func (l *linuxSetnsInit) Init() error {
 		unix.Umask(int(*l.config.Config.Umask))
 	}
 
-	if err := setupScheduler(l.config.Config); err != nil {
+	if err := setupScheduler(l.config); err != nil {
 		return err
 	}
 
