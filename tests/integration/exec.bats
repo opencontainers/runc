@@ -340,3 +340,25 @@ EOF
 	[ ${#lines[@]} -eq 1 ]
 	[[ ${lines[0]} = *"exec /run.sh: no such file or directory"* ]]
 }
+
+@test "runc exec [CPU affinity inherited from runc]" {
+        requires root smp cgroups_cpuset
+
+        first=0 # First CPU
+
+        # Container's process CPU affinity is inherited from that of runc.
+        taskset -p -c "$first" $$
+
+        runc run -d --console-socket "$CONSOLE_SOCKET" ct1
+        [ "$status" -eq 0 ]
+
+        # Check init.
+        runc exec ct1 grep "Cpus_allowed_list:" /proc/1/status
+        [ "$status" -eq 0 ]
+        [[ "${lines[0]}" == "Cpus_allowed_list:	$first" ]]
+
+        # Check exec.
+        runc exec ct1 grep "Cpus_allowed_list:" /proc/self/status
+        [ "$status" -eq 0 ]
+        [[ "${lines[0]}" == "Cpus_allowed_list:	$first" ]]
+}
