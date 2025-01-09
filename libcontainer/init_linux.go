@@ -438,14 +438,6 @@ func syncParentSeccomp(pipe *syncSocket, seccompFd int) error {
 
 // setupUser changes the groups, gid, and uid for the user inside the container.
 func setupUser(config *initConfig) error {
-	if config.RootlessEUID && len(config.AdditionalGroups) > 0 {
-		// We cannot set any additional groups in a rootless container and thus
-		// we bail if the user asked us to do so. TODO: We currently can't do
-		// this check earlier, but if libcontainer.Process.User was typesafe
-		// this might work.
-		return errors.New("cannot set any additional groups in a rootless container")
-	}
-
 	// Before we change to the container's user make sure that the processes
 	// STDIO is correctly owned by the user that we are switching to.
 	if err := fixStdioPermissions(config.UID); err != nil {

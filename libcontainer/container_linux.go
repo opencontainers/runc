@@ -302,6 +302,13 @@ func (c *Container) start(process *Process) (retErr error) {
 	if c.config.Cgroups.Resources.SkipDevices {
 		return errors.New("can't start container with SkipDevices set")
 	}
+
+	if c.config.RootlessEUID && len(process.AdditionalGroups) > 0 {
+		// We cannot set any additional groups in a rootless container
+		// and thus we bail if the user asked us to do so.
+		return errors.New("cannot set any additional groups in a rootless container")
+	}
+
 	if process.Init {
 		if c.initProcessStartTime != 0 {
 			return errors.New("container already has init process")
