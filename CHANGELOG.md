@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### libcontainer API
+ * `configs.CommandHook` struct has changed, Command is now a pointer.
+   Also, `configs.NewCommandHook` now accepts a `*Command`. (#4325)
+
 ## [1.2.0] - 2024-10-22
 
 > できるときにできることをやるんだ。それが今だ。

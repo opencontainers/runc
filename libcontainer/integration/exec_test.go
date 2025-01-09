@@ -1022,13 +1022,13 @@ func TestHook(t *testing.T) {
 			}),
 		},
 		configs.CreateContainer: configs.HookList{
-			configs.NewCommandHook(configs.Command{
+			configs.NewCommandHook(&configs.Command{
 				Path: "/bin/bash",
 				Args: []string{"/bin/bash", "-c", fmt.Sprintf("touch ./%s", hookFiles[configs.CreateContainer])},
 			}),
 		},
 		configs.StartContainer: configs.HookList{
-			configs.NewCommandHook(configs.Command{
+			configs.NewCommandHook(&configs.Command{
 				Path: "/bin/sh",
 				Args: []string{"/bin/sh", "-c", fmt.Sprintf("touch /%s", hookFiles[configs.StartContainer])},
 			}),
