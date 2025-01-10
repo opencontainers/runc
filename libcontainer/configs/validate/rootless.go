@@ -52,9 +52,14 @@ func rootlessEUIDMount(config *configs.Config) error {
 	//      convinced that's a good idea. The kernel is the best arbiter of
 	//      access control.
 
+	// Check that the options list doesn't contain any uid= or gid= entries
+	// that don't resolve to root.
 	for _, mount := range config.Mounts {
-		// Check that the options list doesn't contain any uid= or gid= entries
-		// that don't resolve to root.
+		// Look for a common substring; skip further processing
+		// if there can't be any uid= or gid= options.
+		if !strings.Contains(mount.Data, "id=") {
+			continue
+		}
 		for _, opt := range strings.Split(mount.Data, ",") {
 			if str, ok := strings.CutPrefix(opt, "uid="); ok {
 				uid, err := strconv.Atoi(str)
@@ -63,18 +68,16 @@ func rootlessEUIDMount(config *configs.Config) error {
 					continue
 				}
 				if _, err := config.HostUID(uid); err != nil {
-					return fmt.Errorf("cannot specify uid=%d mount option for rootless container: %w", uid, err)
+					return fmt.Errorf("cannot specify %s mount option for rootless container: %w", opt, err)
 				}
-				continue
-			}
-			if str, ok := strings.CutPrefix(opt, "gid="); ok {
+			} else if str, ok := strings.CutPrefix(opt, "gid="); ok {
 				gid, err := strconv.Atoi(str)
 				if err != nil {
 					// Ignore unknown mount options.
 					continue
 				}
 				if _, err := config.HostGID(gid); err != nil {
-					return fmt.Errorf("cannot specify gid=%d mount option for rootless container: %w", gid, err)
+					return fmt.Errorf("cannot specify %s mount option for rootless container: %w", opt, err)
 				}
 			}
 		}
