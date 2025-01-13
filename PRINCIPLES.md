@@ -15,5 +15,5 @@ In the design and development of runc and libcontainer we try to follow these pr
 * The fewer moving parts in a container, the better.
 * Don't merge it unless you document it.
 * Don't document it unless you can keep it up-to-date.
-* Don't keep it up-to-date unless you test it!
+* Don't merge it unless you test it!
 * Everyone's problem is slightly different. Focus on the part that is the same for everyone, and solve that.
