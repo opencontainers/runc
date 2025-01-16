@@ -89,7 +89,7 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 }
 
 // setupIO modifies the given process config according to the options.
-func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, detach bool, sockpath string) (*tty, error) {
+func setupIO(process *libcontainer.Process, container *libcontainer.Container, createTTY, detach bool, sockpath string) (*tty, error) {
 	if createTTY {
 		process.Stdin = nil
 		process.Stdout = nil
@@ -135,6 +135,17 @@ func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, det
 		inheritStdio(process)
 		return &tty{}, nil
 	}
+
+	config := container.Config()
+	rootuid, err := config.HostRootUID()
+	if err != nil {
+		return nil, err
+	}
+	rootgid, err := config.HostRootGID()
+	if err != nil {
+		return nil, err
+	}
+
 	return setupProcessPipes(process, rootuid, rootgid)
 }
 
@@ -232,20 +243,12 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		}
 		process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), "PreserveFD:"+strconv.Itoa(i)))
 	}
-	rootuid, err := r.container.Config().HostRootUID()
-	if err != nil {
-		return -1, err
-	}
-	rootgid, err := r.container.Config().HostRootGID()
-	if err != nil {
-		return -1, err
-	}
 	detach := r.detach || (r.action == CT_ACT_CREATE)
 	// Setting up IO is a two stage process. We need to modify process to deal
 	// with detaching containers, and then we get a tty after the container has
 	// started.
 	handler := newSignalHandler(r.enableSubreaper, r.notifySocket)
-	tty, err := setupIO(process, rootuid, rootgid, config.Terminal, detach, r.consoleSocket)
+	tty, err := setupIO(process, r.container, config.Terminal, detach, r.consoleSocket)
 	if err != nil {
 		return -1, err
 	}
