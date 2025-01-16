@@ -158,19 +158,7 @@ func execProcess(context *cli.Context) (int, error) {
 	if status == libcontainer.Paused && !context.Bool("ignore-paused") {
 		return -1, errors.New("cannot exec in a paused container (use --ignore-paused to override)")
 	}
-	path := context.String("process")
-	if path == "" && len(context.Args()) == 1 {
-		return -1, errors.New("process args cannot be empty")
-	}
-	state, err := container.State()
-	if err != nil {
-		return -1, err
-	}
-	bundle, ok := utils.SearchLabels(state.Config.Labels, "bundle")
-	if !ok {
-		return -1, errors.New("bundle not found in labels")
-	}
-	p, err := getProcess(context, bundle)
+	p, err := getProcess(context, container)
 	if err != nil {
 		return -1, err
 	}
@@ -196,7 +184,7 @@ func execProcess(context *cli.Context) (int, error) {
 	return r.run(p)
 }
 
-func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
+func getProcess(context *cli.Context, c *libcontainer.Container) (*specs.Process, error) {
 	if path := context.String("process"); path != "" {
 		f, err := os.Open(path)
 		if err != nil {
@@ -209,7 +197,11 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		}
 		return &p, validateProcessSpec(&p)
 	}
-	// process via cli flags
+	// Process from config.json and CLI flags.
+	bundle, ok := utils.SearchLabels(c.Config().Labels, "bundle")
+	if !ok {
+		return nil, errors.New("bundle not found in labels")
+	}
 	if err := os.Chdir(bundle); err != nil {
 		return nil, err
 	}
@@ -218,7 +210,11 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		return nil, err
 	}
 	p := spec.Process
-	p.Args = context.Args()[1:]
+	args := context.Args()
+	if len(args) < 2 {
+		return nil, errors.New("exec args cannot be empty")
+	}
+	p.Args = args[1:]
 	// Override the cwd, if passed.
 	if cwd := context.String("cwd"); cwd != "" {
 		p.Cwd = cwd
