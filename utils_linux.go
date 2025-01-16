@@ -43,9 +43,8 @@ func getDefaultImagePath() string {
 	return filepath.Join(cwd, "checkpoint")
 }
 
-// newProcess returns a new libcontainer Process with the arguments from the
-// spec and stdio from the current process.
-func newProcess(p specs.Process) (*libcontainer.Process, error) {
+// newProcess converts [specs.Process] to [libcontainer.Process].
+func newProcess(p *specs.Process) (*libcontainer.Process, error) {
 	lp := &libcontainer.Process{
 		Args:            p.Args,
 		Env:             p.Env,
@@ -221,7 +220,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	if err = r.checkTerminal(config); err != nil {
 		return -1, err
 	}
-	process, err := newProcess(*config)
+	process, err := newProcess(config)
 	if err != nil {
 		return -1, err
 	}
