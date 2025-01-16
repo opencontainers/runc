@@ -82,12 +82,6 @@ type initConfig struct {
 	ProcessLabel    string                `json:"process_label"`
 	Rlimits         []configs.Rlimit      `json:"rlimits"`
 
-	// Properties that only exist in container config.
-	// FIXME: they are also passed in Config above.
-
-	RootlessEUID    bool `json:"rootless_euid,omitempty"`
-	RootlessCgroups bool `json:"rootless_cgroups,omitempty"`
-
 	// Miscellaneous properties, filled in by [Container.newInitConfig]
 	// unless documented otherwise.
 
@@ -484,7 +478,7 @@ func setupUser(config *initConfig) error {
 	// There's nothing we can do about /etc/group entries, so we silently
 	// ignore setting groups here (since the user didn't explicitly ask us to
 	// set the group).
-	allowSupGroups := !config.RootlessEUID && string(bytes.TrimSpace(setgroups)) != "deny"
+	allowSupGroups := !config.Config.RootlessEUID && string(bytes.TrimSpace(setgroups)) != "deny"
 
 	if allowSupGroups {
 		if err := unix.Setgroups(config.AdditionalGroups); err != nil {

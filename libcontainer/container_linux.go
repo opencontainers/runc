@@ -704,8 +704,6 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 		PassedFilesCount: len(process.ExtraFiles),
 		ContainerID:      c.ID(),
 		NoNewPrivileges:  c.config.NoNewPrivileges,
-		RootlessEUID:     c.config.RootlessEUID,
-		RootlessCgroups:  c.config.RootlessCgroups,
 		AppArmorProfile:  c.config.AppArmorProfile,
 		ProcessLabel:     c.config.ProcessLabel,
 		Rlimits:          c.config.Rlimits,
