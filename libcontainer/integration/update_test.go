@@ -3,6 +3,7 @@ package integration
 import (
 	"bytes"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -15,6 +16,10 @@ func testUpdateDevices(t *testing.T, systemd bool) {
 	if testing.Short() {
 		return
 	}
+	if runtime.GOARCH == "386" {
+		t.Skip("flaky on i386, see https://github.com/opencontainers/runc/issues/4594")
+	}
+
 	config := newTemplateConfig(t, &tParam{systemd: systemd})
 	container, err := newContainer(t, config)
 	ok(t, err)
