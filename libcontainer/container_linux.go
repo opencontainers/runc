@@ -424,11 +424,11 @@ func (c *Container) signal(s os.Signal) error {
 }
 
 func (c *Container) createExecFifo() (retErr error) {
-	rootuid, err := c.Config().HostRootUID()
+	rootuid, err := c.config.HostRootUID()
 	if err != nil {
 		return err
 	}
-	rootgid, err := c.Config().HostRootGID()
+	rootgid, err := c.config.HostRootGID()
 	if err != nil {
 		return err
 	}
