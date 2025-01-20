@@ -3,10 +3,12 @@
 package capabilities
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/moby/sys/capability"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -129,9 +131,13 @@ func (c *Caps) ApplyCaps() error {
 	// don't return any errors, only warn.
 	ambs := c.caps[capability.AMBIENT]
 	err := capability.ResetAmbient()
-	if err != nil {
-		return fmt.Errorf("can't reset ambient capabilities: %w", err)
+
+	// EINVAL is returned when the kernel doesn't support ambient capabilities.
+	// We ignore this because runc supports running on older kernels.
+	if err != nil && !errors.Is(err, syscall.EINVAL) {
+		return err
 	}
+
 	for _, a := range ambs {
 		err := capability.SetAmbient(true, a)
 		if err != nil {
