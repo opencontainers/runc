@@ -324,16 +324,6 @@ func (c *Container) start(process *Process) (retErr error) {
 	defer process.closeClonedExes()
 
 	logsDone := parent.forwardChildLogs()
-	if logsDone != nil {
-		defer func() {
-			// Wait for log forwarder to finish. This depends on
-			// runc init closing the _LIBCONTAINER_LOGPIPE log fd.
-			err := <-logsDone
-			if err != nil && retErr == nil {
-				retErr = fmt.Errorf("unable to forward init logs: %w", err)
-			}
-		}()
-	}
 
 	// Before starting "runc init", mark all non-stdio open files as O_CLOEXEC
 	// to make sure we don't leak any files into "runc init". Any files to be
@@ -346,6 +336,17 @@ func (c *Container) start(process *Process) (retErr error) {
 	}
 	if err := parent.start(); err != nil {
 		return fmt.Errorf("unable to start container process: %w", err)
+	}
+
+	if logsDone != nil {
+		defer func() {
+			// Wait for log forwarder to finish. This depends on
+			// runc init closing the _LIBCONTAINER_LOGPIPE log fd.
+			err := <-logsDone
+			if err != nil && retErr == nil {
+				retErr = fmt.Errorf("unable to forward init logs: %w", err)
+			}
+		}()
 	}
 
 	if process.Init {
