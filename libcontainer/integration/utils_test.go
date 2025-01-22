@@ -231,3 +231,25 @@ func runContainerOk(t testing.TB, config *configs.Config, args ...string) *stdBu
 func destroyContainer(container *libcontainer.Container) {
 	_ = container.Destroy()
 }
+
+func waitStdOut(stdout *os.File) chan error {
+	ch := make(chan error, 1)
+	buf := make([]byte, 1)
+	go func() {
+		defer close(ch)
+
+		for {
+			n, err := stdout.Read(buf)
+			if err != nil {
+				ch <- err
+				return
+			}
+
+			if n >= 0 {
+				ch <- nil
+				return
+			}
+		}
+	}()
+	return ch
+}
