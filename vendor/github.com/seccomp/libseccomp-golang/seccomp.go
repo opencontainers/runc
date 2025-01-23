@@ -33,8 +33,9 @@ type VersionError struct {
 
 func init() {
 	// This forces the cgo libseccomp to initialize its internal API support state,
-	// which is necessary on older versions of libseccomp in order to work
+	// which is necessary on older versions of libseccomp (< 2.5.0) in order to work
 	// correctly.
+	// TODO: remove once libseccomp < v2.5.0 is not supported.
 	_, _ = getAPI()
 }
 
@@ -78,49 +79,44 @@ type ScmpSyscall int32
 type ScmpFd int32
 
 // ScmpNotifData describes the system call context that triggered a notification.
-//
-// Syscall:      the syscall number
-// Arch:         the filter architecture
-// InstrPointer: address of the instruction that triggered a notification
-// Args:         arguments (up to 6) for the syscall
-//
 type ScmpNotifData struct {
-	Syscall      ScmpSyscall `json:"syscall,omitempty"`
-	Arch         ScmpArch    `json:"arch,omitempty"`
-	InstrPointer uint64      `json:"instr_pointer,omitempty"`
-	Args         []uint64    `json:"args,omitempty"`
+	// Syscall is the syscall number.
+	Syscall ScmpSyscall `json:"syscall,omitempty"`
+	// Arch is the filter architecture.
+	Arch ScmpArch `json:"arch,omitempty"`
+	// InstrPointer is the address of the instruction that triggered a notification.
+	InstrPointer uint64 `json:"instr_pointer,omitempty"`
+	// Args are the arguments (up to 6) for the syscall.
+	Args []uint64 `json:"args,omitempty"`
 }
 
 // ScmpNotifReq represents a seccomp userspace notification. See NotifReceive() for
 // info on how to pull such a notification.
-//
-// ID:    notification ID
-// Pid:   process that triggered the notification event
-// Flags: filter flags (see seccomp(2))
-// Data:  system call context that triggered the notification
-//
 type ScmpNotifReq struct {
-	ID    uint64        `json:"id,omitempty"`
-	Pid   uint32        `json:"pid,omitempty"`
-	Flags uint32        `json:"flags,omitempty"`
-	Data  ScmpNotifData `json:"data,omitempty"`
+	// ID is the notification ID.
+	ID uint64 `json:"id,omitempty"`
+	// Pid is the process that triggered the notification event.
+	Pid uint32 `json:"pid,omitempty"`
+	// Flags is filter flags (see seccomp(2)).
+	Flags uint32 `json:"flags,omitempty"`
+	// Data is system call context that triggered the notification.
+	Data ScmpNotifData `json:"data,omitempty"`
 }
 
 // ScmpNotifResp represents a seccomp userspace notification response. See NotifRespond()
 // for info on how to push such a response.
-//
-// ID:    notification ID (must match the corresponding ScmpNotifReq ID)
-// Error: must be 0 if no error occurred, or an error constant from package
-//        syscall (e.g., syscall.EPERM, etc). In the latter case, it's used
-//        as an error return from the syscall that created the notification.
-// Val:   return value for the syscall that created the notification. Only
-//        relevant if Error is 0.
-// Flags: userspace notification response flag (e.g., NotifRespFlagContinue)
-//
 type ScmpNotifResp struct {
-	ID    uint64 `json:"id,omitempty"`
-	Error int32  `json:"error,omitempty"`
-	Val   uint64 `json:"val,omitempty"`
+	// ID is the notification ID (must match the corresponding ScmpNotifReq ID).
+	ID uint64 `json:"id,omitempty"`
+	// Error must be 0 if no error occurred, or an error constant from
+	// package syscall (e.g., syscall.EPERM, etc). In the latter case, it
+	// is used as an error return from the syscall that created the
+	// notification.
+	Error int32 `json:"error,omitempty"`
+	// Val is a return value for the syscall that created the notification.
+	// Only relevant if Error is 0.
+	Val uint64 `json:"val,omitempty"`
+	// Flags is userspace notification response flag (e.g., NotifRespFlagContinue).
 	Flags uint32 `json:"flags,omitempty"`
 }
 
@@ -175,6 +171,14 @@ const (
 	ArchPARISC64
 	// ArchRISCV64 represents RISCV64
 	ArchRISCV64
+	// ArchLOONGARCH64 represents 64-bit LoongArch.
+	ArchLOONGARCH64
+	// ArchM68K represents 32-bit Motorola 68000.
+	ArchM68K
+	// ArchSH represents SuperH.
+	ArchSH
+	// ArchSHEB represents Big-endian SuperH.
+	ArchSHEB
 )
 
 const (
@@ -306,6 +310,14 @@ func GetArchFromString(arch string) (ScmpArch, error) {
 		return ArchPARISC64, nil
 	case "riscv64":
 		return ArchRISCV64, nil
+	case "loongarch64":
+		return ArchLOONGARCH64, nil
+	case "m68k":
+		return ArchM68K, nil
+	case "sh":
+		return ArchSH, nil
+	case "sheb":
+		return ArchSHEB, nil
 	default:
 		return ArchInvalid, fmt.Errorf("cannot convert unrecognized string %q", arch)
 	}
@@ -352,6 +364,14 @@ func (a ScmpArch) String() string {
 		return "parisc64"
 	case ArchRISCV64:
 		return "riscv64"
+	case ArchLOONGARCH64:
+		return "loong64"
+	case ArchM68K:
+		return "m68k"
+	case ArchSH:
+		return "sh"
+	case ArchSHEB:
+		return "sheb"
 	case ArchNative:
 		return "native"
 	case ArchInvalid:
