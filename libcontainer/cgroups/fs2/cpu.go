@@ -28,7 +28,8 @@ func setCPU(dirPath string, r *cgroups.Resources) error {
 	}
 
 	// NOTE: .CpuShares is not used here. Conversion is the caller's responsibility.
-	if r.CpuWeight != 0 {
+	// can not set cpu.weight if cpu.idle is enabled
+	if r.CpuWeight != 0 && (r.CPUIdle == nil || *r.CPUIdle == 0) {
 		if err := cgroups.WriteFile(dirPath, "cpu.weight", strconv.FormatUint(r.CpuWeight, 10)); err != nil {
 			return err
 		}
