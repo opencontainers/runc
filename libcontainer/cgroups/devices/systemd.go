@@ -17,7 +17,7 @@ import (
 
 // systemdProperties takes the configured device rules and generates a
 // corresponding set of systemd properties to configure the devices correctly.
-func systemdProperties(r *cgroups.Resources, sdVer int) ([]systemdDbus.Property, error) {
+func systemdProperties(r *cgroups.Resources, sdVer int, cgroupVer int) ([]systemdDbus.Property, error) {
 	if r.SkipDevices {
 		return nil, nil
 	}
@@ -55,6 +55,19 @@ func systemdProperties(r *cgroups.Resources, sdVer int) ([]systemdDbus.Property,
 	finalRules, err := configEmu.Rules()
 	if err != nil {
 		return nil, fmt.Errorf("unable to get simplified rules for systemd: %w", err)
+	}
+	logRuleError := func(rule *devices.Rule, msg string) {
+		switch cgroupVer {
+		case 1:
+			// For cgroup v1, runc reapplies all the device rules later,
+			// in fsManager.Apply, so it's a temporary issue.
+			logrus.Debugf("temporary ignoring device rule %+v: %s", rule, msg)
+		case 2:
+			// For cgroup v2, if we can't translate the rule to systemd lingo,
+			// there's nothing we can do. For backward compatibility, we do not
+			// error out, but merely print a big fat warning.
+			logrus.Warnf("unable to apply device rule %+v: %s", rule, msg)
+		}
 	}
 	var deviceAllowList []deviceAllowEntry
 	for _, rule := range finalRules {
@@ -96,11 +109,20 @@ func systemdProperties(r *cgroups.Resources, sdVer int) ([]systemdDbus.Property,
 		// The only type of rule we can't handle is wildcard-major rules, and
 		// so we'll give a warning in that case (note that the fallback code
 		// will insert any rules systemd couldn't handle). What amazing fun.
+		//
+		// The properties generated here are applied by systemd. In case of
+		// cgroup v1 ("device.{allow,deny}" files), runc when overwrites the
+		// systemd rules, so the correct rules are in effect (except for the
+		// case when systemd is restarted and our rules gets overwritten, but
+		// there is nothing we can do here).
+		//
+		// For cgroup v2, we only use systemd rules, so we log warnings when
+		// some rules can't be translated.
 
 		if rule.Major == devices.Wildcard {
 			// "_ *:n _" rules aren't supported by systemd.
 			if rule.Minor != devices.Wildcard {
-				logrus.Warnf("systemd doesn't support '*:n' device rules -- temporarily ignoring rule: %v", *rule)
+				logRuleError(rule, "systemd does not support wildcard-major device rules")
 				continue
 			}
 
@@ -119,14 +141,16 @@ func systemdProperties(r *cgroups.Resources, sdVer int) ([]systemdDbus.Property,
 				}
 				entry.Path = prefix + strconv.FormatInt(rule.Major, 10)
 			} else {
-				// For older systemd, "_ n:* _" rules require a device group from /proc/devices.
+				// For older systemd, {block,char}-NAME syntax is used,
+				// where NAME is a device group from /proc/devices
+				// corresponding to the major number.
 				group, err := findDeviceGroup(rule.Type, rule.Major)
 				if err != nil {
 					return nil, fmt.Errorf("unable to find device '%v/%d': %w", rule.Type, rule.Major, err)
 				}
 				if group == "" {
 					// Couldn't find a group.
-					logrus.Warnf("could not find device group for '%v/%d' in /proc/devices -- temporarily ignoring rule: %v", rule.Type, rule.Major, *rule)
+					logRuleError(rule, "systemd older than v240 does not support wildcard-minor rules for devices not listed in /proc/devices")
 					continue
 				}
 				entry.Path = group
@@ -141,12 +165,9 @@ func systemdProperties(r *cgroups.Resources, sdVer int) ([]systemdDbus.Property,
 			}
 			if sdVer < 240 {
 				// Old systemd versions use stat(2) on path to find out device major:minor
-				// numbers and type. If the path doesn't exist, it will not add the rule,
-				// emitting a warning instead.
-				// Since all of this logic is best-effort anyway (we manually set these
-				// rules separately to systemd) we can safely skip entries that don't
-				// have a corresponding path.
+				// numbers and type. If the path doesn't exist, it will not add the rule.
 				if _, err := os.Stat(entry.Path); err != nil {
+					logRuleError(rule, "systemd older than v240 does not support device rules for non-existing device: "+err.Error())
 					continue
 				}
 			}
