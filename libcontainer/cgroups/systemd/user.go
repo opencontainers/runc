@@ -61,8 +61,7 @@ func DetectUID() (int, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(b))
 	for scanner.Scan() {
 		s := strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(s, "OwnerUID=") {
-			uidStr := strings.TrimPrefix(s, "OwnerUID=")
+		if uidStr, ok := strings.CutPrefix(s, "OwnerUID="); ok {
 			i, err := strconv.Atoi(uidStr)
 			if err != nil {
 				return -1, fmt.Errorf("could not detect the OwnerUID: %w", err)

@@ -54,38 +54,39 @@ func ParseUint(s string, base, bitSize int) (uint64, error) {
 	return value, nil
 }
 
-// ParseKeyValue parses a space-separated "name value" kind of cgroup
+// ParseKeyValue parses a space-separated "key value" kind of cgroup
 // parameter and returns its key as a string, and its value as uint64
-// (ParseUint is used to convert the value). For example,
+// (using [ParseUint] to convert the value). For example,
 // "io_service_bytes 1234" will be returned as "io_service_bytes", 1234.
 func ParseKeyValue(t string) (string, uint64, error) {
-	parts := strings.SplitN(t, " ", 3)
-	if len(parts) != 2 {
-		return "", 0, fmt.Errorf("line %q is not in key value format", t)
+	key, val, ok := strings.Cut(t, " ")
+	if !ok || key == "" || val == "" {
+		return "", 0, fmt.Errorf(`line %q is not in "key value" format`, t)
 	}
 
-	value, err := ParseUint(parts[1], 10, 64)
+	value, err := ParseUint(val, 10, 64)
 	if err != nil {
 		return "", 0, err
 	}
 
-	return parts[0], value, nil
+	return key, value, nil
 }
 
-// GetValueByKey reads a key-value pairs from the specified cgroup file,
-// and returns a value of the specified key. ParseUint is used for value
-// conversion.
+// GetValueByKey reads space-separated "key value" pairs from the specified
+// cgroup file, looking for a specified key, and returns its value as uint64,
+// using [ParseUint] for conversion. If the value is not found, 0 is returned.
 func GetValueByKey(path, file, key string) (uint64, error) {
 	content, err := cgroups.ReadFile(path, file)
 	if err != nil {
 		return 0, err
 	}
 
+	key += " "
 	lines := strings.Split(content, "\n")
 	for _, line := range lines {
-		arr := strings.Split(line, " ")
-		if len(arr) == 2 && arr[0] == key {
-			val, err := ParseUint(arr[1], 10, 64)
+		v, ok := strings.CutPrefix(line, key)
+		if ok {
+			val, err := ParseUint(v, 10, 64)
 			if err != nil {
 				err = &ParseError{Path: path, File: file, Err: err}
 			}
@@ -103,7 +104,6 @@ func GetCgroupParamUint(path, file string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	contents = strings.TrimSpace(contents)
 	if contents == "max" {
 		return math.MaxUint64, nil
 	}
@@ -118,11 +118,10 @@ func GetCgroupParamUint(path, file string) (uint64, error) {
 // GetCgroupParamInt reads a single int64 value from specified cgroup file.
 // If the value read is "max", the math.MaxInt64 is returned.
 func GetCgroupParamInt(path, file string) (int64, error) {
-	contents, err := cgroups.ReadFile(path, file)
+	contents, err := GetCgroupParamString(path, file)
 	if err != nil {
 		return 0, err
 	}
-	contents = strings.TrimSpace(contents)
 	if contents == "max" {
 		return math.MaxInt64, nil
 	}
