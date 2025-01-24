@@ -102,7 +102,7 @@ func fdRangeFrom(minFd int, fn fdFunc) error {
 func CloseExecFrom(minFd int) error {
 	// Use close_range(CLOSE_RANGE_CLOEXEC) if possible.
 	if haveCloseRangeCloexec() {
-		err := unix.CloseRange(uint(minFd), math.MaxUint, unix.CLOSE_RANGE_CLOEXEC)
+		err := unix.CloseRange(uint(minFd), math.MaxInt32, unix.CLOSE_RANGE_CLOEXEC)
 		return os.NewSyscallError("close_range", err)
 	}
 	// Otherwise, fall back to the standard loop.
