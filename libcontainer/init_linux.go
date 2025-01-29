@@ -71,6 +71,7 @@ type initConfig struct {
 	RootlessCgroups  bool                  `json:"rootless_cgroups,omitempty"`
 	SpecState        *specs.State          `json:"spec_state,omitempty"`
 	Cgroup2Path      string                `json:"cgroup2_path,omitempty"`
+	CPUAffinity      *configs.CPUAffinity  `json:"cpu_affinity,omitempty"`
 }
 
 // Init is part of "runc init" implementation.
@@ -150,7 +151,7 @@ func startInitialization() (retErr error) {
 
 	logrus.SetOutput(logPipe)
 	logrus.SetFormatter(new(logrus.JSONFormatter))
-	logrus.Debug("child process in init()")
+	logrus.Debugf("child process in init()")
 
 	// Only init processes have FIFOFD.
 	var fifoFile *os.File

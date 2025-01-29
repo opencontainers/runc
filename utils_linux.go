@@ -82,6 +82,12 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 		}
 		lp.Rlimits = append(lp.Rlimits, rl)
 	}
+	aff, err := configs.ConvertCPUAffinity(p.ExecCPUAffinity)
+	if err != nil {
+		return nil, err
+	}
+	lp.CPUAffinity = aff
+
 	return lp, nil
 }
 

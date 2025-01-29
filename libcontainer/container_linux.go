@@ -698,6 +698,7 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 		AppArmorProfile:  c.config.AppArmorProfile,
 		ProcessLabel:     c.config.ProcessLabel,
 		Rlimits:          c.config.Rlimits,
+		CPUAffinity:      c.config.ExecCPUAffinity,
 		CreateConsole:    process.ConsoleSocket != nil,
 		ConsoleWidth:     process.ConsoleWidth,
 		ConsoleHeight:    process.ConsoleHeight,
@@ -713,6 +714,9 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 	}
 	if len(process.Rlimits) > 0 {
 		cfg.Rlimits = process.Rlimits
+	}
+	if process.CPUAffinity != nil {
+		cfg.CPUAffinity = process.CPUAffinity
 	}
 	if cgroups.IsCgroup2UnifiedMode() {
 		cfg.Cgroup2Path = c.cgroupManager.Path("")
