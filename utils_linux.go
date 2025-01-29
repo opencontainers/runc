@@ -47,10 +47,10 @@ func getDefaultImagePath() string {
 // spec and stdio from the current process.
 func newProcess(p specs.Process) (*libcontainer.Process, error) {
 	lp := &libcontainer.Process{
-		Args: p.Args,
-		Env:  p.Env,
-		// TODO: fix libcontainer's API to better support uid/gid in a typesafe way.
-		User:            fmt.Sprintf("%d:%d", p.User.UID, p.User.GID),
+		Args:            p.Args,
+		Env:             p.Env,
+		UID:             int(p.User.UID),
+		GID:             int(p.User.GID),
 		Cwd:             p.Cwd,
 		Label:           p.SelinuxLabel,
 		NoNewPrivileges: &p.NoNewPrivileges,
@@ -72,8 +72,11 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 		lp.Capabilities.Permitted = p.Capabilities.Permitted
 		lp.Capabilities.Ambient = p.Capabilities.Ambient
 	}
-	for _, gid := range p.User.AdditionalGids {
-		lp.AdditionalGroups = append(lp.AdditionalGroups, strconv.FormatUint(uint64(gid), 10))
+	if l := len(p.User.AdditionalGids); l > 0 {
+		lp.AdditionalGroups = make([]int, l)
+		for i, g := range p.User.AdditionalGids {
+			lp.AdditionalGroups[i] = int(g)
+		}
 	}
 	for _, rlimit := range p.Rlimits {
 		rl, err := createLibContainerRlimit(rlimit)
