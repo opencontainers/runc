@@ -106,7 +106,7 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		root:            config.Rootfs,
 		label:           config.MountLabel,
 		cgroup2Path:     iConfig.Cgroup2Path,
-		rootlessCgroups: iConfig.RootlessCgroups,
+		rootlessCgroups: config.RootlessCgroups,
 		cgroupns:        config.Namespaces.Contains(configs.NEWCGROUP),
 	}
 	for _, m := range config.Mounts {
