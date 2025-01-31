@@ -2,6 +2,7 @@ package ebpf
 
 import (
 	"github.com/cilium/ebpf/internal/sys"
+	"github.com/cilium/ebpf/internal/unix"
 )
 
 //go:generate go run golang.org/x/tools/cmd/stringer@latest -output types_string.go -type=MapType,ProgramType,PinType
@@ -94,14 +95,6 @@ const (
 	InodeStorage
 	// TaskStorage - Specialized local storage map for task_struct.
 	TaskStorage
-	// BloomFilter - Space-efficient data structure to quickly test whether an element exists in a set.
-	BloomFilter
-	// UserRingbuf - The reverse of RingBuf, used to send messages from user space to BPF programs.
-	UserRingbuf
-	// CgroupStorage - Store data keyed on a cgroup. If the cgroup disappears, the key is automatically removed.
-	CgroupStorage
-	// Arena - Sparse shared memory region between a BPF program and user space.
-	Arena
 )
 
 // hasPerCPUValue returns true if the Map stores a value per CPU.
@@ -125,21 +118,6 @@ func (mt MapType) canStoreMap() bool {
 // for update and returns a program id for lookup.
 func (mt MapType) canStoreProgram() bool {
 	return mt == ProgramArray
-}
-
-// canHaveValueSize returns true if the map type supports setting a value size.
-func (mt MapType) canHaveValueSize() bool {
-	switch mt {
-	case RingBuf, Arena:
-		return false
-
-	// Special-case perf events since they require a value size of either 0 or 4
-	// for historical reasons. Let the library fix this up later.
-	case PerfEventArray:
-		return false
-	}
-
-	return true
 }
 
 // ProgramType of the eBPF program
@@ -285,10 +263,10 @@ func (lpo *LoadPinOptions) Marshal() uint32 {
 
 	flags := lpo.Flags
 	if lpo.ReadOnly {
-		flags |= sys.BPF_F_RDONLY
+		flags |= unix.BPF_F_RDONLY
 	}
 	if lpo.WriteOnly {
-		flags |= sys.BPF_F_WRONLY
+		flags |= unix.BPF_F_WRONLY
 	}
 	return flags
 }
