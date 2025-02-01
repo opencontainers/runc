@@ -18,10 +18,6 @@ type MarshalOptions struct {
 	Order binary.ByteOrder
 	// Remove function linkage information for compatibility with <5.6 kernels.
 	StripFuncLinkage bool
-	// Replace decl tags with a placeholder for compatibility with <5.16 kernels.
-	ReplaceDeclTags bool
-	// Replace TypeTags with a placeholder for compatibility with <5.17 kernels.
-	ReplaceTypeTags bool
 	// Replace Enum64 with a placeholder for compatibility with <6.0 kernels.
 	ReplaceEnum64 bool
 	// Prevent the "No type found" error when loading BTF without any types.
@@ -33,8 +29,6 @@ func KernelMarshalOptions() *MarshalOptions {
 	return &MarshalOptions{
 		Order:              internal.NativeEndian,
 		StripFuncLinkage:   haveFuncLinkage() != nil,
-		ReplaceDeclTags:    haveDeclTags() != nil,
-		ReplaceTypeTags:    haveTypeTags() != nil,
 		ReplaceEnum64:      haveEnum64() != nil,
 		PreventNoTypeFound: true, // All current kernels require this.
 	}
@@ -324,7 +318,15 @@ func (e *encoder) deflateType(typ Type) (err error) {
 		return errors.New("Void is implicit in BTF wire format")
 
 	case *Int:
-		e.deflateInt(&raw, v)
+		raw.SetKind(kindInt)
+		raw.SetSize(v.Size)
+
+		var bi btfInt
+		bi.SetEncoding(v.Encoding)
+		// We need to set bits in addition to size, since btf_type_int_is_regular
+		// otherwise flags this as a bitfield.
+		bi.SetBits(byte(v.Size) * 8)
+		raw.data = bi
 
 	case *Pointer:
 		raw.SetKind(kindPointer)
@@ -366,7 +368,8 @@ func (e *encoder) deflateType(typ Type) (err error) {
 		raw.SetType(e.id(v.Type))
 
 	case *Const:
-		e.deflateConst(&raw, v)
+		raw.SetKind(kindConst)
+		raw.SetType(e.id(v.Type))
 
 	case *Restrict:
 		raw.SetKind(kindRestrict)
@@ -401,10 +404,15 @@ func (e *encoder) deflateType(typ Type) (err error) {
 		raw.SetSize(v.Size)
 
 	case *declTag:
-		err = e.deflateDeclTag(&raw, v)
+		raw.SetKind(kindDeclTag)
+		raw.SetType(e.id(v.Type))
+		raw.data = &btfDeclTag{uint32(v.Index)}
+		raw.NameOff, err = e.strings.Add(v.Value)
 
-	case *TypeTag:
-		err = e.deflateTypeTag(&raw, v)
+	case *typeTag:
+		raw.SetKind(kindTypeTag)
+		raw.SetType(e.id(v.Type))
+		raw.NameOff, err = e.strings.Add(v.Value)
 
 	default:
 		return fmt.Errorf("don't know how to deflate %T", v)
@@ -415,57 +423,6 @@ func (e *encoder) deflateType(typ Type) (err error) {
 	}
 
 	return raw.Marshal(e.buf, e.Order)
-}
-
-func (e *encoder) deflateInt(raw *rawType, i *Int) {
-	raw.SetKind(kindInt)
-	raw.SetSize(i.Size)
-
-	var bi btfInt
-	bi.SetEncoding(i.Encoding)
-	// We need to set bits in addition to size, since btf_type_int_is_regular
-	// otherwise flags this as a bitfield.
-	bi.SetBits(byte(i.Size) * 8)
-	raw.data = bi
-}
-
-func (e *encoder) deflateDeclTag(raw *rawType, tag *declTag) (err error) {
-	// Replace a decl tag with an integer for compatibility with <5.16 kernels,
-	// following libbpf behaviour.
-	if e.ReplaceDeclTags {
-		typ := &Int{"decl_tag_placeholder", 1, Unsigned}
-		e.deflateInt(raw, typ)
-
-		// Add the placeholder type name to the string table. The encoder added the
-		// original type name before this call.
-		raw.NameOff, err = e.strings.Add(typ.TypeName())
-		return
-	}
-
-	raw.SetKind(kindDeclTag)
-	raw.SetType(e.id(tag.Type))
-	raw.data = &btfDeclTag{uint32(tag.Index)}
-	raw.NameOff, err = e.strings.Add(tag.Value)
-	return
-}
-
-func (e *encoder) deflateConst(raw *rawType, c *Const) {
-	raw.SetKind(kindConst)
-	raw.SetType(e.id(c.Type))
-}
-
-func (e *encoder) deflateTypeTag(raw *rawType, tag *TypeTag) (err error) {
-	// Replace a type tag with a const qualifier for compatibility with <5.17
-	// kernels, following libbpf behaviour.
-	if e.ReplaceTypeTags {
-		e.deflateConst(raw, &Const{tag.Type})
-		return
-	}
-
-	raw.SetKind(kindTypeTag)
-	raw.SetType(e.id(tag.Type))
-	raw.NameOff, err = e.strings.Add(tag.Value)
-	return
 }
 
 func (e *encoder) deflateUnion(raw *rawType, union *Union) (err error) {
@@ -564,7 +521,7 @@ func (e *encoder) deflateEnum64(raw *rawType, enum *Enum) (err error) {
 			})
 		}
 
-		return e.deflateUnion(raw, &Union{enum.Name, enum.Size, members, nil})
+		return e.deflateUnion(raw, &Union{enum.Name, enum.Size, members})
 	}
 
 	raw.SetKind(kindEnum64)

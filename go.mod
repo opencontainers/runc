@@ -9,7 +9,7 @@ toolchain go1.22.4
 
 require (
 	github.com/checkpoint-restore/go-criu/v6 v6.3.0
-	github.com/cilium/ebpf v0.17.1
+	github.com/cilium/ebpf v0.16.0
 	github.com/containerd/console v1.0.4
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/cyphar/filepath-securejoin v0.4.1
@@ -31,8 +31,16 @@ require (
 	google.golang.org/protobuf v1.36.4
 )
 
+// https://github.com/cilium/ebpf/pull/1660
+exclude (
+	github.com/cilium/ebpf v0.17.0
+	github.com/cilium/ebpf v0.17.1
+	github.com/cilium/ebpf v0.17.2
+)
+
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/vishvananda/netns v0.0.4 // indirect
+	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2 // indirect
 )

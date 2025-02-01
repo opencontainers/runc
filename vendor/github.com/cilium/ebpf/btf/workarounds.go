@@ -12,7 +12,7 @@ func datasecResolveWorkaround(b *Builder, ds *Datasec) error {
 		}
 
 		switch v.Type.(type) {
-		case *Typedef, *Volatile, *Const, *Restrict, *TypeTag:
+		case *Typedef, *Volatile, *Const, *Restrict, *typeTag:
 			// NB: We must never call Add on a Datasec, otherwise we risk
 			// infinite recursion.
 			_, err := b.Add(v.Type)

@@ -16,7 +16,6 @@ import (
 	"github.com/cilium/ebpf/btf"
 	"github.com/cilium/ebpf/internal"
 	"github.com/cilium/ebpf/internal/kallsyms"
-	"github.com/cilium/ebpf/internal/linux"
 	"github.com/cilium/ebpf/internal/sys"
 	"github.com/cilium/ebpf/internal/sysenc"
 	"github.com/cilium/ebpf/internal/unix"
@@ -47,14 +46,13 @@ const (
 	outputPad = 256 + 2
 )
 
+// Deprecated: the correct log size is now detected automatically and this
+// constant is unused.
+const DefaultVerifierLogSize = 64 * 1024
+
 // minVerifierLogSize is the default number of bytes allocated for the
 // verifier log.
 const minVerifierLogSize = 64 * 1024
-
-// maxVerifierLogSize is the maximum size of verifier log buffer the kernel
-// will accept before returning EINVAL. May be increased to MaxUint32 in the
-// future, but avoid the unnecessary EINVAL for now.
-const maxVerifierLogSize = math.MaxUint32 >> 2
 
 // ProgramOptions control loading a program into the kernel.
 type ProgramOptions struct {
@@ -75,10 +73,9 @@ type ProgramOptions struct {
 	// attempt at loading the program.
 	LogLevel LogLevel
 
-	// Starting size of the verifier log buffer. If the verifier log is larger
-	// than this size, the buffer will be grown to fit the entire log. Leave at
-	// its default value unless troubleshooting.
-	LogSizeStart uint32
+	// Deprecated: the correct log buffer size is determined automatically
+	// and this field is ignored.
+	LogSize int
 
 	// Disables the verifier log completely, regardless of other options.
 	LogDisabled bool
@@ -165,35 +162,26 @@ func (ps *ProgramSpec) Tag() (string, error) {
 	return ps.Instructions.Tag(internal.NativeEndian)
 }
 
-// kernelModule returns the kernel module providing the symbol in
-// ProgramSpec.AttachTo, if any. Returns an empty string if the symbol is not
-// present or not part of a kernel module.
-func (ps *ProgramSpec) kernelModule() (string, error) {
-	if ps.AttachTo == "" && ps.targetsKernelModule() {
-		return kallsyms.Module(ps.AttachTo)
-	}
-
-	return "", nil
-}
-
-// targetsKernelModule returns true if the program supports being attached to a
-// symbol provided by a kernel module.
-func (ps *ProgramSpec) targetsKernelModule() bool {
+// KernelModule returns the kernel module, if any, the AttachTo function is contained in.
+func (ps *ProgramSpec) KernelModule() (string, error) {
 	if ps.AttachTo == "" {
-		return false
+		return "", nil
 	}
 
 	switch ps.Type {
+	default:
+		return "", nil
 	case Tracing:
 		switch ps.AttachType {
-		case AttachTraceFEntry, AttachTraceFExit:
-			return true
+		default:
+			return "", nil
+		case AttachTraceFEntry:
+		case AttachTraceFExit:
 		}
+		fallthrough
 	case Kprobe:
-		return true
+		return kallsyms.KernelModule(ps.AttachTo)
 	}
-
-	return false
 }
 
 // VerifierError is returned by [NewProgram] and [NewProgramWithOptions] if a
@@ -273,7 +261,7 @@ func newProgramWithOptions(spec *ProgramSpec, opts ProgramOptions) (*Program, er
 	// Overwrite Kprobe program version if set to zero or the magic version constant.
 	kv := spec.KernelVersion
 	if spec.Type == Kprobe && (kv == 0 || kv == internal.MagicKernelVersion) {
-		v, err := linux.KernelVersion()
+		v, err := internal.KernelVersion()
 		if err != nil {
 			return nil, fmt.Errorf("detecting kernel version: %w", err)
 		}
@@ -295,7 +283,7 @@ func newProgramWithOptions(spec *ProgramSpec, opts ProgramOptions) (*Program, er
 	insns := make(asm.Instructions, len(spec.Instructions))
 	copy(insns, spec.Instructions)
 
-	kmodName, err := spec.kernelModule()
+	kmodName, err := spec.KernelModule()
 	if err != nil {
 		return nil, fmt.Errorf("kernel module search: %w", err)
 	}
@@ -356,10 +344,6 @@ func newProgramWithOptions(spec *ProgramSpec, opts ProgramOptions) (*Program, er
 	}
 	defer kconfig.Close()
 
-	if err := resolveKsymReferences(insns); err != nil {
-		return nil, fmt.Errorf("resolve .ksyms: %w", err)
-	}
-
 	if err := fixupAndValidate(insns); err != nil {
 		return nil, err
 	}
@@ -411,10 +395,9 @@ func newProgramWithOptions(spec *ProgramSpec, opts ProgramOptions) (*Program, er
 
 	// The caller requested a specific verifier log level. Set up the log buffer
 	// so that there is a chance of loading the program in a single shot.
-	logSize := internal.Between(opts.LogSizeStart, minVerifierLogSize, maxVerifierLogSize)
 	var logBuf []byte
 	if !opts.LogDisabled && opts.LogLevel != 0 {
-		logBuf = make([]byte, logSize)
+		logBuf = make([]byte, minVerifierLogSize)
 		attr.LogLevel = opts.LogLevel
 		attr.LogSize = uint32(len(logBuf))
 		attr.LogBuf = sys.NewSlicePointer(logBuf)
@@ -448,11 +431,12 @@ func newProgramWithOptions(spec *ProgramSpec, opts ProgramOptions) (*Program, er
 			attr.LogLevel = LogLevelBranch
 		}
 
-		// Make an educated guess how large the buffer should be by multiplying.
-		// Ensure the size doesn't overflow.
-		const factor = 2
-		logSize = internal.Between(logSize, minVerifierLogSize, maxVerifierLogSize/factor)
-		logSize *= factor
+		// Make an educated guess how large the buffer should be. Start
+		// at minVerifierLogSize and then double the size.
+		logSize := uint32(max(len(logBuf)*2, minVerifierLogSize))
+		if int(logSize) < len(logBuf) {
+			return nil, errors.New("overflow while probing log buffer size")
+		}
 
 		if attr.LogTrueSize != 0 {
 			// The kernel has given us a hint how large the log buffer has to be.
@@ -477,12 +461,6 @@ func newProgramWithOptions(spec *ProgramSpec, opts ProgramOptions) (*Program, er
 			// check that the log is empty to reduce false positives.
 			return nil, fmt.Errorf("load program: %w (MEMLOCK may be too low, consider rlimit.RemoveMemlock)", err)
 		}
-
-	case errors.Is(err, unix.EFAULT):
-		// EFAULT is returned when the kernel hits a verifier bug, and always
-		// overrides ENOSPC, defeating the buffer growth strategy. Warn the user
-		// that they may need to increase the buffer size manually.
-		return nil, fmt.Errorf("load program: %w (hit verifier bug, increase LogSizeStart to fit the log and check dmesg)", err)
 
 	case errors.Is(err, unix.EINVAL):
 		if bytes.Contains(tail, coreBadCall) {
@@ -620,7 +598,7 @@ func (p *Program) Clone() (*Program, error) {
 // This requires bpffs to be mounted above fileName.
 // See https://docs.cilium.io/en/stable/network/kubernetes/configuration/#mounting-bpffs-with-systemd
 func (p *Program) Pin(fileName string) error {
-	if err := sys.Pin(p.pinnedPath, fileName, p.fd); err != nil {
+	if err := internal.Pin(p.pinnedPath, fileName, p.fd); err != nil {
 		return err
 	}
 	p.pinnedPath = fileName
@@ -633,7 +611,7 @@ func (p *Program) Pin(fileName string) error {
 //
 // Unpinning an unpinned Program returns nil.
 func (p *Program) Unpin() error {
-	if err := sys.Unpin(p.pinnedPath); err != nil {
+	if err := internal.Unpin(p.pinnedPath); err != nil {
 		return err
 	}
 	p.pinnedPath = ""
@@ -721,10 +699,6 @@ func (p *Program) Test(in []byte) (uint32, []byte, error) {
 //
 // Note: the same restrictions from Test apply.
 func (p *Program) Run(opts *RunOptions) (uint32, error) {
-	if opts == nil {
-		opts = &RunOptions{}
-	}
-
 	ret, _, err := p.run(opts)
 	if err != nil {
 		return ret, fmt.Errorf("run program: %w", err)
@@ -758,7 +732,7 @@ func (p *Program) Benchmark(in []byte, repeat int, reset func()) (uint32, time.D
 	return ret, total, nil
 }
 
-var haveProgRun = internal.NewFeatureTest("BPF_PROG_RUN", func() error {
+var haveProgRun = internal.NewFeatureTest("BPF_PROG_RUN", "4.12", func() error {
 	prog, err := NewProgram(&ProgramSpec{
 		// SocketFilter does not require privileges on newer kernels.
 		Type: SocketFilter,
@@ -800,7 +774,7 @@ var haveProgRun = internal.NewFeatureTest("BPF_PROG_RUN", func() error {
 	}
 
 	return err
-}, "4.12")
+})
 
 func (p *Program) run(opts *RunOptions) (uint32, time.Duration, error) {
 	if uint(len(opts.Data)) > math.MaxUint32 {
@@ -909,10 +883,6 @@ func unmarshalProgram(buf sysenc.Buffer) (*Program, error) {
 }
 
 func marshalProgram(p *Program, length int) ([]byte, error) {
-	if p == nil {
-		return nil, errors.New("can't marshal a nil Program")
-	}
-
 	if length != 4 {
 		return nil, fmt.Errorf("can't marshal program to %d bytes", length)
 	}
@@ -922,22 +892,16 @@ func marshalProgram(p *Program, length int) ([]byte, error) {
 	return buf, nil
 }
 
-// LoadPinnedProgram loads a Program from a pin (file) on the BPF virtual
-// filesystem.
+// LoadPinnedProgram loads a Program from a BPF file.
 //
 // Requires at least Linux 4.11.
 func LoadPinnedProgram(fileName string, opts *LoadPinOptions) (*Program, error) {
-	fd, typ, err := sys.ObjGetTyped(&sys.ObjGetAttr{
+	fd, err := sys.ObjGet(&sys.ObjGetAttr{
 		Pathname:  sys.NewStringPointer(fileName),
 		FileFlags: opts.Marshal(),
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	if typ != sys.BPF_TYPE_PROG {
-		_ = fd.Close()
-		return nil, fmt.Errorf("%s is not a Program", fileName)
 	}
 
 	info, err := newProgramInfoFromFd(fd)
