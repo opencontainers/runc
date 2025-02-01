@@ -2,7 +2,7 @@ package cgroups
 
 import (
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
-	"github.com/opencontainers/runc/libcontainer/devices"
+	devices "github.com/opencontainers/runc/libcontainer/cgroups/devices/config"
 )
 
 type FreezerState string
