@@ -86,7 +86,7 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 }
 
 // setupIO modifies the given process config according to the options.
-func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, detach bool, sockpath string) (*tty, error) {
+func setupIO(process *libcontainer.Process, containerUID, containerGID int, createTTY, detach bool, sockpath string) (*tty, error) {
 	if createTTY {
 		process.Stdin = nil
 		process.Stdout = nil
@@ -129,10 +129,9 @@ func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, det
 	// when runc will detach the caller provides the stdio to runc via runc's 0,1,2
 	// and the container's process inherits runc's stdio.
 	if detach {
-		inheritStdio(process)
-		return &tty{}, nil
+		return &tty{}, inheritStdio(process, containerUID)
 	}
-	return setupProcessPipes(process, rootuid, rootgid)
+	return setupProcessPipes(process, containerUID, containerGID)
 }
 
 // createPidFile creates a file containing the PID,
@@ -229,11 +228,11 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		}
 		process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), "PreserveFD:"+strconv.Itoa(i)))
 	}
-	rootuid, err := r.container.Config().HostRootUID()
+	containerUID, err := r.container.Config().HostUID(int(config.User.UID))
 	if err != nil {
 		return -1, err
 	}
-	rootgid, err := r.container.Config().HostRootGID()
+	containerGID, err := r.container.Config().HostGID(int(config.User.GID))
 	if err != nil {
 		return -1, err
 	}
@@ -242,7 +241,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	// with detaching containers, and then we get a tty after the container has
 	// started.
 	handler := newSignalHandler(r.enableSubreaper, r.notifySocket)
-	tty, err := setupIO(process, rootuid, rootgid, config.Terminal, detach, r.consoleSocket)
+	tty, err := setupIO(process, containerUID, containerGID, config.Terminal, detach, r.consoleSocket)
 	if err != nil {
 		return -1, err
 	}

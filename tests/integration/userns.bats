@@ -36,6 +36,70 @@ function teardown() {
 	fi
 }
 
+@test "check stdio permission for root in userns [terminal=false && detached]" {
+	update_config ' .process.terminal = false
+			| .process.args = ["sh", "-c", "echo errormsg > /dev/stderr"]'
+
+	touch log
+	__runc create test_busybox >log 2>&1
+
+	runc start test_busybox
+	[ "$status" -eq 0 ]
+
+	wait_for_container 10 1 test_busybox stopped
+
+	out=$(cat log)
+	# Keep this to debug is useful once we have a regression about this.
+	echo "$out" >&2
+
+	# We should let stdio could be accessed in userns container.
+	# Please see https://github.com/opencontainers/runc/issues/4475
+	[[ "$out" = "errormsg" ]]
+}
+
+@test "check stdio permission for root in userns [terminal=false && !detached]" {
+	update_config ' .process.terminal = false
+			| .process.args = ["sh", "-c", "echo errormsg > /dev/stderr"]'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+	[[ "$output" = "errormsg" ]]
+}
+
+@test "check stdio permission for non-root user in userns [terminal=false && detached]" {
+	requires root
+	update_config ' .process.terminal = false
+			| .process.user.uid = 1
+			| .process.user.gid = 1
+			| .process.args = ["sh", "-c", "echo errormsg > /dev/stderr"]'
+
+	touch log
+	__runc create test_busybox >log 2>&1
+
+	runc start test_busybox
+	[ "$status" -eq 0 ]
+
+	wait_for_container 10 1 test_busybox stopped
+
+	out=$(cat log)
+	# Keep this to debug is useful once we have a regression about this.
+	echo "$out" >&2
+
+	[[ "$out" = "errormsg" ]]
+}
+
+@test "check stdio permission for non-root user in userns [terminal=false && !detached]" {
+	requires root
+	update_config ' .process.terminal = false
+			| .process.user.uid = 1
+			| .process.user.gid = 1
+			| .process.args = ["sh", "-c", "echo errormsg > /dev/stderr"]'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+	[[ "$output" = "errormsg" ]]
+}
+
 @test "userns with simple mount" {
 	update_config ' .process.args += ["-c", "stat /tmp/mount-1/foo.txt"]
 		| .mounts += [{"source": "source-accessible/dir", "destination": "/tmp/mount-1", "options": ["bind"]}] '

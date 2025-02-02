@@ -31,8 +31,8 @@ func (t *tty) copyIO(w io.Writer, r io.ReadCloser) {
 
 // setup pipes for the process so that advanced features like c/r are able to easily checkpoint
 // and restore the process's IO without depending on a host specific path or device
-func setupProcessPipes(p *libcontainer.Process, rootuid, rootgid int) (*tty, error) {
-	i, err := p.InitializeIO(rootuid, rootgid)
+func setupProcessPipes(p *libcontainer.Process, containerUID, containerGID int) (*tty, error) {
+	i, err := p.InitializeIO(containerUID, containerGID)
 	if err != nil {
 		return nil, err
 	}
@@ -63,10 +63,16 @@ func setupProcessPipes(p *libcontainer.Process, rootuid, rootgid int) (*tty, err
 	return t, nil
 }
 
-func inheritStdio(process *libcontainer.Process) {
+func inheritStdio(process *libcontainer.Process, containerUID int) error {
+	if containerUID != os.Getuid() {
+		if err := libcontainer.FixStdioPermissions(containerUID); err != nil {
+			return err
+		}
+	}
 	process.Stdin = os.Stdin
 	process.Stdout = os.Stdout
 	process.Stderr = os.Stderr
+	return nil
 }
 
 func (t *tty) initHostConsole() error {
