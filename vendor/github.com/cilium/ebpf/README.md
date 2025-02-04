@@ -53,7 +53,6 @@ This library includes the following packages:
 * [rlimit](https://pkg.go.dev/github.com/cilium/ebpf/rlimit) provides a convenient API to lift
   the `RLIMIT_MEMLOCK` constraint on kernels before 5.11.
 * [btf](https://pkg.go.dev/github.com/cilium/ebpf/btf) allows reading the BPF Type Format.
-* [pin](https://pkg.go.dev/github.com/cilium/ebpf/pin) provides APIs for working with pinned objects on bpffs.
 
 ## Requirements
 

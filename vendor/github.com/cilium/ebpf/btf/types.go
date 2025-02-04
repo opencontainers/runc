@@ -67,7 +67,7 @@ var (
 	_ Type = (*Datasec)(nil)
 	_ Type = (*Float)(nil)
 	_ Type = (*declTag)(nil)
-	_ Type = (*TypeTag)(nil)
+	_ Type = (*typeTag)(nil)
 	_ Type = (*cycle)(nil)
 )
 
@@ -169,7 +169,6 @@ type Struct struct {
 	// The size of the struct including padding, in bytes
 	Size    uint32
 	Members []Member
-	Tags    []string
 }
 
 func (s *Struct) Format(fs fmt.State, verb rune) {
@@ -183,7 +182,6 @@ func (s *Struct) size() uint32 { return s.Size }
 func (s *Struct) copy() Type {
 	cpy := *s
 	cpy.Members = copyMembers(s.Members)
-	cpy.Tags = copyTags(cpy.Tags)
 	return &cpy
 }
 
@@ -197,7 +195,6 @@ type Union struct {
 	// The size of the union including padding, in bytes.
 	Size    uint32
 	Members []Member
-	Tags    []string
 }
 
 func (u *Union) Format(fs fmt.State, verb rune) {
@@ -211,7 +208,6 @@ func (u *Union) size() uint32 { return u.Size }
 func (u *Union) copy() Type {
 	cpy := *u
 	cpy.Members = copyMembers(u.Members)
-	cpy.Tags = copyTags(cpy.Tags)
 	return &cpy
 }
 
@@ -221,18 +217,6 @@ func (u *Union) members() []Member {
 
 func copyMembers(orig []Member) []Member {
 	cpy := make([]Member, len(orig))
-	copy(cpy, orig)
-	for i, member := range cpy {
-		cpy[i].Tags = copyTags(member.Tags)
-	}
-	return cpy
-}
-
-func copyTags(orig []string) []string {
-	if orig == nil { // preserve nil vs zero-len slice distinction
-		return nil
-	}
-	cpy := make([]string, len(orig))
 	copy(cpy, orig)
 	return cpy
 }
@@ -263,7 +247,6 @@ type Member struct {
 	Type         Type
 	Offset       Bits
 	BitfieldSize Bits
-	Tags         []string
 }
 
 // Enum lists possible values.
@@ -351,7 +334,6 @@ func (f *Fwd) matches(typ Type) bool {
 type Typedef struct {
 	Name string
 	Type Type
-	Tags []string
 }
 
 func (td *Typedef) Format(fs fmt.State, verb rune) {
@@ -362,7 +344,6 @@ func (td *Typedef) TypeName() string { return td.Name }
 
 func (td *Typedef) copy() Type {
 	cpy := *td
-	cpy.Tags = copyTags(td.Tags)
 	return &cpy
 }
 
@@ -422,12 +403,6 @@ type Func struct {
 	Name    string
 	Type    Type
 	Linkage FuncLinkage
-	Tags    []string
-	// ParamTags holds a list of tags for each parameter of the FuncProto to which `Type` points.
-	// If no tags are present for any param, the outer slice will be nil/len(ParamTags)==0.
-	// If at least 1 param has a tag, the outer slice will have the same length as the number of params.
-	// The inner slice contains the tags and may be nil/len(ParamTags[i])==0 if no tags are present for that param.
-	ParamTags [][]string
 }
 
 func FuncMetadata(ins *asm.Instruction) *Func {
@@ -449,14 +424,6 @@ func (f *Func) TypeName() string { return f.Name }
 
 func (f *Func) copy() Type {
 	cpy := *f
-	cpy.Tags = copyTags(f.Tags)
-	if f.ParamTags != nil { // preserve nil vs zero-len slice distinction
-		ptCopy := make([][]string, len(f.ParamTags))
-		for i, tags := range f.ParamTags {
-			ptCopy[i] = copyTags(tags)
-		}
-		cpy.ParamTags = ptCopy
-	}
 	return &cpy
 }
 
@@ -489,7 +456,6 @@ type Var struct {
 	Name    string
 	Type    Type
 	Linkage VarLinkage
-	Tags    []string
 }
 
 func (v *Var) Format(fs fmt.State, verb rune) {
@@ -500,7 +466,6 @@ func (v *Var) TypeName() string { return v.Name }
 
 func (v *Var) copy() Type {
 	cpy := *v
-	cpy.Tags = copyTags(v.Tags)
 	return &cpy
 }
 
@@ -575,25 +540,19 @@ func (dt *declTag) copy() Type {
 	return &cpy
 }
 
-// TypeTag associates metadata with a pointer type. Tag types act as a custom
-// modifier(const, restrict, volatile) for the target type. Unlike declTags,
-// TypeTags are ordered so the order in which they are added matters.
-//
-// One of their uses is to mark pointers as `__kptr` meaning a pointer points
-// to kernel memory. Adding a `__kptr` to pointers in map values allows you
-// to store pointers to kernel memory in maps.
-type TypeTag struct {
+// typeTag associates metadata with a type.
+type typeTag struct {
 	Type  Type
 	Value string
 }
 
-func (tt *TypeTag) Format(fs fmt.State, verb rune) {
+func (tt *typeTag) Format(fs fmt.State, verb rune) {
 	formatType(fs, verb, tt, "type=", tt.Type, "value=", tt.Value)
 }
 
-func (tt *TypeTag) TypeName() string { return "" }
-func (tt *TypeTag) qualify() Type    { return tt.Type }
-func (tt *TypeTag) copy() Type {
+func (tt *typeTag) TypeName() string { return "" }
+func (tt *typeTag) qualify() Type    { return tt.Type }
+func (tt *typeTag) copy() Type {
 	cpy := *tt
 	return &cpy
 }
@@ -632,7 +591,7 @@ var (
 	_ qualifier = (*Const)(nil)
 	_ qualifier = (*Restrict)(nil)
 	_ qualifier = (*Volatile)(nil)
-	_ qualifier = (*TypeTag)(nil)
+	_ qualifier = (*typeTag)(nil)
 )
 
 var errUnsizedType = errors.New("type is unsized")
@@ -959,7 +918,7 @@ func readAndInflateTypes(r io.Reader, bo binary.ByteOrder, typeLen uint32, rawSt
 			if err != nil {
 				return nil, fmt.Errorf("struct %s (id %d): %w", name, id, err)
 			}
-			typ = &Struct{name, header.Size(), members, nil}
+			typ = &Struct{name, header.Size(), members}
 
 		case kindUnion:
 			vlen := header.Vlen()
@@ -976,7 +935,7 @@ func readAndInflateTypes(r io.Reader, bo binary.ByteOrder, typeLen uint32, rawSt
 			if err != nil {
 				return nil, fmt.Errorf("union %s (id %d): %w", name, id, err)
 			}
-			typ = &Union{name, header.Size(), members, nil}
+			typ = &Union{name, header.Size(), members}
 
 		case kindEnum:
 			vlen := header.Vlen()
@@ -1009,7 +968,7 @@ func readAndInflateTypes(r io.Reader, bo binary.ByteOrder, typeLen uint32, rawSt
 			typ = &Fwd{name, header.FwdKind()}
 
 		case kindTypedef:
-			typedef := &Typedef{name, nil, nil}
+			typedef := &Typedef{name, nil}
 			fixup(header.Type(), &typedef.Type)
 			typ = typedef
 
@@ -1029,7 +988,7 @@ func readAndInflateTypes(r io.Reader, bo binary.ByteOrder, typeLen uint32, rawSt
 			typ = restrict
 
 		case kindFunc:
-			fn := &Func{name, nil, header.Linkage(), nil, nil}
+			fn := &Func{name, nil, header.Linkage()}
 			fixup(header.Type(), &fn.Type)
 			typ = fn
 
@@ -1071,7 +1030,7 @@ func readAndInflateTypes(r io.Reader, bo binary.ByteOrder, typeLen uint32, rawSt
 				return nil, fmt.Errorf("can't read btfVariable, id: %d: %w", id, err)
 			}
 
-			v := &Var{name, nil, VarLinkage(bVariable.Linkage), nil}
+			v := &Var{name, nil, VarLinkage(bVariable.Linkage)}
 			fixup(header.Type(), &v.Type)
 			typ = v
 
@@ -1122,7 +1081,7 @@ func readAndInflateTypes(r io.Reader, bo binary.ByteOrder, typeLen uint32, rawSt
 			declTags = append(declTags, dt)
 
 		case kindTypeTag:
-			tt := &TypeTag{nil, name}
+			tt := &typeTag{nil, name}
 			fixup(header.Type(), &tt.Type)
 			typ = tt
 
@@ -1183,41 +1142,15 @@ func readAndInflateTypes(r io.Reader, bo binary.ByteOrder, typeLen uint32, rawSt
 
 	for _, dt := range declTags {
 		switch t := dt.Type.(type) {
-		case *Var:
+		case *Var, *Typedef:
 			if dt.Index != -1 {
-				return nil, fmt.Errorf("type %s: component idx %d is not -1", dt, dt.Index)
+				return nil, fmt.Errorf("type %s: index %d is not -1", dt, dt.Index)
 			}
-			t.Tags = append(t.Tags, dt.Value)
-
-		case *Typedef:
-			if dt.Index != -1 {
-				return nil, fmt.Errorf("type %s: component idx %d is not -1", dt, dt.Index)
-			}
-			t.Tags = append(t.Tags, dt.Value)
 
 		case composite:
-			if dt.Index >= 0 {
-				members := t.members()
-				if dt.Index >= len(members) {
-					return nil, fmt.Errorf("type %s: component idx %d exceeds members of %s", dt, dt.Index, t)
-				}
-
-				members[dt.Index].Tags = append(members[dt.Index].Tags, dt.Value)
-				continue
+			if dt.Index >= len(t.members()) {
+				return nil, fmt.Errorf("type %s: index %d exceeds members of %s", dt, dt.Index, t)
 			}
-
-			if dt.Index == -1 {
-				switch t2 := t.(type) {
-				case *Struct:
-					t2.Tags = append(t2.Tags, dt.Value)
-				case *Union:
-					t2.Tags = append(t2.Tags, dt.Value)
-				}
-
-				continue
-			}
-
-			return nil, fmt.Errorf("type %s: decl tag for type %s has invalid component idx", dt, t)
 
 		case *Func:
 			fp, ok := t.Type.(*FuncProto)
@@ -1225,26 +1158,9 @@ func readAndInflateTypes(r io.Reader, bo binary.ByteOrder, typeLen uint32, rawSt
 				return nil, fmt.Errorf("type %s: %s is not a FuncProto", dt, t.Type)
 			}
 
-			// Ensure the number of argument tag lists equals the number of arguments
-			if len(t.ParamTags) == 0 {
-				t.ParamTags = make([][]string, len(fp.Params))
+			if dt.Index >= len(fp.Params) {
+				return nil, fmt.Errorf("type %s: index %d exceeds params of %s", dt, dt.Index, t)
 			}
-
-			if dt.Index >= 0 {
-				if dt.Index >= len(fp.Params) {
-					return nil, fmt.Errorf("type %s: component idx %d exceeds params of %s", dt, dt.Index, t)
-				}
-
-				t.ParamTags[dt.Index] = append(t.ParamTags[dt.Index], dt.Value)
-				continue
-			}
-
-			if dt.Index == -1 {
-				t.Tags = append(t.Tags, dt.Value)
-				continue
-			}
-
-			return nil, fmt.Errorf("type %s: decl tag for type %s has invalid component idx", dt, t)
 
 		default:
 			return nil, fmt.Errorf("type %s: decl tag for type %s is not supported", dt, t)
@@ -1284,20 +1200,6 @@ func UnderlyingType(typ Type) Type {
 			result = v.qualify()
 		case *Typedef:
 			result = v.Type
-		default:
-			return result
-		}
-	}
-	return &cycle{typ}
-}
-
-// QualifiedType returns the type with all qualifiers removed.
-func QualifiedType(typ Type) Type {
-	result := typ
-	for depth := 0; depth <= maxResolveDepth; depth++ {
-		switch v := (result).(type) {
-		case qualifier:
-			result = v.qualify()
 		default:
 			return result
 		}

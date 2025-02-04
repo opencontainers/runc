@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/cilium/ebpf/internal"
-	"github.com/cilium/ebpf/internal/linux"
+	"github.com/cilium/ebpf/internal/kallsyms"
 )
 
 var kernelBTF = struct {
@@ -21,6 +21,8 @@ var kernelBTF = struct {
 
 // FlushKernelSpec removes any cached kernel type information.
 func FlushKernelSpec() {
+	kallsyms.FlushKernelModuleCache()
+
 	kernelBTF.Lock()
 	defer kernelBTF.Unlock()
 
@@ -128,7 +130,7 @@ func loadKernelModuleSpec(module string, base *Spec) (*Spec, error) {
 
 // findVMLinux scans multiple well-known paths for vmlinux kernel images.
 func findVMLinux() (*os.File, error) {
-	release, err := linux.KernelRelease()
+	release, err := internal.KernelRelease()
 	if err != nil {
 		return nil, err
 	}
