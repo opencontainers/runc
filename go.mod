@@ -1,6 +1,6 @@
 module github.com/opencontainers/runc
 
-go 1.22
+go 1.22.0
 
 // Suggest toolchain 1.22.4 due to a fix in golang for libcontainer/nsenter/.
 // For more info, see: #4233
