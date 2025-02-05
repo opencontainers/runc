@@ -23,10 +23,18 @@ func systemdProperties(r *cgroups.Resources, sdVer int) ([]systemdDbus.Property,
 	}
 
 	properties := []systemdDbus.Property{
+		// When we later add DeviceAllow=/dev/foo properties, we are
+		// appending devices to the allow list for the unit. However,
+		// if this is an existing unit, it already has DeviceAllow=
+		// entries, and we need to clear them all before applying the
+		// new set. (We also do this for new units, mainly for safety
+		// to ensure we only enable the devices we expect.)
+		//
+		// To clear any existing DeviceAllow= rules, we have to add an
+		// empty DeviceAllow= property.
+		newProp("DeviceAllow", []deviceAllowEntry{}),
 		// Always run in the strictest white-list mode.
 		newProp("DevicePolicy", "strict"),
-		// Empty the DeviceAllow array before filling it.
-		newProp("DeviceAllow", []deviceAllowEntry{}),
 	}
 
 	// Figure out the set of rules.
@@ -239,7 +247,7 @@ func allowAllDevices() []systemdDbus.Property {
 	// Setting mode to auto and removing all DeviceAllow rules
 	// results in allowing access to all devices.
 	return []systemdDbus.Property{
-		newProp("DevicePolicy", "auto"),
 		newProp("DeviceAllow", []deviceAllowEntry{}),
+		newProp("DevicePolicy", "auto"),
 	}
 }

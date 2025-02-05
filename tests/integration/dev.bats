@@ -141,3 +141,15 @@ function teardown() {
 	runc exec -t test_exec sh -c "ls -l /proc/self/fd/0; echo 123"
 	[ "$status" -eq 0 ]
 }
+
+# https://github.com/opencontainers/runc/issues/4568
+@test "runc run [devices vs systemd NeedDaemonReload]" {
+	# The systemd bug is there since v230, see
+	# https://github.com/systemd/systemd/pull/3170/commits/ab932a622d57fd327ef95992c343fd4425324088
+	# and https://github.com/systemd/systemd/issues/35710.
+	requires systemd_v230
+
+	set_cgroups_path
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_need_reload
+	check_systemd_value "NeedDaemonReload" "no"
+}
