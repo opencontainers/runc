@@ -2,14 +2,34 @@
 
 load helpers
 
+function create_netns() {
+	# Create a temporary name for the test network namespace.
+	tmp=$(mktemp -u)
+	ns_name=$(basename "$tmp")
+
+	# Create the network namespace.
+	ip netns add "$ns_name"
+	ns_path=$(ip netns add "$ns_name" 2>&1 | sed -e 's/.*"\(.*\)".*/\1/')
+}
+
+function delete_netns() {
+	# Delete the namespace only if the ns_name variable is set.
+	[ -v ns_name ] && ip netns del "$ns_name"
+}
+
 function setup() {
 	# XXX: currently criu require root containers.
 	requires criu root
 
 	setup_busybox
+
+	# Create a dummy interface to move to the container.
+	ip link add dummy0 type dummy
 }
 
 function teardown() {
+	ip link del dev dummy0
+	delete_netns
 	teardown_bundle
 }
 
@@ -122,6 +142,52 @@ function simple_cr() {
 	done
 }
 
+function simple_cr_with_netdevice() {
+	# Set custom parameters to the netdevice to validate those are respected
+	mtu_value=1789
+	mac_address="00:11:22:33:44:55"
+	global_ip="169.254.169.77/32"
+
+	ip link set mtu "$mtu_value" dev dummy0
+	ip link set address "$mac_address" dev dummy0
+	ip address add "$global_ip" dev dummy0
+
+	# Tell runc which network namespace to use.
+	create_netns
+	update_config '(.. | select(.type? == "network")) .path |= "'"$ns_path"'"'
+	update_config ' .linux.netDevices |= {"dummy0": {} }'
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox_netdevice
+	[ "$status" -eq 0 ]
+
+	testcontainer test_busybox_netdevice running
+	run runc exec test_busybox_netdevice ip address show dev dummy0
+	[ "$status" -eq 0 ]
+	[[ "$output" == *" $global_ip "* ]]
+	[[ "$output" == *"ether $mac_address "* ]]
+	[[ "$output" == *"mtu $mtu_value "* ]]
+
+	for _ in $(seq 2); do
+		# checkpoint the running container
+		runc "$@" checkpoint --work-path ./work-dir test_busybox_netdevice
+		[ "$status" -eq 0 ]
+
+		# after checkpoint busybox is no longer running
+		testcontainer test_busybox_netdevice checkpointed
+
+		# restore from checkpoint
+		runc "$@" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox_netdevice
+		[ "$status" -eq 0 ]
+
+		# busybox should be back up and running
+		testcontainer test_busybox_netdevice running
+		run runc exec test_busybox_netdevice ip address show dev dummy0
+		[ "$status" -eq 0 ]
+		[[ "$output" == *" $global_ip "* ]]
+		[[ "$output" == *"ether $mac_address "* ]]
+		[[ "$output" == *"mtu $mtu_value "* ]]
+	done
+}
+
 @test "checkpoint and restore" {
 	simple_cr
 }
@@ -149,6 +215,35 @@ function simple_cr() {
 	update_config '.linux.namespaces += [{"type": "cgroup"}]'
 
 	simple_cr
+}
+
+@test "checkpoint and restore with netdevice" {
+	simple_cr_with_netdevice
+}
+
+@test "checkpoint and restore with netdevice (bind mount, destination is symlink)" {
+	mkdir -p rootfs/real/conf
+	ln -s /real/conf rootfs/conf
+	update_config '	  .mounts += [{
+					source: ".",
+					destination: "/conf",
+					options: ["bind"]
+				}]'
+	simple_cr_with_netdevice
+}
+
+@test "checkpoint and restore with netdevice (with --debug)" {
+	simple_cr_with_netdevice --debug
+}
+
+@test "checkpoint and restore with netdevice (cgroupns)" {
+	# cgroupv2 already enables cgroupns so this case was tested above already
+	requires cgroups_v1 cgroupns
+
+	# enable CGROUPNS
+	update_config '.linux.namespaces += [{"type": "cgroup"}]'
+
+	simple_cr_with_netdevice
 }
 
 @test "checkpoint --pre-dump (bad --parent-path)" {
