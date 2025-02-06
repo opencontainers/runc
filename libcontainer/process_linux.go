@@ -653,6 +653,10 @@ func (p *initProcess) start() (retErr error) {
 		return fmt.Errorf("error creating network interfaces: %w", err)
 	}
 
+	if err := p.setupNetworkDevices(); err != nil {
+		return fmt.Errorf("error creating network interfaces: %w", err)
+	}
+
 	// initConfig.SpecState is only needed to run hooks that are executed
 	// inside a container, i.e. CreateContainer and StartContainer.
 	if p.config.Config.HasHook(configs.CreateContainer, configs.StartContainer) {
@@ -837,6 +841,28 @@ func (p *initProcess) createNetworkInterfaces() error {
 		}
 		p.config.Networks = append(p.config.Networks, n)
 	}
+	return nil
+}
+
+// setupNetworkDevices sets up and initializes any defined network interface inside the container.
+func (p *initProcess) setupNetworkDevices() error {
+	// host network pods does not move network devices.
+	if !p.config.Config.Namespaces.Contains(configs.NEWNET) {
+		return nil
+	}
+	// get the namespace defined by the config and fall back
+	// to the one created by runc to run the container process.
+	nsPath := p.config.Config.Namespaces.PathOf(configs.NEWNET)
+	if nsPath == "" {
+		nsPath = fmt.Sprintf("/proc/%d/ns/net", p.pid())
+	}
+	for name, netDevice := range p.config.Config.NetDevices {
+		err := netnsAttach(name, nsPath, *netDevice)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

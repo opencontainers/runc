@@ -8,6 +8,7 @@ import (
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
@@ -48,6 +49,14 @@ func destroy(c *Container) error {
 		// Likely to fail when c.config.RootlessCgroups is true
 		_ = signalAllProcesses(c.cgroupManager, unix.SIGKILL)
 	}
+
+	// Likely to fail if the init process no longer exist.
+	// don't fail on the interface detachment to avoid problems with the container shutdown.
+	// In the worst case the OS will handle the cleanup, hardware interfaces will be back on the
+	// root namespace and virtual devices will be destroyed.
+	if err := restoreNetworkDevices(c); err != nil {
+		logrus.WithError(err).Warnf("failed to restore network device %v", err)
+	}
 	if err := c.cgroupManager.Destroy(); err != nil {
 		return fmt.Errorf("unable to remove container's cgroup: %w", err)
 	}
@@ -63,6 +72,31 @@ func destroy(c *Container) error {
 	err := runPoststopHooks(c)
 	c.state = &stoppedState{c: c}
 	return err
+}
+
+func restoreNetworkDevices(c *Container) error {
+	if !c.config.Namespaces.Contains(configs.NEWNET) {
+		return nil
+	}
+	nsPath := c.config.Namespaces.PathOf(configs.NEWNET)
+	// if there is no network namespace configured
+	// try to get the init process pid to obtain it.
+	if nsPath == "" {
+		if c.initProcess != nil && c.initProcess.pid() > 0 {
+			nsPath = fmt.Sprintf("/proc/%d/ns/net", c.initProcess.pid())
+		} else {
+			return nil
+		}
+	}
+
+	for name, netDevice := range c.config.NetDevices {
+		err := netnsDetach(name, nsPath, *netDevice)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func runPoststopHooks(c *Container) error {

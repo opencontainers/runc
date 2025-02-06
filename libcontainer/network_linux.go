@@ -9,7 +9,12 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/types"
+	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netlink/nl"
+	"github.com/vishvananda/netns"
+
+	"golang.org/x/sys/unix"
 )
 
 var strategies = map[string]networkStrategy{
@@ -96,5 +101,200 @@ func (l *loopback) attach(n *configs.Network) (err error) {
 }
 
 func (l *loopback) detach(n *configs.Network) (err error) {
+	return nil
+}
+
+// netnsAttach takes the network device referenced by name in the current network namespace
+// and moves to the network namespace passed as a parameter. It also configure the
+// network device inside the new network namespace with the passed parameters.
+func netnsAttach(name string, nsPath string, device configs.LinuxNetDevice) error {
+	logrus.Debugf("attaching network device %s with attrs %#v to network namespace %s", name, device, nsPath)
+	link, err := netlink.LinkByName(name)
+	if err != nil {
+		return fmt.Errorf("link not found for interface %s on runtime namespace: %w", name, err)
+	}
+
+	// set the interface down to change the attributes safely
+	err = netlink.LinkSetDown(link)
+	if err != nil {
+		return fmt.Errorf("fail to set link down: %w", err)
+	}
+
+	// get the existing IP addresses
+	addresses, err := netlink.AddrList(link, netlink.FAMILY_ALL)
+	if err != nil {
+		return fmt.Errorf("fail to get ip addresses: %w", err)
+	}
+
+	// do interface rename and namespace change in the same operation to avoid
+	// possible conflicts with the interface name.
+	flags := unix.NLM_F_REQUEST | unix.NLM_F_ACK
+	req := nl.NewNetlinkRequest(unix.RTM_NEWLINK, flags)
+
+	// Get a netlink socket in current namespace
+	s, err := nl.GetNetlinkSocketAt(netns.None(), netns.None(), unix.NETLINK_ROUTE)
+	if err != nil {
+		return fmt.Errorf("could not get network namespace handle: %w", err)
+	}
+	req.Sockets = map[int]*nl.SocketHandle{
+		unix.NETLINK_ROUTE: {Socket: s},
+	}
+
+	// set the interface index
+	msg := nl.NewIfInfomsg(unix.AF_UNSPEC)
+	msg.Index = int32(link.Attrs().Index)
+	req.AddData(msg)
+
+	// set the interface name, rename if requested
+	newName := name
+	if device.Name != "" {
+		newName = device.Name
+	}
+	nameData := nl.NewRtAttr(unix.IFLA_IFNAME, nl.ZeroTerminated(newName))
+	req.AddData(nameData)
+
+	// set the new network namespace
+	ns, err := netns.GetFromPath(nsPath)
+	if err != nil {
+		return fmt.Errorf("could not get network namespace from path %s for network device %s : %w", nsPath, name, err)
+	}
+
+	val := nl.Uint32Attr(uint32(ns))
+	attr := nl.NewRtAttr(unix.IFLA_NET_NS_FD, val)
+	req.AddData(attr)
+
+	_, err = req.Execute(unix.NETLINK_ROUTE, 0)
+	if err != nil {
+		return fmt.Errorf("fail to move network device %s to network namespace %s: %w", name, nsPath, err)
+	}
+
+	// to avoid golang problem with goroutines we create the socket in the
+	// namespace and use it directly
+	nhNs, err := netlink.NewHandleAt(ns)
+	if err != nil {
+		return err
+	}
+
+	nsLink, err := nhNs.LinkByName(newName)
+	if err != nil {
+		return fmt.Errorf("link not found for interface %s on namespace %s : %w", newName, nsPath, err)
+	}
+
+	for _, address := range addresses {
+		// remove the interface attribute of the original address
+		// to avoid issues when the interface is renamed.
+		err = nhNs.AddrAdd(nsLink, &netlink.Addr{IPNet: address.IPNet})
+		if err != nil {
+			return fmt.Errorf("fail to set up address %s on namespace %s: %w", address.String(), nsPath, err)
+		}
+	}
+
+	err = nhNs.LinkSetUp(nsLink)
+	if err != nil {
+		return fmt.Errorf("fail to set up interface %s on namespace %s: %w", nsLink.Attrs().Name, nsPath, err)
+	}
+
+	return nil
+}
+
+// netnsDetach takes the network device referenced by name in the passed network namespace
+// and moves to the root network namespace, restoring the original name. It also sets down
+// the network device to avoid conflict with existing network configuration.
+func netnsDetach(name string, nsPath string, device configs.LinuxNetDevice) error {
+	logrus.Debugf("detaching network device %s with attrs %#v to network namespace %s", name, device, nsPath)
+	ns, err := netns.GetFromPath(nsPath)
+	if err != nil {
+		return fmt.Errorf("could not get network namespace from path %s for network device %s : %w", nsPath, name, err)
+	}
+	// to avoid golang problem with goroutines we create the socket in the
+	// namespace and use it directly
+	nhNs, err := netlink.NewHandleAt(ns)
+	if err != nil {
+		return fmt.Errorf("could not get network namespace handle: %w", err)
+	}
+
+	// set the new network namespace
+	rootNs, err := netns.Get()
+	if err != nil {
+		return fmt.Errorf("could not get current network namespace handle: %w", err)
+	}
+	defer rootNs.Close()
+
+	// check the interface name, it could have been renamed
+	devName := device.Name
+	if devName == "" {
+		devName = name
+	}
+
+	nsLink, err := nhNs.LinkByName(devName)
+	if err != nil {
+		return fmt.Errorf("link not found for interface %s on namespace %s: %w", device.Name, nsPath, err)
+	}
+
+	// set the device down to avoid network conflicts
+	// when it is restored to the original namespace
+	err = nhNs.LinkSetDown(nsLink)
+	if err != nil {
+		return fmt.Errorf("fail to set interface down: %w", err)
+	}
+
+	// get the existing IP addresses
+	addresses, err := nhNs.AddrList(nsLink, netlink.FAMILY_ALL)
+	if err != nil {
+		return fmt.Errorf("fail to get ip addresses: %w", err)
+	}
+
+	// do interface rename and namespace change in the same operation to avoid
+	// possible conflicts with the interface name.
+	flags := unix.NLM_F_REQUEST | unix.NLM_F_ACK
+	req := nl.NewNetlinkRequest(unix.RTM_NEWLINK, flags)
+
+	// Get a netlink socket in current namespace
+	s, err := nl.GetNetlinkSocketAt(ns, rootNs, unix.NETLINK_ROUTE)
+	if err != nil {
+		return fmt.Errorf("could not get network namespace handle: %w", err)
+	}
+	req.Sockets = map[int]*nl.SocketHandle{
+		unix.NETLINK_ROUTE: {Socket: s},
+	}
+
+	// set the interface index
+	msg := nl.NewIfInfomsg(unix.AF_UNSPEC)
+	msg.Index = int32(nsLink.Attrs().Index)
+	req.AddData(msg)
+
+	// restore the original name if it was renamed
+	if nsLink.Attrs().Name != name {
+		nameData := nl.NewRtAttr(unix.IFLA_IFNAME, nl.ZeroTerminated(name))
+		req.AddData(nameData)
+	}
+
+	val := nl.Uint32Attr(uint32(rootNs))
+	attr := nl.NewRtAttr(unix.IFLA_NET_NS_FD, val)
+	req.AddData(attr)
+
+	_, err = req.Execute(unix.NETLINK_ROUTE, 0)
+	if err != nil {
+		return fmt.Errorf("fail to move back interface to current namespace: %w", err)
+	}
+
+	link, err := netlink.LinkByName(name)
+	if err != nil {
+		return fmt.Errorf("link not found for interface %s on runtime namespace: %w", name, err)
+	}
+
+	for _, address := range addresses {
+		err = nhNs.AddrAdd(nsLink, &netlink.Addr{IPNet: address.IPNet})
+		if err != nil {
+			return fmt.Errorf("fail to set up address %s on runtime namespace: %w", address.String(), err)
+		}
+	}
+
+	// set the interface down
+	err = netlink.LinkSetDown(link)
+	if err != nil {
+		return fmt.Errorf("fail to set link down: %w", err)
+	}
+
 	return nil
 }
