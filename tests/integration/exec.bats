@@ -126,6 +126,18 @@ function teardown() {
 	runc exec --user 1000:1000 test_busybox id
 	[ "$status" -eq 0 ]
 	[[ "${output}" == "uid=1000 gid=1000"* ]]
+
+	# Check the default value of HOME ("/") is set even in case when
+	#  - HOME is not set in process.Env, and
+	#  - there is no entry in container's /etc/passwd for a given UID.
+	#
+	# NOTE this is not a standard runtime feature, but rather
+	# a historical de facto behavior we're afraid to change.
+
+	# shellcheck disable=SC2016
+	runc exec --user 1000 test_busybox sh -u -c 'echo $HOME'
+	[ "$status" -eq 0 ]
+	[[ "$output" = "/" ]]
 }
 
 # https://github.com/opencontainers/runc/issues/3674.

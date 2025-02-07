@@ -14,7 +14,6 @@ import (
 	"syscall"
 
 	"github.com/containerd/console"
-	"github.com/moby/sys/user"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -57,8 +56,9 @@ type initConfig struct {
 	ProcessLabel     string                `json:"process_label"`
 	AppArmorProfile  string                `json:"apparmor_profile"`
 	NoNewPrivileges  bool                  `json:"no_new_privileges"`
-	User             string                `json:"user"`
-	AdditionalGroups []string              `json:"additional_groups"`
+	UID              int                   `json:"uid"`
+	GID              int                   `json:"gid"`
+	AdditionalGroups []int                 `json:"additional_groups"`
 	Config           *configs.Config       `json:"config"`
 	Networks         []*network            `json:"network"`
 	PassedFilesCount int                   `json:"passed_files_count"`
@@ -208,7 +208,7 @@ func startInitialization() (retErr error) {
 }
 
 func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSocket, pidfdSocket, fifoFile, logPipe *os.File) error {
-	env, homeSet, err := prepareEnv(config.Env)
+	env, err := prepareEnv(config.Env, config.UID)
 	if err != nil {
 		return err
 	}
@@ -226,7 +226,6 @@ func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSock
 			pidfdSocket:   pidfdSocket,
 			config:        config,
 			logPipe:       logPipe,
-			addHome:       !homeSet,
 		}
 		return i.Init()
 	case initStandard:
@@ -238,7 +237,6 @@ func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSock
 			config:        config,
 			fifoFile:      fifoFile,
 			logPipe:       logPipe,
-			addHome:       !homeSet,
 		}
 		return i.Init()
 	}
@@ -274,7 +272,7 @@ func verifyCwd() error {
 // finalizeNamespace drops the caps, sets the correct user
 // and working dir, and closes any leaked file descriptors
 // before executing the command inside the namespace.
-func finalizeNamespace(config *initConfig, addHome bool) error {
+func finalizeNamespace(config *initConfig) error {
 	// Ensure that all unwanted fds we may have accidentally
 	// inherited are marked close-on-exec so they stay out of the
 	// container
@@ -320,7 +318,7 @@ func finalizeNamespace(config *initConfig, addHome bool) error {
 	if err := system.SetKeepCaps(); err != nil {
 		return fmt.Errorf("unable to set keep caps: %w", err)
 	}
-	if err := setupUser(config, addHome); err != nil {
+	if err := setupUser(config); err != nil {
 		return fmt.Errorf("unable to setup user: %w", err)
 	}
 	// Change working directory AFTER the user has been set up, if we haven't done it yet.
@@ -438,52 +436,11 @@ func syncParentSeccomp(pipe *syncSocket, seccompFd int) error {
 	return readSync(pipe, procSeccompDone)
 }
 
-// setupUser changes the groups, gid, and uid for the user inside the container,
-// and appends user's HOME to config.Env if addHome is true.
-func setupUser(config *initConfig, addHome bool) error {
-	// Set up defaults.
-	defaultExecUser := user.ExecUser{
-		Uid:  0,
-		Gid:  0,
-		Home: "/",
-	}
-
-	passwdPath, err := user.GetPasswdPath()
-	if err != nil {
-		return err
-	}
-
-	groupPath, err := user.GetGroupPath()
-	if err != nil {
-		return err
-	}
-
-	execUser, err := user.GetExecUserPath(config.User, &defaultExecUser, passwdPath, groupPath)
-	if err != nil {
-		return err
-	}
-
-	var addGroups []int
-	if len(config.AdditionalGroups) > 0 {
-		addGroups, err = user.GetAdditionalGroupsPath(config.AdditionalGroups, groupPath)
-		if err != nil {
-			return err
-		}
-	}
-
-	if config.RootlessEUID {
-		// We cannot set any additional groups in a rootless container and thus
-		// we bail if the user asked us to do so. TODO: We currently can't do
-		// this check earlier, but if libcontainer.Process.User was typesafe
-		// this might work.
-		if len(addGroups) > 0 {
-			return errors.New("cannot set any additional groups in a rootless container")
-		}
-	}
-
+// setupUser changes the groups, gid, and uid for the user inside the container.
+func setupUser(config *initConfig) error {
 	// Before we change to the container's user make sure that the processes
 	// STDIO is correctly owned by the user that we are switching to.
-	if err := fixStdioPermissions(execUser); err != nil {
+	if err := fixStdioPermissions(config.UID); err != nil {
 		return err
 	}
 
@@ -502,36 +459,30 @@ func setupUser(config *initConfig, addHome bool) error {
 	allowSupGroups := !config.RootlessEUID && string(bytes.TrimSpace(setgroups)) != "deny"
 
 	if allowSupGroups {
-		suppGroups := append(execUser.Sgids, addGroups...)
-		if err := unix.Setgroups(suppGroups); err != nil {
+		if err := unix.Setgroups(config.AdditionalGroups); err != nil {
 			return &os.SyscallError{Syscall: "setgroups", Err: err}
 		}
 	}
 
-	if err := unix.Setgid(execUser.Gid); err != nil {
+	if err := unix.Setgid(config.GID); err != nil {
 		if err == unix.EINVAL {
-			return fmt.Errorf("cannot setgid to unmapped gid %d in user namespace", execUser.Gid)
+			return fmt.Errorf("cannot setgid to unmapped gid %d in user namespace", config.GID)
 		}
 		return err
 	}
-	if err := unix.Setuid(execUser.Uid); err != nil {
+	if err := unix.Setuid(config.UID); err != nil {
 		if err == unix.EINVAL {
-			return fmt.Errorf("cannot setuid to unmapped uid %d in user namespace", execUser.Uid)
+			return fmt.Errorf("cannot setuid to unmapped uid %d in user namespace", config.UID)
 		}
 		return err
-	}
-
-	// If we didn't get HOME already, set it based on the user's HOME.
-	if addHome {
-		config.Env = append(config.Env, "HOME="+execUser.Home)
 	}
 	return nil
 }
 
-// fixStdioPermissions fixes the permissions of PID 1's STDIO within the container to the specified user.
+// fixStdioPermissions fixes the permissions of PID 1's STDIO within the container to the specified uid.
 // The ownership needs to match because it is created outside of the container and needs to be
 // localized.
-func fixStdioPermissions(u *user.ExecUser) error {
+func fixStdioPermissions(uid int) error {
 	var null unix.Stat_t
 	if err := unix.Stat("/dev/null", &null); err != nil {
 		return &os.PathError{Op: "stat", Path: "/dev/null", Err: err}
@@ -544,7 +495,7 @@ func fixStdioPermissions(u *user.ExecUser) error {
 
 		// Skip chown if uid is already the one we want or any of the STDIO descriptors
 		// were redirected to /dev/null.
-		if int(s.Uid) == u.Uid || s.Rdev == null.Rdev {
+		if int(s.Uid) == uid || s.Rdev == null.Rdev {
 			continue
 		}
 
@@ -554,7 +505,7 @@ func fixStdioPermissions(u *user.ExecUser) error {
 		// that users expect to be able to actually use their console. Without
 		// this code, you couldn't effectively run as a non-root user inside a
 		// container and also have a console set up.
-		if err := file.Chown(u.Uid, int(s.Gid)); err != nil {
+		if err := file.Chown(uid, int(s.Gid)); err != nil {
 			// If we've hit an EINVAL then s.Gid isn't mapped in the user
 			// namespace. If we've hit an EPERM then the inode's current owner
 			// is not mapped in our user namespace (in particular,
