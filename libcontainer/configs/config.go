@@ -3,8 +3,11 @@ package configs
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -225,6 +228,9 @@ type Config struct {
 
 	// IOPriority is the container's I/O priority.
 	IOPriority *IOPriority `json:"io_priority,omitempty"`
+
+	// ExecCPUAffinity is CPU affinity for a non-init process to be run in the container.
+	ExecCPUAffinity *CPUAffinity `json:"exec_cpu_affinity,omitempty"`
 }
 
 // Scheduler is based on the Linux sched_setattr(2) syscall.
@@ -287,6 +293,72 @@ func ToSchedAttr(scheduler *Scheduler) (*unix.SchedAttr, error) {
 }
 
 type IOPriority = specs.LinuxIOPriority
+
+type CPUAffinity struct {
+	Initial, Final *unix.CPUSet
+}
+
+func toCPUSet(str string) (*unix.CPUSet, error) {
+	if str == "" {
+		return nil, nil
+	}
+	s := new(unix.CPUSet)
+	for _, r := range strings.Split(str, ",") {
+		// Allow extra spaces around.
+		r = strings.TrimSpace(r)
+		// Allow empty elements (extra commas).
+		if r == "" {
+			continue
+		}
+		if r0, r1, found := strings.Cut(r, "-"); found {
+			start, err := strconv.ParseUint(r0, 10, 32)
+			if err != nil {
+				return nil, err
+			}
+			end, err := strconv.ParseUint(r1, 10, 32)
+			if err != nil {
+				return nil, err
+			}
+			if start > end {
+				return nil, errors.New("invalid range: " + r)
+			}
+			for i := int(start); i <= int(end); i++ {
+				s.Set(i)
+			}
+		} else {
+			val, err := strconv.ParseUint(r, 10, 32)
+			if err != nil {
+				return nil, err
+			}
+			s.Set(int(val))
+		}
+	}
+
+	return s, nil
+}
+
+// ConvertCPUAffinity converts [specs.CPUAffinity] to [CPUAffinity].
+func ConvertCPUAffinity(sa *specs.CPUAffinity) (*CPUAffinity, error) {
+	if sa == nil {
+		return nil, nil
+	}
+	initial, err := toCPUSet(sa.Initial)
+	if err != nil {
+		return nil, fmt.Errorf("bad CPUAffinity.Initial: %w", err)
+	}
+	final, err := toCPUSet(sa.Final)
+	if err != nil {
+		return nil, fmt.Errorf("bad CPUAffinity.Final: %w", err)
+	}
+	if initial == nil && final == nil {
+		return nil, nil
+	}
+
+	return &CPUAffinity{
+		Initial: initial,
+		Final:   final,
+	}, nil
+}
 
 type (
 	HookName string

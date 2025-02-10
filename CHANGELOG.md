@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    IDs before calling libcontainer; it is recommended to use Go package
    github.com/moby/sys/user for that. (#3999)
 
+### Added
+ * CPU affinity support for `runc exec`. (#4327)
+
 ## [1.2.0] - 2024-10-22
 
 > できるときにできることをやるんだ。それが今だ。

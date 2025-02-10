@@ -102,6 +102,8 @@ type Process struct {
 	Scheduler *configs.Scheduler
 
 	IOPriority *configs.IOPriority
+
+	CPUAffinity *configs.CPUAffinity
 }
 
 // Wait waits for the process to exit.
