@@ -1,11 +1,6 @@
 module github.com/opencontainers/runc
 
-go 1.22
-
-// Suggest toolchain 1.22.4 due to a fix in golang for libcontainer/nsenter/.
-// For more info, see: #4233
-// Note that toolchain does not impose a requirement on other modules using runc.
-toolchain go1.22.4
+go 1.23.0
 
 require (
 	github.com/checkpoint-restore/go-criu/v6 v6.3.0
