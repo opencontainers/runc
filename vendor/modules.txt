@@ -81,7 +81,7 @@ github.com/vishvananda/netns
 # golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
 ## explicit; go 1.18
 golang.org/x/exp/constraints
-# golang.org/x/net v0.24.0
+# golang.org/x/net v0.33.0
 ## explicit; go 1.18
 golang.org/x/net/bpf
 # golang.org/x/sys v0.28.0
