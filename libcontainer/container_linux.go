@@ -689,6 +689,9 @@ func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, comm *processComm
 }
 
 func (c *Container) newInitConfig(process *Process) *initConfig {
+	// Set initial properties. For those properties that exist
+	// both in the container config and the process, use the ones
+	// from the container config first, and override them later.
 	cfg := &initConfig{
 		Config:           c.config,
 		Args:             process.Args,
@@ -697,18 +700,24 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 		GID:              process.GID,
 		AdditionalGroups: process.AdditionalGroups,
 		Cwd:              process.Cwd,
-		Capabilities:     process.Capabilities,
+		Capabilities:     c.config.Capabilities,
 		PassedFilesCount: len(process.ExtraFiles),
 		ContainerID:      c.ID(),
 		NoNewPrivileges:  c.config.NoNewPrivileges,
-		RootlessEUID:     c.config.RootlessEUID,
-		RootlessCgroups:  c.config.RootlessCgroups,
 		AppArmorProfile:  c.config.AppArmorProfile,
 		ProcessLabel:     c.config.ProcessLabel,
 		Rlimits:          c.config.Rlimits,
+		IOPriority:       c.config.IOPriority,
+		Scheduler:        c.config.Scheduler,
 		CreateConsole:    process.ConsoleSocket != nil,
 		ConsoleWidth:     process.ConsoleWidth,
 		ConsoleHeight:    process.ConsoleHeight,
+	}
+
+	// Overwrite config properties with ones from process.
+
+	if process.Capabilities != nil {
+		cfg.Capabilities = process.Capabilities
 	}
 	if process.NoNewPrivileges != nil {
 		cfg.NoNewPrivileges = *process.NoNewPrivileges
@@ -722,6 +731,15 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 	if len(process.Rlimits) > 0 {
 		cfg.Rlimits = process.Rlimits
 	}
+	if process.IOPriority != nil {
+		cfg.IOPriority = process.IOPriority
+	}
+	if process.Scheduler != nil {
+		cfg.Scheduler = process.Scheduler
+	}
+
+	// Set misc properties.
+
 	if cgroups.IsCgroup2UnifiedMode() {
 		cfg.Cgroup2Path = c.cgroupManager.Path("")
 	}
