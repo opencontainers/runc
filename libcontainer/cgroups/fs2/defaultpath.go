@@ -25,22 +25,15 @@ import (
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/runc/libcontainer/cgroups/internal/path"
 )
 
 const UnifiedMountpoint = "/sys/fs/cgroup"
 
 func defaultDirPath(c *cgroups.Cgroup) (string, error) {
-	if (c.Name != "" || c.Parent != "") && c.Path != "" {
-		return "", errors.New("cgroup: either Path or Name and Parent should be used")
-	}
-
-	// XXX: Do not remove CleanPath. Path safety is important! -- cyphar
-	innerPath := utils.CleanPath(c.Path)
-	if innerPath == "" {
-		cgParent := utils.CleanPath(c.Parent)
-		cgName := utils.CleanPath(c.Name)
-		innerPath = filepath.Join(cgParent, cgName)
+	innerPath, err := path.Inner(c)
+	if err != nil {
+		return "", err
 	}
 
 	if filepath.IsAbs(innerPath) {
