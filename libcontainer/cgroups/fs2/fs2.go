@@ -237,11 +237,10 @@ func (m *Manager) setUnified(res map[string]string) error {
 			if errors.Is(err, os.ErrPermission) || errors.Is(err, os.ErrNotExist) {
 				// Check if a controller is available,
 				// to give more specific error if not.
-				sk := strings.SplitN(k, ".", 2)
-				if len(sk) != 2 {
+				c, _, ok := strings.Cut(k, ".")
+				if !ok {
 					return fmt.Errorf("unified resource %q must be in the form CONTROLLER.PARAMETER", k)
 				}
-				c := sk[0]
 				if _, ok := m.controllers[c]; !ok && c != "cgroup" {
 					return fmt.Errorf("unified resource %q can't be set: controller %q not available", k, c)
 				}

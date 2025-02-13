@@ -685,8 +685,8 @@ func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
 	var sp []systemdDbus.Property
 
 	for k, v := range spec.Annotations {
-		name := strings.TrimPrefix(k, keyPrefix)
-		if len(name) == len(k) { // prefix not there
+		name, ok := strings.CutPrefix(k, keyPrefix)
+		if !ok { // prefix not there
 			continue
 		}
 		if err := checkPropertyName(name); err != nil {

@@ -224,8 +224,7 @@ func findDeviceGroup(ruleType devices.Type, ruleMajor int64) (string, error) {
 			continue
 		}
 
-		group := strings.TrimPrefix(line, ruleMajorStr)
-		if len(group) < len(line) { // got it
+		if group, ok := strings.CutPrefix(line, ruleMajorStr); ok {
 			return prefix + group, nil
 		}
 	}

@@ -53,8 +53,8 @@ func TestCpuacctStats(t *testing.T) {
 			962250696038415, 981956408513304, 1002658817529022, 994937703492523,
 			874843781648690, 872544369885276, 870104915696359, 870202363887496,
 		},
-		UsageInKernelmode: (uint64(291429664) * nanosecondsInSecond) / clockTicks,
-		UsageInUsermode:   (uint64(452278264) * nanosecondsInSecond) / clockTicks,
+		UsageInKernelmode: (uint64(291429664) * nsInSec) / clockTicks,
+		UsageInUsermode:   (uint64(452278264) * nsInSec) / clockTicks,
 	}
 
 	if !reflect.DeepEqual(expectedStats, actualStats.CpuStats.CpuUsage) {
@@ -86,8 +86,8 @@ func TestCpuacctStatsWithoutUsageAll(t *testing.T) {
 		},
 		PercpuUsageInKernelmode: []uint64{},
 		PercpuUsageInUsermode:   []uint64{},
-		UsageInKernelmode:       (uint64(291429664) * nanosecondsInSecond) / clockTicks,
-		UsageInUsermode:         (uint64(452278264) * nanosecondsInSecond) / clockTicks,
+		UsageInKernelmode:       (uint64(291429664) * nsInSec) / clockTicks,
+		UsageInUsermode:         (uint64(452278264) * nsInSec) / clockTicks,
 	}
 
 	if !reflect.DeepEqual(expectedStats, actualStats.CpuStats.CpuUsage) {

@@ -117,6 +117,12 @@ following will output a list of processes running in the container:
 	SkipArgReorder: true,
 }
 
+// getSubCgroupPaths parses --cgroup arguments, which can either be
+//   - a single "path" argument (for cgroup v2);
+//   - one or more controller[,controller[,...]]:path arguments (for cgroup v1).
+//
+// Returns a controller to path map. For cgroup v2, it's a single entity map
+// with empty controller value.
 func getSubCgroupPaths(args []string) (map[string]string, error) {
 	if len(args) == 0 {
 		return nil, nil
@@ -124,20 +130,23 @@ func getSubCgroupPaths(args []string) (map[string]string, error) {
 	paths := make(map[string]string, len(args))
 	for _, c := range args {
 		// Split into controller:path.
-		cs := strings.SplitN(c, ":", 3)
-		if len(cs) > 2 {
-			return nil, fmt.Errorf("invalid --cgroup argument: %s", c)
-		}
-		if len(cs) == 1 { // no controller: prefix
+		if ctr, path, ok := strings.Cut(c, ":"); ok {
+			// There may be a few comma-separated controllers.
+			for _, ctrl := range strings.Split(ctr, ",") {
+				if ctrl == "" {
+					return nil, fmt.Errorf("invalid --cgroup argument: %s (empty <controller> prefix)", c)
+				}
+				if _, ok := paths[ctrl]; ok {
+					return nil, fmt.Errorf("invalid --cgroup argument(s): controller %s specified multiple times", ctrl)
+				}
+				paths[ctrl] = path
+			}
+		} else {
+			// No "controller:" prefix (cgroup v2, a single path).
 			if len(args) != 1 {
 				return nil, fmt.Errorf("invalid --cgroup argument: %s (missing <controller>: prefix)", c)
 			}
 			paths[""] = c
-		} else {
-			// There may be a few comma-separated controllers.
-			for _, ctrl := range strings.Split(cs[0], ",") {
-				paths[ctrl] = cs[1]
-			}
 		}
 	}
 	return paths, nil

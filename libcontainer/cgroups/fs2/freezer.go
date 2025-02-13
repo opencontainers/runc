@@ -104,9 +104,7 @@ func waitFrozen(dirPath string) (cgroups.FreezerState, error) {
 		if i == maxIter {
 			return cgroups.Undefined, fmt.Errorf("timeout of %s reached waiting for the cgroup to freeze", waitTime*maxIter)
 		}
-		line := scanner.Text()
-		val := strings.TrimPrefix(line, "frozen ")
-		if val != line { // got prefix
+		if val, ok := strings.CutPrefix(scanner.Text(), "frozen "); ok {
 			if val[0] == '1' {
 				return cgroups.Frozen, nil
 			}
