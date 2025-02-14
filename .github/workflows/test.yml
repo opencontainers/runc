@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, ubuntu-24.04, actuated-arm64-6cpu-8gb]
+        os: [ubuntu-24.04, actuated-arm64-6cpu-8gb]
         go-version: [1.22.x, 1.23.x, 1.24.x]
         rootless: ["rootless", ""]
         race: ["-race", ""]
@@ -176,8 +176,6 @@ jobs:
       run: sudo -E PATH="$PATH" script -e -c 'make local${{ matrix.rootless }}integration'
 
     - name: integration test (systemd driver)
-      # Skip rootless+systemd for ubuntu 20.04 because of cgroup v1.
-      if: ${{ !(matrix.os == 'ubuntu-20.04' && matrix.rootless == 'rootless') }}
       run: |
         # Delegate all cgroup v2 controllers to rootless user via --systemd-cgroup.
         # The default (since systemd v252) is "pids memory cpu".
