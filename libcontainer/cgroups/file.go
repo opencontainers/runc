@@ -5,12 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 
-	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -147,7 +146,10 @@ func openFile(dir, file string, flags int) (*os.File, error) {
 		flags |= os.O_TRUNC | os.O_CREATE
 		mode = 0o600
 	}
-	path := path.Join(dir, utils.CleanPath(file))
+	// NOTE it is important to use filepath.Clean("/"+file) here
+	// (see https://github.com/opencontainers/runc/issues/4103)!
+	path := filepath.Join(dir, filepath.Clean("/"+file))
+
 	if prepareOpenat2() != nil {
 		return openFallback(path, flags, mode)
 	}
@@ -171,9 +173,7 @@ func openFile(dir, file string, flags int) (*os.File, error) {
 		//
 		// TODO: if such usage will ever be common, amend this
 		// to reopen cgroupRootHandle and retry openat2.
-		fdPath, closer := utils.ProcThreadSelf("fd/" + strconv.Itoa(int(cgroupRootHandle.Fd())))
-		defer closer()
-		fdDest, _ := os.Readlink(fdPath)
+		fdDest, _ := os.Readlink("/proc/thread-self/fd/" + strconv.Itoa(int(cgroupRootHandle.Fd())))
 		if fdDest != cgroupfsDir {
 			// Wrap the error so it is clear that cgroupRootHandle
 			// is opened to an unexpected/wrong directory.

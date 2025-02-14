@@ -19,40 +19,25 @@ package fs2
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/runc/libcontainer/cgroups/internal/path"
 )
 
 const UnifiedMountpoint = "/sys/fs/cgroup"
 
 func defaultDirPath(c *cgroups.Cgroup) (string, error) {
-	if (c.Name != "" || c.Parent != "") && c.Path != "" {
-		return "", fmt.Errorf("cgroup: either Path or Name and Parent should be used, got %+v", c)
+	innerPath, err := path.Inner(c)
+	if err != nil {
+		return "", err
 	}
 
-	return _defaultDirPath(UnifiedMountpoint, c.Path, c.Parent, c.Name)
-}
-
-func _defaultDirPath(root, cgPath, cgParent, cgName string) (string, error) {
-	if (cgName != "" || cgParent != "") && cgPath != "" {
-		return "", errors.New("cgroup: either Path or Name and Parent should be used")
-	}
-
-	// XXX: Do not remove CleanPath. Path safety is important! -- cyphar
-	innerPath := utils.CleanPath(cgPath)
-	if innerPath == "" {
-		cgParent := utils.CleanPath(cgParent)
-		cgName := utils.CleanPath(cgName)
-		innerPath = filepath.Join(cgParent, cgName)
-	}
 	if filepath.IsAbs(innerPath) {
-		return filepath.Join(root, innerPath), nil
+		return filepath.Join(UnifiedMountpoint, innerPath), nil
 	}
 
 	// we don't need to use /proc/thread-self here because runc always runs
@@ -67,7 +52,7 @@ func _defaultDirPath(root, cgPath, cgParent, cgName string) (string, error) {
 	// A parent cgroup (with no tasks in it) is what we need.
 	ownCgroup = filepath.Dir(ownCgroup)
 
-	return filepath.Join(root, ownCgroup, innerPath), nil
+	return filepath.Join(UnifiedMountpoint, ownCgroup, innerPath), nil
 }
 
 // parseCgroupFile parses /proc/PID/cgroup file and return string
