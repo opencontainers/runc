@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.2.z]
 
+## [1.2.5] - 2025-02-13
+
+> Мороз и солнце; день чудесный!
+
+### Fixed
+* There was a regression in systemd v230 which made the way we define device
+  rule restrictions require a systemctl daemon-reload for our transient
+  units. This caused issues for workloads using NVIDIA GPUs. Workaround the
+  upstream regression by re-arranging how the unit properties are defined.
+  (#4568, #4612, #4615)
+ * Dependency github.com/cyphar/filepath-securejoin is updated to v0.4.1,
+   allowing projects that vendor runc to bump it as well. (#4608)
+ * CI: fixed criu-dev compilation. (#4611)
+
+### Changed
+ * Dependency golang.org/x/net is updated to 0.33.0. (#4632)
+
 ## [1.2.4] - 2025-01-07
 
 > Христос се роди!
@@ -972,7 +989,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.1.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.1.0-rc.1
 
 <!-- 1.2.z patch releases -->
-[Unreleased 1.2.z]: https://github.com/opencontainers/runc/compare/v1.2.4...release-1.2
+[Unreleased 1.2.z]: https://github.com/opencontainers/runc/compare/v1.2.5...release-1.2
+[1.2.5]: https://github.com/opencontainers/runc/compare/v1.2.4...v1.2.5
 [1.2.4]: https://github.com/opencontainers/runc/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/opencontainers/runc/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/opencontainers/runc/compare/v1.2.1...v1.2.2
