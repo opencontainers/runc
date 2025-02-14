@@ -7,8 +7,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
+	"github.com/opencontainers/cgroups"
+	"github.com/opencontainers/cgroups/systemd"
 )
 
 func usage() {

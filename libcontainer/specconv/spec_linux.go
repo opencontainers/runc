@@ -14,8 +14,8 @@ import (
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	dbus "github.com/godbus/dbus/v5"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
-	devices "github.com/opencontainers/runc/libcontainer/cgroups/devices/config"
+	"github.com/opencontainers/cgroups"
+	devices "github.com/opencontainers/cgroups/devices/config"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
