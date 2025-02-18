@@ -12,6 +12,7 @@ import (
 var errInvalidProcess = errors.New("invalid process")
 
 type processOperations interface {
+	terminate() error
 	wait() (*os.ProcessState, error)
 	signal(sig os.Signal) error
 	pid() int
