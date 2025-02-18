@@ -63,3 +63,20 @@ function teardown() {
 	runc run ct1
 	[ "$status" -eq 0 ]
 }
+
+# https://github.com/opencontainers/runc/issues/1663
+@test "runc run [hook's argv is preserved]" {
+	# Check that argv[0] and argv[1] passed to the hook's binary
+	# exactly as set in config.json.
+	update_config '.hooks |= {"startContainer": [{"path": "/bin/busybox", "args": ["cat", "/nosuchfile"]}]}'
+	runc run ct1
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"cat: can't open"*"/nosuchfile"* ]]
+
+	# Busybox also accepts commands where argv[0] is "busybox",
+	# and argv[1] is applet name. Test this as well.
+	update_config '.hooks |= {"startContainer": [{"path": "/bin/busybox", "args": ["busybox", "cat", "/nosuchfile"]}]}'
+	runc run ct1
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"cat: can't open"*"/nosuchfile"* ]]
+}
