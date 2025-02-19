@@ -1051,7 +1051,12 @@ void nsexec(void)
 			 */
 			try_unshare(config.cloneflags, "remaining namespaces");
 
-			if (config.timensoffset) {
+			/*
+			 * We should configure the process's timens offset only when we need to
+			 * create new time namespace, we shouldn't do it if we are joining an
+			 * existing time namespace.
+			 */
+			if ((config.cloneflags & CLONE_NEWTIME) && config.timensoffset) {
 				write_log(DEBUG, "request stage-0 to write timens offsets");
 
 				s = SYNC_TIMEOFFSETS_PLS;
