@@ -1,6 +1,7 @@
 package libcontainer
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"unsafe"
@@ -40,6 +41,9 @@ func registerMemoryEventV2(cgDir, evName, cgEvName string) (<-chan struct{}, err
 
 		for {
 			n, err := unix.Read(fd, buffer[:])
+			if errors.Is(err, unix.EINTR) {
+				continue
+			}
 			if err != nil {
 				logrus.Warnf("unable to read event data from inotify, got error: %v", err)
 				return
