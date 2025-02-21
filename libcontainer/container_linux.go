@@ -1123,7 +1123,7 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 					})
 				}
 			}
-			if requiresRootOrMappingTool(c.config) {
+			if requiresRootOrMappingTool(c.config.GIDMappings) {
 				r.AddData(&Boolmsg{
 					Type:  SetgroupAttr,
 					Value: true,
@@ -1186,9 +1186,9 @@ func ignoreTerminateErrors(err error) error {
 	return err
 }
 
-func requiresRootOrMappingTool(c *configs.Config) bool {
+func requiresRootOrMappingTool(gidMappings []configs.IDMap) bool {
 	gidMap := []configs.IDMap{
 		{ContainerID: 0, HostID: int64(os.Getegid()), Size: 1},
 	}
-	return !reflect.DeepEqual(c.GIDMappings, gidMap)
+	return !reflect.DeepEqual(gidMappings, gidMap)
 }
