@@ -782,20 +782,6 @@ void nsexec(void)
 			prctl(PR_SET_NAME, (unsigned long)"runc:[2:INIT]", 0, 0, 0);
 			write_log(DEBUG, "~> nsexec stage-2");
 
-			if (setsid() < 0)
-				bail("setsid failed");
-
-			if (setuid(0) < 0)
-				bail("setuid failed");
-
-			if (setgid(0) < 0)
-				bail("setgid failed");
-
-			if (!config.is_rootless_euid && config.is_setgroup) {
-				if (setgroups(0, NULL) < 0)
-					bail("setgroups failed");
-			}
-
 			close(syncfd);
 
 			/* Free netlink data. */

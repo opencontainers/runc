@@ -222,6 +222,24 @@ func startInitialization() (retErr error) {
 		return err
 	}
 
+	if _, err := unix.Setsid(); err != nil {
+		return os.NewSyscallError("setsid", err)
+	}
+
+	if err := unix.Setuid(0); err != nil {
+		return os.NewSyscallError("setuid", err)
+	}
+
+	if err := unix.Setgid(0); err != nil {
+		return os.NewSyscallError("setgid", err)
+	}
+
+	if !config.Config.RootlessEUID && requiresRootOrMappingTool(config.Config.GIDMappings) {
+		if err := unix.Setgroups([]int{0}); err != nil {
+			return os.NewSyscallError("setgroups", err)
+		}
+	}
+
 	// If init succeeds, it will not return, hence none of the defers will be called.
 	return containerInit(it, &config, syncPipe, consoleSocket, pidfdSocket, fifoFile, logPipe)
 }
