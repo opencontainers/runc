@@ -104,6 +104,7 @@ type containerProcess struct {
 	process       *Process
 	bootstrapData io.Reader
 	container     *Container
+	childPid      int
 }
 
 func (p *containerProcess) pid() int {
