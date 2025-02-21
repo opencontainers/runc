@@ -27,6 +27,11 @@ type IDMap struct {
 	Size        int64 `json:"size"`
 }
 
+// ToString is to serialize the IDMap to a string.
+func (i IDMap) ToString() string {
+	return fmt.Sprintf("%d %d %d", i.ContainerID, i.HostID, i.Size)
+}
+
 // Seccomp represents syscall restrictions
 // By default, only the native architecture of the kernel is allowed to be used
 // for syscalls. Additional architectures can be added by specifying them in
