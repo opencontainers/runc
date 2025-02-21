@@ -1,6 +1,7 @@
 package libcontainer
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -42,7 +43,18 @@ func (s *syncSocket) WritePacket(b []byte) (int, error) {
 }
 
 func (s *syncSocket) ReadPacket() ([]byte, error) {
-	size, _, err := unix.Recvfrom(int(s.f.Fd()), nil, unix.MSG_TRUNC|unix.MSG_PEEK)
+	var (
+		size int
+		err  error
+	)
+
+	for {
+		size, _, err = unix.Recvfrom(int(s.f.Fd()), nil, unix.MSG_TRUNC|unix.MSG_PEEK)
+		if !errors.Is(err, unix.EINTR) {
+			break
+		}
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("fetch packet length from socket: %w", err)
 	}
