@@ -55,6 +55,9 @@ type processComm struct {
 	// indicate that it is ready.
 	initSockParent *os.File
 	initSockChild  *os.File
+	// Used for control messages between parent and "runc init" stage-1 process.
+	stage1SockParent *os.File
+	stage1SockChild  *os.File
 	// Used for control messages between parent and "runc init".
 	syncSockParent *syncSocket
 	syncSockChild  *syncSocket
@@ -72,6 +75,10 @@ func newProcessComm() (*processComm, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to create init pipe: %w", err)
 	}
+	comm.stage1SockParent, comm.stage1SockChild, err = utils.NewSockPair("stage1")
+	if err != nil {
+		return nil, fmt.Errorf("unable to create stage1 pipe: %w", err)
+	}
 	comm.syncSockParent, comm.syncSockChild, err = newSyncSockpair("sync")
 	if err != nil {
 		return nil, fmt.Errorf("unable to create sync pipe: %w", err)
@@ -85,12 +92,14 @@ func newProcessComm() (*processComm, error) {
 
 func (c *processComm) closeChild() {
 	_ = c.initSockChild.Close()
+	_ = c.stage1SockChild.Close()
 	_ = c.syncSockChild.Close()
 	_ = c.logPipeChild.Close()
 }
 
 func (c *processComm) closeParent() {
 	_ = c.initSockParent.Close()
+	_ = c.stage1SockChild.Close()
 	_ = c.syncSockParent.Close()
 	// c.logPipeParent is kept alive for ForwardLogs
 }
@@ -194,6 +203,13 @@ func (p *setnsProcess) start() (retErr error) {
 			return fmt.Errorf("error copying bootstrap data to pipe: %w", err)
 		}
 	}
+	if err := p.setupNsExec(p.comm.stage1SockParent); err != nil {
+		return fmt.Errorf("error waiting nsexec report pid: %w", err)
+	}
+	if err := p.comm.stage1SockParent.Close(); err != nil {
+		return err
+	}
+
 	if err := p.execSetns(); err != nil {
 		return fmt.Errorf("error executing setns process: %w", err)
 	}
@@ -332,20 +348,8 @@ func (p *setnsProcess) execSetns() error {
 		_ = p.cmd.Wait()
 		return &exec.ExitError{ProcessState: status}
 	}
-	var pid *pid
-	if err := json.NewDecoder(p.comm.initSockParent).Decode(&pid); err != nil {
-		_ = p.cmd.Wait()
-		return fmt.Errorf("error reading pid from init pipe: %w", err)
-	}
 
-	// Clean up the zombie parent process
-	// On Unix systems FindProcess always succeeds.
-	firstChildProcess, _ := os.FindProcess(pid.PidFirstChild)
-
-	// Ignore the error in case the child has already been reaped for any reason
-	_, _ = firstChildProcess.Wait()
-
-	process, err := os.FindProcess(pid.Pid)
+	process, err := os.FindProcess(p.childPid)
 	if err != nil {
 		return err
 	}
@@ -357,24 +361,6 @@ func (p *setnsProcess) execSetns() error {
 type initProcess struct {
 	containerProcess
 	intelRdtManager *intelrdt.Manager
-}
-
-// getChildPid receives the final child's pid over the provided pipe.
-func (p *initProcess) getChildPid() (int, error) {
-	var pid pid
-	if err := json.NewDecoder(p.comm.initSockParent).Decode(&pid); err != nil {
-		_ = p.cmd.Wait()
-		return -1, err
-	}
-
-	// Clean up the zombie parent process
-	// On Unix systems FindProcess always succeeds.
-	firstChildProcess, _ := os.FindProcess(pid.PidFirstChild)
-
-	// Ignore the error in case the child has already been reaped for any reason
-	_, _ = firstChildProcess.Wait()
-
-	return pid.Pid, nil
 }
 
 func (p *initProcess) waitForChildExit(childPid int) error {
@@ -571,23 +557,28 @@ func (p *initProcess) start() (retErr error) {
 	if _, err := io.Copy(p.comm.initSockParent, p.bootstrapData); err != nil {
 		return fmt.Errorf("can't copy bootstrap data to pipe: %w", err)
 	}
+	if err := p.setupNsExec(p.comm.stage1SockParent); err != nil {
+		return fmt.Errorf("error waiting nsexec report pid: %w", err)
+	}
+	if err := p.comm.stage1SockParent.Close(); err != nil {
+		return err
+	}
 
-	childPid, err := p.getChildPid()
-	if err != nil {
-		return fmt.Errorf("can't get final child's PID from pipe: %w", err)
+	if p.childPid <= 0 {
+		return fmt.Errorf("invalid child pid %d", p.childPid)
 	}
 
 	// Save the standard descriptor names before the container process
 	// can potentially move them (e.g., via dup2()).  If we don't do this now,
 	// we won't know at checkpoint time which file descriptor to look up.
-	fds, err := getPipeFds(childPid)
+	fds, err := getPipeFds(p.childPid)
 	if err != nil {
-		return fmt.Errorf("error getting pipe fds for pid %d: %w", childPid, err)
+		return fmt.Errorf("error getting pipe fds for pid %d: %w", p.childPid, err)
 	}
 	p.setExternalDescriptors(fds)
 
 	// Wait for our first child to exit
-	if err := p.waitForChildExit(childPid); err != nil {
+	if err := p.waitForChildExit(p.childPid); err != nil {
 		return fmt.Errorf("error waiting for our first child to exit: %w", err)
 	}
 
