@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
-	devices "github.com/opencontainers/runc/libcontainer/cgroups/devices/config"
+	devices "github.com/opencontainers/cgroups/devices/config"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 

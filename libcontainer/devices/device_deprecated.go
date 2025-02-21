@@ -1,8 +1,8 @@
 package devices
 
-import "github.com/opencontainers/runc/libcontainer/cgroups/devices/config"
+import "github.com/opencontainers/cgroups/devices/config"
 
-// Deprecated: use [github.com/opencontainers/runc/libcontainer/cgroups/devices/config].
+// Deprecated: use [github.com/opencontainers/cgroups/devices/config].
 const (
 	Wildcard       = config.Wildcard
 	WildcardDevice = config.WildcardDevice
@@ -11,7 +11,7 @@ const (
 	FifoDevice     = config.FifoDevice
 )
 
-// Deprecated: use [github.com/opencontainers/runc/libcontainer/cgroups/devices/config].
+// Deprecated: use [github.com/opencontainers/cgroups/devices/config].
 type (
 	Device      = config.Device
 	Permissions = config.Permissions
