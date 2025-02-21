@@ -2,6 +2,7 @@ package nsenter
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,9 +17,16 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+type mockProcessParent struct {
+	childPid int
+}
+
 func TestNsenterValidPaths(t *testing.T) {
 	args := []string{"nsenter-exec"}
 	parent, child := newPipe(t)
+	syncParent, syncChild := newPipe(t)
+
+	process, chErr := startMockProcessParent(syncParent)
 
 	namespaces := []string{
 		// join pid ns of the current process
@@ -27,8 +35,8 @@ func TestNsenterValidPaths(t *testing.T) {
 	cmd := &exec.Cmd{
 		Path:       os.Args[0],
 		Args:       args,
-		ExtraFiles: []*os.File{child},
-		Env:        []string{"_LIBCONTAINER_INITPIPE=3"},
+		ExtraFiles: []*os.File{child, syncChild},
+		Env:        []string{"_LIBCONTAINER_INITPIPE=3", "_LIBCONTAINER_STAGE1PIPE=4"},
 		Stdout:     os.Stdout,
 		Stderr:     os.Stderr,
 	}
@@ -56,12 +64,19 @@ func TestNsenterValidPaths(t *testing.T) {
 		t.Fatalf("nsenter error: %v", err)
 	}
 
-	reapChildren(t, parent)
+	if err := <-chErr; err != nil {
+		t.Fatal(err)
+	}
+
+	reapChildren(t, process)
 }
 
 func TestNsenterInvalidPaths(t *testing.T) {
 	args := []string{"nsenter-exec"}
 	parent, child := newPipe(t)
+	syncParent, syncChild := newPipe(t)
+
+	_, _ = startMockProcessParent(syncParent)
 
 	namespaces := []string{
 		fmt.Sprintf("pid:/proc/%d/ns/pid", -1),
@@ -69,8 +84,8 @@ func TestNsenterInvalidPaths(t *testing.T) {
 	cmd := &exec.Cmd{
 		Path:       os.Args[0],
 		Args:       args,
-		ExtraFiles: []*os.File{child},
-		Env:        []string{"_LIBCONTAINER_INITPIPE=3"},
+		ExtraFiles: []*os.File{child, syncChild},
+		Env:        []string{"_LIBCONTAINER_INITPIPE=3", "_LIBCONTAINER_STAGE1PIPE=4"},
 	}
 
 	if err := cmd.Start(); err != nil {
@@ -100,6 +115,9 @@ func TestNsenterInvalidPaths(t *testing.T) {
 func TestNsenterIncorrectPathType(t *testing.T) {
 	args := []string{"nsenter-exec"}
 	parent, child := newPipe(t)
+	syncParent, syncChild := newPipe(t)
+
+	_, _ = startMockProcessParent(syncParent)
 
 	namespaces := []string{
 		fmt.Sprintf("net:/proc/%d/ns/pid", os.Getpid()),
@@ -107,8 +125,8 @@ func TestNsenterIncorrectPathType(t *testing.T) {
 	cmd := &exec.Cmd{
 		Path:       os.Args[0],
 		Args:       args,
-		ExtraFiles: []*os.File{child},
-		Env:        []string{"_LIBCONTAINER_INITPIPE=3"},
+		ExtraFiles: []*os.File{child, syncChild},
+		Env:        []string{"_LIBCONTAINER_INITPIPE=3", "_LIBCONTAINER_STAGE1PIPE=4"},
 	}
 
 	if err := cmd.Start(); err != nil {
@@ -139,6 +157,9 @@ func TestNsenterChildLogging(t *testing.T) {
 	args := []string{"nsenter-exec"}
 	parent, child := newPipe(t)
 	logread, logwrite := newPipe(t)
+	syncParent, syncChild := newPipe(t)
+
+	process, chErr := startMockProcessParent(syncParent)
 
 	namespaces := []string{
 		// join pid ns of the current process
@@ -147,8 +168,8 @@ func TestNsenterChildLogging(t *testing.T) {
 	cmd := &exec.Cmd{
 		Path:       os.Args[0],
 		Args:       args,
-		ExtraFiles: []*os.File{child, logwrite},
-		Env:        []string{"_LIBCONTAINER_INITPIPE=3", "_LIBCONTAINER_LOGPIPE=4"},
+		ExtraFiles: []*os.File{child, syncChild, logwrite},
+		Env:        []string{"_LIBCONTAINER_INITPIPE=3", "_LIBCONTAINER_STAGE1PIPE=4", "_LIBCONTAINER_LOGPIPE=5"},
 		Stdout:     os.Stdout,
 		Stderr:     os.Stderr,
 	}
@@ -178,7 +199,11 @@ func TestNsenterChildLogging(t *testing.T) {
 		t.Fatalf("nsenter error: %v", err)
 	}
 
-	reapChildren(t, parent)
+	if err := <-chErr; err != nil {
+		t.Fatal(err)
+	}
+
+	reapChildren(t, process)
 }
 
 func init() {
@@ -202,26 +227,37 @@ func newPipe(t *testing.T) (parent *os.File, child *os.File) {
 	return
 }
 
-func reapChildren(t *testing.T, parent *os.File) {
+func startMockProcessParent(syncSock *os.File) (*mockProcessParent, chan error) {
+	process := &mockProcessParent{}
+	ch := make(chan error, 1)
+
+	go (func() {
+		ch <- libcontainer.ParseNsExecSync(syncSock, func(msg libcontainer.NsExecSyncMsg) error {
+			if msg == libcontainer.SyncRecvPidPls {
+				var pid uint32
+				if err := binary.Read(syncSock, nl.NativeEndian(), &pid); err != nil {
+					return err
+				}
+				process.childPid = int(pid)
+				return libcontainer.AckNsExecSync(syncSock, libcontainer.SyncRecvPidAck)
+			}
+			return nil
+		})
+	})()
+
+	return process, ch
+}
+
+func reapChildren(t *testing.T, parent *mockProcessParent) {
 	t.Helper()
-	decoder := json.NewDecoder(parent)
-	decoder.DisallowUnknownFields()
-	var pid struct {
-		Pid2 int `json:"stage2_pid"`
-		Pid1 int `json:"stage1_pid"`
-	}
-	if err := decoder.Decode(&pid); err != nil {
-		t.Fatal(err)
+
+	// Sanity check.
+	if parent.childPid <= 0 {
+		t.Fatal("got pid:", parent.childPid)
 	}
 
 	// Reap children.
-	_, _ = unix.Wait4(pid.Pid1, nil, 0, nil)
-	_, _ = unix.Wait4(pid.Pid2, nil, 0, nil)
-
-	// Sanity check.
-	if pid.Pid1 == 0 || pid.Pid2 == 0 {
-		t.Fatal("got pids:", pid)
-	}
+	_, _ = unix.Wait4(parent.childPid, nil, 0, nil)
 }
 
 func getLogs(t *testing.T, logread *os.File) {

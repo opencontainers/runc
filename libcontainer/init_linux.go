@@ -33,11 +33,6 @@ const (
 	initStandard initType = "standard"
 )
 
-type pid struct {
-	Pid           int `json:"stage2_pid"`
-	PidFirstChild int `json:"stage1_pid"`
-}
-
 // network is an internal struct used to setup container networks.
 type network struct {
 	configs.Network
@@ -225,6 +220,24 @@ func startInitialization() (retErr error) {
 	var config initConfig
 	if err := json.NewDecoder(initPipe).Decode(&config); err != nil {
 		return err
+	}
+
+	if _, err := unix.Setsid(); err != nil {
+		return os.NewSyscallError("setsid", err)
+	}
+
+	if err := unix.Setuid(0); err != nil {
+		return os.NewSyscallError("setuid", err)
+	}
+
+	if err := unix.Setgid(0); err != nil {
+		return os.NewSyscallError("setgid", err)
+	}
+
+	if !config.Config.RootlessEUID && requiresRootOrMappingTool(config.Config.GIDMappings) {
+		if err := unix.Setgroups([]int{0}); err != nil {
+			return os.NewSyscallError("setgroups", err)
+		}
 	}
 
 	// If init succeeds, it will not return, hence none of the defers will be called.
