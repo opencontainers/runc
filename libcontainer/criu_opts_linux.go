@@ -16,6 +16,8 @@ type CriuOpts struct {
 	ParentImage             string             // directory for storing parent image files in pre-dump and dump
 	LeaveRunning            bool               // leave container in running state after checkpoint
 	TcpEstablished          bool               // checkpoint/restore established TCP connections
+	TcpSkipInFlight         bool               // skip in-flight TCP connections
+	LinkRemap               bool               // allow one to link unlinked files back when possible
 	ExternalUnixConnections bool               // allow external unix connections
 	ShellJob                bool               // allow to dump and restore shell jobs
 	FileLocks               bool               // handle file locks, for safety
