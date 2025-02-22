@@ -267,15 +267,37 @@ EOF
 	check_cpu_quota 500000 1000000 "500ms"
 	check_cpu_shares 100
 
+	# update cpu quota with fraction
+	runc update test_update --cpu-quota 123456
+	[ "$status" -eq 0 ]
+	expected_quota=123456
+	if [ -v RUNC_USE_SYSTEMD ]; then
+		expected_quota=130000
+	fi
+	check_cpu_quota $expected_quota 1000000 "130ms"
+
+	# update cpu quota to original value
+	runc update test_update --cpu-quota 500000
+	[ "$status" -eq 0 ]
+	check_cpu_quota 500000 1000000 "500ms"
+
 	# update cpu period
 	runc update test_update --cpu-period 900000
 	[ "$status" -eq 0 ]
-	check_cpu_quota 500000 900000 "560ms"
+	expected_quota=500000
+	if [ -v RUNC_USE_SYSTEMD ]; then
+		expected_quota=504000
+	fi
+	check_cpu_quota $expected_quota 900000 "560ms"
 
 	# update cpu quota
 	runc update test_update --cpu-quota 600000
 	[ "$status" -eq 0 ]
-	check_cpu_quota 600000 900000 "670ms"
+	expected_quota=600000
+	if [ -v RUNC_USE_SYSTEMD ]; then
+		expected_quota=603000
+	fi
+	check_cpu_quota $expected_quota 900000 "670ms"
 
 	# remove cpu quota
 	runc update test_update --cpu-quota -1
@@ -304,7 +326,11 @@ EOF
 	runc update test_update \
 		--cpu-period 900000 --cpu-quota 600000 --cpu-share 200
 	[ "$status" -eq 0 ]
-	check_cpu_quota 600000 900000 "670ms"
+	expected_quota=600000
+	if [ -v RUNC_USE_SYSTEMD ]; then
+		expected_quota=603000
+	fi
+	check_cpu_quota $expected_quota 900000 "670ms"
 	check_cpu_shares 200
 
 	# remove cpu quota and reset the period

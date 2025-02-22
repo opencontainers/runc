@@ -178,3 +178,64 @@ func TestUnifiedResToSystemdProps(t *testing.T) {
 		})
 	}
 }
+
+func TestGetCPUQuotaFromProperties(t *testing.T) {
+	testCases := []struct {
+		name             string
+		properties       []systemdDbus.Property
+		cpuPeriod        uint64
+		expectedCPUQuota int64
+	}{
+		{
+			name: "Update only CPU quota",
+			properties: []systemdDbus.Property{
+				newProp("CPUQuotaPerSecUSec", 1230000),
+			},
+			cpuPeriod:        0,
+			expectedCPUQuota: 123000,
+		},
+		{
+			name: "Update CPU Quota and CPU period",
+			properties: []systemdDbus.Property{
+				newProp("CPUQuotaPerSecUSec", 560000),
+				newProp("CPUQuotaPeriodUSec", 900000),
+			},
+			cpuPeriod:        900000,
+			expectedCPUQuota: 504000,
+		},
+		{
+			name: "Update CPU Quota and CPU period without supporting CPUQuotaPeriodUSec",
+			properties: []systemdDbus.Property{
+				newProp("CPUQuotaPerSecUSec", 560000),
+			},
+			cpuPeriod:        900000,
+			expectedCPUQuota: 504000,
+		},
+		{
+			name: "Update only CPU period",
+			properties: []systemdDbus.Property{
+				newProp("CPUQuotaPeriodUSec", 900000),
+			},
+			cpuPeriod:        900000,
+			expectedCPUQuota: 0,
+		},
+		{
+			name: "Update neither CPU quota nor CPU period",
+			properties: []systemdDbus.Property{
+				newProp("MemoryMax", 67108864),
+			},
+			cpuPeriod:        0,
+			expectedCPUQuota: 0,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if cpuQuota, err := getCPUQuotaFromProperties(tc.properties, tc.cpuPeriod); err != nil {
+				t.Errorf("getCPUQuotaFromProperties(%v); unexpected error %v", tc.properties, err)
+			} else if cpuQuota != tc.expectedCPUQuota {
+				t.Errorf("getCPUQuotaFromProperties(%v); want %d; got %d", tc.properties, tc.expectedCPUQuota, cpuQuota)
+			}
+		})
+	}
+}
