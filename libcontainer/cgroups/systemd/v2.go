@@ -489,6 +489,16 @@ func (m *UnifiedManager) Set(r *cgroups.Resources) error {
 		return fmt.Errorf("unable to set unit properties: %w", err)
 	}
 
+	if cpuQuota, err := getCPUQuotaFromProperties(properties, r.CpuPeriod); err != nil {
+		return err
+	} else if cpuQuota > 0 {
+		// CPU Quota is rounded up to the nearest 10ms in properties.
+		// Get the rounded value in order to write the same value to the file.
+		rCopy := *r
+		r = &rCopy
+		r.CpuQuota = cpuQuota
+	}
+
 	return m.fsMgr.Set(r)
 }
 

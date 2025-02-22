@@ -314,6 +314,26 @@ func addCpuQuota(cm *dbusConnManager, properties *[]systemdDbus.Property, quota 
 	}
 }
 
+func getCPUQuotaFromProperties(properties []systemdDbus.Property, period uint64) (int64, error) {
+	var cpuQuotaPerSecUsec int64
+
+	for _, prop := range properties {
+		if prop.Name == "CPUQuotaPerSecUSec" {
+			if err := prop.Value.Store(&cpuQuotaPerSecUsec); err != nil {
+				return 0, fmt.Errorf("can't parse CPUQuotaPerSecUSec %v: %w", prop.Value, err)
+			}
+			break
+		}
+	}
+	if cpuQuotaPerSecUsec == 0 {
+		return 0, nil
+	}
+	if period == 0 {
+		period = defCPUQuotaPeriod
+	}
+	return cpuQuotaPerSecUsec * int64(period) / 1000000, nil
+}
+
 func addCpuset(cm *dbusConnManager, props *[]systemdDbus.Property, cpus, mems string) error {
 	if cpus == "" && mems == "" {
 		return nil

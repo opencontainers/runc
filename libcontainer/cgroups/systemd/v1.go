@@ -370,6 +370,16 @@ func (m *LegacyManager) Set(r *cgroups.Resources) error {
 		return setErr
 	}
 
+	if cpuQuota, err := getCPUQuotaFromProperties(properties, r.CpuPeriod); err != nil {
+		return err
+	} else if cpuQuota > 0 {
+		// CPU Quota is rounded up to the nearest 10ms in properties.
+		// Get the rounded value in order to write the same value to the file.
+		rCopy := *r
+		r = &rCopy
+		r.CpuQuota = cpuQuota
+	}
+
 	for _, sys := range legacySubsystems {
 		// Get the subsystem path, but don't error out for not found cgroups.
 		path, ok := m.paths[sys.Name()]
