@@ -214,12 +214,6 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		return fmt.Errorf("error jailing process inside rootfs: %w", err)
 	}
 
-	if setupDev {
-		if err := reOpenDevNull(); err != nil {
-			return fmt.Errorf("error reopening /dev/null inside container: %w", err)
-		}
-	}
-
 	if cwd := iConfig.Cwd; cwd != "" {
 		// Note that spec.Process.Cwd can contain unclean value like  "../../../../foo/bar...".
 		// However, we are safe to call MkDirAll directly because we are in the jail here.
@@ -858,38 +852,6 @@ func setupDevSymlinks(rootfs string) error {
 		)
 		if err := os.Symlink(src, dst); err != nil && !os.IsExist(err) {
 			return err
-		}
-	}
-	return nil
-}
-
-// If stdin, stdout, and/or stderr are pointing to `/dev/null` in the parent's rootfs
-// this method will make them point to `/dev/null` in this container's rootfs.  This
-// needs to be called after we chroot/pivot into the container's rootfs so that any
-// symlinks are resolved locally.
-func reOpenDevNull() error {
-	var stat, devNullStat unix.Stat_t
-	file, err := os.OpenFile("/dev/null", os.O_RDWR, 0)
-	if err != nil {
-		return err
-	}
-	defer file.Close() //nolint: errcheck
-	if err := unix.Fstat(int(file.Fd()), &devNullStat); err != nil {
-		return &os.PathError{Op: "fstat", Path: file.Name(), Err: err}
-	}
-	for fd := 0; fd < 3; fd++ {
-		if err := unix.Fstat(fd, &stat); err != nil {
-			return &os.PathError{Op: "fstat", Path: "fd " + strconv.Itoa(fd), Err: err}
-		}
-		if stat.Rdev == devNullStat.Rdev {
-			// Close and re-open the fd.
-			if err := unix.Dup3(int(file.Fd()), fd, 0); err != nil {
-				return &os.PathError{
-					Op:   "dup3",
-					Path: "fd " + strconv.Itoa(int(file.Fd())),
-					Err:  err,
-				}
-			}
 		}
 	}
 	return nil
