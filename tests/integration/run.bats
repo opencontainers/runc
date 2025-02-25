@@ -131,10 +131,10 @@ function teardown() {
 	runc --debug run test_hello
 	[ "$status" -eq 0 ]
 	[[ "$output" = *"Hello World"* ]]
-	[[ "$output" = *"runc-dmz: using /proc/self/exe clone"* ]]
+	[[ "$output" = *"runc exeseal: using /proc/self/exe clone"* ]]
 	# runc will use fsopen("overlay") if it can.
 	if can_fsopen overlay; then
-		[[ "$output" = *"runc-dmz: using overlayfs for sealed /proc/self/exe"* ]]
+		[[ "$output" = *"runc exeseal: using overlayfs for sealed /proc/self/exe"* ]]
 	fi
 }
 

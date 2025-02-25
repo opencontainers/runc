@@ -1,4 +1,4 @@
-package dmz
+package exeseal
 
 import (
 	"errors"
@@ -224,7 +224,7 @@ func CloneSelfExe(tmpDir string) (*os.File, error) {
 	// around ~60% overhead during container startup.
 	overlayFile, err := sealedOverlayfs("/proc/self/exe", tmpDir)
 	if err == nil {
-		logrus.Debug("runc-dmz: using overlayfs for sealed /proc/self/exe") // used for tests
+		logrus.Debug("runc exeseal: using overlayfs for sealed /proc/self/exe") // used for tests
 		return overlayFile, nil
 	}
 	logrus.WithError(err).Debugf("could not use overlayfs for /proc/self/exe sealing -- falling back to making a temporary copy")

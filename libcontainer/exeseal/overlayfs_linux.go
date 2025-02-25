@@ -1,4 +1,4 @@
-package dmz
+package exeseal
 
 import (
 	"fmt"

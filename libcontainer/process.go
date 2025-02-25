@@ -52,7 +52,7 @@ type Process struct {
 	// ExtraFiles specifies additional open files to be inherited by the process.
 	ExtraFiles []*os.File
 
-	// Open handles to cloned binaries -- see dmz.CloneSelfExe for more details.
+	// Open handles to cloned binaries -- see exeseal.CloneSelfExe for more details.
 	clonedExes []*os.File
 
 	// Initial size for the console.

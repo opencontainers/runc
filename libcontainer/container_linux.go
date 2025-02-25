@@ -22,7 +22,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/dmz"
+	"github.com/opencontainers/runc/libcontainer/exeseal"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
@@ -496,7 +496,7 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 		exePath string
 		safeExe *os.File
 	)
-	if dmz.IsSelfExeCloned() {
+	if exeseal.IsSelfExeCloned() {
 		// /proc/self/exe is already a cloned binary -- no need to do anything
 		logrus.Debug("skipping binary cloning -- /proc/self/exe is already cloned!")
 		// We don't need to use /proc/thread-self here because the exe mm of a
@@ -505,13 +505,13 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 		exePath = "/proc/self/exe"
 	} else {
 		var err error
-		safeExe, err = dmz.CloneSelfExe(c.stateDir)
+		safeExe, err = exeseal.CloneSelfExe(c.stateDir)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create safe /proc/self/exe clone for runc init: %w", err)
 		}
 		exePath = "/proc/self/fd/" + strconv.Itoa(int(safeExe.Fd()))
 		p.clonedExes = append(p.clonedExes, safeExe)
-		logrus.Debug("runc-dmz: using /proc/self/exe clone") // used for tests
+		logrus.Debug("runc exeseal: using /proc/self/exe clone") // used for tests
 	}
 
 	cmd := exec.Command(exePath, "init")
