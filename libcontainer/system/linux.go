@@ -3,13 +3,28 @@
 package system
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"strconv"
+	"strings"
 	"unsafe"
 
+	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
+)
+
+// SetgroupsPolicy is used for setgroups policies.
+type SetgroupsPolicy int
+
+const (
+	SetgroupsDefault SetgroupsPolicy = iota + 1
+	SetgroupsAllow
+	SetgroupsDeny
 )
 
 type ParentDeathSignal int
@@ -168,4 +183,105 @@ func SetLinuxPersonality(personality int) error {
 		return &os.SyscallError{Syscall: "set_personality", Err: errno}
 	}
 	return nil
+}
+
+// UpdateSetgroups is to set the process's setgroups policy
+// This *must* be called before we touch gid_map.
+func UpdateSetgroups(pid int, policy SetgroupsPolicy) error {
+	var strPolicy string
+	switch policy {
+	case SetgroupsAllow:
+		strPolicy = "allow"
+	case SetgroupsDeny:
+		strPolicy = "deny"
+	case SetgroupsDefault:
+		fallthrough
+	default:
+		return nil
+	}
+	err := os.WriteFile("/proc/"+strconv.Itoa(pid)+"/setgroups", []byte(strPolicy), 0)
+
+	// If the kernel is too old to support /proc/pid/setgroups,
+	// open(2) or write(2) will return ENOENT. This is fine.
+	if errors.Is(err, unix.ENOENT) {
+		return nil
+	}
+	return err
+}
+
+// TryMappingTool is to try to use the mapping tool to map the uid/gid.
+func TryMappingTool(app string, pid int, idMappings []configs.IDMap) error {
+	if app == "" {
+		return fmt.Errorf("no mapping tool specified")
+	}
+
+	argv := []string{strconv.Itoa(pid)}
+	for _, m := range idMappings {
+		argv = append(argv, strconv.FormatInt(m.ContainerID, 10), strconv.FormatInt(m.HostID, 10), strconv.FormatInt(m.Size, 10))
+	}
+	cmd := exec.Command(app, argv...)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	return cmd.Wait()
+}
+
+// UpdateUidmap is to update the uid map of the process.
+func UpdateUidmap(app string, pid int, uidMappings []configs.IDMap) error {
+	if len(uidMappings) == 0 {
+		return nil
+	}
+
+	data := []string{}
+	for _, m := range uidMappings {
+		data = append(data, m.ToString())
+	}
+	logrus.Debugf("update /proc/%d/uid_map to '%s'", pid, strings.Join(data, "\n"))
+	err := os.WriteFile("/proc/"+strconv.Itoa(pid)+"/uid_map", []byte(strings.Join(data, "\n")), 0)
+	if errors.Is(err, unix.EPERM) {
+		logrus.Debugf("update /proc/%d/uid_map got -EPERM (trying %s)", pid, app)
+		return TryMappingTool(app, pid, uidMappings)
+	}
+	return err
+}
+
+// UpdateGidmap is to update the gid map of the process.
+func UpdateGidmap(app string, pid int, gidMappings []configs.IDMap) error {
+	if len(gidMappings) == 0 {
+		return nil
+	}
+
+	data := []string{}
+	for _, m := range gidMappings {
+		data = append(data, m.ToString())
+	}
+	logrus.Debugf("update /proc/%d/gid_map to '%s'", pid, strings.Join(data, "\n"))
+	err := os.WriteFile("/proc/"+strconv.Itoa(pid)+"/gid_map", []byte(strings.Join(data, "\n")), 0)
+	if errors.Is(err, unix.EPERM) {
+		logrus.Debugf("update /proc/%d/gid_map got -EPERM (trying %s)", pid, app)
+		return TryMappingTool(app, pid, gidMappings)
+	}
+	return err
+}
+
+// UpdateTimeNsOffsets is to update the time namespace offsets of the process.
+func UpdateTimeNsOffsets(pid int, offsets map[string]specs.LinuxTimeOffset) error {
+	if len(offsets) == 0 {
+		return nil
+	}
+	var data []string
+	for clock, offset := range offsets {
+		data = append(data, clock+" "+strconv.FormatInt(offset.Secs, 10)+" "+strconv.FormatInt(int64(offset.Nanosecs), 10))
+	}
+	logrus.Debugf("update /proc/%d/timens_offsets to '%s'", pid, strings.Join(data, "\n"))
+	return os.WriteFile("/proc/"+strconv.Itoa(pid)+"/timens_offsets", []byte(strings.Join(data, "\n")), 0)
+}
+
+// UpdateOomScoreAdj is to update oom_score_adj of the process.
+func UpdateOomScoreAdj(oomScoreAdj string) error {
+	if len(oomScoreAdj) == 0 {
+		return nil
+	}
+	logrus.Debugf("update /proc/self/oom_score_adj to '%s'", oomScoreAdj)
+	return os.WriteFile("/proc/self/oom_score_adj", []byte(oomScoreAdj), 0)
 }

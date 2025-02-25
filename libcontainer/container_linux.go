@@ -536,6 +536,10 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 	cmd.Env = append(cmd.Env,
 		"_LIBCONTAINER_INITPIPE="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1),
 	)
+	cmd.ExtraFiles = append(cmd.ExtraFiles, comm.stage1SockChild)
+	cmd.Env = append(cmd.Env,
+		"_LIBCONTAINER_STAGE1PIPE="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1),
+	)
 	cmd.ExtraFiles = append(cmd.ExtraFiles, comm.syncSockChild.File())
 	cmd.Env = append(cmd.Env,
 		"_LIBCONTAINER_SYNCPIPE="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1),
@@ -1022,17 +1026,6 @@ func (c *Container) orderNamespacePaths(namespaces map[configs.NamespaceType]str
 	return paths, nil
 }
 
-func encodeIDMapping(idMap []configs.IDMap) ([]byte, error) {
-	data := bytes.NewBuffer(nil)
-	for _, im := range idMap {
-		line := fmt.Sprintf("%d %d %d\n", im.ContainerID, im.HostID, im.Size)
-		if _, err := data.WriteString(line); err != nil {
-			return nil, err
-		}
-	}
-	return data.Bytes(), nil
-}
-
 // netlinkError is an error wrapper type for use by custom netlink message
 // types. Panics with errors are wrapped in netlinkError so that the recover
 // in bootstrapData can distinguish intentional panics.
@@ -1079,59 +1072,6 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 		})
 	}
 
-	// write namespace paths only when we are not joining an existing user ns
-	_, joinExistingUser := nsMaps[configs.NEWUSER]
-	if !joinExistingUser {
-		// write uid mappings
-		if len(c.config.UIDMappings) > 0 {
-			if c.config.RootlessEUID {
-				// We resolve the paths for new{u,g}idmap from
-				// the context of runc to avoid doing a path
-				// lookup in the nsexec context.
-				if path, err := exec.LookPath("newuidmap"); err == nil {
-					r.AddData(&Bytemsg{
-						Type:  UidmapPathAttr,
-						Value: []byte(path),
-					})
-				}
-			}
-			b, err := encodeIDMapping(c.config.UIDMappings)
-			if err != nil {
-				return nil, err
-			}
-			r.AddData(&Bytemsg{
-				Type:  UidmapAttr,
-				Value: b,
-			})
-		}
-
-		// write gid mappings
-		if len(c.config.GIDMappings) > 0 {
-			b, err := encodeIDMapping(c.config.GIDMappings)
-			if err != nil {
-				return nil, err
-			}
-			r.AddData(&Bytemsg{
-				Type:  GidmapAttr,
-				Value: b,
-			})
-			if c.config.RootlessEUID {
-				if path, err := exec.LookPath("newgidmap"); err == nil {
-					r.AddData(&Bytemsg{
-						Type:  GidmapPathAttr,
-						Value: []byte(path),
-					})
-				}
-			}
-			if requiresRootOrMappingTool(c.config) {
-				r.AddData(&Boolmsg{
-					Type:  SetgroupAttr,
-					Value: true,
-				})
-			}
-		}
-	}
-
 	if c.config.OomScoreAdj != nil {
 		// write oom_score_adj
 		r.AddData(&Bytemsg{
@@ -1139,12 +1079,6 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 			Value: []byte(strconv.Itoa(*c.config.OomScoreAdj)),
 		})
 	}
-
-	// write rootless
-	r.AddData(&Boolmsg{
-		Type:  RootlessEUIDAttr,
-		Value: c.config.RootlessEUID,
-	})
 
 	// write boottime and monotonic time ns offsets.
 	if c.config.TimeOffsets != nil {
@@ -1186,9 +1120,9 @@ func ignoreTerminateErrors(err error) error {
 	return err
 }
 
-func requiresRootOrMappingTool(c *configs.Config) bool {
+func requiresRootOrMappingTool(gidMappings []configs.IDMap) bool {
 	gidMap := []configs.IDMap{
 		{ContainerID: 0, HostID: int64(os.Getegid()), Size: 1},
 	}
-	return !reflect.DeepEqual(c.GIDMappings, gidMap)
+	return !reflect.DeepEqual(gidMappings, gidMap)
 }
