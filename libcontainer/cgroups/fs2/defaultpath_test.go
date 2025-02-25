@@ -76,7 +76,13 @@ func TestDefaultDirPath(t *testing.T) {
 		},
 	}
 	for _, c := range cases {
-		got, err := _defaultDirPath(UnifiedMountpoint, c.cgPath, c.cgParent, c.cgName)
+		cg := &cgroups.Cgroup{
+			Path:   c.cgPath,
+			Parent: c.cgParent,
+			Name:   c.cgName,
+		}
+
+		got, err := defaultDirPath(cg)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/cgroups/internal/path"
 )
 
 func TestInvalidCgroupPath(t *testing.T) {
@@ -66,7 +67,7 @@ func TestInvalidCgroupPath(t *testing.T) {
 		t.Run(tc.test, func(t *testing.T) {
 			config := &cgroups.Cgroup{Path: tc.path, Name: tc.name, Parent: tc.parent}
 
-			inner, err := innerPath(config)
+			inner, err := path.Inner(config)
 			if err != nil {
 				t.Fatalf("couldn't get cgroup data: %v", err)
 			}

@@ -9,7 +9,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/runc/libcontainer/cgroups/internal/path"
 )
 
 // The absolute path to the root of the cgroup hierarchies.
@@ -26,7 +26,7 @@ func initPaths(cg *cgroups.Cgroup) (map[string]string, error) {
 		return nil, err
 	}
 
-	inner, err := innerPath(cg)
+	inner, err := path.Inner(cg)
 	if err != nil {
 		return nil, err
 	}
@@ -133,22 +133,6 @@ func rootPath() (string, error) {
 
 	cgroupRoot = root
 	return cgroupRoot, nil
-}
-
-func innerPath(c *cgroups.Cgroup) (string, error) {
-	if (c.Name != "" || c.Parent != "") && c.Path != "" {
-		return "", errors.New("cgroup: either Path or Name and Parent should be used")
-	}
-
-	// XXX: Do not remove CleanPath. Path safety is important! -- cyphar
-	innerPath := utils.CleanPath(c.Path)
-	if innerPath == "" {
-		cgParent := utils.CleanPath(c.Parent)
-		cgName := utils.CleanPath(c.Name)
-		innerPath = filepath.Join(cgParent, cgName)
-	}
-
-	return innerPath, nil
 }
 
 func subsysPath(root, inner, subsystem string) (string, error) {
