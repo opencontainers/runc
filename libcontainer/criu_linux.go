@@ -327,6 +327,8 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 		ShellJob:          proto.Bool(criuOpts.ShellJob),
 		LeaveRunning:      proto.Bool(criuOpts.LeaveRunning),
 		TcpEstablished:    proto.Bool(criuOpts.TcpEstablished),
+		TcpSkipInFlight:   proto.Bool(criuOpts.TcpSkipInFlight),
+		LinkRemap:         proto.Bool(criuOpts.LinkRemap),
 		ExtUnixSk:         proto.Bool(criuOpts.ExternalUnixConnections),
 		FileLocks:         proto.Bool(criuOpts.FileLocks),
 		EmptyNs:           proto.Uint32(criuOpts.EmptyNs),

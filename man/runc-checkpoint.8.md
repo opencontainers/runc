@@ -28,6 +28,14 @@ image files directory.
 : Allow checkpoint/restore of established TCP connections. See
 [criu --tcp-establised option](https://criu.org/CLI/opt/--tcp-established).
 
+**--tcp-skip-in-flight**
+: Skip in-flight TCP connections. See
+[criu --skip-in-flight option](https://criu.org/CLI/opt/--skip-in-flight).
+
+**--link-remap**
+: Allow one to link unlinked files back when possible. See
+[criu --link-remap option](https://criu.org/CLI/opt/--link-remap).
+
 **--ext-unix-sk**
 : Allow checkpoint/restore of external unix sockets. See
 [criu --ext-unix-sk option](https://criu.org/CLI/opt/--ext-unix-sk).

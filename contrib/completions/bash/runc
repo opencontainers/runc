@@ -507,6 +507,8 @@ _runc_checkpoint() {
 	   -h
 	   --leave-running
 	   --tcp-established
+	   --tcp-skip-in-flight
+	   --link-remap
 	   --ext-unix-sk
 	   --shell-job
 	   --lazy-pages
