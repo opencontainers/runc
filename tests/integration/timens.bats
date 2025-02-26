@@ -54,6 +54,26 @@ function teardown() {
 	grep -E '^boottime\s+1337\s+3141519$' <<<"$output"
 }
 
+# https://github.com/opencontainers/runc/issues/4635
+@test "runc exec [simple timens]" {
+	requires timens
+
+	update_config '.process.args = ["sleep", "inf"]'
+	update_config '.linux.namespaces += [{"type": "time"}]
+		| .linux.timeOffsets = {
+			"monotonic": { "secs": 7881, "nanosecs": 2718281 },
+			"boottime": { "secs": 1337, "nanosecs": 3141519 }
+		}'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	runc exec test_busybox cat /proc/self/timens_offsets
+	[ "$status" -eq 0 ]
+	grep -E '^monotonic\s+7881\s+2718281$' <<<"$output"
+	grep -E '^boottime\s+1337\s+3141519$' <<<"$output"
+}
+
 @test "runc run [simple timens + userns]" {
 	requires root
 	requires timens
