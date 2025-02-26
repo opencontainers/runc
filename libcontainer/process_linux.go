@@ -554,6 +554,13 @@ func (p *initProcess) start() (retErr error) {
 		return fmt.Errorf("unable to start init: %w", err)
 	}
 
+	// SIGKILL may happen at any time, so generate state.json here
+	_, err = p.container.updateState(nil)
+	if err != nil {
+		return fmt.Errorf("unable to store init state before creating cgroup: %w", err)
+	}
+	p.container.initProcess = p
+
 	defer func() {
 		if retErr != nil {
 			// Find out if init is killed by the kernel's OOM killer.

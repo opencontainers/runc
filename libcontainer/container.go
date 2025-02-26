@@ -22,6 +22,8 @@ const (
 	Paused
 	// Stopped is the status that denotes the container does not have a created or running process.
 	Stopped
+	// Creating is the status that denotes the container is creating.
+	Creating
 )
 
 func (s Status) String() string {
@@ -34,6 +36,8 @@ func (s Status) String() string {
 		return "paused"
 	case Stopped:
 		return "stopped"
+	case Creating:
+		return "creating"
 	default:
 		return "unknown"
 	}
