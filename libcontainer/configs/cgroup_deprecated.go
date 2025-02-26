@@ -1,6 +1,6 @@
-package configs // Deprecated: use [github.com/opencontainers/runc/libcontainer/cgroups].
+package configs // Deprecated: use [github.com/opencontainers/cgroups].
 
-import "github.com/opencontainers/runc/libcontainer/cgroups"
+import "github.com/opencontainers/cgroups"
 
 type (
 	Cgroup         = cgroups.Cgroup

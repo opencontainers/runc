@@ -36,7 +36,7 @@ this package into your code:
 
 ```go
     import (
-        _ "github.com/opencontainers/runc/libcontainer/cgroups/devices"
+        _ "github.com/opencontainers/cgroups/devices"
     )
 ```
 

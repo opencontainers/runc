@@ -7,14 +7,14 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
+	"github.com/opencontainers/cgroups"
+	"github.com/opencontainers/cgroups/systemd"
 )
 
 func usage() {
 	fmt.Print(`Open Container Initiative tests/cmd/sd-helper
 
-sd-helper is a tool that uses runc/libcontainer/cgroups/systemd package
+sd-helper is a tool that uses github.com/opencontainers/groups/systemd package
 functionality to communicate to systemd in order to perform various operations.
 Currently this is limited to starting and stopping systemd transient slice
 units.

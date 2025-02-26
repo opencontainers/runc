@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	dbus "github.com/godbus/dbus/v5"
-	devices "github.com/opencontainers/runc/libcontainer/cgroups/devices/config"
+	devices "github.com/opencontainers/cgroups/devices/config"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"github.com/opencontainers/runtime-spec/specs-go"
