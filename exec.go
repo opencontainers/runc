@@ -117,6 +117,12 @@ following will output a list of processes running in the container:
 	SkipArgReorder: true,
 }
 
+// getSubCgroupPaths parses --cgroup arguments, which can either be
+//   - a single "path" argument (for cgroup v2);
+//   - one or more controller[,controller[,...]]:path arguments (for cgroup v1).
+//
+// Returns a controller to path map. For cgroup v2, it's a single entity map
+// with empty controller value.
 func getSubCgroupPaths(args []string) (map[string]string, error) {
 	if len(args) == 0 {
 		return nil, nil
@@ -124,20 +130,23 @@ func getSubCgroupPaths(args []string) (map[string]string, error) {
 	paths := make(map[string]string, len(args))
 	for _, c := range args {
 		// Split into controller:path.
-		cs := strings.SplitN(c, ":", 3)
-		if len(cs) > 2 {
-			return nil, fmt.Errorf("invalid --cgroup argument: %s", c)
-		}
-		if len(cs) == 1 { // no controller: prefix
+		if ctr, path, ok := strings.Cut(c, ":"); ok {
+			// There may be a few comma-separated controllers.
+			for _, ctrl := range strings.Split(ctr, ",") {
+				if ctrl == "" {
+					return nil, fmt.Errorf("invalid --cgroup argument: %s (empty <controller> prefix)", c)
+				}
+				if _, ok := paths[ctrl]; ok {
+					return nil, fmt.Errorf("invalid --cgroup argument(s): controller %s specified multiple times", ctrl)
+				}
+				paths[ctrl] = path
+			}
+		} else {
+			// No "controller:" prefix (cgroup v2, a single path).
 			if len(args) != 1 {
 				return nil, fmt.Errorf("invalid --cgroup argument: %s (missing <controller>: prefix)", c)
 			}
 			paths[""] = c
-		} else {
-			// There may be a few comma-separated controllers.
-			for _, ctrl := range strings.Split(cs[0], ",") {
-				paths[ctrl] = cs[1]
-			}
 		}
 	}
 	return paths, nil
@@ -158,19 +167,7 @@ func execProcess(context *cli.Context) (int, error) {
 	if status == libcontainer.Paused && !context.Bool("ignore-paused") {
 		return -1, errors.New("cannot exec in a paused container (use --ignore-paused to override)")
 	}
-	path := context.String("process")
-	if path == "" && len(context.Args()) == 1 {
-		return -1, errors.New("process args cannot be empty")
-	}
-	state, err := container.State()
-	if err != nil {
-		return -1, err
-	}
-	bundle, ok := utils.SearchLabels(state.Config.Labels, "bundle")
-	if !ok {
-		return -1, errors.New("bundle not found in labels")
-	}
-	p, err := getProcess(context, bundle)
+	p, err := getProcess(context, container)
 	if err != nil {
 		return -1, err
 	}
@@ -196,7 +193,7 @@ func execProcess(context *cli.Context) (int, error) {
 	return r.run(p)
 }
 
-func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
+func getProcess(context *cli.Context, c *libcontainer.Container) (*specs.Process, error) {
 	if path := context.String("process"); path != "" {
 		f, err := os.Open(path)
 		if err != nil {
@@ -209,7 +206,11 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		}
 		return &p, validateProcessSpec(&p)
 	}
-	// process via cli flags
+	// Process from config.json and CLI flags.
+	bundle, ok := utils.SearchLabels(c.Config().Labels, "bundle")
+	if !ok {
+		return nil, errors.New("bundle not found in labels")
+	}
 	if err := os.Chdir(bundle); err != nil {
 		return nil, err
 	}
@@ -218,7 +219,11 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		return nil, err
 	}
 	p := spec.Process
-	p.Args = context.Args()[1:]
+	args := context.Args()
+	if len(args) < 2 {
+		return nil, errors.New("exec args cannot be empty")
+	}
+	p.Args = args[1:]
 	// Override the cwd, if passed.
 	if cwd := context.String("cwd"); cwd != "" {
 		p.Cwd = cwd

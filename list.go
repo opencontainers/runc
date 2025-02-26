@@ -5,11 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/user"
+	"strconv"
 	"syscall"
 	"text/tabwriter"
 	"time"
 
-	"github.com/moby/sys/user"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/urfave/cli"
@@ -136,9 +137,10 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 		}
 		// This cast is safe on Linux.
 		uid := st.Sys().(*syscall.Stat_t).Uid
-		owner, err := user.LookupUid(int(uid))
-		if err != nil {
-			owner.Name = fmt.Sprintf("#%d", uid)
+		owner := "#" + strconv.Itoa(int(uid))
+		u, err := user.LookupId(owner[1:])
+		if err == nil {
+			owner = u.Username
 		}
 
 		container, err := libcontainer.Load(root, item.Name())
@@ -170,7 +172,7 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 			Rootfs:         state.BaseState.Config.Rootfs,
 			Created:        state.BaseState.Created,
 			Annotations:    annotations,
-			Owner:          owner.Name,
+			Owner:          owner,
 		})
 	}
 	return s, nil

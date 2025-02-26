@@ -322,30 +322,6 @@ static int clone_parent(jmp_buf *env, int jmpval)
 	return clone(child_func, ca.stack_ptr, CLONE_PARENT | SIGCHLD, &ca);
 }
 
-/* Returns the clone(2) flag for a namespace, given the name of a namespace. */
-static int nsflag(char *name)
-{
-	if (!strcmp(name, "cgroup"))
-		return CLONE_NEWCGROUP;
-	else if (!strcmp(name, "ipc"))
-		return CLONE_NEWIPC;
-	else if (!strcmp(name, "mnt"))
-		return CLONE_NEWNS;
-	else if (!strcmp(name, "net"))
-		return CLONE_NEWNET;
-	else if (!strcmp(name, "pid"))
-		return CLONE_NEWPID;
-	else if (!strcmp(name, "user"))
-		return CLONE_NEWUSER;
-	else if (!strcmp(name, "uts"))
-		return CLONE_NEWUTS;
-	else if (!strcmp(name, "time"))
-		return CLONE_NEWTIME;
-
-	/* If we don't recognise a name, fallback to 0. */
-	return 0;
-}
-
 static uint32_t readint32(char *buf)
 {
 	return *(uint32_t *) buf;
@@ -444,35 +420,67 @@ void nl_free(struct nlconfig_t *config)
 	free(config->data);
 }
 
-void join_namespaces(char *nslist)
-{
-	int num = 0, i;
-	char *saveptr = NULL;
-	char *namespace = strtok_r(nslist, ",", &saveptr);
-	struct namespace_t {
-		int fd;
-		char type[PATH_MAX];
-		char path[PATH_MAX];
-	} *namespaces = NULL;
+struct namespace_t {
+	int fd;
+	char type[PATH_MAX];
+	char path[PATH_MAX];
+};
 
-	if (!namespace || !strlen(namespace) || !strlen(nslist))
+typedef int nsset_t;
+
+static struct nstype_t {
+	int type;
+	char *name;
+} all_ns_types[] = {
+	{ CLONE_NEWCGROUP, "cgroup" },
+	{ CLONE_NEWIPC, "ipc" },
+	{ CLONE_NEWNS, "mnt" },
+	{ CLONE_NEWNET, "net" },
+	{ CLONE_NEWPID, "pid" },
+	{ CLONE_NEWTIME, "time" },
+	{ CLONE_NEWUSER, "user" },
+	{ CLONE_NEWUTS, "uts" },
+	{ },			/* null terminator */
+};
+
+/* Returns the clone(2) flag for a namespace, given the name of a namespace. */
+static int nstype(char *name)
+{
+	for (struct nstype_t * ns = all_ns_types; ns->name != NULL; ns++)
+		if (!strcmp(name, ns->name))
+			return ns->type;
+	/*
+	 * setns(2) lets us join namespaces without knowing the type, but
+	 * namespaces usually require special handling of some kind (so joining
+	 * a namespace without knowing its type or joining a new namespace type
+	 * without corresponding handling could result in broken behaviour) and
+	 * the rest of runc doesn't allow unknown namespace types anyway.
+	 */
+	bail("unknown namespace type %s", name);
+}
+
+static nsset_t __open_namespaces(char *nsspec, struct namespace_t **ns_list, size_t *ns_len)
+{
+	int len = 0;
+	nsset_t ns_to_join = 0;
+	char *namespace, *saveptr = NULL;
+	struct namespace_t *namespaces = NULL;
+
+	namespace = strtok_r(nsspec, ",", &saveptr);
+
+	if (!namespace || !strlen(namespace) || !strlen(nsspec))
 		bail("ns paths are empty");
 
-	/*
-	 * We have to open the file descriptors first, since after
-	 * we join the mnt namespace we might no longer be able to
-	 * access the paths.
-	 */
 	do {
 		int fd;
 		char *path;
 		struct namespace_t *ns;
 
 		/* Resize the namespace array. */
-		namespaces = realloc(namespaces, ++num * sizeof(struct namespace_t));
+		namespaces = realloc(namespaces, ++len * sizeof(struct namespace_t));
 		if (!namespaces)
 			bail("failed to reallocate namespace array");
-		ns = &namespaces[num - 1];
+		ns = &namespaces[len - 1];
 
 		/* Split 'ns:path'. */
 		path = strstr(namespace, ":");
@@ -488,22 +496,43 @@ void join_namespaces(char *nslist)
 		strncpy(ns->type, namespace, PATH_MAX - 1);
 		strncpy(ns->path, path, PATH_MAX - 1);
 		ns->path[PATH_MAX - 1] = '\0';
+
+		ns_to_join |= nstype(ns->type);
 	} while ((namespace = strtok_r(NULL, ",", &saveptr)) != NULL);
 
-	/*
-	 * The ordering in which we join namespaces is important. We should
-	 * always join the user namespace *first*. This is all guaranteed
-	 * from the container_linux.go side of this, so we're just going to
-	 * follow the order given to us.
-	 */
+	*ns_list = namespaces;
+	*ns_len = len;
+	return ns_to_join;
+}
 
-	for (i = 0; i < num; i++) {
-		struct namespace_t *ns = &namespaces[i];
-		int flag = nsflag(ns->type);
+/*
+ * Try to join all namespaces that are in the "allow" nsset, and return the
+ * set we were able to successfully join. If a permission error is returned
+ * from nsset(2), the namespace is skipped (non-permission errors are fatal).
+ */
+static nsset_t __join_namespaces(nsset_t allow, struct namespace_t *ns_list, size_t ns_len)
+{
+	nsset_t joined = 0;
 
-		write_log(DEBUG, "setns(%#x) into %s namespace (with path %s)", flag, ns->type, ns->path);
-		if (setns(ns->fd, flag) < 0)
+	for (size_t i = 0; i < ns_len; i++) {
+		struct namespace_t *ns = &ns_list[i];
+		int type = nstype(ns->type);
+		int err, saved_errno;
+
+		if (!(type & allow))
+			continue;
+
+		err = setns(ns->fd, type);
+		saved_errno = errno;
+		write_log(DEBUG, "setns(%#x) into %s namespace (with path %s): %s",
+			  type, ns->type, ns->path, strerror(errno));
+		if (err < 0) {
+			/* Skip permission errors. */
+			if (saved_errno == EPERM)
+				continue;
 			bail("failed to setns into %s namespace", ns->type);
+		}
+		joined |= type;
 
 		/*
 		 * If we change user namespaces, make sure we switch to root in the
@@ -511,15 +540,101 @@ void join_namespaces(char *nslist)
 		 * of things can break if we aren't the right user. See
 		 * <https://github.com/opencontainers/runc/issues/4466> for one example.
 		 */
-		if (flag == CLONE_NEWUSER) {
+		if (type == CLONE_NEWUSER) {
 			if (setresuid(0, 0, 0) < 0)
 				bail("failed to become root in user namespace");
 		}
 
 		close(ns->fd);
+		ns->fd = -1;
+	}
+	return joined;
+}
+
+static char *strappend(char *dst, char *src)
+{
+	if (!dst)
+		return strdup(src);
+
+	size_t len = strlen(dst) + strlen(src) + 1;
+	dst = realloc(dst, len);
+	strncat(dst, src, len);
+	return dst;
+}
+
+static char *nsset_to_str(nsset_t nsset)
+{
+	char *str = NULL;
+	for (struct nstype_t * ns = all_ns_types; ns->name != NULL; ns++) {
+		if (ns->type & nsset) {
+			if (str)
+				str = strappend(str, ", ");
+			str = strappend(str, ns->name);
+		}
+	}
+	return str ? : strdup("");
+}
+
+static void __close_namespaces(nsset_t to_join, nsset_t joined, struct namespace_t *ns_list, size_t ns_len)
+{
+	/* We expect to have joined every namespace. */
+	nsset_t failed_to_join = to_join & ~joined;
+
+	/* Double-check that we used up (and thus joined) all of the nsfds. */
+	for (size_t i = 0; i < ns_len; i++) {
+		struct namespace_t *ns = &ns_list[i];
+		int type = nstype(ns->type);
+
+		if (ns->fd < 0)
+			continue;
+
+		failed_to_join |= type;
+		write_log(FATAL, "failed to setns(%#x) into %s namespace (with path %s): %s",
+			  type, ns->type, ns->path, strerror(EPERM));
+		close(ns->fd);
+		ns->fd = -1;
 	}
 
-	free(namespaces);
+	/* Make sure we joined the namespaces we planned to. */
+	if (failed_to_join)
+		bail("failed to join {%s} namespaces: %s", nsset_to_str(failed_to_join), strerror(EPERM));
+
+	free(ns_list);
+}
+
+void join_namespaces(char *nsspec)
+{
+	nsset_t to_join = 0, joined = 0;
+	struct namespace_t *ns_list;
+	size_t ns_len;
+
+	/*
+	 * We have to open the file descriptors first, since after we join the
+	 * mnt or user namespaces we might no longer be able to access the
+	 * paths.
+	 */
+	to_join = __open_namespaces(nsspec, &ns_list, &ns_len);
+
+	/*
+	 * We first try to join all non-userns namespaces to join any namespaces
+	 * that we might not be able to join once we switch credentials to the
+	 * container's userns. We then join the user namespace, and then try to
+	 * join any remaining namespaces (this last step is needed for rootless
+	 * containers -- we don't get setns(2) permissions until we join the userns
+	 * and get CAP_SYS_ADMIN).
+	 *
+	 * Splitting the joins this way is necessary for containers that are
+	 * configured to join some externally-created namespace but are also
+	 * configured to join an unrelated user namespace.
+	 *
+	 * This is similar to what nsenter(1) seems to do in practice.
+	 */
+	joined |= __join_namespaces(to_join & ~(joined | CLONE_NEWUSER), ns_list, ns_len);
+	joined |= __join_namespaces(CLONE_NEWUSER, ns_list, ns_len);
+	joined |= __join_namespaces(to_join & ~(joined | CLONE_NEWUSER), ns_list, ns_len);
+
+	/* Verify that we joined all of the namespaces. */
+	__close_namespaces(to_join, joined, ns_list, ns_len);
 }
 
 static inline int sane_kill(pid_t pid, int signum)

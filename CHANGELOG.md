@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### libcontainer API
+ * `configs.CommandHook` struct has changed, Command is now a pointer.
+   Also, `configs.NewCommandHook` now accepts a `*Command`. (#4325)
+ * The `Process` struct has `User` string field replaced with numeric
+   `UID` and `GID` fields, and `AdditionalGroups` changed its type from
+   `[]string` to `[]int`. Essentially, resolution of user and group
+   names to IDs is no longer performed by libcontainer, so if a libcontainer
+   user previously relied on this feature, now they have to convert names to
+   IDs before calling libcontainer; it is recommended to use Go package
+   github.com/moby/sys/user for that. (#3999)
+
+### Fixed
+ * `runc exec -p` no longer ignores specified `ioPriority` and `scheduler`
+   settings. Similarly, libcontainer's `Container.Start` and `Container.Run`
+   methods no longer ignore `Process.IOPriority` and `Process.Scheduler`
+   settings. (#4585)
+
 ## [1.2.0] - 2024-10-22
 
 > できるときにできることをやるんだ。それが今だ。

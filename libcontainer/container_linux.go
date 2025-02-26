@@ -25,7 +25,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/manager"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/dmz"
+	"github.com/opencontainers/runc/libcontainer/exeseal"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
@@ -305,6 +305,13 @@ func (c *Container) start(process *Process) (retErr error) {
 	if c.config.Cgroups.Resources.SkipDevices {
 		return errors.New("can't start container with SkipDevices set")
 	}
+
+	if c.config.RootlessEUID && len(process.AdditionalGroups) > 0 {
+		// We cannot set any additional groups in a rootless container
+		// and thus we bail if the user asked us to do so.
+		return errors.New("cannot set any additional groups in a rootless container")
+	}
+
 	if process.Init {
 		if c.initProcessStartTime != 0 {
 			return errors.New("container already has init process")
@@ -327,16 +334,6 @@ func (c *Container) start(process *Process) (retErr error) {
 	defer process.closeClonedExes()
 
 	logsDone := parent.forwardChildLogs()
-	if logsDone != nil {
-		defer func() {
-			// Wait for log forwarder to finish. This depends on
-			// runc init closing the _LIBCONTAINER_LOGPIPE log fd.
-			err := <-logsDone
-			if err != nil && retErr == nil {
-				retErr = fmt.Errorf("unable to forward init logs: %w", err)
-			}
-		}()
-	}
 
 	// Before starting "runc init", mark all non-stdio open files as O_CLOEXEC
 	// to make sure we don't leak any files into "runc init". Any files to be
@@ -351,9 +348,20 @@ func (c *Container) start(process *Process) (retErr error) {
 		return fmt.Errorf("unable to start container process: %w", err)
 	}
 
+	if logsDone != nil {
+		defer func() {
+			// Wait for log forwarder to finish. This depends on
+			// runc init closing the _LIBCONTAINER_LOGPIPE log fd.
+			err := <-logsDone
+			if err != nil && retErr == nil {
+				retErr = fmt.Errorf("unable to forward init logs: %w", err)
+			}
+		}()
+	}
+
 	if process.Init {
 		c.fifo.Close()
-		if c.config.Hooks != nil {
+		if c.config.HasHook(configs.Poststart) {
 			s, err := c.currentOCIState()
 			if err != nil {
 				return err
@@ -420,18 +428,18 @@ func (c *Container) signal(s os.Signal) error {
 		// does nothing until it's thawed. Only thaw the cgroup
 		// for SIGKILL.
 		if paused, _ := c.isPaused(); paused {
-			_ = c.cgroupManager.Freeze(configs.Thawed)
+			_ = c.cgroupManager.Freeze(cgroups.Thawed)
 		}
 	}
 	return nil
 }
 
 func (c *Container) createExecFifo() (retErr error) {
-	rootuid, err := c.Config().HostRootUID()
+	rootuid, err := c.config.HostRootUID()
 	if err != nil {
 		return err
 	}
-	rootgid, err := c.Config().HostRootGID()
+	rootgid, err := c.config.HostRootGID()
 	if err != nil {
 		return err
 	}
@@ -491,7 +499,7 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 		exePath string
 		safeExe *os.File
 	)
-	if dmz.IsSelfExeCloned() {
+	if exeseal.IsSelfExeCloned() {
 		// /proc/self/exe is already a cloned binary -- no need to do anything
 		logrus.Debug("skipping binary cloning -- /proc/self/exe is already cloned!")
 		// We don't need to use /proc/thread-self here because the exe mm of a
@@ -500,13 +508,13 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 		exePath = "/proc/self/exe"
 	} else {
 		var err error
-		safeExe, err = dmz.CloneSelfExe(c.stateDir)
+		safeExe, err = exeseal.CloneSelfExe(c.stateDir)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create safe /proc/self/exe clone for runc init: %w", err)
 		}
 		exePath = "/proc/self/fd/" + strconv.Itoa(int(safeExe.Fd()))
 		p.clonedExes = append(p.clonedExes, safeExe)
-		logrus.Debug("runc-dmz: using /proc/self/exe clone") // used for tests
+		logrus.Debug("runc exeseal: using /proc/self/exe clone") // used for tests
 	}
 
 	cmd := exec.Command(exePath, "init")
@@ -612,14 +620,16 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, comm *processComm)
 	}
 
 	init := &initProcess{
-		cmd:             cmd,
-		comm:            comm,
-		manager:         c.cgroupManager,
+		containerProcess: containerProcess{
+			cmd:           cmd,
+			comm:          comm,
+			manager:       c.cgroupManager,
+			config:        c.newInitConfig(p),
+			process:       p,
+			bootstrapData: data,
+			container:     c,
+		},
 		intelRdtManager: c.intelRdtManager,
-		config:          c.newInitConfig(p),
-		container:       c,
-		process:         p,
-		bootstrapData:   data,
 	}
 	c.initProcess = init
 	return init, nil
@@ -635,15 +645,18 @@ func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, comm *processComm
 		return nil, err
 	}
 	proc := &setnsProcess{
-		cmd:             cmd,
+		containerProcess: containerProcess{
+			cmd:           cmd,
+			comm:          comm,
+			manager:       c.cgroupManager,
+			config:        c.newInitConfig(p),
+			process:       p,
+			bootstrapData: data,
+			container:     c,
+		},
 		cgroupPaths:     state.CgroupPaths,
 		rootlessCgroups: c.config.RootlessCgroups,
 		intelRdtPath:    state.IntelRdtPath,
-		comm:            comm,
-		manager:         c.cgroupManager,
-		config:          c.newInitConfig(p),
-		process:         p,
-		bootstrapData:   data,
 		initProcessPid:  state.InitProcessPid,
 	}
 	if len(p.SubCgroupPaths) > 0 {
@@ -679,25 +692,35 @@ func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, comm *processComm
 }
 
 func (c *Container) newInitConfig(process *Process) *initConfig {
+	// Set initial properties. For those properties that exist
+	// both in the container config and the process, use the ones
+	// from the container config first, and override them later.
 	cfg := &initConfig{
 		Config:           c.config,
 		Args:             process.Args,
 		Env:              process.Env,
-		User:             process.User,
+		UID:              process.UID,
+		GID:              process.GID,
 		AdditionalGroups: process.AdditionalGroups,
 		Cwd:              process.Cwd,
-		Capabilities:     process.Capabilities,
+		Capabilities:     c.config.Capabilities,
 		PassedFilesCount: len(process.ExtraFiles),
 		ContainerID:      c.ID(),
 		NoNewPrivileges:  c.config.NoNewPrivileges,
-		RootlessEUID:     c.config.RootlessEUID,
-		RootlessCgroups:  c.config.RootlessCgroups,
 		AppArmorProfile:  c.config.AppArmorProfile,
 		ProcessLabel:     c.config.ProcessLabel,
 		Rlimits:          c.config.Rlimits,
+		IOPriority:       c.config.IOPriority,
+		Scheduler:        c.config.Scheduler,
 		CreateConsole:    process.ConsoleSocket != nil,
 		ConsoleWidth:     process.ConsoleWidth,
 		ConsoleHeight:    process.ConsoleHeight,
+	}
+
+	// Overwrite config properties with ones from process.
+
+	if process.Capabilities != nil {
+		cfg.Capabilities = process.Capabilities
 	}
 	if process.NoNewPrivileges != nil {
 		cfg.NoNewPrivileges = *process.NoNewPrivileges
@@ -711,6 +734,15 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 	if len(process.Rlimits) > 0 {
 		cfg.Rlimits = process.Rlimits
 	}
+	if process.IOPriority != nil {
+		cfg.IOPriority = process.IOPriority
+	}
+	if process.Scheduler != nil {
+		cfg.Scheduler = process.Scheduler
+	}
+
+	// Set misc properties.
+
 	if cgroups.IsCgroup2UnifiedMode() {
 		cfg.Cgroup2Path = c.cgroupManager.Path("")
 	}
@@ -745,7 +777,7 @@ func (c *Container) Pause() error {
 	}
 	switch status {
 	case Running, Created:
-		if err := c.cgroupManager.Freeze(configs.Frozen); err != nil {
+		if err := c.cgroupManager.Freeze(cgroups.Frozen); err != nil {
 			return err
 		}
 		return c.state.transition(&pausedState{
@@ -769,7 +801,7 @@ func (c *Container) Resume() error {
 	if status != Paused {
 		return ErrNotPaused
 	}
-	if err := c.cgroupManager.Freeze(configs.Thawed); err != nil {
+	if err := c.cgroupManager.Freeze(cgroups.Thawed); err != nil {
 		return err
 	}
 	return c.state.transition(&runningState{
@@ -906,7 +938,7 @@ func (c *Container) isPaused() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return state == configs.Frozen, nil
+	return state == cgroups.Frozen, nil
 }
 
 func (c *Container) currentState() *State {
@@ -1134,8 +1166,9 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 		Value: c.config.RootlessEUID,
 	})
 
-	// write boottime and monotonic time ns offsets.
-	if c.config.TimeOffsets != nil {
+	// write boottime and monotonic time ns offsets only when we are not joining an existing time ns
+	_, joinExistingTime := nsMaps[configs.NEWTIME]
+	if !joinExistingTime && c.config.TimeOffsets != nil {
 		var offsetSpec bytes.Buffer
 		for clock, offset := range c.config.TimeOffsets {
 			fmt.Fprintf(&offsetSpec, "%s %d %d\n", clock, offset.Secs, offset.Nanosecs)

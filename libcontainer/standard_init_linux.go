@@ -155,15 +155,12 @@ func (l *linuxStandardInit) Init() error {
 		}
 	}
 
-	if l.config.Config.Scheduler != nil {
-		if err := setupScheduler(l.config.Config); err != nil {
-			return err
-		}
+	if err := setupScheduler(l.config); err != nil {
+		return err
 	}
-	if l.config.Config.IOPriority != nil {
-		if err := setIOPriority(l.config.Config.IOPriority); err != nil {
-			return err
-		}
+
+	if err := setupIOPriority(l.config); err != nil {
+		return err
 	}
 
 	// Tell our parent that we're ready to exec. This must be done before the
@@ -197,6 +194,17 @@ func (l *linuxStandardInit) Init() error {
 	if err := pdeath.Restore(); err != nil {
 		return fmt.Errorf("can't restore pdeath signal: %w", err)
 	}
+
+	// In case we have any StartContainer hooks to run, and they don't
+	// have environment configured explicitly, make sure they will be run
+	// with the same environment as container's init.
+	//
+	// NOTE the above described behavior is not part of runtime-spec, but
+	// rather a de facto historical thing we afraid to change.
+	if h := l.config.Config.Hooks[configs.StartContainer]; len(h) > 0 {
+		h.SetDefaultEnv(l.config.Env)
+	}
+
 	// Compare the parent from the initial start of the init process and make
 	// sure that it did not change.  if the parent changes that means it died
 	// and we were reparented to something else so we should just kill ourself
@@ -267,11 +275,12 @@ func (l *linuxStandardInit) Init() error {
 	// https://github.com/torvalds/linux/blob/v4.9/fs/exec.c#L1290-L1318
 	_ = l.fifoFile.Close()
 
-	s := l.config.SpecState
-	s.Pid = unix.Getpid()
-	s.Status = specs.StateCreated
-	if err := l.config.Config.Hooks.Run(configs.StartContainer, s); err != nil {
-		return err
+	if s := l.config.SpecState; s != nil {
+		s.Pid = unix.Getpid()
+		s.Status = specs.StateCreated
+		if err := l.config.Config.Hooks.Run(configs.StartContainer, s); err != nil {
+			return err
+		}
 	}
 
 	// Close all file descriptors we are not passing to the container. This is
@@ -287,5 +296,5 @@ func (l *linuxStandardInit) Init() error {
 	if err := utils.UnsafeCloseFrom(l.config.PassedFilesCount + 3); err != nil {
 		return err
 	}
-	return system.Exec(name, l.config.Args, os.Environ())
+	return system.Exec(name, l.config.Args, l.config.Env)
 }

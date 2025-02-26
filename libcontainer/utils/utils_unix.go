@@ -102,8 +102,14 @@ func fdRangeFrom(minFd int, fn fdFunc) error {
 func CloseExecFrom(minFd int) error {
 	// Use close_range(CLOSE_RANGE_CLOEXEC) if possible.
 	if haveCloseRangeCloexec() {
-		err := unix.CloseRange(uint(minFd), math.MaxUint, unix.CLOSE_RANGE_CLOEXEC)
-		return os.NewSyscallError("close_range", err)
+		err := unix.CloseRange(uint(minFd), math.MaxInt32, unix.CLOSE_RANGE_CLOEXEC)
+		if err == nil {
+			return nil
+		}
+
+		logrus.Debugf("close_range failed, closing range one at a time (error: %v)", err)
+
+		// If close_range fails, we fall back to the standard loop.
 	}
 	// Otherwise, fall back to the standard loop.
 	return fdRangeFrom(minFd, unix.CloseOnExec)
@@ -287,9 +293,6 @@ func IsLexicallyInRoot(root, path string) bool {
 // try to detect any symlink components in the path while we are doing the
 // MkdirAll.
 //
-// NOTE: Unlike os.MkdirAll, mode is not Go's os.FileMode, it is the unix mode
-// (the suid/sgid/sticky bits are not the same as for os.FileMode).
-//
 // NOTE: If unsafePath is a subpath of root, we assume that you have already
 // called SecureJoin and so we use the provided path verbatim without resolving
 // any symlinks (this is done in a way that avoids symlink-exchange races).
@@ -300,7 +303,7 @@ func IsLexicallyInRoot(root, path string) bool {
 // handling if unsafePath has already been scoped within the rootfs (this is
 // needed for a lot of runc callers and fixing this would require reworking a
 // lot of path logic).
-func MkdirAllInRootOpen(root, unsafePath string, mode uint32) (_ *os.File, Err error) {
+func MkdirAllInRootOpen(root, unsafePath string, mode os.FileMode) (_ *os.File, Err error) {
 	// If the path is already "within" the root, get the path relative to the
 	// root and use that as the unsafe path. This is necessary because a lot of
 	// MkdirAllInRootOpen callers have already done SecureJoin, and refactoring
@@ -334,12 +337,12 @@ func MkdirAllInRootOpen(root, unsafePath string, mode uint32) (_ *os.File, Err e
 	}
 	defer rootDir.Close()
 
-	return securejoin.MkdirAllHandle(rootDir, unsafePath, int(mode))
+	return securejoin.MkdirAllHandle(rootDir, unsafePath, mode)
 }
 
 // MkdirAllInRoot is a wrapper around MkdirAllInRootOpen which closes the
 // returned handle, for callers that don't need to use it.
-func MkdirAllInRoot(root, unsafePath string, mode uint32) error {
+func MkdirAllInRoot(root, unsafePath string, mode os.FileMode) error {
 	f, err := MkdirAllInRootOpen(root, unsafePath, mode)
 	if err == nil {
 		_ = f.Close()

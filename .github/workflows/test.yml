@@ -23,8 +23,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, ubuntu-24.04, actuated-arm64-6cpu-8gb]
-        go-version: [1.22.x, 1.23.x]
+        os: [ubuntu-24.04, actuated-arm64-6cpu-8gb]
+        go-version: [1.23.x, 1.24.x]
         rootless: ["rootless", ""]
         race: ["-race", ""]
         criu: ["", "criu-dev"]
@@ -122,7 +122,7 @@ jobs:
       if: ${{ matrix.criu != '' }}
       run: |
         sudo apt -qy install \
-          libcap-dev libnet1-dev libnl-3-dev \
+          libcap-dev libnet1-dev libnl-3-dev uuid-dev \
           libprotobuf-c-dev libprotobuf-dev protobuf-c-compiler protobuf-compiler
         git clone https://github.com/checkpoint-restore/criu.git ~/criu
         (cd ~/criu && git checkout ${{ matrix.criu }} && sudo make install-criu)
@@ -172,8 +172,6 @@ jobs:
       run: sudo -E PATH="$PATH" script -e -c 'make local${{ matrix.rootless }}integration'
 
     - name: integration test (systemd driver)
-      # Skip rootless+systemd for ubuntu 20.04 because of cgroup v1.
-      if: ${{ !(matrix.os == 'ubuntu-20.04' && matrix.rootless == 'rootless') }}
       run: |
         # Delegate all cgroup v2 controllers to rootless user via --systemd-cgroup.
         # The default (since systemd v252) is "pids memory cpu".

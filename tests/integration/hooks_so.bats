@@ -24,19 +24,14 @@ function teardown() {
 
 @test "runc run (hooks library tests)" {
 	# setup some dummy libs
-	gcc -shared -Wl,-soname,librunc-hooks-create-runtime.so.1 -o "$HOOKLIBCR.1.0.0"
-	gcc -shared -Wl,-soname,librunc-hooks-create-container.so.1 -o "$HOOKLIBCC.1.0.0"
+	gcc -shared -Wl,-soname,"$HOOKLIBCR.1" -o "$HOOKLIBCR.1.0.0"
+	gcc -shared -Wl,-soname,"$HOOKLIBCC.1" -o "$HOOKLIBCC.1.0.0"
 
 	bundle=$(pwd)
 
 	# To mount $HOOKLIBCR we need to do that in the container namespace
-	create_runtime_hook=$(
-		cat <<-EOF
-			pid=\$(cat - | jq -r '.pid')
-			touch "$LIBPATH/$HOOKLIBCR.1.0.0"
-			nsenter -m \$ns -t \$pid mount --bind "$bundle/$HOOKLIBCR.1.0.0" "$LIBPATH/$HOOKLIBCR.1.0.0"
-		EOF
-	)
+	create_runtime_hook="pid=\$(cat - | jq -r '.pid'); touch "$LIBPATH/$HOOKLIBCR.1.0.0" && \
+		nsenter -m \$ns -t \$pid mount --bind "$bundle/$HOOKLIBCR.1.0.0" "$LIBPATH/$HOOKLIBCR.1.0.0""
 
 	create_container_hook="touch ./lib/$HOOKLIBCC.1.0.0 && mount --bind $bundle/$HOOKLIBCC.1.0.0 ./lib/$HOOKLIBCC.1.0.0"
 

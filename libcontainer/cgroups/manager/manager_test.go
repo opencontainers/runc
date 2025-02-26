@@ -3,8 +3,8 @@ package manager
 import (
 	"testing"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
-	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 // TestNilResources checks that a cgroup manager do not panic when
@@ -27,14 +27,14 @@ func TestNilResourcesSystemd(t *testing.T) {
 }
 
 func testNilResources(t *testing.T, systemd bool) {
-	cg := &configs.Cgroup{} // .Resources is nil
+	cg := &cgroups.Cgroup{} // .Resources is nil
 	cg.Systemd = systemd
 	mgr, err := New(cg)
 	if err != nil {
 		// Some managers require non-nil Resources during
 		// instantiation -- provide and retry. In such case
 		// we're mostly testing Set(nil) below.
-		cg.Resources = &configs.Resources{}
+		cg.Resources = &cgroups.Resources{}
 		mgr, err = New(cg)
 		if err != nil {
 			t.Fatal(err)
@@ -42,7 +42,7 @@ func testNilResources(t *testing.T, systemd bool) {
 	}
 	_ = mgr.Apply(-1)
 	_ = mgr.Set(nil)
-	_ = mgr.Freeze(configs.Thawed)
+	_ = mgr.Freeze(cgroups.Thawed)
 	_ = mgr.Exists()
 	_, _ = mgr.GetAllPids()
 	_, _ = mgr.GetCgroups()

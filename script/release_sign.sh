@@ -108,7 +108,7 @@ trap 'rm -r "$tmp_gpgdir"' EXIT
 tmp_runc_gpgflags=("--homedir=$tmp_gpgdir" "--no-default-keyring" "--keyring=$project.keyring")
 gpg "${tmp_runc_gpgflags[@]}" --import <"$root/$project.keyring"
 
-tmp_seccomp_gpgflags=("--homedir=$tmp_gpgdir" "--no-default-keyring" "--keyring=seccomp.keyring")
+tmp_seccomp_gpgflags=("--homedir=$tmp_gpgdir" "--no-default-keyring" "--keyring=seccomp.keyring" "--keyserver=keys.openpgp.org")
 gpg "${tmp_seccomp_gpgflags[@]}" --recv-keys 0x47A68FCE37C7D7024FD65E11356CE62C2B524099
 gpg "${tmp_seccomp_gpgflags[@]}" --recv-keys 0x7100AADFAE6E6E940D2E0AD655E45A5AE8CA7C8A
 

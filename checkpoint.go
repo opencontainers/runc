@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strconv"
 
-	criu "github.com/checkpoint-restore/go-criu/v6/rpc"
 	"github.com/moby/sys/userns"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
@@ -32,6 +31,8 @@ checkpointed.`,
 		cli.StringFlag{Name: "parent-path", Value: "", Usage: "path for previous criu image files in pre-dump"},
 		cli.BoolFlag{Name: "leave-running", Usage: "leave the process running after checkpointing"},
 		cli.BoolFlag{Name: "tcp-established", Usage: "allow open tcp connections"},
+		cli.BoolFlag{Name: "tcp-skip-in-flight", Usage: "skip in-flight tcp connections"},
+		cli.BoolFlag{Name: "link-remap", Usage: "allow one to link unlinked files back when possible"},
 		cli.BoolFlag{Name: "ext-unix-sk", Usage: "allow external unix sockets"},
 		cli.BoolFlag{Name: "shell-job", Usage: "allow shell jobs"},
 		cli.BoolFlag{Name: "lazy-pages", Usage: "use userfaultfd to lazily restore memory pages"},
@@ -123,6 +124,8 @@ func criuOptions(context *cli.Context) (*libcontainer.CriuOpts, error) {
 		ParentImage:             parentPath,
 		LeaveRunning:            context.Bool("leave-running"),
 		TcpEstablished:          context.Bool("tcp-established"),
+		TcpSkipInFlight:         context.Bool("tcp-skip-in-flight"),
+		LinkRemap:               context.Bool("link-remap"),
 		ExternalUnixConnections: context.Bool("ext-unix-sk"),
 		ShellJob:                context.Bool("shell-job"),
 		FileLocks:               context.Bool("file-locks"),
@@ -132,6 +135,7 @@ func criuOptions(context *cli.Context) (*libcontainer.CriuOpts, error) {
 		StatusFd:                context.Int("status-fd"),
 		LsmProfile:              context.String("lsm-profile"),
 		LsmMountContext:         context.String("lsm-mount-context"),
+		ManageCgroupsMode:       context.String("manage-cgroups-mode"),
 	}
 
 	// CRIU options below may or may not be set.
@@ -150,21 +154,6 @@ func criuOptions(context *cli.Context) (*libcontainer.CriuOpts, error) {
 			Address: address,
 			Port:    int32(portInt),
 		}
-	}
-
-	switch context.String("manage-cgroups-mode") {
-	case "":
-		// do nothing
-	case "soft":
-		opts.ManageCgroupsMode = criu.CriuCgMode_SOFT
-	case "full":
-		opts.ManageCgroupsMode = criu.CriuCgMode_FULL
-	case "strict":
-		opts.ManageCgroupsMode = criu.CriuCgMode_STRICT
-	case "ignore":
-		opts.ManageCgroupsMode = criu.CriuCgMode_IGNORE
-	default:
-		return nil, errors.New("Invalid manage-cgroups-mode value")
 	}
 
 	// runc doesn't manage network devices and their configuration.

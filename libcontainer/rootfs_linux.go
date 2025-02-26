@@ -22,9 +22,9 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	devices "github.com/opencontainers/runc/libcontainer/cgroups/devices/config"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
@@ -106,7 +106,7 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		root:            config.Rootfs,
 		label:           config.MountLabel,
 		cgroup2Path:     iConfig.Cgroup2Path,
-		rootlessCgroups: iConfig.RootlessCgroups,
+		rootlessCgroups: config.RootlessCgroups,
 		cgroupns:        config.Namespaces.Contains(configs.NEWCGROUP),
 	}
 	for _, m := range config.Mounts {
@@ -195,11 +195,12 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		return &os.PathError{Op: "chdir", Path: config.Rootfs, Err: err}
 	}
 
-	s := iConfig.SpecState
-	s.Pid = unix.Getpid()
-	s.Status = specs.StateCreating
-	if err := iConfig.Config.Hooks.Run(configs.CreateContainer, s); err != nil {
-		return err
+	if s := iConfig.SpecState; s != nil {
+		s.Pid = unix.Getpid()
+		s.Status = specs.StateCreating
+		if err := iConfig.Config.Hooks.Run(configs.CreateContainer, s); err != nil {
+			return err
+		}
 	}
 
 	if config.NoPivotRoot {

@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups"
+	devices "github.com/opencontainers/runc/libcontainer/cgroups/devices/config"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/specconv"
 	"golang.org/x/sys/unix"
 )
@@ -99,9 +100,9 @@ func newTemplateConfig(t testing.TB, p *tParam) *configs.Config {
 			{Type: configs.NEWPID},
 			{Type: configs.NEWNET},
 		}),
-		Cgroups: &configs.Cgroup{
+		Cgroups: &cgroups.Cgroup{
 			Systemd: p.systemd,
-			Resources: &configs.Resources{
+			Resources: &cgroups.Resources{
 				MemorySwappiness: nil,
 				Devices:          allowedDevices,
 			},

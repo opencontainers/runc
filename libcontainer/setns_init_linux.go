@@ -71,12 +71,13 @@ func (l *linuxSetnsInit) Init() error {
 		unix.Umask(int(*l.config.Config.Umask))
 	}
 
-	if l.config.Config.Scheduler != nil {
-		if err := setupScheduler(l.config.Config); err != nil {
-			return err
-		}
+	if err := setupScheduler(l.config); err != nil {
+		return err
 	}
 
+	if err := setupIOPriority(l.config); err != nil {
+		return err
+	}
 	// Tell our parent that we're ready to exec. This must be done before the
 	// Seccomp rules have been applied, because we need to be able to read and
 	// write to a socket.
@@ -153,5 +154,5 @@ func (l *linuxSetnsInit) Init() error {
 	if err := utils.UnsafeCloseFrom(l.config.PassedFilesCount + 3); err != nil {
 		return err
 	}
-	return system.Exec(name, l.config.Args, os.Environ())
+	return system.Exec(name, l.config.Args, l.config.Env)
 }

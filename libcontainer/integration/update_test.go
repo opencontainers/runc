@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer"
+	devices "github.com/opencontainers/runc/libcontainer/cgroups/devices/config"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
-	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
 func testUpdateDevices(t *testing.T, systemd bool) {

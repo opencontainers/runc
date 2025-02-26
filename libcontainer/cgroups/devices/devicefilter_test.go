@@ -4,8 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opencontainers/runc/libcontainer/devices"
-	"github.com/opencontainers/runc/libcontainer/specconv"
+	devices "github.com/opencontainers/runc/libcontainer/cgroups/devices/config"
 )
 
 func hash(s, comm string) string {
@@ -53,6 +52,88 @@ block-0:
 }
 
 func TestDeviceFilter_BuiltInAllowList(t *testing.T) {
+	// This is a copy of all rules from
+	// github.com/opencontainers/runc/libcontainer/specconv.AllowedDevices.
+	devices := []*devices.Rule{
+		{
+			Type:        devices.CharDevice,
+			Major:       devices.Wildcard,
+			Minor:       devices.Wildcard,
+			Permissions: "m",
+			Allow:       true,
+		},
+		{
+			Type:        devices.BlockDevice,
+			Major:       devices.Wildcard,
+			Minor:       devices.Wildcard,
+			Permissions: "m",
+			Allow:       true,
+		},
+		{
+			Type:        devices.CharDevice,
+			Major:       1,
+			Minor:       3,
+			Permissions: "rwm",
+			Allow:       true,
+		},
+		{
+			Type:        devices.CharDevice,
+			Major:       1,
+			Minor:       8,
+			Permissions: "rwm",
+			Allow:       true,
+		},
+		{
+			Type:        devices.CharDevice,
+			Major:       1,
+			Minor:       7,
+			Permissions: "rwm",
+			Allow:       true,
+		},
+		{
+			Type:        devices.CharDevice,
+			Major:       5,
+			Minor:       0,
+			Permissions: "rwm",
+			Allow:       true,
+		},
+		{
+			Type:        devices.CharDevice,
+			Major:       1,
+			Minor:       5,
+			Permissions: "rwm",
+			Allow:       true,
+		},
+		{
+			Type:        devices.CharDevice,
+			Major:       1,
+			Minor:       9,
+			Permissions: "rwm",
+			Allow:       true,
+		},
+		{
+			Type:        devices.CharDevice,
+			Major:       136,
+			Minor:       devices.Wildcard,
+			Permissions: "rwm",
+			Allow:       true,
+		},
+		{
+			Type:        devices.CharDevice,
+			Major:       5,
+			Minor:       2,
+			Permissions: "rwm",
+			Allow:       true,
+		},
+		{
+			Type:        devices.CharDevice,
+			Major:       10,
+			Minor:       200,
+			Permissions: "rwm",
+			Allow:       true,
+		},
+	}
+
 	expected := `
 // load parameters into registers
         0: LdXMemW dst: r2 src: r1 off: 0 imm: 0
@@ -120,19 +201,22 @@ block-8:
         51: MovImm32 dst: r0 imm: 1
         52: Exit
 block-9:
-// /dev/pts (c, 136, wildcard, rwm, true)
+// tuntap (c, 10, 200, rwm, true)
         53: JNEImm dst: r2 off: -1 imm: 2 <block-10>
-        54: JNEImm dst: r4 off: -1 imm: 136 <block-10>
-        55: MovImm32 dst: r0 imm: 1
-        56: Exit
+        54: JNEImm dst: r4 off: -1 imm: 10 <block-10>
+        55: JNEImm dst: r5 off: -1 imm: 200 <block-10>
+        56: MovImm32 dst: r0 imm: 1
+        57: Exit
 block-10:
-        57: MovImm32 dst: r0 imm: 0
-        58: Exit
+// /dev/pts (c, 136, wildcard, rwm, true)
+	58: JNEImm dst: r2 off: -1 imm: 2 <block-11>
+        59: JNEImm dst: r4 off: -1 imm: 136 <block-11>
+        60: MovImm32 dst: r0 imm: 1
+        61: Exit
+block-11:
+        62: MovImm32 dst: r0 imm: 0
+        63: Exit
 `
-	var devices []*devices.Rule
-	for _, device := range specconv.AllowedDevices {
-		devices = append(devices, &device.Rule)
-	}
 	testDeviceFilter(t, devices, expected)
 }
 

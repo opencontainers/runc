@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opencontainers/runc/libcontainer/dmz"
+	"github.com/opencontainers/runc/libcontainer/exeseal"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -101,7 +101,7 @@ func cleanup(path string) error {
 	return nil
 }
 
-// memfdClone is a memfd-only implementation of dmz.CloneBinary.
+// memfdClone is a memfd-only implementation of exeseal.CloneBinary.
 func memfdClone(path string) (*os.File, error) {
 	binFile, err := os.Open(path)
 	if err != nil {
@@ -113,7 +113,7 @@ func memfdClone(path string) (*os.File, error) {
 		return nil, fmt.Errorf("checking %s size: %w", path, err)
 	}
 	size := stat.Size()
-	memfd, sealFn, err := dmz.Memfd("/proc/self/exe")
+	memfd, sealFn, err := exeseal.Memfd("/proc/self/exe")
 	if err != nil {
 		return nil, fmt.Errorf("creating memfd failed: %w", err)
 	}
@@ -126,7 +126,7 @@ func memfdClone(path string) (*os.File, error) {
 	if err := sealFn(&memfd); err != nil {
 		return nil, fmt.Errorf("could not seal fd: %w", err)
 	}
-	if !dmz.IsCloned(memfd) {
+	if !exeseal.IsCloned(memfd) {
 		return nil, fmt.Errorf("cloned memfd is not properly sealed")
 	}
 	return memfd, nil

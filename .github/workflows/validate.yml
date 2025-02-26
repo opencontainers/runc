@@ -8,7 +8,7 @@ on:
       - release-*
   pull_request:
 env:
-  GO_VERSION: 1.23.x
+  GO_VERSION: 1.24
 permissions:
   contents: read
 
@@ -40,7 +40,7 @@ jobs:
           sudo apt -qy install libseccomp-dev
       - uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.60
+          version: v1.64
       # Extra linters, only checking new code from a pull request.
       - name: lint-extra
         if: github.event_name == 'pull_request'
@@ -76,8 +76,14 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "${{ env.GO_VERSION }}"
+      - name: install deps
+        run: |
+          sudo apt update
+          sudo apt -y install libseccomp-dev
       - name: compile with no build tags
         run: make BUILDTAGS=""
+      - name: compile with runc_nocriu build tag
+        run: make EXTRA_BUILDTAGS="runc_nocriu"
 
   codespell:
     runs-on: ubuntu-24.04
@@ -121,7 +127,7 @@ jobs:
         run : ./script/check-config.sh
 
   space-at-eol:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - run: rm -fr vendor

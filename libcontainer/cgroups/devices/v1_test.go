@@ -8,9 +8,8 @@ import (
 	"github.com/moby/sys/userns"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	devices "github.com/opencontainers/runc/libcontainer/cgroups/devices/config"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
-	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
 func init() {
@@ -35,7 +34,7 @@ func TestSetV1Allow(t *testing.T) {
 		}
 	}
 
-	r := &configs.Resources{
+	r := &cgroups.Resources{
 		Devices: []*devices.Rule{
 			{
 				Type:        devices.CharDevice,

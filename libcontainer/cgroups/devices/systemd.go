@@ -11,22 +11,30 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/sirupsen/logrus"
 
-	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/devices"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
+	devices "github.com/opencontainers/runc/libcontainer/cgroups/devices/config"
 )
 
 // systemdProperties takes the configured device rules and generates a
 // corresponding set of systemd properties to configure the devices correctly.
-func systemdProperties(r *configs.Resources, sdVer int) ([]systemdDbus.Property, error) {
+func systemdProperties(r *cgroups.Resources, sdVer int) ([]systemdDbus.Property, error) {
 	if r.SkipDevices {
 		return nil, nil
 	}
 
 	properties := []systemdDbus.Property{
+		// When we later add DeviceAllow=/dev/foo properties, we are
+		// appending devices to the allow list for the unit. However,
+		// if this is an existing unit, it already has DeviceAllow=
+		// entries, and we need to clear them all before applying the
+		// new set. (We also do this for new units, mainly for safety
+		// to ensure we only enable the devices we expect.)
+		//
+		// To clear any existing DeviceAllow= rules, we have to add an
+		// empty DeviceAllow= property.
+		newProp("DeviceAllow", []deviceAllowEntry{}),
 		// Always run in the strictest white-list mode.
 		newProp("DevicePolicy", "strict"),
-		// Empty the DeviceAllow array before filling it.
-		newProp("DeviceAllow", []deviceAllowEntry{}),
 	}
 
 	// Figure out the set of rules.
@@ -216,8 +224,7 @@ func findDeviceGroup(ruleType devices.Type, ruleMajor int64) (string, error) {
 			continue
 		}
 
-		group := strings.TrimPrefix(line, ruleMajorStr)
-		if len(group) < len(line) { // got it
+		if group, ok := strings.CutPrefix(line, ruleMajorStr); ok {
 			return prefix + group, nil
 		}
 	}
@@ -239,7 +246,7 @@ func allowAllDevices() []systemdDbus.Property {
 	// Setting mode to auto and removing all DeviceAllow rules
 	// results in allowing access to all devices.
 	return []systemdDbus.Property{
-		newProp("DevicePolicy", "auto"),
 		newProp("DeviceAllow", []deviceAllowEntry{}),
+		newProp("DevicePolicy", "auto"),
 	}
 }

@@ -3,19 +3,19 @@ package fs
 import (
 	"testing"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
-	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 func TestFreezerSetState(t *testing.T) {
 	path := tempDir(t, "freezer")
 
 	writeFileContents(t, path, map[string]string{
-		"freezer.state": string(configs.Frozen),
+		"freezer.state": string(cgroups.Frozen),
 	})
 
-	r := &configs.Resources{
-		Freezer: configs.Thawed,
+	r := &cgroups.Resources{
+		Freezer: cgroups.Thawed,
 	}
 	freezer := &FreezerGroup{}
 	if err := freezer.Set(path, r); err != nil {
@@ -26,7 +26,7 @@ func TestFreezerSetState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if value != string(configs.Thawed) {
+	if value != string(cgroups.Thawed) {
 		t.Fatal("Got the wrong value, set freezer.state failed.")
 	}
 }
@@ -34,9 +34,9 @@ func TestFreezerSetState(t *testing.T) {
 func TestFreezerSetInvalidState(t *testing.T) {
 	path := tempDir(t, "freezer")
 
-	const invalidArg configs.FreezerState = "Invalid"
+	const invalidArg cgroups.FreezerState = "Invalid"
 
-	r := &configs.Resources{
+	r := &cgroups.Resources{
 		Freezer: invalidArg,
 	}
 	freezer := &FreezerGroup{}
