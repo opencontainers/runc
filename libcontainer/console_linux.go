@@ -3,6 +3,7 @@ package libcontainer
 import (
 	"os"
 
+	"github.com/opencontainers/runc/libcontainer/utils"
 	"golang.org/x/sys/unix"
 )
 
