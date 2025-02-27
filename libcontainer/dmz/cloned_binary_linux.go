@@ -47,11 +47,15 @@ func sealMemfd(f **os.File) error {
 	// errors because they are not needed and we want to continue
 	// to work on older kernels.
 	fd := (*f).Fd()
-	// F_SEAL_FUTURE_WRITE -- Linux 5.1
-	_, _ = unix.FcntlInt(fd, unix.F_ADD_SEALS, unix.F_SEAL_FUTURE_WRITE)
+
+	// Skip F_SEAL_FUTURE_WRITE, it is not needed because we alreadu use the
+	// stronger F_SEAL_WRITE (and is buggy on Linux <5.5 -- see kernel commit
+	// 05d351102dbe and <https://github.com/opencontainers/runc/pull/4640>).
+
 	// F_SEAL_EXEC -- Linux 6.3
 	const F_SEAL_EXEC = 0x20 //nolint:revive // this matches the unix.* name
 	_, _ = unix.FcntlInt(fd, unix.F_ADD_SEALS, F_SEAL_EXEC)
+
 	// Apply all original memfd seals.
 	_, err := unix.FcntlInt(fd, unix.F_ADD_SEALS, baseMemfdSeals)
 	return os.NewSyscallError("fcntl(F_ADD_SEALS)", err)
