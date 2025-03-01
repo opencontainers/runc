@@ -221,7 +221,7 @@ EOF
 
 	if [ -v HAVE_SWAP ]; then
 		# Test case for https://github.com/opencontainers/runc/pull/592,
-		# checking libcontainer/cgroups/fs/memory.go:setMemoryAndSwap.
+		# checking github.com/opencontainers/cgroups/fs/memory.go:setMemoryAndSwap.
 
 		runc update test_update --memory 30M --memory-swap 50M
 		[ "$status" -eq 0 ]

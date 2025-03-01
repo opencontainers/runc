@@ -51,6 +51,17 @@ github.com/moby/sys/userns
 # github.com/mrunalp/fileutils v0.5.1
 ## explicit; go 1.13
 github.com/mrunalp/fileutils
+# github.com/opencontainers/cgroups v0.0.1
+## explicit; go 1.23.0
+github.com/opencontainers/cgroups
+github.com/opencontainers/cgroups/devices
+github.com/opencontainers/cgroups/devices/config
+github.com/opencontainers/cgroups/fs
+github.com/opencontainers/cgroups/fs2
+github.com/opencontainers/cgroups/fscommon
+github.com/opencontainers/cgroups/internal/path
+github.com/opencontainers/cgroups/manager
+github.com/opencontainers/cgroups/systemd
 # github.com/opencontainers/runtime-spec v1.2.1
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go

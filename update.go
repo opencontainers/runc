@@ -7,7 +7,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/cgroups"
 	"github.com/sirupsen/logrus"
 
 	"github.com/docker/go-units"
