@@ -133,8 +133,10 @@ func startUnit(cm *dbusConnManager, unitName string, properties []systemdDbus.Pr
 	retry := true
 
 retry:
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	err := cm.retryOnDisconnect(func(c *systemdDbus.Conn) error {
-		_, err := c.StartTransientUnitContext(context.TODO(), unitName, "replace", properties, statusChan)
+		_, err := c.StartTransientUnitContext(ctx, unitName, "replace", properties, statusChan)
 		return err
 	})
 	if err != nil {
@@ -161,9 +163,6 @@ retry:
 		return err
 	}
 
-	timeout := time.NewTimer(30 * time.Second)
-	defer timeout.Stop()
-
 	select {
 	case s := <-statusChan:
 		close(statusChan)
@@ -172,7 +171,7 @@ retry:
 			_ = resetFailedUnit(cm, unitName)
 			return fmt.Errorf("error creating systemd unit `%s`: got `%s`", unitName, s)
 		}
-	case <-timeout.C:
+	case <-ctx.Done():
 		_ = resetFailedUnit(cm, unitName)
 		return errors.New("Timeout waiting for systemd to create " + unitName)
 	}
@@ -182,13 +181,13 @@ retry:
 
 func stopUnit(cm *dbusConnManager, unitName string) error {
 	statusChan := make(chan string, 1)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	err := cm.retryOnDisconnect(func(c *systemdDbus.Conn) error {
-		_, err := c.StopUnitContext(context.TODO(), unitName, "replace", statusChan)
+		_, err := c.StopUnitContext(ctx, unitName, "replace", statusChan)
 		return err
 	})
 	if err == nil {
-		timeout := time.NewTimer(30 * time.Second)
-		defer timeout.Stop()
 
 		select {
 		case s := <-statusChan:
@@ -197,7 +196,7 @@ func stopUnit(cm *dbusConnManager, unitName string) error {
 			if s != "done" {
 				logrus.Warnf("error removing unit `%s`: got `%s`. Continuing...", unitName, s)
 			}
-		case <-timeout.C:
+		case <-ctx.Done():
 			return errors.New("Timed out while waiting for systemd to remove " + unitName)
 		}
 	}
@@ -205,7 +204,7 @@ func stopUnit(cm *dbusConnManager, unitName string) error {
 	// In case of a failed unit, let systemd remove it.
 	_ = resetFailedUnit(cm, unitName)
 
-	return nil
+	return err
 }
 
 func resetFailedUnit(cm *dbusConnManager, name string) error {
