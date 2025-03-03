@@ -163,13 +163,52 @@ type setnsProcess struct {
 	initProcessPid  int
 }
 
+// Starts setns process with specified initial CPU affinity.
+func (p *setnsProcess) startWithCPUAffinity() error {
+	aff := p.config.CPUAffinity
+	if aff == nil || aff.Initial == nil {
+		return p.cmd.Start()
+	}
+	errCh := make(chan error)
+	defer close(errCh)
+
+	// Use a goroutine to dedicate an OS thread.
+	go func() {
+		runtime.LockOSThread()
+		// Command inherits the CPU affinity.
+		if err := unix.SchedSetaffinity(unix.Gettid(), aff.Initial); err != nil {
+			errCh <- fmt.Errorf("error setting initial CPU affinity: %w", err)
+			return
+		}
+
+		errCh <- p.cmd.Start()
+		// Deliberately omit runtime.UnlockOSThread here.
+		// https://pkg.go.dev/runtime#LockOSThread says:
+		// "If the calling goroutine exits without unlocking the
+		// thread, the thread will be terminated".
+	}()
+
+	return <-errCh
+}
+
+func (p *setnsProcess) setFinalCPUAffinity() error {
+	aff := p.config.CPUAffinity
+	if aff == nil || aff.Final == nil {
+		return nil
+	}
+	if err := unix.SchedSetaffinity(p.pid(), aff.Final); err != nil {
+		return fmt.Errorf("error setting final CPU affinity: %w", err)
+	}
+	return nil
+}
+
 func (p *setnsProcess) start() (retErr error) {
 	defer p.comm.closeParent()
 
-	// get the "before" value of oom kill count
+	// Get the "before" value of oom kill count.
 	oom, _ := p.manager.OOMKillCount()
-	err := p.cmd.Start()
-	// close the child-side of the pipes (controlled by child)
+	err := p.startWithCPUAffinity()
+	// Close the child-side of the pipes (controlled by child).
 	p.comm.closeChild()
 	if err != nil {
 		return fmt.Errorf("error starting setns process: %w", err)
@@ -218,6 +257,10 @@ func (p *setnsProcess) start() (retErr error) {
 				return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
 			}
 		}
+	}
+	// Set final CPU affinity right after the process is moved into container's cgroup.
+	if err := p.setFinalCPUAffinity(); err != nil {
+		return err
 	}
 	if p.intelRdtPath != "" {
 		// if Intel RDT "resource control" filesystem path exists

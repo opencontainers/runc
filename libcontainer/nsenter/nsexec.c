@@ -673,6 +673,28 @@ static void update_timens_offsets(pid_t pid, char *map, size_t map_len)
 		bail("failed to update /proc/%d/timens_offsets", pid);
 }
 
+static void log_cpu_affinity()
+{
+	cpu_set_t cpus = { };
+	size_t i, mask = 0;
+
+	if (!log_enabled_for(DEBUG))
+		return;
+
+	if (sched_getaffinity(0, sizeof(cpus), &cpus) < 0) {
+		write_log(WARNING, "sched_getaffinity: %m");
+		return;
+	}
+
+	/* Do not print the complete mask, we only need a few first CPUs. */
+	for (i = 0; i < sizeof(mask) * 8; i++) {
+		if (CPU_ISSET(i, &cpus))
+			mask |= 1 << i;
+	}
+
+	write_log(DEBUG, "affinity: 0x%zx", mask);
+}
+
 void nsexec(void)
 {
 	int pipenum;
@@ -698,6 +720,15 @@ void nsexec(void)
 	}
 
 	write_log(DEBUG, "=> nsexec container setup");
+
+	/* Log initial CPU affinity, this is solely for the tests in
+	 * ../../tests/integration/cpu_affinity.bats.
+	 *
+	 * Logging this from Go code might be too late as some kernels
+	 * change the process' CPU affinity to that of container's cpuset
+	 * as soon as the process is moved into container's cgroup.
+	 */
+	log_cpu_affinity();
 
 	/* Parse all of the netlink configuration. */
 	nl_parse(pipenum, &config);

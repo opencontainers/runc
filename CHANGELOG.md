@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    methods no longer ignore `Process.IOPriority` and `Process.Scheduler`
    settings. (#4585)
 
+### Added
+ * CPU affinity support for `runc exec`. (#4327)
+
 ## [1.2.5] - 2025-02-13
 
 > Мороз и солнце; день чудесный!
