@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0-rc.1] - 2025-03-04
+
+> No tengo miedo al invierno, con tu recuerdo lleno de sol.
+
 ### libcontainer API
  * `configs.CommandHook` struct has changed, Command is now a pointer.
    Also, `configs.NewCommandHook` now accepts a `*Command`. (#4325)
@@ -16,15 +20,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    user previously relied on this feature, now they have to convert names to
    IDs before calling libcontainer; it is recommended to use Go package
    github.com/moby/sys/user for that. (#3999)
+ * Move libcontainer/cgroups to a separate repository. (#4618)
 
 ### Fixed
  * `runc exec -p` no longer ignores specified `ioPriority` and `scheduler`
    settings. Similarly, libcontainer's `Container.Start` and `Container.Run`
    methods no longer ignore `Process.IOPriority` and `Process.Scheduler`
    settings. (#4585)
+ * We no longer use `F_SEAL_FUTURE_WRITE` when sealing the runc binary, as it
+   turns out this had some unfortunate bugs in older kernel versions and was
+   never necessary in the first place. (#4641, #4640)
+ * runc now uses a more flexible method of joining namespaces, which better
+   matches the behaviour of `nsenter(8)`. This is mainly useful for users that
+   create a container with a runc-managed user namespace but want the container
+   to join some externally-managed namespace as well. (#4492)
+ * `runc` now properly handles joining time namespaces (such as with `runc
+   exec`). Previously we would attempt to set the time offsets when joining,
+   which would fail. (#4635, #4636)
+ * Handle `EINTR` retries correctly for socket-related direct
+   `golang.org/x/sys/unix` system calls. (#4637)
+ * Handle `close_range(2)` errors more gracefully. (#4596)
+ * Fix a stall issue that would happen if setting `O_CLOEXEC` with
+   `CloseExecFrom` failed (#4599).
+ * Handle errors on older kernels when resetting ambient capabilities more
+   gracefully. (#4597)
+
+### Changed
+ * runc now has an official release policy to help provide more consistency
+   around our release schedules and better define our support policy for old
+   release branches. See `RELEASES.md` for more details. (#4557)
+ * Improved performance by switching to `strings.Cut` where appropriate.
+   (#4470)
+ * The minimum Go version of runc is now Go 1.23. (#4598)
+ * Updated builds to libseccomp v2.5.6. (#4625)
 
 ### Added
+ * runc has been updated to support OCI runtime-spec 1.2.1. (#4653)
  * CPU affinity support for `runc exec`. (#4327)
+ * CRIU support can be disabled using the build tag `runc_nocriu`. (#4546)
+ * Support to get the pidfd of the container via CLI flag `pidfd-socket`.
+   (#4045)
+ * Support `skip-in-flight` and `link-remap` options for CRIU. (#4627)
+ * Support cgroup v1 mounted with `noprefix`. (#4513)
 
 ## [1.2.5] - 2025-02-13
 
@@ -74,7 +111,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    would result in spurious EEXIST errors. In particular, this regression
    caused issues with BuildKit. (#4543, #4550)
  * Fixed a regression in eBPF support for pre-5.6 kernels after upgrading
-   Cilium's eBPF library version to 0.16 in runc. (#3008, #4551)
+   Cilium's eBPF library version to 0.16 in runc. (#3008, #4548, #4551)
 
 ## [1.2.2] - 2024-11-15
 
@@ -978,7 +1015,7 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.1...HEAD
 [1.2.0]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.1...v1.2.0
 [1.1.0]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...v1.1.0
 [1.0.0]: https://github.com/opencontainers/runc/releases/tag/v1.0.0
@@ -1018,3 +1055,6 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.2.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.2...v1.2.0-rc.3
 [1.2.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.1...v1.2.0-rc.2
 [1.2.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.2.0-rc.1
+
+<!-- 1.3.z patch releases -->
+[1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
