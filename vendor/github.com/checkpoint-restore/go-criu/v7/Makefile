@@ -18,9 +18,6 @@ test: build
 coverage:
 	$(MAKE) -C test coverage
 
-codecov:
-	$(MAKE) -C test codecov
-
 rpc/rpc.proto:
 	curl -sSL https://raw.githubusercontent.com/checkpoint-restore/criu/master/images/rpc.proto -o $@
 
@@ -34,8 +31,12 @@ stats/stats.pb.go: stats/stats.proto
 	protoc --go_out=. --go_opt=M$^=stats/ $^
 
 vendor:
-	GO111MODULE=on $(GO) mod tidy
-	GO111MODULE=on $(GO) mod vendor
-	GO111MODULE=on $(GO) mod verify
+	$(GO) mod tidy
+	$(GO) mod vendor
+	$(GO) mod verify
 
-.PHONY: build test lint vendor coverage codecov
+clean:
+	$(MAKE) -C crit/ clean
+	$(MAKE) -C test/ clean
+
+.PHONY: build test lint vendor coverage clean

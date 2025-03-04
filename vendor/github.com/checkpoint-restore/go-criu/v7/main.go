@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/checkpoint-restore/go-criu/v6/rpc"
+	"github.com/checkpoint-restore/go-criu/v7/rpc"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -61,13 +61,19 @@ func (c *Criu) Prepare() error {
 }
 
 // Cleanup cleans up
-func (c *Criu) Cleanup() {
+func (c *Criu) Cleanup() error {
+	var errs []error
 	if c.swrkCmd != nil {
-		c.swrkSk.Close()
+		if err := c.swrkSk.Close(); err != nil {
+			errs = append(errs, err)
+		}
 		c.swrkSk = nil
-		_ = c.swrkCmd.Wait()
+		if err := c.swrkCmd.Wait(); err != nil {
+			errs = append(errs, fmt.Errorf("criu swrk failed: %w", err))
+		}
 		c.swrkCmd = nil
 	}
+	return errors.Join(errs...)
 }
 
 func (c *Criu) sendAndRecv(reqB []byte) ([]byte, int, error) {
@@ -99,9 +105,7 @@ func (c *Criu) doSwrk(reqType rpc.CriuReqType, opts *rpc.CriuOpts, nfy Notify) e
 	return nil
 }
 
-func (c *Criu) doSwrkWithResp(reqType rpc.CriuReqType, opts *rpc.CriuOpts, nfy Notify, features *rpc.CriuFeatures) (*rpc.CriuResp, error) {
-	var resp *rpc.CriuResp
-
+func (c *Criu) doSwrkWithResp(reqType rpc.CriuReqType, opts *rpc.CriuOpts, nfy Notify, features *rpc.CriuFeatures) (resp *rpc.CriuResp, retErr error) {
 	req := rpc.CriuReq{
 		Type: &reqType,
 		Opts: opts,
@@ -121,7 +125,13 @@ func (c *Criu) doSwrkWithResp(reqType rpc.CriuReqType, opts *rpc.CriuOpts, nfy N
 			return nil, err
 		}
 
-		defer c.Cleanup()
+		defer func() {
+			// append any cleanup errors to the returned error
+			err := c.Cleanup()
+			if err != nil {
+				retErr = errors.Join(retErr, err)
+			}
+		}()
 	}
 
 	for {
@@ -218,7 +228,7 @@ func (c *Criu) StartPageServerChld(opts *rpc.CriuOpts) (int, int, error) {
 		return 0, 0, err
 	}
 
-	return int(resp.Ps.GetPid()), int(resp.Ps.GetPort()), nil
+	return int(resp.GetPs().GetPid()), int(resp.GetPs().GetPort()), nil
 }
 
 // GetCriuVersion executes the VERSION RPC call and returns the version
@@ -230,22 +240,22 @@ func (c *Criu) GetCriuVersion() (int, error) {
 	}
 
 	if resp.GetType() != rpc.CriuReqType_VERSION {
-		return 0, fmt.Errorf("Unexpected CRIU RPC response")
+		return 0, errors.New("unexpected CRIU RPC response")
 	}
 
-	version := int(*resp.GetVersion().MajorNumber) * 10000
-	version += int(*resp.GetVersion().MinorNumber) * 100
-	if resp.GetVersion().Sublevel != nil {
-		version += int(*resp.GetVersion().Sublevel)
+	version := resp.GetVersion().GetMajorNumber() * 10000
+	version += resp.GetVersion().GetMinorNumber() * 100
+	if resp.GetVersion().GetSublevel() != 0 {
+		version += resp.GetVersion().GetSublevel()
 	}
 
-	if resp.GetVersion().Gitid != nil {
+	if resp.GetVersion().GetGitid() != "" {
 		// taken from runc: if it is a git release -> increase minor by 1
 		version -= (version % 100)
 		version += 100
 	}
 
-	return version, nil
+	return int(version), nil
 }
 
 // IsCriuAtLeast checks if the version is at least the same
