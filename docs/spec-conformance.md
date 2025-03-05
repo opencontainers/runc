@@ -1,6 +1,6 @@
 # Spec conformance
 
-This branch of runc implements the [OCI Runtime Spec v1.2.0](https://github.com/opencontainers/runtime-spec/tree/v1.2.0)
+This branch of runc implements the [OCI Runtime Spec v1.2.1](https://github.com/opencontainers/runtime-spec/tree/v1.2.1)
 for the `linux` platform.
 
 The following features are not implemented yet:
