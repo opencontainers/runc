@@ -18,14 +18,23 @@ const signalBufferSize = 2048
 // while still forwarding all other signals to the process.
 // If notifySocket is present, use it to read systemd notifications from the container and
 // forward them to notifySocketHost.
-func newSignalHandler(enableSubreaper bool, notifySocket *notifySocket) chan *signalHandler {
+func newSignalHandler(enableSubreaper bool, detach bool, notifySocket *notifySocket) chan *signalHandler {
 	if enableSubreaper {
 		// set us as the subreaper before registering the signal handler for the container
 		if err := system.SetSubreaper(1); err != nil {
 			logrus.Warn(err)
 		}
 	}
-	handler := make(chan *signalHandler)
+	handler := make(chan *signalHandler, 1)
+	// For detached container, we don't need to setup signal notifier, because
+	// there is no customer to consume the signals in `forward()`.
+	if detach {
+		handler <- &signalHandler{
+			signals:      nil,
+			notifySocket: notifySocket,
+		}
+		return handler
+	}
 	// signal.Notify is actually quite expensive, as it has to configure the
 	// signal mask and add signal handlers for all signals (all ~65 of them).
 	// So, defer this to a background thread while doing the rest of the io/tty
