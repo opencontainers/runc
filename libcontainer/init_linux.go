@@ -524,16 +524,17 @@ func fixStdioPermissions(uid int) error {
 		// that users expect to be able to actually use their console. Without
 		// this code, you couldn't effectively run as a non-root user inside a
 		// container and also have a console set up.
-		if err := file.Chown(uid, int(s.Gid)); err != nil {
-			// If we've hit an EINVAL then s.Gid isn't mapped in the user
-			// namespace. If we've hit an EPERM then the inode's current owner
+		if err := file.Chown(uid, -1); err != nil {
+			// If we've hit an EPERM then the inode's current owner
 			// is not mapped in our user namespace (in particular,
 			// privileged_wrt_inode_uidgid() has failed). Read-only
 			// /dev can result in EROFS error. In any case, it's
 			// better for us to just not touch the stdio rather
 			// than bail at this point.
-
-			if errors.Is(err, unix.EINVAL) || errors.Is(err, unix.EPERM) || errors.Is(err, unix.EROFS) {
+			// EINVAL should never happen, as it would mean the uid
+			// is not mapped, we expect this function to be called
+			// with a mapped uid.
+			if errors.Is(err, unix.EPERM) || errors.Is(err, unix.EROFS) {
 				continue
 			}
 			return err
