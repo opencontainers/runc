@@ -554,19 +554,16 @@ func setupUser(config *initConfig) error {
 // The ownership needs to match because it is created outside of the container and needs to be
 // localized.
 func fixStdioPermissions(u *user.ExecUser) error {
-	var null unix.Stat_t
-	if err := unix.Stat("/dev/null", &null); err != nil {
-		return &os.PathError{Op: "stat", Path: "/dev/null", Err: err}
-	}
 	for _, file := range []*os.File{os.Stdin, os.Stdout, os.Stderr} {
 		var s unix.Stat_t
 		if err := unix.Fstat(int(file.Fd()), &s); err != nil {
 			return &os.PathError{Op: "fstat", Path: file.Name(), Err: err}
 		}
 
-		// Skip chown if uid is already the one we want or any of the STDIO descriptors
-		// were redirected to /dev/null.
-		if int(s.Uid) == u.Uid || s.Rdev == null.Rdev {
+		// Skip chown if:
+		// - uid is already the one we want, or
+		// - fd is opened to /dev/null.
+		if int(s.Uid) == u.Uid || isDevNull(&s) {
 			continue
 		}
 
