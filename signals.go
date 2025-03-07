@@ -70,20 +70,19 @@ type signalHandler struct {
 func (h *signalHandler) forward(process *libcontainer.Process, tty *tty, detach bool) (int, error) {
 	// make sure we know the pid of our main process so that we can return
 	// after it dies.
-	if detach && h.notifySocket == nil {
-		return 0, nil
-	}
-
 	pid1, err := process.Pid()
 	if err != nil {
 		return -1, err
 	}
 
-	if h.notifySocket != nil {
-		if detach {
+	if detach {
+		if h.notifySocket != nil {
 			_ = h.notifySocket.run(pid1)
-			return 0, nil
 		}
+		return 0, nil
+	}
+
+	if h.notifySocket != nil {
 		_ = h.notifySocket.run(os.Getpid())
 		go func() { _ = h.notifySocket.run(0) }()
 	}
