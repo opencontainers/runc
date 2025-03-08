@@ -252,7 +252,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	// Setting up IO is a two stage process. We need to modify process to deal
 	// with detaching containers, and then we get a tty after the container has
 	// started.
-	handlerCh := newSignalHandler(r.enableSubreaper, r.notifySocket)
+	handlerCh := newSignalHandler(r.enableSubreaper, detach, r.notifySocket)
 	tty, err := setupIO(process, r.container, config.Terminal, detach, r.consoleSocket)
 	if err != nil {
 		return -1, err
