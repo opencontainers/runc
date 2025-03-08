@@ -213,10 +213,72 @@ jobs:
     - name: unit test
       run: sudo -E PATH="$PATH" -- make GOARCH=386 localunittest
 
+  fedora:
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: lima-vm/lima-actions/setup@v1
+      id: lima-actions-setup
+
+    - uses: actions/cache@v4
+      with:
+        path: ~/.cache/lima
+        key: lima-${{ steps.lima-actions-setup.outputs.version }}
+
+    - name: "Start VM"
+      # --plain is set to disable file sharing, port forwarding, built-in containerd, etc. for faster start up
+      #
+      # CPUs: min(4, host CPU cores)
+      # RAM:  min(4 GiB, half of host memory)
+      # Disk: 100 GiB
+      run: limactl start --plain --name=default template://fedora
+
+    - name: "Initialize VM"
+      run: |
+        set -eux -o pipefail
+        limactl cp -r . default:/tmp/runc
+        lima sudo /tmp/runc/script/setup_host_fedora.sh
+
+    - name: "Show guest info"
+      run: |
+        set -eux -o pipefail
+        lima uname -a
+        lima systemctl --version
+        lima df -T
+        lima cat /etc/os-release
+        lima go version
+        lima sestatus
+        lima rpm -q container-selinux
+
+    - name: "Check config"
+      run: lima /tmp/runc/script/check-config.sh
+
+    # NOTE the execution environment lacks a terminal, needed for
+    # some integration tests. So we use `ssh -tt` command to fake a terminal.
+    - uses: lima-vm/lima-actions/ssh@v1
+
+    - name: "Run unit tests"
+      run: ssh -tt lima-default sudo -i make -C /tmp/runc localunittest
+
+    - name: "Run integration tests (systemd driver)"
+      run: ssh -tt lima-default sudo -i make -C /tmp/runc localintegration RUNC_USE_SYSTEMD=yes
+
+    - name: "Run integration tests (fs driver)"
+      run: ssh -tt lima-default sudo -i make -C /tmp/runc localintegration
+
+    - name: "Run integration tests (systemd driver, rootless)"
+      run: ssh -tt lima-default sudo -i make -C /tmp/runc localrootlessintegration RUNC_USE_SYSTEMD=yes
+
+    - name: "Run integration tests (fs driver, rootless)"
+      run: ssh -tt lima-default sudo -i make -C /tmp/runc localrootlessintegration
+
   all-done:
     needs:
     - test
     - cross-i386
+    - fedora
     runs-on: ubuntu-24.04
     steps:
     - run: echo "All jobs completed"
