@@ -31,16 +31,37 @@ func TestExecIn(t *testing.T) {
 	// Execute a first process in the container
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
+	defer func() {
+		_ = stdinR.Close()
+		_ = stdinW.Close()
+	}()
+	stdoutR, stdoutW, err := os.Pipe()
+	ok(t, err)
+	defer func() {
+		_ = stdoutR.Close()
+		_ = stdoutW.Close()
+	}()
+
+	ch := waitStdOut(stdoutR)
 	process := &libcontainer.Process{
-		Cwd:   "/",
-		Args:  []string{"cat"},
-		Env:   standardEnvironment,
-		Stdin: stdinR,
-		Init:  true,
+		Cwd:    "/",
+		Args:   []string{"cat", "/proc/self/cmdline", "-"},
+		Env:    standardEnvironment,
+		Stdin:  stdinR,
+		Stdout: stdoutW,
+		Init:   true,
 	}
 	err = container.Run(process)
-	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer func() {
+		_, _ = stdinW.Write([]byte("hello"))
+		_ = stdinW.Close()
+		if _, err := process.Wait(); err != nil {
+			t.Log(err)
+		}
+	}()
+	ok(t, err)
+
+	err = <-ch
 	ok(t, err)
 
 	buffers := newStdBuffers()
@@ -56,8 +77,6 @@ func TestExecIn(t *testing.T) {
 	err = container.Run(ps)
 	ok(t, err)
 	waitProcess(ps, t)
-	_ = stdinW.Close()
-	waitProcess(process, t)
 
 	out := buffers.Stdout.String()
 	if !strings.Contains(out, "cat") || !strings.Contains(out, "ps") {
@@ -241,21 +260,37 @@ func TestExecInTTY(t *testing.T) {
 	// Execute a first process in the container
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
+	defer func() {
+		_ = stdinR.Close()
+		_ = stdinW.Close()
+	}()
+	stdoutR, stdoutW, err := os.Pipe()
+	ok(t, err)
+	defer func() {
+		_ = stdoutR.Close()
+		_ = stdoutW.Close()
+	}()
+
+	ch := waitStdOut(stdoutR)
 	process := &libcontainer.Process{
-		Cwd:   "/",
-		Args:  []string{"cat"},
-		Env:   standardEnvironment,
-		Stdin: stdinR,
-		Init:  true,
+		Cwd:    "/",
+		Args:   []string{"cat", "/proc/self/cmdline", "-"},
+		Env:    standardEnvironment,
+		Stdin:  stdinR,
+		Stdout: stdoutW,
+		Init:   true,
 	}
 	err = container.Run(process)
-	_ = stdinR.Close()
 	defer func() {
+		_, _ = stdinW.Write([]byte("hello"))
 		_ = stdinW.Close()
 		if _, err := process.Wait(); err != nil {
 			t.Log(err)
 		}
 	}()
+	ok(t, err)
+
+	err = <-ch
 	ok(t, err)
 
 	ps := &libcontainer.Process{
