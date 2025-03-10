@@ -471,6 +471,8 @@ type LinuxResources struct {
 	Rdma map[string]LinuxRdma `json:"rdma,omitempty"`
 	// Unified resources.
 	Unified map[string]string `json:"unified,omitempty"`
+	// Specify an oom_score_adj for the container.
+	OOMScoreAdj *int `json:"oomScoreAdj,omitempty" platform:"linux"`
 }
 
 // LinuxDevice represents the mknod information for a Linux special device file

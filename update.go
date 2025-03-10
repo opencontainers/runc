@@ -54,7 +54,8 @@ The accepted format is as follow (unchanged values can be omitted):
   },
   "blockIO": {
     "weight": 0
-  }
+  },
+  "oomScoreAdj": 0
 }
 
 Note: if data is to be read from a file or the standard input, all
@@ -136,6 +137,10 @@ other options are ignored.
 			Name:  "mem-bw-schema",
 			Usage: "The string of Intel RDT/MBA memory bandwidth schema",
 		},
+		cli.StringFlag{
+			Name:  "oom-score-adj",
+			Usage: "oom score adj value",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 1, exactArgs); err != nil {
@@ -177,6 +182,8 @@ other options are ignored.
 			if err != nil {
 				return err
 			}
+			aJSON, _ := json.Marshal(r)
+			fmt.Println("Passed resources are", string(aJSON))
 		} else {
 			if val := context.Int("blkio-weight"); val != 0 {
 				r.BlockIO.Weight = u16Ptr(uint16(val))
@@ -253,6 +260,10 @@ other options are ignored.
 			}
 
 			r.Pids.Limit = int64(context.Int("pids-limit"))
+
+			if oomScoreAdj := context.Int("oom-score-adj"); oomScoreAdj != 0 {
+				r.OOMScoreAdj = &oomScoreAdj
+			}
 		}
 
 		// Fix up values
@@ -377,6 +388,10 @@ other options are ignored.
 		// configuration on top of what runc does.
 		// Note this field is not saved into container's state.json.
 		config.Cgroups.SkipDevices = true
+
+		if r.OOMScoreAdj != nil {
+			config.OomScoreAdj = r.OOMScoreAdj
+		}
 
 		return container.Set(config)
 	},

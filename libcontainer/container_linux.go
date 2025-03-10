@@ -171,6 +171,16 @@ func (c *Container) Set(config configs.Config) error {
 	if status == Stopped {
 		return ErrNotRunning
 	}
+
+	// Set the oom_score_adj value
+	if config.OomScoreAdj != nil && *config.OomScoreAdj != 0 {
+		if c.hasInit() {
+			if err := os.WriteFile(fmt.Sprintf("/proc/%d/oom_score_adj", c.initProcess.pid()), []byte(strconv.Itoa(*config.OomScoreAdj)), unix.O_WRONLY); err != nil {
+				return err
+			}
+		}
+	}
+
 	if err := c.cgroupManager.Set(config.Cgroups.Resources); err != nil {
 		// Set configs back
 		if err2 := c.cgroupManager.Set(c.config.Cgroups.Resources); err2 != nil {
