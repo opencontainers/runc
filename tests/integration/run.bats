@@ -84,7 +84,6 @@ function teardown() {
 	chmod 'a=rwx,ug+s,+t' rootfs/tmp # set all bits
 	mode=$(stat -c %A rootfs/tmp)
 
-	# shellcheck disable=SC2016
 	update_config '.process.args = ["sh", "-c", "stat -c %A /tmp"]'
 	update_config '.mounts += [{"destination": "/tmp", "type": "tmpfs", "source": "tmpfs", "options":["noexec","nosuid","nodev","rprivate"]}]'
 
@@ -94,7 +93,6 @@ function teardown() {
 }
 
 @test "runc run with tmpfs perms" {
-	# shellcheck disable=SC2016
 	update_config '.process.args = ["sh", "-c", "stat -c %a /tmp/test"]'
 	update_config '.mounts += [{"destination": "/tmp/test", "type": "tmpfs", "source": "tmpfs", "options": ["mode=0444"]}]'
 
@@ -113,14 +111,12 @@ function teardown() {
 	# so it should use the directory's perms.
 	update_config '.mounts[-1].options = []'
 	chmod 0710 rootfs/tmp/test
-	# shellcheck disable=SC2016
 	runc run test_tmpfs
 	[ "$status" -eq 0 ]
 	[ "${lines[0]}" = "710" ]
 
 	# Add back the mode on the mount, and it should use that instead.
 	# Just for fun, use different perms than was used earlier.
-	# shellcheck disable=SC2016
 	update_config '.mounts[-1].options = ["mode=0410"]'
 	runc run test_tmpfs
 	[ "$status" -eq 0 ]
