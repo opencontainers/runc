@@ -136,6 +136,10 @@ other options are ignored.
 			Name:  "mem-bw-schema",
 			Usage: "The string of Intel RDT/MBA memory bandwidth schema",
 		},
+		cli.StringFlag{
+			Name:  "oom-score-adj",
+			Usage: "oom score adj value",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 1, exactArgs); err != nil {
@@ -253,6 +257,10 @@ other options are ignored.
 			}
 
 			r.Pids.Limit = int64(context.Int("pids-limit"))
+		}
+
+		if oomScoreAdj := context.Int("oom-score-adj"); oomScoreAdj != 0 {
+			config.OomScoreAdj = &oomScoreAdj
 		}
 
 		// Fix up values
