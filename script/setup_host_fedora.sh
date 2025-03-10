@@ -18,8 +18,7 @@ useradd -u2000 -m -d/home/rootless -s/bin/bash rootless
 
 # Allow root and rootless itself to execute `ssh rootless@localhost` in tests/rootless.sh
 ssh-keygen -t ecdsa -N "" -f /root/rootless.key
-# shellcheck disable=SC2174
-mkdir -m 0700 -p /home/rootless/.ssh
+mkdir -m 0700 /home/rootless/.ssh
 cp /root/rootless.key /home/rootless/.ssh/id_ecdsa
 cat /root/rootless.key.pub >>/home/rootless/.ssh/authorized_keys
 chown -R rootless.rootless /home/rootless
