@@ -27,7 +27,7 @@ function teardown() {
 	teardown_bundle
 	# Show any avc denials.
 	if [[ -v AU_DD && -v AU_TT ]] && command -v ausearch &>/dev/null; then
-		ausearch -ts "$AU_DD" "$AU_TT" -i -m avc || true
+		ausearch -ts "$AU_DD" "$AU_TT" -i -m avc,user_avc || true
 	fi
 }
 
