@@ -96,19 +96,7 @@ task:
     cat /proc/cpuinfo
   check_config_script: |
     /home/runc/script/check-config.sh
-  unit_tests_script: |
-    ssh -tt localhost "make -C /home/runc localunittest"
   integration_systemd_script: |
-    ssh -tt localhost "make -C /home/runc localintegration RUNC_USE_SYSTEMD=yes"
+    ssh -tt localhost "make -C /home/runc localintegration RUNC_USE_SYSTEMD=yes TESTPATH=/selinux.bats"
   integration_fs_script: |
-    ssh -tt localhost "make -C /home/runc localintegration"
-  integration_systemd_rootless_script: |
-    case $DISTRO in
-      *-8)
-        echo "SKIP: integration_systemd_rootless_script requires cgroup v2"
-        ;;
-      *)
-        ssh -tt localhost "make -C /home/runc localrootlessintegration RUNC_USE_SYSTEMD=yes"
-    esac
-  integration_fs_rootless_script: |
-    ssh -tt localhost "make -C /home/runc localrootlessintegration"
+    ssh -tt localhost "make -C /home/runc localintegration TESTPATH=/selinux.bats"

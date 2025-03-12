@@ -34,36 +34,49 @@ function teardown() {
 # This needs to be placed at the top of the bats file to work around
 # a shellcheck bug. See <https://github.com/koalaman/shellcheck/issues/2873>.
 function run_check_label() {
+	NUM=$1
 	TEST_NAME="key_label"
 	cp "${TESTBINDIR}/${TEST_NAME}" rootfs/bin/
 
 	LABEL="system_u:system_r:container_t:s0:c4,c5"
 	update_config '	  .process.selinuxLabel |= "'"$LABEL"'"
 			| .process.args = ["/bin/'"$TEST_NAME"'"]'
-	runc run tst
-	[ "$status" -eq 0 ]
-	# Key name is _ses.$CONTAINER_NAME.
-	KEY=_ses.tst
-	[ "$output" == "$KEY $LABEL" ]
+	for i in $(seq 1 "$NUM"); do
+		echo "iter $i/$NUM"
+
+		runc run tst
+		[ "$status" -eq 0 ]
+		# Key name is _ses.$CONTAINER_NAME.
+		KEY=_ses.tst
+		[ "$output" == "$KEY $LABEL" ]
+	done
 }
 
 # This needs to be placed at the top of the bats file to work around
 # a shellcheck bug. See <https://github.com/koalaman/shellcheck/issues/2873>.
 function exec_check_label() {
+	NUM=$1
 	TEST_NAME="key_label"
 	cp "${TESTBINDIR}/${TEST_NAME}" rootfs/bin/
 
 	LABEL="system_u:system_r:container_t:s0:c4,c5"
 	update_config '	  .process.selinuxLabel |= "'"$LABEL"'"
 			| .process.args = ["/bin/sh"]'
-	runc run -d --console-socket "$CONSOLE_SOCKET" tst
-	[ "$status" -eq 0 ]
 
-	runc exec tst "/bin/$TEST_NAME"
-	[ "$status" -eq 0 ]
-	# Key name is _ses.$CONTAINER_NAME.
-	KEY=_ses.tst
-	[ "$output" == "$KEY $LABEL" ]
+	for i in $(seq 1 "$NUM"); do
+		echo "iter $i/$NUM"
+
+		runc run -d --console-socket "$CONSOLE_SOCKET" tst
+		[ "$status" -eq 0 ]
+
+		runc exec tst "/bin/$TEST_NAME"
+		[ "$status" -eq 0 ]
+		# Key name is _ses.$CONTAINER_NAME.
+		KEY=_ses.tst
+		[ "$output" == "$KEY $LABEL" ]
+		runc delete -f tst
+		[ "$status" -eq 0 ]
+	done
 }
 
 function enable_userns() {
@@ -88,19 +101,19 @@ function enable_userns() {
 }
 
 @test "runc run (session keyring security label)" {
-	run_check_label
+	run_check_label 1000
 }
 
 @test "runc exec (session keyring security label)" {
-	exec_check_label
+	exec_check_label 1000
 }
 
 @test "runc run (session keyring security label + userns)" {
 	enable_userns
-	run_check_label
+	run_check_label 100
 }
 
 @test "runc exec (session keyring security label + userns)" {
 	enable_userns
-	exec_check_label
+	exec_check_label 100
 }
