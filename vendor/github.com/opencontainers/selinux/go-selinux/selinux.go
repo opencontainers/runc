@@ -190,7 +190,7 @@ func SetKeyLabel(label string) error {
 
 // KeyLabel retrieves the current kernel keyring label setting
 func KeyLabel() (string, error) {
-	return readCon("/proc/self/attr/keycreate")
+	return readCon(attrPath("keycreate"))
 }
 
 // Get returns the Context as a string
