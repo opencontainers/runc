@@ -3,7 +3,6 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -30,9 +29,7 @@ func TestExecPS(t *testing.T) {
 }
 
 func TestUsernsExecPS(t *testing.T) {
-	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
-		t.Skip("Test requires userns.")
-	}
+	needUserNS(t)
 	testExecPS(t, true)
 }
 
@@ -122,10 +119,7 @@ func TestRlimit(t *testing.T) {
 }
 
 func TestUsernsRlimit(t *testing.T) {
-	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
-		t.Skip("Test requires userns.")
-	}
-
+	needUserNS(t)
 	testRlimit(t, true)
 }
 
@@ -1515,9 +1509,7 @@ func TestInitJoinPID(t *testing.T) {
 }
 
 func TestInitJoinNetworkAndUser(t *testing.T) {
-	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
-		t.Skip("Test requires userns.")
-	}
+	needUserNS(t)
 	if testing.Short() {
 		return
 	}
@@ -1764,10 +1756,7 @@ next_fd:
 // Test that a container using user namespaces is able to bind mount a folder
 // that does not have permissions for group/others.
 func TestBindMountAndUser(t *testing.T) {
-	if _, err := os.Stat("/proc/self/ns/user"); errors.Is(err, os.ErrNotExist) {
-		t.Skip("userns is unsupported")
-	}
-
+	needUserNS(t)
 	if testing.Short() {
 		return
 	}
