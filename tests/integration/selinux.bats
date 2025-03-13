@@ -5,7 +5,7 @@ load helpers
 function setup() {
 	requires root # for chcon
 	if ! selinuxenabled; then
-		skip "requires SELinux enabled and in enforcing mode"
+		skip "requires SELinux enabled"
 	fi
 
 	setup_busybox
