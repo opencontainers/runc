@@ -39,10 +39,9 @@ func (l *linuxSetnsInit) Init() error {
 		defer selinux.SetKeyLabel("") //nolint: errcheck
 		// Do not inherit the parent's session keyring.
 		if _, err := keys.JoinSessionKeyring(l.getSessionRingName()); err != nil {
-			// Same justification as in standart_init_linux.go as to why we
+			logrus.Warnf("KeyctlJoinSessionKeyring: %v", err)
+			// Same justification as in standard_init_linux.go as to why we
 			// don't bail on ENOSYS.
-			//
-			// TODO(cyphar): And we should have logging here too.
 			if !errors.Is(err, unix.ENOSYS) {
 				return fmt.Errorf("unable to join session keyring: %w", err)
 			}

@@ -55,14 +55,12 @@ func (l *linuxStandardInit) Init() error {
 
 		// Do not inherit the parent's session keyring.
 		if sessKeyId, err := keys.JoinSessionKeyring(ringname); err != nil {
+			logrus.Warnf("KeyctlJoinSessionKeyring: %v", err)
 			// If keyrings aren't supported then it is likely we are on an
 			// older kernel (or inside an LXC container). While we could bail,
 			// the security feature we are using here is best-effort (it only
 			// really provides marginal protection since VFS credentials are
 			// the only significant protection of keyrings).
-			//
-			// TODO(cyphar): Log this so people know what's going on, once we
-			//               have proper logging in 'runc init'.
 			if !errors.Is(err, unix.ENOSYS) {
 				return fmt.Errorf("unable to join session keyring: %w", err)
 			}
