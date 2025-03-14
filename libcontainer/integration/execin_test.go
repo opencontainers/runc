@@ -69,10 +69,7 @@ func TestExecIn(t *testing.T) {
 }
 
 func TestExecInUsernsRlimit(t *testing.T) {
-	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
-		t.Skip("Test requires userns.")
-	}
-
+	needUserNS(t)
 	testExecInRlimit(t, true)
 }
 
@@ -502,9 +499,7 @@ func TestExecInOomScoreAdj(t *testing.T) {
 }
 
 func TestExecInUserns(t *testing.T) {
-	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
-		t.Skip("Test requires userns.")
-	}
+	needUserNS(t)
 	if testing.Short() {
 		return
 	}
