@@ -1062,14 +1062,17 @@ func pivotRoot(rootfs string) error {
 	// /proc/self/cwd being the old root. Since we can play around with the cwd
 	// with pivot_root this allows us to pivot without creating directories in
 	// the rootfs. Shout-outs to the LXC developers for giving us this idea.
-
-	oldroot, err := unix.Open("/", unix.O_DIRECTORY|unix.O_RDONLY, 0)
+	oldroot, err := utils.RetryOnEINTR2(func() (int, error) {
+		return unix.Open("/", unix.O_DIRECTORY|unix.O_RDONLY, 0)
+	})
 	if err != nil {
 		return &os.PathError{Op: "open", Path: "/", Err: err}
 	}
 	defer unix.Close(oldroot) //nolint: errcheck
 
-	newroot, err := unix.Open(rootfs, unix.O_DIRECTORY|unix.O_RDONLY, 0)
+	newroot, err := utils.RetryOnEINTR2(func() (int, error) {
+		return unix.Open(rootfs, unix.O_DIRECTORY|unix.O_RDONLY, 0)
+	})
 	if err != nil {
 		return &os.PathError{Op: "open", Path: rootfs, Err: err}
 	}

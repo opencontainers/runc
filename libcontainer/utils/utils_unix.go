@@ -359,7 +359,9 @@ func Openat(dir *os.File, path string, flags int, mode uint32) (*os.File, error)
 	}
 	flags |= unix.O_CLOEXEC
 
-	fd, err := unix.Openat(dirFd, path, flags, mode)
+	fd, err := RetryOnEINTR2(func() (int, error) {
+		return unix.Openat(dirFd, path, flags, mode)
+	})
 	if err != nil {
 		return nil, &os.PathError{Op: "openat", Path: path, Err: err}
 	}
