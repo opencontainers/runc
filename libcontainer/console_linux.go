@@ -38,7 +38,10 @@ func dupStdio(slavePath string) error {
 		}
 	}
 	for _, i := range []int{0, 1, 2} {
-		if err := unix.Dup3(fd, i, 0); err != nil {
+		err := unixutils.RetryOnEINTR(func() error {
+			return unix.Dup3(fd, i, 0)
+		})
+		if err != nil {
 			return err
 		}
 	}

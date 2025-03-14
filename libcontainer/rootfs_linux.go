@@ -884,7 +884,10 @@ func reOpenDevNull() error {
 		}
 		if stat.Rdev == devNullStat.Rdev {
 			// Close and re-open the fd.
-			if err := unix.Dup3(int(file.Fd()), fd, 0); err != nil {
+			err := unixutils.RetryOnEINTR(func() error {
+				return unix.Dup3(int(file.Fd()), fd, 0)
+			})
+			if err != nil {
 				return &os.PathError{
 					Op:   "dup3",
 					Path: "fd " + strconv.Itoa(int(file.Fd())),
