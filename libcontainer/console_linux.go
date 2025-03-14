@@ -3,6 +3,7 @@ package libcontainer
 import (
 	"os"
 
+	unixutils "github.com/opencontainers/runc/libcontainer/internal/unix-utils"
 	"golang.org/x/sys/unix"
 )
 
@@ -26,7 +27,9 @@ func mountConsole(slavePath string) error {
 // dupStdio opens the slavePath for the console and dups the fds to the current
 // processes stdio, fd 0,1,2.
 func dupStdio(slavePath string) error {
-	fd, err := unix.Open(slavePath, unix.O_RDWR, 0)
+	fd, err := unixutils.RetryOnEINTR2(func() (int, error) {
+		return unix.Open(slavePath, unix.O_RDWR, 0)
+	})
 	if err != nil {
 		return &os.PathError{
 			Op:   "open",

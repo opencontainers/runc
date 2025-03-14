@@ -13,6 +13,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	unixutils "github.com/opencontainers/runc/libcontainer/internal/unix-utils"
 	"github.com/opencontainers/runc/libcontainer/keys"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
@@ -259,7 +260,9 @@ func (l *linuxStandardInit) Init() error {
 	// user process. We open it through /proc/self/fd/$fd, because the fd that
 	// was given to us was an O_PATH fd to the fifo itself. Linux allows us to
 	// re-open an O_PATH fd through /proc.
-	fd, err := unix.Open(fifoPath, unix.O_WRONLY|unix.O_CLOEXEC, 0)
+	fd, err := unixutils.RetryOnEINTR2(func() (int, error) {
+		return unix.Open(fifoPath, unix.O_WRONLY|unix.O_CLOEXEC, 0)
+	})
 	if err != nil {
 		return &os.PathError{Op: "open exec fifo", Path: fifoPath, Err: err}
 	}
