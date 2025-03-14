@@ -8,6 +8,7 @@ import (
 	"os"
 	"unsafe"
 
+	unixutils "github.com/opencontainers/runc/libcontainer/internal/unix-utils"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -33,12 +34,10 @@ func (p ParentDeathSignal) Set() error {
 }
 
 func Exec(cmd string, args []string, env []string) error {
-	for {
-		err := unix.Exec(cmd, args, env)
-		if err != unix.EINTR {
-			return &os.PathError{Op: "exec", Path: cmd, Err: err}
-		}
-	}
+	err := unixutils.RetryOnEINTR(func() error {
+		return unix.Exec(cmd, args, env)
+	})
+	return &os.PathError{Op: "exec", Path: cmd, Err: err}
 }
 
 func SetParentDeathSignal(sig uintptr) error {

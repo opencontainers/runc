@@ -17,6 +17,7 @@ import (
 	"github.com/opencontainers/cgroups"
 	devices "github.com/opencontainers/cgroups/devices/config"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	unixutils "github.com/opencontainers/runc/libcontainer/internal/unix-utils"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
@@ -348,12 +349,7 @@ type CreateOpts struct {
 // the value from the kernel, which guarantees the returned value
 // to be absolute and clean.
 func getwd() (wd string, err error) {
-	for {
-		wd, err = unix.Getwd()
-		if err != unix.EINTR {
-			break
-		}
-	}
+	wd, err = unixutils.RetryOnEINTR2(unix.Getwd)
 	return wd, os.NewSyscallError("getwd", err)
 }
 
