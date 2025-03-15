@@ -3,6 +3,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -358,9 +359,35 @@ func Openat(dir *os.File, path string, flags int, mode uint32) (*os.File, error)
 	}
 	flags |= unix.O_CLOEXEC
 
-	fd, err := unix.Openat(dirFd, path, flags, mode)
+	fd, err := RetryOnEINTR2(func() (int, error) {
+		return unix.Openat(dirFd, path, flags, mode)
+	})
 	if err != nil {
 		return nil, &os.PathError{Op: "openat", Path: path, Err: err}
 	}
 	return os.NewFile(uintptr(fd), dir.Name()+"/"+path), nil
+}
+
+// RetryOnEINTR takes a function that returns an error and calls it until it the error returned is
+// not EINTR.
+func RetryOnEINTR(fn func() error) error {
+	var err error
+	for {
+		err = fn()
+		if !errors.Is(err, unix.EINTR) {
+			break
+		}
+	}
+	return err
+}
+
+// RetryOnEINTR2 is like RetryOnEINTR, but returns 2 values: an int and an error.
+func RetryOnEINTR2(fn func() (int, error)) (fd int, err error) {
+	for {
+		fd, err = fn()
+		if !errors.Is(err, unix.EINTR) {
+			break
+		}
+	}
+	return fd, err
 }

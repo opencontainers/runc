@@ -6,6 +6,7 @@ import (
 	"os"
 	"sync/atomic"
 
+	"github.com/opencontainers/runc/libcontainer/utils"
 	"golang.org/x/sys/unix"
 )
 
@@ -46,14 +47,10 @@ func (s *syncSocket) ReadPacket() ([]byte, error) {
 		size int
 		err  error
 	)
-
-	for {
+	err = utils.RetryOnEINTR(func() error {
 		size, _, err = unix.Recvfrom(int(s.f.Fd()), nil, unix.MSG_TRUNC|unix.MSG_PEEK)
-		if err != unix.EINTR { //nolint:errorlint // unix errors are bare
-			break
-		}
-	}
-
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("fetch packet length from socket: %w", os.NewSyscallError("recvfrom", err))
 	}
