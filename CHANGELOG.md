@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > Hasta la victoria, siempre.
 
-## Fixed
+### Fixed
  * Fix a stall issue that would happen if setting `O_CLOEXEC` with
    `CloseExecFrom` failed (#4647).
  * `runc` now properly handles joining time namespaces (such as with `runc
@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * Remove `Fexecve` helper from `libcontainer/system`. Runc 1.2.1 removed
    runc-dmz, but we forgot to remove this helper added only for that. (#4646)
 
-##  Changed
+### Changed
  * Use Go 1.23 for official builds, run CI with Go 1.24 and drop Ubuntu 20.04
    from CI. We need to drop Ubuntu 20.04 from CI because Github Actions
    announced it's already deprecated and it will be discontinued soon. (#4648)
