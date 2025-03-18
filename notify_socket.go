@@ -151,6 +151,22 @@ func (s *notifySocket) run(pid1 int) error {
 	}
 }
 
+// forward reads systemd notifications from the container and forwards them
+// to notifySocketHost.
+func (s *notifySocket) forward(process *libcontainer.Process, detach bool) error {
+	if detach {
+		pid, err := process.Pid()
+		if err != nil {
+			return err
+		}
+		_ = s.run(pid)
+	} else {
+		_ = s.run(os.Getpid())
+		go func() { _ = s.run(0) }()
+	}
+	return nil
+}
+
 // notifyHost tells the host (usually systemd) that the container reported READY.
 // Also sends MAINPID and BARRIER.
 func notifyHost(client *net.UnixConn, ready []byte, pid1 int) error {
