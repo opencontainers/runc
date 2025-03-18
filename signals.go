@@ -5,7 +5,6 @@ import (
 	"os/signal"
 
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
 
 	"github.com/sirupsen/logrus"
@@ -16,13 +15,7 @@ const signalBufferSize = 2048
 
 // newSignalHandler returns a signal handler for processing SIGCHLD and SIGWINCH signals
 // while still forwarding all other signals to the process.
-func newSignalHandler(enableSubreaper bool) chan *signalHandler {
-	if enableSubreaper {
-		// set us as the subreaper before registering the signal handler for the container
-		if err := system.SetSubreaper(1); err != nil {
-			logrus.Warn(err)
-		}
-	}
+func newSignalHandler() chan *signalHandler {
 	handler := make(chan *signalHandler)
 	// signal.Notify is actually quite expensive, as it has to configure the
 	// signal mask and add signal handlers for all signals (all ~65 of them).
@@ -54,13 +47,9 @@ type signalHandler struct {
 
 // forward handles the main signal event loop forwarding, resizing, or reaping depending
 // on the signal received.
-func (h *signalHandler) forward(process *libcontainer.Process, tty *tty, detach bool) (int, error) {
+func (h *signalHandler) forward(process *libcontainer.Process, tty *tty) (int, error) {
 	// make sure we know the pid of our main process so that we can return
 	// after it dies.
-	if detach {
-		return 0, nil
-	}
-
 	pid1, err := process.Pid()
 	if err != nil {
 		return -1, err
