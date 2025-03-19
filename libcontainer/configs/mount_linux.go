@@ -4,7 +4,7 @@ import "golang.org/x/sys/unix"
 
 type MountIDMapping struct {
 	// Recursive indicates if the mapping needs to be recursive.
-	Recursive bool `json:"recursive"`
+	Recursive bool `json:"recursive,omitempty"`
 
 	// UserNSPath is a path to a user namespace that indicates the necessary
 	// id-mappings for MOUNT_ATTR_IDMAP. If set to non-"", UIDMappings and
@@ -31,26 +31,26 @@ type Mount struct {
 	Device string `json:"device"`
 
 	// Mount flags.
-	Flags int `json:"flags"`
+	Flags int `json:"flags,omitempty"`
 
 	// Mount flags that were explicitly cleared in the configuration (meaning
 	// the user explicitly requested that these flags *not* be set).
-	ClearedFlags int `json:"cleared_flags"`
+	ClearedFlags int `json:"cleared_flags,omitempty"`
 
-	// Propagation Flags
-	PropagationFlags []int `json:"propagation_flags"`
+	// Propagation flags.
+	PropagationFlags []int `json:"propagation_flags,omitempty"`
 
 	// Mount data applied to the mount.
-	Data string `json:"data"`
+	Data string `json:"data,omitempty"`
 
 	// Relabel source if set, "z" indicates shared, "Z" indicates unshared.
-	Relabel string `json:"relabel"`
+	Relabel string `json:"relabel,omitempty"`
 
 	// RecAttr represents mount properties to be applied recursively (AT_RECURSIVE), see mount_setattr(2).
-	RecAttr *unix.MountAttr `json:"rec_attr"`
+	RecAttr *unix.MountAttr `json:"rec_attr,omitempty"`
 
 	// Extensions are additional flags that are specific to runc.
-	Extensions int `json:"extensions"`
+	Extensions int `json:"extensions,omitempty"`
 
 	// Mapping is the MOUNT_ATTR_IDMAP configuration for the mount. If non-nil,
 	// the mount is configured to use MOUNT_ATTR_IDMAP-style id mappings.

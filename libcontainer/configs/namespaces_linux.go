@@ -86,7 +86,7 @@ func NamespaceTypes() []NamespaceType {
 // alternate path that is able to be joined via setns.
 type Namespace struct {
 	Type NamespaceType `json:"type"`
-	Path string        `json:"path"`
+	Path string        `json:"path,omitempty"`
 }
 
 func (n *Namespace) GetPath(pid int) string {
