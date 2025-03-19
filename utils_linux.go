@@ -218,14 +218,13 @@ type runner struct {
 	subCgroupPaths  map[string]string
 }
 
-func (r *runner) run(config *specs.Process) (int, error) {
-	var err error
+func (r *runner) run(config *specs.Process) (_ int, retErr error) {
 	defer func() {
-		if err != nil {
+		if retErr != nil {
 			r.destroy()
 		}
 	}()
-	if err = r.checkTerminal(config); err != nil {
+	if err := r.checkTerminal(config); err != nil {
 		return -1, err
 	}
 	process, err := newProcess(config)
