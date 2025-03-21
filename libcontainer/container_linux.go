@@ -628,7 +628,6 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, comm *processComm)
 		},
 		intelRdtManager: c.intelRdtManager,
 	}
-	c.initProcess = init
 	return init, nil
 }
 
@@ -883,6 +882,9 @@ func (c *Container) currentStatus() (Status, error) {
 // out of process we need to verify the container's status based on runtime
 // information and not rely on our in process info.
 func (c *Container) refreshState() error {
+	if c.hasInit() && c.initProcess.pid() == -1 {
+		return c.state.transition(&creatingState{c: c})
+	}
 	paused, err := c.isPaused()
 	if err != nil {
 		return err

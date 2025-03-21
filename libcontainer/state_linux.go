@@ -242,3 +242,20 @@ func (n *loadedState) destroy() error {
 	}
 	return n.c.state.destroy()
 }
+
+type creatingState struct {
+	c *Container
+}
+
+func (i *creatingState) status() Status {
+	return Creating
+}
+
+func (i *creatingState) transition(s containerState) error {
+	return newStateTransitionError(i, s)
+}
+
+func (i *creatingState) destroy() error {
+	_ = signalAllProcesses(i.c.cgroupManager, unix.SIGKILL)
+	return destroy(i.c)
+}
