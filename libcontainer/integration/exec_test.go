@@ -172,7 +172,7 @@ func TestEnter(t *testing.T) {
 	}
 	err = container.Run(&pconfig)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 	ok(t, err)
 	pid, err := pconfig.Pid()
 	ok(t, err)
@@ -190,7 +190,7 @@ func TestEnter(t *testing.T) {
 
 	err = container.Run(&pconfig2)
 	_ = stdinR2.Close()
-	defer stdinW2.Close() //nolint: errcheck
+	defer stdinW2.Close()
 	ok(t, err)
 
 	pid2, err := pconfig2.Pid()
@@ -458,7 +458,7 @@ func testFreeze(t *testing.T, withSystemd bool, useSet bool) {
 	}
 	err = container.Run(pconfig)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 	ok(t, err)
 
 	if !useSet {
@@ -738,7 +738,7 @@ func TestContainerState(t *testing.T) {
 	err = container.Run(p)
 	ok(t, err)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 
 	st, err := container.State()
 	ok(t, err)
@@ -1164,7 +1164,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 
 	err = container.Run(pconfig)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 	ok(t, err)
 
 	// Create mnt2host under dir1host and bind mount itself on top of it.
@@ -1194,7 +1194,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 
 	err = container.Run(pconfig2)
 	_ = stdinR2.Close()
-	defer stdinW2.Close() //nolint: errcheck
+	defer stdinW2.Close()
 	ok(t, err)
 
 	_ = stdinW2.Close()
@@ -1276,7 +1276,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 
 	err = container.Run(pconfig)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 	ok(t, err)
 
 	// Create mnt2cont under dir1host. This will become visible inside container
@@ -1311,7 +1311,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 
 	err = container.Run(pconfig2)
 	_ = stdinR2.Close()
-	defer stdinW2.Close() //nolint: errcheck
+	defer stdinW2.Close()
 	ok(t, err)
 
 	// Wait for process
@@ -1430,7 +1430,7 @@ func TestInitJoinPID(t *testing.T) {
 	}
 	err = container1.Run(init1)
 	_ = stdinR1.Close()
-	defer stdinW1.Close() //nolint: errcheck
+	defer stdinW1.Close()
 	ok(t, err)
 
 	// get the state of the first container
@@ -1457,7 +1457,7 @@ func TestInitJoinPID(t *testing.T) {
 	}
 	err = container2.Run(init2)
 	_ = stdinR2.Close()
-	defer stdinW2.Close() //nolint: errcheck
+	defer stdinW2.Close()
 	ok(t, err)
 	// get the state of the second container
 	state2, err := container2.State()
@@ -1529,7 +1529,7 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 	}
 	err = container1.Run(init1)
 	_ = stdinR1.Close()
-	defer stdinW1.Close() //nolint: errcheck
+	defer stdinW1.Close()
 	ok(t, err)
 
 	// get the state of the first container
@@ -1563,7 +1563,7 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 	}
 	err = container2.Run(init2)
 	_ = stdinR2.Close()
-	defer stdinW2.Close() //nolint: errcheck
+	defer stdinW2.Close()
 	ok(t, err)
 
 	// get the state of the second container

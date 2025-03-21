@@ -49,7 +49,7 @@ func RecvFile(socket *os.File) (_ *os.File, Err error) {
 
 	for {
 		n, oobn, _, _, err = unix.Recvmsg(int(sockfd), name, oob, unix.MSG_CMSG_CLOEXEC)
-		if err != unix.EINTR { //nolint:errorlint // unix errors are bare
+		if err != unix.EINTR {
 			break
 		}
 	}
@@ -128,7 +128,7 @@ func SendRawFd(socket *os.File, msg string, fd uintptr) error {
 	oob := unix.UnixRights(int(fd))
 	for {
 		err := unix.Sendmsg(int(socket.Fd()), []byte(msg), oob, nil, 0)
-		if err != unix.EINTR { //nolint:errorlint // unix errors are bare
+		if err != unix.EINTR {
 			return os.NewSyscallError("sendmsg", err)
 		}
 	}
