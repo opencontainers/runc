@@ -33,7 +33,7 @@ func TestSeccompDenySyslogWithErrno(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy() //nolint:errcheck
+	defer destroyContainer(container)
 
 	buffers := newStdBuffers()
 	pwd := &libcontainer.Process{
@@ -81,7 +81,7 @@ func TestSeccompDenySyslog(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy() //nolint:errcheck
+	defer destroyContainer(container)
 
 	buffers := newStdBuffers()
 	pwd := &libcontainer.Process{
@@ -136,7 +136,7 @@ func TestSeccompPermitWriteConditional(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy() //nolint:errcheck
+	defer destroyContainer(container)
 
 	buffers := newStdBuffers()
 	dmesg := &libcontainer.Process{
@@ -188,7 +188,7 @@ func TestSeccompDenyWriteConditional(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy() //nolint:errcheck
+	defer destroyContainer(container)
 
 	buffers := newStdBuffers()
 	dmesg := &libcontainer.Process{

@@ -1373,9 +1373,7 @@ func testPidnsInitKill(t *testing.T, config *configs.Config) {
 	// Run a container with two long-running processes.
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer func() {
-		_ = container.Destroy()
-	}()
+	defer destroyContainer(container)
 
 	process1 := &libcontainer.Process{
 		Cwd:  "/",
@@ -1796,7 +1794,7 @@ func TestBindMountAndUser(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy() //nolint: errcheck
+	defer destroyContainer(container)
 
 	var stdout bytes.Buffer
 
