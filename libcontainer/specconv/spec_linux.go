@@ -19,6 +19,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
+	"github.com/opencontainers/runc/libcontainer/utils"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
@@ -348,12 +349,9 @@ type CreateOpts struct {
 // the value from the kernel, which guarantees the returned value
 // to be absolute and clean.
 func getwd() (wd string, err error) {
-	for {
-		wd, err = unix.Getwd()
-		if err != unix.EINTR {
-			break
-		}
-	}
+	wd, err = utils.RetryOnEINTR2(func() (string, error) {
+		return unix.Getwd()
+	})
 	return wd, os.NewSyscallError("getwd", err)
 }
 
