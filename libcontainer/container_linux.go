@@ -50,11 +50,11 @@ type Container struct {
 type State struct {
 	BaseState
 
-	// Platform specific fields below here
+	// Platform specific fields below.
 
 	// Specified if the container was started under the rootless mode.
 	// Set to true if BaseState.Config.RootlessEUID && BaseState.Config.RootlessCgroups
-	Rootless bool `json:"rootless"`
+	Rootless bool `json:"rootless,omitempty"`
 
 	// Paths to all the container's cgroups, as returned by (*cgroups.Manager).GetPaths
 	//
@@ -62,17 +62,17 @@ type State struct {
 	// to the cgroup for this subsystem.
 	//
 	// For cgroup v2 unified hierarchy, a key is "", and the value is the unified path.
-	CgroupPaths map[string]string `json:"cgroup_paths"`
+	CgroupPaths map[string]string `json:"cgroup_paths,omitempty"`
 
 	// NamespacePaths are filepaths to the container's namespaces. Key is the namespace type
 	// with the value as the path.
 	NamespacePaths map[configs.NamespaceType]string `json:"namespace_paths"`
 
-	// Container's standard descriptors (std{in,out,err}), needed for checkpoint and restore
+	// Container's standard descriptors (std{in,out,err}), needed for checkpoint and restore.
 	ExternalDescriptors []string `json:"external_descriptors,omitempty"`
 
-	// Intel RDT "resource control" filesystem path
-	IntelRdtPath string `json:"intel_rdt_path"`
+	// Intel RDT "resource control" filesystem path.
+	IntelRdtPath string `json:"intel_rdt_path,omitempty"`
 }
 
 // ID returns the container's unique ID
