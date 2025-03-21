@@ -534,12 +534,12 @@ func testPids(t *testing.T, systemd bool) {
 	config.Cgroups.Resources.PidsLimit = -1
 
 	// Running multiple processes, expecting it to succeed with no pids limit.
-	_ = runContainerOk(t, config, "/bin/sh", "-c", "/bin/true | /bin/true | /bin/true | /bin/true")
+	runContainerOk(t, config, "/bin/sh", "-c", "/bin/true | /bin/true | /bin/true | /bin/true")
 
 	// Enforce a permissive limit. This needs to be fairly hand-wavey due to the
 	// issues with running Go binaries with pids restrictions (see below).
 	config.Cgroups.Resources.PidsLimit = 64
-	_ = runContainerOk(t, config, "/bin/sh", "-c", `
+	runContainerOk(t, config, "/bin/sh", "-c", `
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
@@ -1711,10 +1711,10 @@ func testFdLeaks(t *testing.T, systemd bool) {
 	// Examples of this open-once file descriptors are:
 	//  - /sys/fs/cgroup dirfd opened by prepareOpenat2 in libct/cgroups;
 	//  - dbus connection opened by getConnection in libct/cgroups/systemd.
-	_ = runContainerOk(t, config, "true")
+	runContainerOk(t, config, "true")
 	fds0 := fdList(t)
 
-	_ = runContainerOk(t, config, "true")
+	runContainerOk(t, config, "true")
 	fds1 := fdList(t)
 
 	if reflect.DeepEqual(fds0, fds1) {
