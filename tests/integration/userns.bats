@@ -246,3 +246,37 @@ function teardown() {
 	[ "$status" -eq 0 ]
 	[[ "$output" == "$netns_id" ]]
 }
+
+@test "userns with network interface" {
+	requires root
+
+	# create a dummy interface to move to the container
+	ip link add dummy0 type dummy
+
+	update_config ' .linux.netDevices |= {"dummy0": {} }
+		| .process.args |= ["ip", "address", "show", "dev", "dummy0"]'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+
+	# the interface is virtual and deleted during the namespace cleanup
+	run ip link del dummy0
+	[ "$status" -ne 0 ]
+}
+
+@test "userns with network interface renamed" {
+	requires root
+
+	# create a dummy interface to move to the container
+	ip link add dummy0 type dummy
+
+	update_config ' .linux.netDevices |= { "dummy0": { "name" : "ctr_dummy0" } }
+		| .process.args |= ["ip", "address", "show", "dev", "ctr_dummy0"]'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+
+	# the interface is virtual and deleted during the namespace cleanup
+	run ip link del dummy0
+	[ "$status" -ne 0 ]
+}

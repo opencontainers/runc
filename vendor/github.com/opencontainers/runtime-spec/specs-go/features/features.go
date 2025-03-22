@@ -48,6 +48,7 @@ type Linux struct {
 	Selinux         *Selinux         `json:"selinux,omitempty"`
 	IntelRdt        *IntelRdt        `json:"intelRdt,omitempty"`
 	MountExtensions *MountExtensions `json:"mountExtensions,omitempty"`
+	NetDevices      *NetDevices      `json:"netDevices,omitempty"`
 }
 
 // Cgroup represents the "cgroup" field.
@@ -140,6 +141,13 @@ type MountExtensions struct {
 type IDMap struct {
 	// Enabled represents whether idmap mounts supports is compiled in.
 	// Unrelated to whether the host supports it or not.
+	// Nil value means "unknown", not "false".
+	Enabled *bool `json:"enabled,omitempty"`
+}
+
+// NetDevices represents the "netDevices" field.
+type NetDevices struct {
+	// Enabled is true if network devices support is compiled in.
 	// Nil value means "unknown", not "false".
 	Enabled *bool `json:"enabled,omitempty"`
 }
