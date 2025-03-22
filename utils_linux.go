@@ -229,6 +229,14 @@ func (r *runner) run(config *specs.Process) (_ int, retErr error) {
 	if err != nil {
 		return -1, err
 	}
+	defer func() {
+		// We should terminate the process once we got an error.
+		// It's safe to do this because we ignored all errors in
+		// `r.terminate`.
+		if retErr != nil {
+			r.terminate(process)
+		}
+	}()
 	process.LogLevel = strconv.Itoa(int(logrus.GetLevel()))
 	// Populate the fields that come from runner.
 	process.Init = r.init
@@ -280,21 +288,16 @@ func (r *runner) run(config *specs.Process) (_ int, retErr error) {
 		return -1, err
 	}
 	if err = tty.waitConsole(); err != nil {
-		r.terminate(process)
 		return -1, err
 	}
 	tty.ClosePostStart()
 	if r.pidFile != "" {
 		if err = createPidFile(r.pidFile, process); err != nil {
-			r.terminate(process)
 			return -1, err
 		}
 	}
 	handler := <-handlerCh
 	status, err := handler.forward(process, tty, detach)
-	if err != nil {
-		r.terminate(process)
-	}
 	if detach {
 		return 0, nil
 	}
