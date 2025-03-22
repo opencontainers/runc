@@ -86,7 +86,7 @@ func marshal(path string, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close() //nolint: errcheck
+	defer f.Close()
 	return utils.WriteJSON(f, v)
 }
 

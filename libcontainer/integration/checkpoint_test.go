@@ -67,7 +67,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 
 	err = container.Run(&pconfig)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 	ok(t, err)
 
 	pid, err := pconfig.Pid()
@@ -141,7 +141,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 
 	err = container.Restore(restoreProcessConfig, checkpointOpts)
 	_ = restoreStdinR.Close()
-	defer restoreStdinW.Close() //nolint: errcheck
+	defer restoreStdinW.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
