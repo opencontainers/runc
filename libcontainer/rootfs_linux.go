@@ -357,7 +357,7 @@ func mountCgroupV2(m *configs.Mount, c *mountConfig) error {
 	err := utils.WithProcfd(c.root, m.Destination, func(dstFd string) error {
 		return mountViaFds(m.Source, nil, m.Destination, dstFd, "cgroup2", uintptr(m.Flags), m.Data)
 	})
-	if err == nil || !(errors.Is(err, unix.EPERM) || errors.Is(err, unix.EBUSY)) {
+	if err == nil || (!errors.Is(err, unix.EPERM) && !errors.Is(err, unix.EBUSY)) {
 		return err
 	}
 

@@ -956,8 +956,8 @@ func (c *Container) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuO
 	// available but empty. criurpc.CriuReqType_VERSION actually
 	// has no req.GetOpts().
 	if logrus.GetLevel() >= logrus.DebugLevel &&
-		!(req.GetType() == criurpc.CriuReqType_FEATURE_CHECK ||
-			req.GetType() == criurpc.CriuReqType_VERSION) {
+		(req.GetType() != criurpc.CriuReqType_FEATURE_CHECK &&
+			req.GetType() != criurpc.CriuReqType_VERSION) {
 
 		val := reflect.ValueOf(req.GetOpts())
 		v := reflect.Indirect(val)
