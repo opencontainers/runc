@@ -48,7 +48,7 @@ func sealMemfd(f **os.File) error {
 	// to work on older kernels.
 	fd := (*f).Fd()
 
-	// Skip F_SEAL_FUTURE_WRITE, it is not needed because we alreadu use the
+	// Skip F_SEAL_FUTURE_WRITE, it is not needed because we already use the
 	// stronger F_SEAL_WRITE (and is buggy on Linux <5.5 -- see kernel commit
 	// 05d351102dbe and <https://github.com/opencontainers/runc/pull/4640>).
 
