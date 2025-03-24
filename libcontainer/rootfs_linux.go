@@ -1260,7 +1260,7 @@ func maskPath(path string, mountLabel string) error {
 // writeSystemProperty writes the value to a path under /proc/sys as determined from the key.
 // For e.g. net.ipv4.ip_forward translated to /proc/sys/net/ipv4/ip_forward.
 func writeSystemProperty(key, value string) error {
-	keyPath := strings.Replace(key, ".", "/", -1)
+	keyPath := strings.ReplaceAll(key, ".", "/")
 	return os.WriteFile(path.Join("/proc/sys", keyPath), []byte(value), 0o644)
 }
 
