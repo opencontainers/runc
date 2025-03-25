@@ -6,6 +6,17 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// Exec wraps [unix.Exec].
+func Exec(cmd string, args []string, env []string) error {
+	err := retryOnEINTR(func() error {
+		return unix.Exec(cmd, args, env)
+	})
+	if err != nil {
+		return &os.PathError{Op: "exec", Path: cmd, Err: err}
+	}
+	return nil
+}
+
 // Getwd wraps [unix.Getwd].
 func Getwd() (wd string, err error) {
 	wd, err = retryOnEINTR2(unix.Getwd)

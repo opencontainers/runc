@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
+	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/keys"
@@ -298,5 +299,5 @@ func (l *linuxStandardInit) Init() error {
 	if err := utils.UnsafeCloseFrom(l.config.PassedFilesCount + 3); err != nil {
 		return err
 	}
-	return system.Exec(name, l.config.Args, l.config.Env)
+	return linux.Exec(name, l.config.Args, l.config.Env)
 }
