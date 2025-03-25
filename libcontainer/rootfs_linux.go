@@ -873,7 +873,7 @@ func reOpenDevNull() error {
 	if err != nil {
 		return err
 	}
-	defer file.Close() //nolint: errcheck
+	defer file.Close()
 	if err := unix.Fstat(int(file.Fd()), &devNullStat); err != nil {
 		return &os.PathError{Op: "fstat", Path: file.Name(), Err: err}
 	}
@@ -999,7 +999,7 @@ func rootfsParentMountPrivate(path string) error {
 		if err == nil {
 			return nil
 		}
-		if err != unix.EINVAL || path == "/" { //nolint:errorlint // unix errors are bare
+		if err != unix.EINVAL || path == "/" {
 			break
 		}
 		path = filepath.Dir(path)
@@ -1067,13 +1067,13 @@ func pivotRoot(rootfs string) error {
 	if err != nil {
 		return &os.PathError{Op: "open", Path: "/", Err: err}
 	}
-	defer unix.Close(oldroot) //nolint: errcheck
+	defer unix.Close(oldroot)
 
 	newroot, err := unix.Open(rootfs, unix.O_DIRECTORY|unix.O_RDONLY, 0)
 	if err != nil {
 		return &os.PathError{Op: "open", Path: rootfs, Err: err}
 	}
-	defer unix.Close(newroot) //nolint: errcheck
+	defer unix.Close(newroot)
 
 	// Change to the new root so that the pivot_root actually acts on it.
 	if err := unix.Fchdir(newroot); err != nil {

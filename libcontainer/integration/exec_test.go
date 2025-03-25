@@ -172,7 +172,7 @@ func TestEnter(t *testing.T) {
 	}
 	err = container.Run(&pconfig)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 	ok(t, err)
 	pid, err := pconfig.Pid()
 	ok(t, err)
@@ -190,7 +190,7 @@ func TestEnter(t *testing.T) {
 
 	err = container.Run(&pconfig2)
 	_ = stdinR2.Close()
-	defer stdinW2.Close() //nolint: errcheck
+	defer stdinW2.Close()
 	ok(t, err)
 
 	pid2, err := pconfig2.Pid()
@@ -458,7 +458,7 @@ func testFreeze(t *testing.T, withSystemd bool, useSet bool) {
 	}
 	err = container.Run(pconfig)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 	ok(t, err)
 
 	if !useSet {
@@ -534,12 +534,12 @@ func testPids(t *testing.T, systemd bool) {
 	config.Cgroups.Resources.PidsLimit = -1
 
 	// Running multiple processes, expecting it to succeed with no pids limit.
-	_ = runContainerOk(t, config, "/bin/sh", "-c", "/bin/true | /bin/true | /bin/true | /bin/true")
+	runContainerOk(t, config, "/bin/sh", "-c", "/bin/true | /bin/true | /bin/true | /bin/true")
 
 	// Enforce a permissive limit. This needs to be fairly hand-wavey due to the
 	// issues with running Go binaries with pids restrictions (see below).
 	config.Cgroups.Resources.PidsLimit = 64
-	_ = runContainerOk(t, config, "/bin/sh", "-c", `
+	runContainerOk(t, config, "/bin/sh", "-c", `
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
@@ -738,7 +738,7 @@ func TestContainerState(t *testing.T) {
 	err = container.Run(p)
 	ok(t, err)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 
 	st, err := container.State()
 	ok(t, err)
@@ -1164,7 +1164,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 
 	err = container.Run(pconfig)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 	ok(t, err)
 
 	// Create mnt2host under dir1host and bind mount itself on top of it.
@@ -1194,7 +1194,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 
 	err = container.Run(pconfig2)
 	_ = stdinR2.Close()
-	defer stdinW2.Close() //nolint: errcheck
+	defer stdinW2.Close()
 	ok(t, err)
 
 	_ = stdinW2.Close()
@@ -1276,7 +1276,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 
 	err = container.Run(pconfig)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 	ok(t, err)
 
 	// Create mnt2cont under dir1host. This will become visible inside container
@@ -1311,7 +1311,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 
 	err = container.Run(pconfig2)
 	_ = stdinR2.Close()
-	defer stdinW2.Close() //nolint: errcheck
+	defer stdinW2.Close()
 	ok(t, err)
 
 	// Wait for process
@@ -1373,9 +1373,7 @@ func testPidnsInitKill(t *testing.T, config *configs.Config) {
 	// Run a container with two long-running processes.
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer func() {
-		_ = container.Destroy()
-	}()
+	defer destroyContainer(container)
 
 	process1 := &libcontainer.Process{
 		Cwd:  "/",
@@ -1432,7 +1430,7 @@ func TestInitJoinPID(t *testing.T) {
 	}
 	err = container1.Run(init1)
 	_ = stdinR1.Close()
-	defer stdinW1.Close() //nolint: errcheck
+	defer stdinW1.Close()
 	ok(t, err)
 
 	// get the state of the first container
@@ -1459,7 +1457,7 @@ func TestInitJoinPID(t *testing.T) {
 	}
 	err = container2.Run(init2)
 	_ = stdinR2.Close()
-	defer stdinW2.Close() //nolint: errcheck
+	defer stdinW2.Close()
 	ok(t, err)
 	// get the state of the second container
 	state2, err := container2.State()
@@ -1531,7 +1529,7 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 	}
 	err = container1.Run(init1)
 	_ = stdinR1.Close()
-	defer stdinW1.Close() //nolint: errcheck
+	defer stdinW1.Close()
 	ok(t, err)
 
 	// get the state of the first container
@@ -1565,7 +1563,7 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 	}
 	err = container2.Run(init2)
 	_ = stdinR2.Close()
-	defer stdinW2.Close() //nolint: errcheck
+	defer stdinW2.Close()
 	ok(t, err)
 
 	// get the state of the second container
@@ -1711,10 +1709,10 @@ func testFdLeaks(t *testing.T, systemd bool) {
 	// Examples of this open-once file descriptors are:
 	//  - /sys/fs/cgroup dirfd opened by prepareOpenat2 in libct/cgroups;
 	//  - dbus connection opened by getConnection in libct/cgroups/systemd.
-	_ = runContainerOk(t, config, "true")
+	runContainerOk(t, config, "true")
 	fds0 := fdList(t)
 
-	_ = runContainerOk(t, config, "true")
+	runContainerOk(t, config, "true")
 	fds1 := fdList(t)
 
 	if reflect.DeepEqual(fds0, fds1) {
@@ -1796,7 +1794,7 @@ func TestBindMountAndUser(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy() //nolint: errcheck
+	defer destroyContainer(container)
 
 	var stdout bytes.Buffer
 

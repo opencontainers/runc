@@ -40,7 +40,7 @@ func TestExecIn(t *testing.T) {
 	}
 	err = container.Run(process)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 	ok(t, err)
 
 	buffers := newStdBuffers()
@@ -98,7 +98,7 @@ func testExecInRlimit(t *testing.T, userns bool) {
 	}
 	err = container.Run(process)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 	ok(t, err)
 
 	buffers := newStdBuffers()
@@ -149,7 +149,7 @@ func TestExecInAdditionalGroups(t *testing.T) {
 	}
 	err = container.Run(process)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 	ok(t, err)
 
 	var stdout bytes.Buffer
@@ -338,7 +338,7 @@ func TestExecInEnvironment(t *testing.T) {
 	}
 	err = container.Run(process)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 	ok(t, err)
 
 	execEnv := []string{
@@ -408,7 +408,7 @@ func TestExecinPassExtraFiles(t *testing.T) {
 	}
 	err = container.Run(process)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 	ok(t, err)
 
 	var stdout bytes.Buffer
@@ -473,7 +473,7 @@ func TestExecInOomScoreAdj(t *testing.T) {
 	}
 	err = container.Run(process)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 	ok(t, err)
 
 	buffers := newStdBuffers()
@@ -521,7 +521,7 @@ func TestExecInUserns(t *testing.T) {
 	}
 	err = container.Run(process)
 	_ = stdinR.Close()
-	defer stdinW.Close() //nolint: errcheck
+	defer stdinW.Close()
 	ok(t, err)
 
 	initPID, err := process.Pid()
