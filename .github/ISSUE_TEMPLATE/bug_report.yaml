@@ -25,6 +25,8 @@ body:
   - type: textarea
     attributes:
       label: Steps to reproduce the issue
+      description: |
+        As much as possible, try to make steps that would work in a script. This makes the repro unambiguous and easy to follow.
       value: |
         1.
         2.
