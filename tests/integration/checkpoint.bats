@@ -441,3 +441,38 @@ function simple_cr() {
 	pid=$(cat "pid")
 	grep -q "${REL_CGROUPS_PATH}$" "/proc/$pid/cgroup"
 }
+
+@test "checkpoint/restore and exec" {
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	testcontainer test_busybox running
+
+	local execed_pid=""
+	for _ in $(seq 2); do
+		# checkpoint the running container
+		runc checkpoint --work-path ./work-dir test_busybox
+		[ "$status" -eq 0 ]
+
+		# after checkpoint busybox is no longer running
+		testcontainer test_busybox checkpointed
+
+		# restore from checkpoint
+		runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+		[ "$status" -eq 0 ]
+
+		# busybox should be back up and running
+		testcontainer test_busybox running
+
+		# verify that previously exec'd process is restored.
+		if [ -n "$execed_pid" ]; then
+			runc exec test_busybox ls -ld "/proc/$execed_pid"
+			[ "$status" -eq 0 ]
+		fi
+
+		# exec a new background process.
+		runc exec test_busybox sh -c 'sleep 1000 < /dev/null &> /dev/null & echo $!'
+		[ "$status" -eq 0 ]
+		execed_pid=$output
+	done
+}
