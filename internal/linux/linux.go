@@ -53,6 +53,18 @@ func Openat(dirfd int, path string, mode int, perm uint32) (fd int, err error) {
 	return fd, nil
 }
 
+// Recvfrom wraps [unix.Recvfrom].
+func Recvfrom(fd int, p []byte, flags int) (n int, from unix.Sockaddr, err error) {
+	err = retryOnEINTR(func() error {
+		n, from, err = unix.Recvfrom(fd, p, flags)
+		return err
+	})
+	if err != nil {
+		return 0, nil, os.NewSyscallError("recvfrom", err)
+	}
+	return n, from, err
+}
+
 // Sendmsg wraps [unix.Sendmsg].
 func Sendmsg(fd int, p, oob []byte, to unix.Sockaddr, flags int) error {
 	err := retryOnEINTR(func() error {

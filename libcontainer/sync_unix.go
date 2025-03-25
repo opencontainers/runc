@@ -6,6 +6,7 @@ import (
 	"os"
 	"sync/atomic"
 
+	"github.com/opencontainers/runc/internal/linux"
 	"golang.org/x/sys/unix"
 )
 
@@ -42,20 +43,9 @@ func (s *syncSocket) WritePacket(b []byte) (int, error) {
 }
 
 func (s *syncSocket) ReadPacket() ([]byte, error) {
-	var (
-		size int
-		err  error
-	)
-
-	for {
-		size, _, err = unix.Recvfrom(int(s.f.Fd()), nil, unix.MSG_TRUNC|unix.MSG_PEEK)
-		if err != unix.EINTR { //nolint:errorlint // unix errors are bare
-			break
-		}
-	}
-
+	size, _, err := linux.Recvfrom(int(s.f.Fd()), nil, unix.MSG_TRUNC|unix.MSG_PEEK)
 	if err != nil {
-		return nil, fmt.Errorf("fetch packet length from socket: %w", os.NewSyscallError("recvfrom", err))
+		return nil, fmt.Errorf("fetch packet length from socket: %w", err)
 	}
 	// We will only get a zero size if the socket has been closed from the
 	// other end (otherwise recvfrom(2) will block until a packet is ready). In
