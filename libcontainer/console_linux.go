@@ -3,6 +3,7 @@ package libcontainer
 import (
 	"os"
 
+	"github.com/opencontainers/runc/internal/linux"
 	"golang.org/x/sys/unix"
 )
 
@@ -26,16 +27,12 @@ func mountConsole(slavePath string) error {
 // dupStdio opens the slavePath for the console and dups the fds to the current
 // processes stdio, fd 0,1,2.
 func dupStdio(slavePath string) error {
-	fd, err := unix.Open(slavePath, unix.O_RDWR, 0)
+	fd, err := linux.Open(slavePath, unix.O_RDWR, 0)
 	if err != nil {
-		return &os.PathError{
-			Op:   "open",
-			Path: slavePath,
-			Err:  err,
-		}
+		return err
 	}
 	for _, i := range []int{0, 1, 2} {
-		if err := unix.Dup3(fd, i, 0); err != nil {
+		if err := linux.Dup3(fd, i, 0); err != nil {
 			return err
 		}
 	}

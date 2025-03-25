@@ -262,9 +262,9 @@ func (l *linuxStandardInit) Init() error {
 	// user process. We open it through /proc/self/fd/$fd, because the fd that
 	// was given to us was an O_PATH fd to the fifo itself. Linux allows us to
 	// re-open an O_PATH fd through /proc.
-	fd, err := unix.Open(fifoPath, unix.O_WRONLY|unix.O_CLOEXEC, 0)
+	fd, err := linux.Open(fifoPath, unix.O_WRONLY|unix.O_CLOEXEC, 0)
 	if err != nil {
-		return &os.PathError{Op: "open exec fifo", Path: fifoPath, Err: err}
+		return err
 	}
 	if _, err := unix.Write(fd, []byte("0")); err != nil {
 		return &os.PathError{Op: "write exec fifo", Path: fifoPath, Err: err}

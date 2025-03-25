@@ -14,6 +14,7 @@ import (
 	_ "unsafe" // for go:linkname
 
 	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/opencontainers/runc/internal/linux"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -358,9 +359,9 @@ func Openat(dir *os.File, path string, flags int, mode uint32) (*os.File, error)
 	}
 	flags |= unix.O_CLOEXEC
 
-	fd, err := unix.Openat(dirFd, path, flags, mode)
+	fd, err := linux.Openat(dirFd, path, flags, mode)
 	if err != nil {
-		return nil, &os.PathError{Op: "openat", Path: path, Err: err}
+		return nil, err
 	}
 	return os.NewFile(uintptr(fd), dir.Name()+"/"+path), nil
 }
