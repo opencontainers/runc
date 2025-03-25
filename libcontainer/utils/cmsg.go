@@ -21,6 +21,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/opencontainers/runc/internal/linux"
 	"golang.org/x/sys/unix"
 )
 
@@ -126,10 +127,5 @@ func SendFile(socket *os.File, file *os.File) error {
 // SendRawFd sends a specific file descriptor over the given AF_UNIX socket.
 func SendRawFd(socket *os.File, msg string, fd uintptr) error {
 	oob := unix.UnixRights(int(fd))
-	for {
-		err := unix.Sendmsg(int(socket.Fd()), []byte(msg), oob, nil, 0)
-		if err != unix.EINTR {
-			return os.NewSyscallError("sendmsg", err)
-		}
-	}
+	return linux.Sendmsg(int(socket.Fd()), []byte(msg), oob, nil, 0)
 }

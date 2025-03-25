@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
@@ -181,7 +182,7 @@ func sdNotifyBarrier(client *net.UnixConn) error {
 		return err
 	}
 
-	// Get the FD for the unix socket file to be able to do perform syscall.Sendmsg.
+	// Get the FD for the unix socket file to be able to use sendmsg.
 	clientFd, err := client.File()
 	if err != nil {
 		return err
@@ -189,9 +190,9 @@ func sdNotifyBarrier(client *net.UnixConn) error {
 
 	// Send the write end of the pipe along with a BARRIER=1 message.
 	fdRights := unix.UnixRights(int(pipeW.Fd()))
-	err = unix.Sendmsg(int(clientFd.Fd()), []byte("BARRIER=1"), fdRights, nil, 0)
+	err = linux.Sendmsg(int(clientFd.Fd()), []byte("BARRIER=1"), fdRights, nil, 0)
 	if err != nil {
-		return &os.SyscallError{Syscall: "sendmsg", Err: err}
+		return err
 	}
 
 	// Close our copy of pipeW.
