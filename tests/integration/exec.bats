@@ -352,3 +352,17 @@ EOF
 	[ ${#lines[@]} -eq 1 ]
 	[[ ${lines[0]} = *"exec /run.sh: no such file or directory"* ]]
 }
+
+# https://github.com/opencontainers/runc/issues/4688
+@test "runc exec check default home" {
+	# --user can't work in rootless containers that don't have idmap.
+	[ $EUID -ne 0 ] && requires rootless_idmap
+	echo 'tempuser:x:2000:2000:tempuser:/home/tempuser:/bin/sh' >>rootfs/etc/passwd
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test
+	[ "$status" -eq 0 ]
+
+	runc exec -u 2000 test sh -c "echo \$HOME"
+	[ "$status" -eq 0 ]
+	[ "${lines[0]}" = "/home/tempuser" ]
+}
