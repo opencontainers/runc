@@ -20,6 +20,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/cgroups"
+	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/libcontainer/capabilities"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/system"
@@ -280,10 +281,10 @@ func verifyCwd() error {
 	// details, and CVE-2024-21626 for the security issue that motivated this
 	// check.
 	//
-	// We have to use unix.Getwd() here because os.Getwd() has a workaround for
+	// We do not use os.Getwd() here because it has a workaround for
 	// $PWD which involves doing stat(.), which can fail if the current
 	// directory is inaccessible to the container process.
-	if wd, err := unix.Getwd(); errors.Is(err, unix.ENOENT) {
+	if wd, err := linux.Getwd(); errors.Is(err, unix.ENOENT) {
 		return errors.New("current working directory is outside of container mount namespace root -- possible container breakout detected")
 	} else if err != nil {
 		return fmt.Errorf("failed to verify if current working directory is safe: %w", err)
