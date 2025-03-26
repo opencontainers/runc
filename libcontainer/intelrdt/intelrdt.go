@@ -150,6 +150,8 @@ type Manager struct {
 	config *configs.Config
 	id     string
 	path   string
+	// Specifies whether the directory was created by us.
+	created bool
 }
 
 // NewManager returns a new instance of Manager, or nil if the Intel RDT
@@ -458,16 +460,21 @@ func (m *Manager) Apply(pid int) (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.config.IntelRdt.ClosID != "" && m.config.IntelRdt.L3CacheSchema == "" && m.config.IntelRdt.MemBwSchema == "" {
-		// Check that the CLOS exists, i.e. it has been pre-configured to
-		// conform with the runtime spec
-		if _, err := os.Stat(path); err != nil {
+	if _, err := os.Stat(path); err != nil {
+		if m.config.IntelRdt.ClosID != "" && m.config.IntelRdt.L3CacheSchema == "" && m.config.IntelRdt.MemBwSchema == "" {
+			// CLOS must exist, i.e. it has been pre-configured to
+			// conform with the runtime spec.
 			return fmt.Errorf("clos dir not accessible (must be pre-created when l3CacheSchema and memBwSchema are empty): %w", err)
 		}
-	}
-
-	if err := os.MkdirAll(path, 0o755); err != nil {
-		return newLastCmdError(err)
+		if os.IsNotExist(err) {
+			if err := os.MkdirAll(path, 0o755); err != nil {
+				return newLastCmdError(err)
+			}
+			m.created = true
+		} else {
+			// Report unknown stat error.
+			return err
+		}
 	}
 
 	if err := WriteIntelRdtTasks(path, pid); err != nil {
@@ -640,30 +647,26 @@ func (m *Manager) Set(container *configs.Config) error {
 		path := m.GetPath()
 		l3CacheSchema := container.IntelRdt.L3CacheSchema
 		memBwSchema := container.IntelRdt.MemBwSchema
+		schemata := ""
 
-		// TODO: verify that l3CacheSchema and/or memBwSchema match the
-		// existing schemata if ClosID has been specified. This is a more
-		// involved than reading the file and doing plain string comparison as
-		// the value written in does not necessarily match what gets read out
-		// (leading zeros, cache id ordering etc).
-
-		// Write a single joint schema string to schemata file
-		if l3CacheSchema != "" && memBwSchema != "" {
-			if err := writeFile(path, "schemata", l3CacheSchema+"\n"+memBwSchema); err != nil {
-				return err
+		if l3CacheSchema != "" || memBwSchema != "" {
+			if l3CacheSchema != "" && memBwSchema != "" {
+				// Write a single joint schema string to the schemata file.
+				schemata = l3CacheSchema + "\n" + memBwSchema
+			} else {
+				// One of the schemas is empty, so can safely concatenate
+				schemata = l3CacheSchema + memBwSchema
 			}
 		}
 
-		// Write only L3 cache schema string to schemata file
-		if l3CacheSchema != "" && memBwSchema == "" {
-			if err := writeFile(path, "schemata", l3CacheSchema); err != nil {
-				return err
+		if schemata != "" {
+			if m.config.IntelRdt != nil && m.config.IntelRdt.ClosID != "" && !m.created {
+				// ClosId is set and the directory was not created by us. Verify
+				// that the value matches and return.
+				return checkExistingSchemata(path, schemata)
 			}
-		}
 
-		// Write only memory bandwidth schema string to schemata file
-		if l3CacheSchema == "" && memBwSchema != "" {
-			if err := writeFile(path, "schemata", memBwSchema); err != nil {
+			if err := writeFile(path, "schemata", schemata); err != nil {
 				return err
 			}
 		}
