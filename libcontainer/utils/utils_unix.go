@@ -130,7 +130,7 @@ func runtime_IsPollDescriptor(fd uintptr) bool //nolint:revive
 //
 // NOTE: That this function is incredibly dangerous to use in most Go code, as
 // closing file descriptors from underneath *os.File handles can lead to very
-// bad behaviour (the closed file descriptor can be re-used and then any
+// bad behaviour (the closed file descriptor can be reused and then any
 // *os.File operations would apply to the wrong file). This function is only
 // intended to be called from the last stage of runc init.
 func UnsafeCloseFrom(minFd int) error {

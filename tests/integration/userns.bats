@@ -217,7 +217,7 @@ function teardown() {
 	# Also create a network namespace that *is not owned* by the above userns.
 	# NOTE: Having no permissions in a namespaces makes it necessary to modify
 	# the config so that we don't get mount errors (for reference: no netns
-	# permissions == no sysfs mounts, no pidns permissoins == no procfs mounts,
+	# permissions == no sysfs mounts, no pidns permissions == no procfs mounts,
 	# no utsns permissions == no sethostname(2), no ipc permissions == no
 	# mqueue mounts, etc).
 	netns_path="$(mktemp "$BATS_RUN_TMPDIR/netns.XXXXXX")"
