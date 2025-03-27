@@ -88,6 +88,10 @@ func (l *linuxSetnsInit) Init() error {
 		}
 	}
 
+	if err := setupMemoryPolicy(l.config.Config); err != nil {
+		return err
+	}
+
 	// Tell our parent that we're ready to exec. This must be done before the
 	// Seccomp rules have been applied, because we need to be able to read and
 	// write to a socket.
