@@ -214,6 +214,9 @@ type Config struct {
 	// to limit the resources (e.g., L3 cache, memory bandwidth) the container has available
 	IntelRdt *IntelRdt `json:"intel_rdt,omitempty"`
 
+	// MemoryPolicy specifies NUMA memory policy for the container.
+	MemoryPolicy *LinuxMemoryPolicy `json:"memory_policy,omitempty"`
+
 	// RootlessEUID is set when the runc was launched with non-zero EUID.
 	// Note that RootlessEUID is set to false when launched with EUID=0 in userns.
 	// When RootlessEUID is set, runc creates a new userns for the container.
@@ -305,7 +308,8 @@ type CPUAffinity struct {
 	Initial, Final *unix.CPUSet
 }
 
-func toCPUSet(str string) (*unix.CPUSet, error) {
+// ToCPUSet parses a string in list format into a unix.CPUSet, e.g. "0-3,5,7-9".
+func ToCPUSet(str string) (*unix.CPUSet, error) {
 	if str == "" {
 		return nil, nil
 	}
@@ -356,7 +360,7 @@ func toCPUSet(str string) (*unix.CPUSet, error) {
 		}
 	}
 	if s.Count() == 0 {
-		return nil, fmt.Errorf("no CPUs found in %q", str)
+		return nil, fmt.Errorf("no members found in set %q", str)
 	}
 
 	return s, nil
@@ -367,11 +371,11 @@ func ConvertCPUAffinity(sa *specs.CPUAffinity) (*CPUAffinity, error) {
 	if sa == nil {
 		return nil, nil
 	}
-	initial, err := toCPUSet(sa.Initial)
+	initial, err := ToCPUSet(sa.Initial)
 	if err != nil {
 		return nil, fmt.Errorf("bad CPUAffinity.Initial: %w", err)
 	}
-	final, err := toCPUSet(sa.Final)
+	final, err := ToCPUSet(sa.Final)
 	if err != nil {
 		return nil, fmt.Errorf("bad CPUAffinity.Final: %w", err)
 	}

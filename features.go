@@ -59,6 +59,10 @@ var featuresCommand = cli.Command{
 					Enabled:  &t,
 					Schemata: &t,
 				},
+				MemoryPolicy: &features.MemoryPolicy{
+					Modes: specconv.KnownMemoryPolicyModes(),
+					Flags: specconv.KnownMemoryPolicyFlags(),
+				},
 				MountExtensions: &features.MountExtensions{
 					IDMap: &features.IDMap{
 						Enabled: &t,
