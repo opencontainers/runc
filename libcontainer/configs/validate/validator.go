@@ -33,6 +33,7 @@ func Validate(config *configs.Config) error {
 		mountsStrict,
 		scheduler,
 		ioPriority,
+		memoryPolicy,
 	}
 	for _, c := range checks {
 		if err := c(config); err != nil {
@@ -480,5 +481,28 @@ func ioPriority(config *configs.Config) error {
 		return fmt.Errorf("invalid ioPriority.Class: %q", class)
 	}
 
+	return nil
+}
+
+func memoryPolicy(config *configs.Config) error {
+	mpol := config.MemoryPolicy
+	if mpol == nil {
+		return nil
+	}
+	switch mpol.Mode {
+	case configs.MPOL_DEFAULT, configs.MPOL_LOCAL:
+		if mpol.Nodes != nil && mpol.Nodes.Count() != 0 {
+			return fmt.Errorf("memory policy mode requires 0 nodes but got %d", mpol.Nodes.Count())
+		}
+	case configs.MPOL_BIND, configs.MPOL_INTERLEAVE,
+		configs.MPOL_PREFERRED_MANY, configs.MPOL_WEIGHTED_INTERLEAVE:
+		if mpol.Nodes == nil || mpol.Nodes.Count() == 0 {
+			return fmt.Errorf("memory policy mode requires at least one node but got 0")
+		}
+	case configs.MPOL_PREFERRED:
+		// Zero or more nodes are allowed by the kernel.
+	default:
+		return fmt.Errorf("invalid memory policy mode: %d", mpol.Mode)
+	}
 	return nil
 }
