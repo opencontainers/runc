@@ -39,3 +39,5 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/vishvananda/netns v0.0.4 // indirect
 )
+
+replace github.com/opencontainers/runtime-spec => github.com/askervin/runtime-spec v1.0.3-0.20250423073229-57c949588e88
