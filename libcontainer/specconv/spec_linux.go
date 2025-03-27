@@ -41,6 +41,8 @@ var (
 		flag  int
 	}
 	complexFlags map[string]func(*configs.Mount)
+	mpolModeMap  map[specs.MemoryPolicyModeType]uint
+	mpolModeFMap map[specs.MemoryPolicyFlagType]uint
 )
 
 func initMaps() {
@@ -148,6 +150,22 @@ func initMaps() {
 				m.IDMapping.Recursive = true
 			},
 		}
+
+		mpolModeMap = map[specs.MemoryPolicyModeType]uint{
+			specs.MpolDefault:            configs.MPOL_DEFAULT,
+			specs.MpolPreferred:          configs.MPOL_PREFERRED,
+			specs.MpolBind:               configs.MPOL_BIND,
+			specs.MpolInterleave:         configs.MPOL_INTERLEAVE,
+			specs.MpolLocal:              configs.MPOL_LOCAL,
+			specs.MpolPreferredMany:      configs.MPOL_PREFERRED_MANY,
+			specs.MpolWeightedInterleave: configs.MPOL_WEIGHTED_INTERLEAVE,
+		}
+
+		mpolModeFMap = map[specs.MemoryPolicyFlagType]uint{
+			specs.MpolFStaticNodes:   configs.MPOL_F_STATIC_NODES,
+			specs.MpolFRelativeNodes: configs.MPOL_F_RELATIVE_NODES,
+			specs.MpolFNumaBalancing: configs.MPOL_F_NUMA_BALANCING,
+		}
 	})
 }
 
@@ -179,6 +197,30 @@ func KnownMountOptions() []string {
 	}
 	for k := range extensionFlags {
 		res = append(res, k)
+	}
+	sort.Strings(res)
+	return res
+}
+
+// KnownMemoryPolicyModes returns the list of the known memory policy modes.
+// Used by `runc features`.
+func KnownMemoryPolicyModes() []string {
+	initMaps()
+	var res []string
+	for k := range mpolModeMap {
+		res = append(res, string(k))
+	}
+	sort.Strings(res)
+	return res
+}
+
+// KnownMemoryPolicyFlags returns the list of the known memory policy mode flags.
+// Used by `runc features`.
+func KnownMemoryPolicyFlags() []string {
+	initMaps()
+	var res []string
+	for k := range mpolModeFMap {
+		res = append(res, string(k))
 	}
 	sort.Strings(res)
 	return res
@@ -466,6 +508,28 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 				L3CacheSchema: spec.Linux.IntelRdt.L3CacheSchema,
 				MemBwSchema:   spec.Linux.IntelRdt.MemBwSchema,
 			}
+		}
+		if spec.Linux.MemoryPolicy != nil {
+			var ok bool
+			var err error
+			specMp := spec.Linux.MemoryPolicy
+			confMp := &configs.LinuxMemoryPolicy{}
+			confMp.Mode, ok = mpolModeMap[specMp.Mode]
+			if !ok {
+				return nil, fmt.Errorf("invalid memory policy mode %q", specMp.Mode)
+			}
+			confMp.Nodes, err = configs.ToCPUSet(specMp.Nodes)
+			if err != nil {
+				return nil, fmt.Errorf("invalid memory policy nodes %q: %w", specMp.Nodes, err)
+			}
+			for _, specFlag := range specMp.Flags {
+				confFlag, ok := mpolModeFMap[specFlag]
+				if !ok {
+					return nil, fmt.Errorf("invalid memory policy flag %q", specFlag)
+				}
+				confMp.Flags = append(confMp.Flags, confFlag)
+			}
+			config.MemoryPolicy = confMp
 		}
 		if spec.Linux.Personality != nil {
 			if len(spec.Linux.Personality.Flags) > 0 {
