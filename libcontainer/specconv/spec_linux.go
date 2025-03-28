@@ -16,6 +16,7 @@ import (
 	dbus "github.com/godbus/dbus/v5"
 	"github.com/opencontainers/cgroups"
 	devices "github.com/opencontainers/cgroups/devices/config"
+	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
@@ -344,24 +345,13 @@ type CreateOpts struct {
 	RootlessCgroups  bool
 }
 
-// getwd is a wrapper similar to os.Getwd, except it always gets
-// the value from the kernel, which guarantees the returned value
-// to be absolute and clean.
-func getwd() (wd string, err error) {
-	for {
-		wd, err = unix.Getwd()
-		if err != unix.EINTR {
-			break
-		}
-	}
-	return wd, os.NewSyscallError("getwd", err)
-}
-
 // CreateLibcontainerConfig creates a new libcontainer configuration from a
 // given specification and a cgroup name
 func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
-	// runc's cwd will always be the bundle path
-	cwd, err := getwd()
+	// Runc's cwd will always be the bundle path.
+	// Use the value from the kernel, which guarantees the returned value
+	// to be absolute and clean.
+	cwd, err := linux.Getwd()
 	if err != nil {
 		return nil, err
 	}

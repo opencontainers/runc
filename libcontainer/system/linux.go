@@ -32,15 +32,6 @@ func (p ParentDeathSignal) Set() error {
 	return SetParentDeathSignal(uintptr(p))
 }
 
-func Exec(cmd string, args []string, env []string) error {
-	for {
-		err := unix.Exec(cmd, args, env)
-		if err != unix.EINTR {
-			return &os.PathError{Op: "exec", Path: cmd, Err: err}
-		}
-	}
-}
-
 func SetParentDeathSignal(sig uintptr) error {
 	if err := unix.Prctl(unix.PR_SET_PDEATHSIG, sig, 0, 0, 0); err != nil {
 		return err

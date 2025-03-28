@@ -24,6 +24,7 @@ import (
 	"github.com/opencontainers/cgroups"
 	devices "github.com/opencontainers/cgroups/devices/config"
 	"github.com/opencontainers/cgroups/fs2"
+	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
@@ -883,12 +884,8 @@ func reOpenDevNull() error {
 		}
 		if stat.Rdev == devNullStat.Rdev {
 			// Close and re-open the fd.
-			if err := unix.Dup3(int(file.Fd()), fd, 0); err != nil {
-				return &os.PathError{
-					Op:   "dup3",
-					Path: "fd " + strconv.Itoa(int(file.Fd())),
-					Err:  err,
-				}
+			if err := linux.Dup3(int(file.Fd()), fd, 0); err != nil {
+				return err
 			}
 		}
 	}
@@ -1063,15 +1060,15 @@ func pivotRoot(rootfs string) error {
 	// with pivot_root this allows us to pivot without creating directories in
 	// the rootfs. Shout-outs to the LXC developers for giving us this idea.
 
-	oldroot, err := unix.Open("/", unix.O_DIRECTORY|unix.O_RDONLY, 0)
+	oldroot, err := linux.Open("/", unix.O_DIRECTORY|unix.O_RDONLY, 0)
 	if err != nil {
-		return &os.PathError{Op: "open", Path: "/", Err: err}
+		return err
 	}
 	defer unix.Close(oldroot)
 
-	newroot, err := unix.Open(rootfs, unix.O_DIRECTORY|unix.O_RDONLY, 0)
+	newroot, err := linux.Open(rootfs, unix.O_DIRECTORY|unix.O_RDONLY, 0)
 	if err != nil {
-		return &os.PathError{Op: "open", Path: rootfs, Err: err}
+		return err
 	}
 	defer unix.Close(newroot)
 
