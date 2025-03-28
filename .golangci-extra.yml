@@ -3,13 +3,19 @@
 #
 # For the default linter config, see .golangci.yml. This config should
 # only enable additional linters not enabled in the default config.
+version: "2"
 
 run:
   build-tags:
     - seccomp
 
 linters:
-  disable-all: true
+  default: none
   enable:
     - godot
     - revive
+    - staticcheck
+  settings:
+    staticcheck:
+      checks:
+        - all

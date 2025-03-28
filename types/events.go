@@ -12,7 +12,7 @@ type Event struct {
 	Data interface{} `json:"data,omitempty"`
 }
 
-// stats is the runc specific stats structure for stability when encoding and decoding stats.
+// Stats is the runc specific stats structure for stability when encoding and decoding stats.
 type Stats struct {
 	CPU               Cpu                 `json:"cpu"`
 	CPUSet            CPUSet              `json:"cpuset"`

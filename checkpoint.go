@@ -70,7 +70,7 @@ checkpointed.`,
 		}
 
 		err = container.Checkpoint(options)
-		if err == nil && !(options.LeaveRunning || options.PreDump) {
+		if err == nil && !options.LeaveRunning && !options.PreDump {
 			// Destroy the container unless we tell CRIU to keep it.
 			if err := container.Destroy(); err != nil {
 				logrus.Warn(err)

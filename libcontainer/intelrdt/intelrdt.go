@@ -416,13 +416,13 @@ func WriteIntelRdtTasks(dir string, pid int) error {
 	return nil
 }
 
-// Check if Intel RDT/CAT is enabled
+// IsCATEnabled checks if Intel RDT/CAT is enabled.
 func IsCATEnabled() bool {
 	featuresInit()
 	return catEnabled
 }
 
-// Check if Intel RDT/MBA is enabled
+// IsMBAEnabled checks if Intel RDT/MBA is enabled.
 func IsMBAEnabled() bool {
 	featuresInit()
 	return mbaEnabled
@@ -443,7 +443,7 @@ func (m *Manager) getIntelRdtPath() (string, error) {
 	return filepath.Join(rootPath, clos), nil
 }
 
-// Applies Intel RDT configuration to the process with the specified pid
+// Apply applies Intel RDT configuration to the process with the specified pid.
 func (m *Manager) Apply(pid int) (err error) {
 	// If intelRdt is not specified in config, we do nothing
 	if m.config.IntelRdt == nil {
@@ -478,7 +478,7 @@ func (m *Manager) Apply(pid int) (err error) {
 	return nil
 }
 
-// Destroys the Intel RDT container-specific 'container_id' group
+// Destroy destroys the Intel RDT container-specific container_id group.
 func (m *Manager) Destroy() error {
 	// Don't remove resctrl group if closid has been explicitly specified. The
 	// group is likely externally managed, i.e. by some other entity than us.
@@ -494,8 +494,8 @@ func (m *Manager) Destroy() error {
 	return nil
 }
 
-// Returns Intel RDT path to save in a state file and to be able to
-// restore the object later
+// GetPath returns Intel RDT path to save in a state file and to be able to
+// restore the object later.
 func (m *Manager) GetPath() string {
 	if m.path == "" {
 		m.path, _ = m.getIntelRdtPath()
@@ -503,7 +503,7 @@ func (m *Manager) GetPath() string {
 	return m.path
 }
 
-// Returns statistics for Intel RDT
+// GetStats returns statistics for Intel RDT.
 func (m *Manager) GetStats() (*Stats, error) {
 	// If intelRdt is not specified in config
 	if m.config.IntelRdt == nil {

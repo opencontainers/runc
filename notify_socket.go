@@ -104,11 +104,11 @@ func (s *notifySocket) waitForContainer(container *libcontainer.Container) error
 	return s.run(state.InitProcessPid)
 }
 
-func (n *notifySocket) run(pid1 int) error {
-	if n.socket == nil {
+func (s *notifySocket) run(pid1 int) error {
+	if s.socket == nil {
 		return nil
 	}
-	notifySocketHostAddr := net.UnixAddr{Name: n.host, Net: "unixgram"}
+	notifySocketHostAddr := net.UnixAddr{Name: s.host, Net: "unixgram"}
 	client, err := net.DialUnix("unixgram", nil, &notifySocketHostAddr)
 	if err != nil {
 		return err
@@ -121,7 +121,7 @@ func (n *notifySocket) run(pid1 int) error {
 	go func() {
 		for {
 			buf := make([]byte, 4096)
-			r, err := n.socket.Read(buf)
+			r, err := s.socket.Read(buf)
 			if err != nil {
 				return
 			}
