@@ -5,6 +5,7 @@ package specconv
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -916,11 +917,7 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*cgrou
 				}
 			}
 			if len(r.Unified) > 0 {
-				// copy the map
-				c.Resources.Unified = make(map[string]string, len(r.Unified))
-				for k, v := range r.Unified {
-					c.Resources.Unified[k] = v
-				}
+				c.Resources.Unified = maps.Clone(r.Unified)
 			}
 		}
 	}
