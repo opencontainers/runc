@@ -113,7 +113,7 @@ func writeSync(pipe *syncSocket, sync syncType) error {
 	return doWriteSync(pipe, syncT{Type: sync})
 }
 
-func writeSyncArg(pipe *syncSocket, sync syncType, arg interface{}) error {
+func writeSyncArg(pipe *syncSocket, sync syncType, arg any) error {
 	argJSON, err := json.Marshal(arg)
 	if err != nil {
 		return fmt.Errorf("writing sync %v: marshal argument failed: %w", sync, err)

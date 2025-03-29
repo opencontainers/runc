@@ -676,7 +676,7 @@ func TestInitSystemdProps(t *testing.T) {
 	type expT struct {
 		isErr bool
 		name  string
-		value interface{}
+		value any
 	}
 
 	testCases := []struct {

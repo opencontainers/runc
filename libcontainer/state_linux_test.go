@@ -24,7 +24,7 @@ func TestStateStatus(t *testing.T) {
 }
 
 func testTransitions(t *testing.T, initialState containerState, valid []containerState) {
-	validMap := map[reflect.Type]interface{}{}
+	validMap := map[reflect.Type]any{}
 	for _, validState := range valid {
 		validMap[reflect.TypeOf(validState)] = nil
 		t.Run(validState.status().String(), func(t *testing.T) {

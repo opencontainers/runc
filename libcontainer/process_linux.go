@@ -877,7 +877,7 @@ func getPipeFds(pid int) ([]string, error) {
 	fds := make([]string, 3)
 
 	dirPath := filepath.Join("/proc", strconv.Itoa(pid), "/fd")
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		// XXX: This breaks if the path is not a valid symlink (which can
 		//      happen in certain particularly unlucky mount namespace setups).
 		f := filepath.Join(dirPath, strconv.Itoa(i))

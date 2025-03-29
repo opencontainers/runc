@@ -191,7 +191,7 @@ func validateID(id string) error {
 	}
 
 	// Allowed characters: 0-9 A-Z a-z _ + - .
-	for i := 0; i < len(id); i++ {
+	for i := range len(id) {
 		c := id[i]
 		switch {
 		case c >= 'a' && c <= 'z':

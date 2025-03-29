@@ -60,7 +60,7 @@ func genBigEnv(count int) []string {
 	}
 
 	envs := make([]string, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		key := strings.ToUpper(randStr(10))
 		value := randStr(20)
 		envs[i] = key + "=" + value
