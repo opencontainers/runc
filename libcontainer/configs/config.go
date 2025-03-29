@@ -503,7 +503,7 @@ func (hooks *Hooks) MarshalJSON() ([]byte, error) {
 		return serializableHooks
 	}
 
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"prestart":        serialize((*hooks)[Prestart]),
 		"createRuntime":   serialize((*hooks)[CreateRuntime]),
 		"createContainer": serialize((*hooks)[CreateContainer]),
