@@ -11,6 +11,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"slices"
 )
 
 var psCommand = cli.Command{
@@ -86,11 +87,8 @@ var psCommand = cli.Command{
 				return fmt.Errorf("unable to parse pid: %w", err)
 			}
 
-			for _, pid := range pids {
-				if pid == p {
-					fmt.Println(line)
-					break
-				}
+			if slices.Contains(pids, p) {
+				fmt.Println(line)
 			}
 		}
 		return nil
