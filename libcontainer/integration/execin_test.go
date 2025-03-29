@@ -209,7 +209,7 @@ func TestExecInError(t *testing.T) {
 	}()
 	ok(t, err)
 
-	for i := 0; i < 42; i++ {
+	for range 42 {
 		unexistent := &libcontainer.Process{
 			Cwd:  "/",
 			Args: []string{"unexistent"},
@@ -263,7 +263,7 @@ func TestExecInTTY(t *testing.T) {
 
 	// Repeat to increase chances to catch a race; see
 	// https://github.com/opencontainers/runc/issues/2425.
-	for i := 0; i < 300; i++ {
+	for range 300 {
 		var stdout bytes.Buffer
 
 		parent, child, err := utils.NewSockPair("console")

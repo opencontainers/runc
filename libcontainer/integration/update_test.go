@@ -60,7 +60,7 @@ func testUpdateDevices(t *testing.T, systemd bool) {
 	}
 	defaultDevices := config.Cgroups.Resources.Devices
 
-	for i := 0; i < 300; i++ {
+	for i := range 300 {
 		// Check the access
 		buf.Reset()
 		err = container.Run(devCheck)
