@@ -81,7 +81,7 @@ func TestFactoryLoadContainer(t *testing.T) {
 	}
 }
 
-func marshal(path string, v interface{}) error {
+func marshal(path string, v any) error {
 	f, err := os.Create(path)
 	if err != nil {
 		return err
