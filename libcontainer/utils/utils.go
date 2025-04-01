@@ -27,7 +27,7 @@ func ExitStatus(status unix.WaitStatus) int {
 // without a trailing newline. This is used instead of json.Encoder because
 // there might be a problem in json decoder in some cases, see:
 // https://github.com/docker/docker/issues/14203#issuecomment-174177790
-func WriteJSON(w io.Writer, v interface{}) error {
+func WriteJSON(w io.Writer, v any) error {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return err

@@ -878,7 +878,7 @@ func reOpenDevNull() error {
 	if err := unix.Fstat(int(file.Fd()), &devNullStat); err != nil {
 		return &os.PathError{Op: "fstat", Path: file.Name(), Err: err}
 	}
-	for fd := 0; fd < 3; fd++ {
+	for fd := range 3 {
 		if err := unix.Fstat(fd, &stat); err != nil {
 			return &os.PathError{Op: "fstat", Path: "fd " + strconv.Itoa(fd), Err: err}
 		}
@@ -1211,7 +1211,7 @@ func remountReadonly(m *configs.Mount) error {
 		dest  = m.Destination
 		flags = m.Flags
 	)
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		// There is a special case in the kernel for
 		// MS_REMOUNT | MS_BIND, which allows us to change only the
 		// flags even as an unprivileged user (i.e. user namespace)

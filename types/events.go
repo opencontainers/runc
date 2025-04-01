@@ -7,9 +7,9 @@ import (
 
 // Event struct for encoding the event data to json.
 type Event struct {
-	Type string      `json:"type"`
-	ID   string      `json:"id"`
-	Data interface{} `json:"data,omitempty"`
+	Type string `json:"type"`
+	ID   string `json:"id"`
+	Data any    `json:"data,omitempty"`
 }
 
 // Stats is the runc specific stats structure for stability when encoding and decoding stats.

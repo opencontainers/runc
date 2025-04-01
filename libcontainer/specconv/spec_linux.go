@@ -5,6 +5,7 @@ package specconv
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -625,7 +626,7 @@ func checkPropertyName(s string) error {
 	}
 	// Check ASCII characters rather than Unicode runes,
 	// so we have to use indexes rather than range.
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		ch := s[i]
 		if (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') {
 			continue
@@ -916,11 +917,7 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*cgrou
 				}
 			}
 			if len(r.Unified) > 0 {
-				// copy the map
-				c.Resources.Unified = make(map[string]string, len(r.Unified))
-				for k, v := range r.Unified {
-					c.Resources.Unified[k] = v
-				}
+				c.Resources.Unified = maps.Clone(r.Unified)
 			}
 		}
 	}

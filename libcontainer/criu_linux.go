@@ -832,7 +832,7 @@ func logCriuErrors(dir, file string) {
 			logrus.Warn("...")
 		}
 		// Print the last lines.
-		for add := 0; add < max; add++ {
+		for add := range max {
 			i := (idx + add) % max
 			s := lines[i]
 			actLineNo := lineNo + add - max + 1
@@ -961,7 +961,7 @@ func (c *Container) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuO
 
 		val := reflect.ValueOf(req.GetOpts())
 		v := reflect.Indirect(val)
-		for i := 0; i < v.NumField(); i++ {
+		for i := range v.NumField() {
 			st := v.Type()
 			name := st.Field(i).Name
 			if 'A' <= name[0] && name[0] <= 'Z' {
