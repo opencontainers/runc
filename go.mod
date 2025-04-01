@@ -17,12 +17,13 @@ require (
 	github.com/moby/sys/userns v0.1.0
 	github.com/mrunalp/fileutils v0.5.1
 	github.com/opencontainers/cgroups v0.0.1
-	github.com/opencontainers/runtime-spec v1.2.1
+	github.com/opencontainers/runtime-spec v1.2.2-0.20250401095657-e935f995dd67
 	github.com/opencontainers/selinux v1.12.0
 	github.com/seccomp/libseccomp-golang v0.10.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/urfave/cli v1.22.16
 	github.com/vishvananda/netlink v1.3.0
+	github.com/vishvananda/netns v0.0.4
 	golang.org/x/net v0.38.0
 	golang.org/x/sys v0.31.0
 	google.golang.org/protobuf v1.36.6
@@ -39,5 +40,4 @@ require (
 	github.com/cilium/ebpf v0.17.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/vishvananda/netns v0.0.4 // indirect
 )
