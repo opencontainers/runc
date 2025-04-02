@@ -223,3 +223,19 @@ EOF
 	[ ${#lines[@]} -eq 1 ]
 	[[ ${lines[0]} = "exec /run.sh: no such file or directory" ]]
 }
+
+# https://github.com/opencontainers/runc/issues/4688
+@test "runc run check default home" {
+	# cannot start containers as another user in rootless setup without idmap
+	[ $EUID -ne 0 ] && requires rootless_idmap
+	echo 'tempuser:x:2000:2000:tempuser:/home/tempuser:/bin/sh' >>rootfs/etc/passwd
+
+	# shellcheck disable=SC2016
+	update_config '	  .process.cwd = "/root"
+			| .process.user.uid = 2000
+			| .process.args |= ["sh", "-c", "echo $HOME"]'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+	[ "${lines[0]}" = "/home/tempuser" ]
+}

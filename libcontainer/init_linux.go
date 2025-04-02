@@ -233,12 +233,6 @@ func startInitialization() (retErr error) {
 }
 
 func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSocket, pidfdSocket, fifoFile, logPipe *os.File) error {
-	env, err := prepareEnv(config.Env, config.UID)
-	if err != nil {
-		return err
-	}
-	config.Env = env
-
 	// Clean the RLIMIT_NOFILE cache in go runtime.
 	// Issue: https://github.com/opencontainers/runc/issues/4195
 	maybeClearRlimitNofileCache(config.Rlimits)
@@ -324,6 +318,14 @@ func finalizeNamespace(config *initConfig) error {
 			return fmt.Errorf("chdir to cwd (%q) set in config.json failed: %w", config.Cwd, err)
 		}
 	}
+
+	// We should set envs after we are in the jail of the container.
+	// Please see https://github.com/opencontainers/runc/issues/4688
+	env, err := prepareEnv(config.Env, config.UID)
+	if err != nil {
+		return err
+	}
+	config.Env = env
 
 	w, err := capabilities.New(config.Capabilities)
 	if err != nil {
