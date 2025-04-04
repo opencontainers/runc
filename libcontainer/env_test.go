@@ -37,6 +37,18 @@ func TestPrepareEnv(t *testing.T) {
 			env:     []string{"TERM=vt100", "HOME=/home/one", "HOME=/home/two", "TERM=xterm", "HOME=/home/three", "FOO=bar"},
 			wantEnv: []string{"TERM=xterm", "HOME=/home/three", "FOO=bar"},
 		},
+		{
+			env:     []string{"HOME=", "HOME=/foo"},
+			wantEnv: []string{"HOME=/foo"},
+		},
+		{
+			env:     []string{"HOME="},
+			wantEnv: []string{home},
+		},
+		{
+			env:     []string{"HOME=/foo", "HOME="},
+			wantEnv: []string{home},
+		},
 	}
 
 	for _, tc := range tests {
