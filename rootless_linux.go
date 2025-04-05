@@ -11,6 +11,7 @@ import (
 )
 
 func shouldUseRootlessCgroupManager(context *cli.Context) (bool, error) {
+	logrus.Warn("shouldUseRootlessCgroupManager")
 	if context != nil {
 		b, err := parseBoolOrAuto(context.GlobalString("rootless"))
 		if err != nil {
@@ -18,10 +19,12 @@ func shouldUseRootlessCgroupManager(context *cli.Context) (bool, error) {
 		}
 		// nil b stands for "auto detect"
 		if b != nil {
+			logrus.Warnf("rootless set: %v", *b)
 			return *b, nil
 		}
 	}
 	if os.Geteuid() != 0 {
+		logrus.Warnf("geteuid: %v", os.Geteuid())
 		return true, nil
 	}
 	if !userns.RunningInUserNS() {
@@ -39,8 +42,9 @@ func shouldUseRootlessCgroupManager(context *cli.Context) (bool, error) {
 	// mostly when $DBUS_SESSION_BUS_ADDRESS is unset.
 	if context.GlobalBool("systemd-cgroup") {
 		ownerUID, err := systemd.DetectUID()
+		logrus.Warnf("ownerUID, err: %v, v", ownerUID, err)
 		if err != nil {
-			logrus.WithError(err).Debug("failed to get the OwnerUID value, assuming the value to be 0")
+			logrus.WithError(err).Warn("failed to get the OwnerUID value, assuming the value to be 0")
 			ownerUID = 0
 		}
 		return ownerUID != 0, nil
@@ -49,6 +53,7 @@ func shouldUseRootlessCgroupManager(context *cli.Context) (bool, error) {
 	// As we are unaware of cgroups path, we can't determine whether we have the full
 	// access to the cgroups path.
 	// Either way, we can safely decide to use the rootless cgroups manager.
+	logrus.Warn("cgroupfs driver")
 	return true, nil
 }
 
