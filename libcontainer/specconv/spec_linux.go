@@ -465,6 +465,8 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 				ClosID:        spec.Linux.IntelRdt.ClosID,
 				L3CacheSchema: spec.Linux.IntelRdt.L3CacheSchema,
 				MemBwSchema:   spec.Linux.IntelRdt.MemBwSchema,
+				EnableCMT:     spec.Linux.IntelRdt.EnableCMT,
+				EnableMBM:     spec.Linux.IntelRdt.EnableMBM,
 			}
 		}
 		if spec.Linux.Personality != nil {
