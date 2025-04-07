@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0-rc.2] - 2025-04-10
+> Eppur si muove.
+
+### Fixed
+ * Use the container's `/etc/passwd` to set the `HOME` env var. After a refactor
+   for 1.3, we were setting it reading the host's `/etc/passwd` file instead.
+   (#4693, #4688)
+ * Override `HOME` env var if it's set to the empty string. This fixes a
+   regression after the same refactor for 1.3 and aligns the behavior with older
+   versions of runc. (#4711)
+ * Add time namespace to container config after checkpoint/restore. CRIU since
+   version 3.14 uses a time namespace for checkpoint/restore, however it was not
+   joining the time namespace in runc. (#4705)
+
 ## [1.3.0-rc.1] - 2025-03-04
 
 > No tengo miedo al invierno, con tu recuerdo lleno de sol.
@@ -1040,7 +1054,7 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.1...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...HEAD
 [1.2.0]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.1...v1.2.0
 [1.1.0]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...v1.1.0
 [1.0.0]: https://github.com/opencontainers/runc/releases/tag/v1.0.0
@@ -1083,4 +1097,5 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.2.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.2.0-rc.1
 
 <!-- 1.3.z patch releases -->
+[1.3.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.1...v1.3.0-rc.2
 [1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
