@@ -30,7 +30,11 @@ Use runc list to identify instances of containers and their current status.`,
 		if err != nil {
 			return err
 		}
-		return container.Pause()
+		err = container.Pause()
+		if err != nil {
+			return err
+		}
+		return nil
 	},
 }
 
@@ -59,6 +63,10 @@ Use runc list to identify instances of containers and their current status.`,
 		if err != nil {
 			return err
 		}
-		return container.Resume()
+		err = container.Resume()
+		if err != nil {
+			return err
+		}
+		return nil
 	},
 }
