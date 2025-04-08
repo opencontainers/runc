@@ -1146,6 +1146,13 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 		}
 		// create a timestamp indicating when the restored checkpoint was started
 		c.created = time.Now().UTC()
+		if !c.config.Namespaces.Contains(configs.NEWTIME) &&
+			configs.IsNamespaceSupported(configs.NEWTIME) &&
+			c.checkCriuVersion(31400) == nil {
+			// CRIU restores processes into a time namespace.
+			c.config.Namespaces = append(c.config.Namespaces,
+				configs.Namespace{Type: configs.NEWTIME})
+		}
 		if _, err := c.updateState(r); err != nil {
 			return err
 		}
