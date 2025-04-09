@@ -27,6 +27,22 @@ var version = "unknown"
 // and will be populated by the Makefile
 var gitCommit = ""
 
+func printVersion(c *cli.Context) {
+	w := c.App.Writer
+
+	fmt.Fprintln(w, "runc version", c.App.Version)
+	if gitCommit != "" {
+		fmt.Fprintln(w, "commit:", gitCommit)
+	}
+	fmt.Fprintln(w, "spec:", specs.Version)
+	fmt.Fprintln(w, "go:", runtime.Version())
+
+	major, minor, micro := seccomp.Version()
+	if major+minor+micro > 0 {
+		fmt.Fprintf(w, "libseccomp: %d.%d.%d\n", major, minor, micro)
+	}
+}
+
 const (
 	specConfig = "config.json"
 	usage      = `Open Container Initiative runtime
@@ -57,21 +73,10 @@ value for "bundle" is the current directory.`
 func main() {
 	app := cli.NewApp()
 	app.Name = "runc"
+	app.Version = version
 	app.Usage = usage
 
-	v := []string{version}
-
-	if gitCommit != "" {
-		v = append(v, "commit: "+gitCommit)
-	}
-	v = append(v, "spec: "+specs.Version)
-	v = append(v, "go: "+runtime.Version())
-
-	major, minor, micro := seccomp.Version()
-	if major+minor+micro > 0 {
-		v = append(v, fmt.Sprintf("libseccomp: %d.%d.%d", major, minor, micro))
-	}
-	app.Version = strings.Join(v, "\n")
+	cli.VersionPrinter = printVersion
 
 	root := "/run/runc"
 	xdgDirUsed := false
