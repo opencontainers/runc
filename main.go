@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -19,12 +20,18 @@ import (
 	"github.com/urfave/cli"
 )
 
-// version must be set from the contents of VERSION file by go build's
-// -X main.version= option in the Makefile.
-var version = "unknown"
+// version is set from the contents of VERSION file.
+//
+//go:embed VERSION
+var version string
+
+// extraVersion is an optional suffix appended to runc version.
+// It can be set via Makefile ("make EXTRA_VERSION=xxx") or by
+// adding -X main.extraVersion=xxx option to the go build command.
+var extraVersion = ""
 
 // gitCommit will be the hash that the binary was built from
-// and will be populated by the Makefile
+// and will be populated by the Makefile.
 var gitCommit = ""
 
 func printVersion(c *cli.Context) {
@@ -73,7 +80,7 @@ value for "bundle" is the current directory.`
 func main() {
 	app := cli.NewApp()
 	app.Name = "runc"
-	app.Version = version
+	app.Version = strings.TrimSpace(version) + extraVersion
 	app.Usage = usage
 
 	cli.VersionPrinter = printVersion
