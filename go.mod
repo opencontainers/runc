@@ -2,8 +2,6 @@ module github.com/opencontainers/runc
 
 go 1.23.0
 
-toolchain go1.24.1
-
 require (
 	github.com/checkpoint-restore/go-criu/v7 v7.2.0
 	github.com/containerd/console v1.0.4
