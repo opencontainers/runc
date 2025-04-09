@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"net"
 	"os"
 	"path/filepath"
@@ -443,4 +444,10 @@ func setupPidfdSocket(process *libcontainer.Process, sockpath string) (_clean fu
 	return func() {
 		conn.Close()
 	}, nil
+}
+
+func maybeLogCgroupWarning(op string, err error) {
+	if errors.Is(err, fs.ErrPermission) {
+		logrus.Warn("runc " + op + " failure might be caused by lack of full access to cgroups")
+	}
 }
