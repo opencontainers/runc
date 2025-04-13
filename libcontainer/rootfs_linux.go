@@ -215,6 +215,10 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		return fmt.Errorf("error jailing process inside rootfs: %w", err)
 	}
 
+	if err := adjustRootMountPropagation(uintptr(config.RootPropagation)); err != nil {
+		return err
+	}
+
 	if setupDev {
 		if err := reOpenDevNull(); err != nil {
 			return fmt.Errorf("error reopening /dev/null inside container: %w", err)
@@ -227,6 +231,32 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		if err := os.MkdirAll(cwd, 0o755); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+// adjustRootMountPropagation applies mount propagation flags such as MS_SHARED or MS_UNBINDABLE
+// to the root mount after the pivot_root or chroot has taken place.
+//
+// This must be done after pivot_root/chroot because the mount propagation flag is applied
+// to the current root ("/"), and not to the old rootfs before it becomes "/". Applying the
+// flag in prepareRoot would affect the host mount namespace if the container's
+// root mount is shared.
+func adjustRootMountPropagation(rootPropagation uintptr) error {
+	var flag uintptr
+
+	switch {
+	case rootPropagation&unix.MS_SHARED != 0:
+		flag = unix.MS_SHARED
+	case rootPropagation&unix.MS_UNBINDABLE != 0:
+		flag = unix.MS_UNBINDABLE
+	default:
+		return nil
+	}
+
+	if err := unix.Mount("", "/", "", flag, ""); err != nil {
+		return fmt.Errorf("failed to set rootfs propagation: %w", err)
 	}
 
 	return nil
