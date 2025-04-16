@@ -31,7 +31,7 @@ task:
   install_dependencies_script: |
     case $DISTRO in
     *-8)
-      yum config-manager --set-enabled powertools # for glibc-static
+      dnf config-manager --set-enabled powertools # for glibc-static
       ;;
     *-9)
       dnf config-manager --set-enabled crb # for glibc-static
@@ -49,6 +49,15 @@ task:
       yum install -y --setopt=install_weak_deps=False --setopt=tsflags=nodocs $RPMS && break
     done
     [ $? -eq 0 ] # fail if yum failed
+
+    case $DISTRO in
+    *-8)
+      # Use newer criu (with https://github.com/checkpoint-restore/criu/pull/2545).
+      # Alas we have to disable container-tools for that.
+      dnf -y module disable container-tools
+      dnf -y copr enable adrian/criu-el8
+      dnf -y install criu
+    esac
 
     # Install Go.
     URL_PREFIX="https://go.dev/dl/"
