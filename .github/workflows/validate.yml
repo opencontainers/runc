@@ -145,7 +145,8 @@ jobs:
     - name: verify deps
       run: make verify-dependencies
     - name: no toolchain in go.mod # See https://github.com/opencontainers/runc/pull/4717, https://github.com/dependabot/dependabot-core/issues/11933.
-      run: if grep -q '^toolchain ' go.mod; then echo "Error: go.mod must not have toolchain directive, please fix"; exit 1; fi
+      run: |
+        if grep -q '^toolchain ' go.mod; then echo "Error: go.mod must not have toolchain directive, please fix"; exit 1; fi
 
 
   commit:
