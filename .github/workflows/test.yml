@@ -161,10 +161,10 @@ jobs:
       run: |
         sudo useradd -u2000 -m -d/home/rootless -s/bin/bash rootless
         # Allow root and rootless itself to execute `ssh rootless@localhost` in tests/rootless.sh
-        ssh-keygen -t ecdsa -N "" -f $HOME/rootless.key
+        ssh-keygen -t ecdsa -N "" -f $HOME/.ssh/rootless.key
         sudo mkdir -m 0700 -p /home/rootless/.ssh
-        sudo cp $HOME/rootless.key /home/rootless/.ssh/id_ecdsa
-        sudo cp $HOME/rootless.key.pub /home/rootless/.ssh/authorized_keys
+        sudo cp $HOME/.ssh/rootless.key /home/rootless/.ssh/id_ecdsa
+        sudo cp $HOME/.ssh/rootless.key.pub /home/rootless/.ssh/authorized_keys
         sudo chown -R rootless.rootless /home/rootless
         sudo chmod a+X $HOME # for Ubuntu 22.04 and later
 
