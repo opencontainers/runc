@@ -1,3 +1,5 @@
+// Package configs includes configuration options for executing a
+// process inside a contained environment.
 package configs
 
 import (
