@@ -159,13 +159,7 @@ jobs:
     - name: add rootless user
       if: matrix.rootless == 'rootless'
       run: |
-        sudo useradd -u2000 -m -d/home/rootless -s/bin/bash rootless
-        # Allow root and rootless itself to execute `ssh rootless@localhost` in tests/rootless.sh
-        ssh-keygen -t ecdsa -N "" -f $HOME/rootless.key
-        sudo mkdir -m 0700 -p /home/rootless/.ssh
-        sudo cp $HOME/rootless.key /home/rootless/.ssh/id_ecdsa
-        sudo cp $HOME/rootless.key.pub /home/rootless/.ssh/authorized_keys
-        sudo chown -R rootless.rootless /home/rootless
+        ./script/setup_rootless.sh
         sudo chmod a+X $HOME # for Ubuntu 22.04 and later
 
     - name: integration test (fs driver)
