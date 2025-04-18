@@ -666,11 +666,17 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 					return err
 				}
 				srcFlags := statfsToMountFlags(*st)
+
+				logrus.Debugf(
+					"working around failure to set vfs flags on bind-mount %s: srcFlags=%s flagsSet=%s flagsClr=%s: %v",
+					m.Destination, stringifyMountFlags(srcFlags),
+					stringifyMountFlags(m.Flags), stringifyMountFlags(m.ClearedFlags), mountErr)
+
 				// If the user explicitly request one of the locked flags *not*
 				// be set, we need to return an error to avoid producing mounts
 				// that don't match the user's request.
-				if srcFlags&m.ClearedFlags&mntLockFlags != 0 {
-					return mountErr
+				if cannotClearFlags := srcFlags & m.ClearedFlags & mntLockFlags; cannotClearFlags != 0 {
+					return fmt.Errorf("cannot clear locked flags %s: %w", stringifyMountFlags(cannotClearFlags), mountErr)
 				}
 
 				// If an MS_*ATIME flag was requested, it must match the
@@ -691,17 +697,19 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 				// MS_STRICTATIME mounts even if the user requested MS_RELATIME
 				// or MS_NOATIME.
 				if m.Flags&mntAtimeFlags != 0 && m.Flags&mntAtimeFlags != srcFlags&mntAtimeFlags {
-					return mountErr
+					return fmt.Errorf("cannot change locked atime flags %s: %w", stringifyMountFlags(srcFlags&mntAtimeFlags), mountErr)
 				}
 
 				// Retry the mount with the existing lockable mount flags
 				// applied.
 				flags |= srcFlags & mntLockFlags
 				mountErr = mountViaFds("", nil, m.Destination, dstFd, "", uintptr(flags), "")
-				logrus.Debugf("remount retry: srcFlags=0x%x flagsSet=0x%x flagsClr=0x%x: %v", srcFlags, m.Flags, m.ClearedFlags, mountErr)
+				if mountErr != nil {
+					mountErr = fmt.Errorf("remount with locked flags %s re-applied: %w", stringifyMountFlags(srcFlags&mntLockFlags), mountErr)
+				}
 				return mountErr
 			}); err != nil {
-				return err
+				return fmt.Errorf("failed to set user-requested vfs flags on bind-mount: %w", err)
 			}
 		}
 
