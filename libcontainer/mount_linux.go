@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
@@ -45,6 +46,64 @@ type mountError struct {
 	err     error
 }
 
+// int32plus is a collection of int types with >=32 bits.
+type int32plus interface {
+	int | uint | int32 | uint32 | int64 | uint64 | uintptr
+}
+
+// stringifyMountFlags converts mount(2) flags to a string that you can use in
+// error messages.
+func stringifyMountFlags[Int int32plus](flags Int) string {
+	flagNames := []struct {
+		name string
+		bits Int
+	}{
+		{"MS_RDONLY", unix.MS_RDONLY},
+		{"MS_NOSUID", unix.MS_NOSUID},
+		{"MS_NODEV", unix.MS_NODEV},
+		{"MS_NOEXEC", unix.MS_NOEXEC},
+		{"MS_SYNCHRONOUS", unix.MS_SYNCHRONOUS},
+		{"MS_REMOUNT", unix.MS_REMOUNT},
+		{"MS_MANDLOCK", unix.MS_MANDLOCK},
+		{"MS_DIRSYNC", unix.MS_DIRSYNC},
+		{"MS_NOSYMFOLLOW", unix.MS_NOSYMFOLLOW},
+		// No (1 << 9) flag.
+		{"MS_NOATIME", unix.MS_NOATIME},
+		{"MS_NODIRATIME", unix.MS_NODIRATIME},
+		{"MS_BIND", unix.MS_BIND},
+		{"MS_MOVE", unix.MS_MOVE},
+		{"MS_REC", unix.MS_REC},
+		// MS_VERBOSE was deprecated and swapped to MS_SILENT.
+		{"MS_SILENT", unix.MS_SILENT},
+		{"MS_POSIXACL", unix.MS_POSIXACL},
+		{"MS_UNBINDABLE", unix.MS_UNBINDABLE},
+		{"MS_PRIVATE", unix.MS_PRIVATE},
+		{"MS_SLAVE", unix.MS_SLAVE},
+		{"MS_SHARED", unix.MS_SHARED},
+		{"MS_RELATIME", unix.MS_RELATIME},
+		// MS_KERNMOUNT (1 << 22) is internal to the kernel.
+		{"MS_I_VERSION", unix.MS_I_VERSION},
+		{"MS_STRICTATIME", unix.MS_STRICTATIME},
+		{"MS_LAZYTIME", unix.MS_LAZYTIME},
+	}
+	var (
+		flagSet  []string
+		seenBits Int
+	)
+	for _, flag := range flagNames {
+		if flags&flag.bits == flag.bits {
+			seenBits |= flag.bits
+			flagSet = append(flagSet, flag.name)
+		}
+	}
+	// If there were any remaining flags specified we don't know the name of,
+	// just add them in an 0x... format.
+	if remaining := flags &^ seenBits; remaining != 0 {
+		flagSet = append(flagSet, "0x"+strconv.FormatUint(uint64(remaining), 16))
+	}
+	return strings.Join(flagSet, "|")
+}
+
 // Error provides a string error representation.
 func (e *mountError) Error() string {
 	out := e.op + " "
@@ -62,7 +121,7 @@ func (e *mountError) Error() string {
 	}
 
 	if e.flags != uintptr(0) {
-		out += ", flags=0x" + strconv.FormatUint(uint64(e.flags), 16)
+		out += ", flags=" + stringifyMountFlags(e.flags)
 	}
 	if e.data != "" {
 		out += ", data=" + e.data
