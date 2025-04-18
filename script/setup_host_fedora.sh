@@ -7,6 +7,9 @@ for i in $(seq 0 2); do
 	sleep "$i"
 	"${DNF[@]}" update && "${DNF[@]}" install "${RPMS[@]}" && break
 done
+
+# Bump criu to v4.1 for testing.
+dnf -y --enablerepo=updates-testing update criu
 dnf clean all
 
 # To avoid "avc: denied { nosuid_transition }" from SELinux as we run tests on /tmp.
