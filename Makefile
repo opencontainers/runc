@@ -17,8 +17,8 @@ BUILDTAGS += $(EXTRA_BUILDTAGS)
 
 COMMIT := $(shell git describe --dirty --long --always)
 EXTRA_VERSION :=
-VERSION := $(shell cat ./VERSION)$(EXTRA_VERSION)
-LDFLAGS_COMMON := -X main.gitCommit=$(COMMIT) -X main.version=$(VERSION)
+LDFLAGS_COMMON := -X main.gitCommit=$(COMMIT) \
+		  $(if $(strip $(EXTRA_VERSION)),-X main.extraVersion=$(EXTRA_VERSION),)
 
 GOARCH := $(shell $(GO) env GOARCH)
 
@@ -118,11 +118,11 @@ release: runcimage
 		--rm -v $(CURDIR):/go/src/$(PROJECT) \
 		-e RELEASE_ARGS=$(RELEASE_ARGS) \
 		$(RUNC_IMAGE) make localrelease
-	script/release_sign.sh -S $(GPG_KEYID) -r release/$(VERSION) -v $(VERSION)
+	script/release_sign.sh -S $(GPG_KEYID)
 
 .PHONY: localrelease
 localrelease: verify-changelog
-	script/release_build.sh -r release/$(VERSION) -v $(VERSION) $(RELEASE_ARGS)
+	script/release_build.sh $(RELEASE_ARGS)
 
 .PHONY: dbuild
 dbuild: runcimage

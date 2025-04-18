@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -19,13 +20,35 @@ import (
 	"github.com/urfave/cli"
 )
 
-// version must be set from the contents of VERSION file by go build's
-// -X main.version= option in the Makefile.
-var version = "unknown"
+// version is set from the contents of VERSION file.
+//
+//go:embed VERSION
+var version string
+
+// extraVersion is an optional suffix appended to runc version.
+// It can be set via Makefile ("make EXTRA_VERSION=xxx") or by
+// adding -X main.extraVersion=xxx option to the go build command.
+var extraVersion = ""
 
 // gitCommit will be the hash that the binary was built from
-// and will be populated by the Makefile
+// and will be populated by the Makefile.
 var gitCommit = ""
+
+func printVersion(c *cli.Context) {
+	w := c.App.Writer
+
+	fmt.Fprintln(w, "runc version", c.App.Version)
+	if gitCommit != "" {
+		fmt.Fprintln(w, "commit:", gitCommit)
+	}
+	fmt.Fprintln(w, "spec:", specs.Version)
+	fmt.Fprintln(w, "go:", runtime.Version())
+
+	major, minor, micro := seccomp.Version()
+	if major+minor+micro > 0 {
+		fmt.Fprintf(w, "libseccomp: %d.%d.%d\n", major, minor, micro)
+	}
+}
 
 const (
 	specConfig = "config.json"
@@ -57,21 +80,10 @@ value for "bundle" is the current directory.`
 func main() {
 	app := cli.NewApp()
 	app.Name = "runc"
+	app.Version = strings.TrimSpace(version) + extraVersion
 	app.Usage = usage
 
-	v := []string{version}
-
-	if gitCommit != "" {
-		v = append(v, "commit: "+gitCommit)
-	}
-	v = append(v, "spec: "+specs.Version)
-	v = append(v, "go: "+runtime.Version())
-
-	major, minor, micro := seccomp.Version()
-	if major+minor+micro > 0 {
-		v = append(v, fmt.Sprintf("libseccomp: %d.%d.%d", major, minor, micro))
-	}
-	app.Version = strings.Join(v, "\n")
+	cli.VersionPrinter = printVersion
 
 	root := "/run/runc"
 	xdgDirUsed := false
