@@ -8,6 +8,13 @@ for i in $(seq 0 2); do
 	# shellcheck disable=SC2086
 	dnf $DNF_OPTS update && dnf $DNF_OPTS install $RPMS && break
 done
+
+# criu-4.1-1 has a known bug (https://github.com/checkpoint-restore/criu/issues/2650)
+# which is fixed in criu-4.1-2 (currently in updates-testing). TODO: remove this later.
+if [[ $(rpm -q criu) == "criu-4.1-1.fc"* ]]; then
+	"${DNF[@]}" --enablerepo=updates-testing update criu
+fi
+
 dnf clean all
 
 # To avoid "avc: denied { nosuid_transition }" from SELinux as we run tests on /tmp.
