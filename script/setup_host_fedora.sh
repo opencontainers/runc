@@ -12,15 +12,8 @@ dnf clean all
 # To avoid "avc: denied { nosuid_transition }" from SELinux as we run tests on /tmp.
 mount -o remount,suid /tmp
 
-# Add a user for rootless tests
-useradd -u2000 -m -d/home/rootless -s/bin/bash rootless
-
-# Allow root and rootless itself to execute `ssh rootless@localhost` in tests/rootless.sh
-ssh-keygen -t ecdsa -N "" -f /root/rootless.key
-mkdir -m 0700 /home/rootless/.ssh
-cp /root/rootless.key /home/rootless/.ssh/id_ecdsa
-cat /root/rootless.key.pub >>/home/rootless/.ssh/authorized_keys
-chown -R rootless.rootless /home/rootless
+# Setup rootless user.
+"$(dirname "${BASH_SOURCE[0]}")"/setup_rootless.sh
 
 # Delegate cgroup v2 controllers to rootless user via --systemd-cgroup
 mkdir -p /etc/systemd/system/user@.service.d
