@@ -1282,9 +1282,23 @@ func maskPaths(paths []string, mountLabel string) error {
 		return fmt.Errorf("can't mask paths: %w", err)
 	}
 	devNullSrc := &mountSource{Type: mountSourcePlain, file: devNull}
+	procSelfFd, closer := utils.ProcThreadSelf("fd/")
+	defer closer()
 
 	for _, path := range paths {
-		if err := mountViaFds("", devNullSrc, path, "", "", unix.MS_BIND, ""); err != nil && !errors.Is(err, os.ErrNotExist) {
+		// Open the target path; skip if it doesn't exist.
+		dstFh, err := os.OpenFile(path, unix.O_PATH|unix.O_CLOEXEC, 0)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			return fmt.Errorf("can't mask path %q: %w", path, err)
+		}
+
+		dstFd := filepath.Join(procSelfFd, strconv.Itoa(int(dstFh.Fd())))
+		err = mountViaFds("", devNullSrc, path, dstFd, "", unix.MS_BIND, "")
+		dstFh.Close()
+		if err != nil {
 			if !errors.Is(err, unix.ENOTDIR) {
 				return fmt.Errorf("can't mask path %q: %w", path, err)
 			}
