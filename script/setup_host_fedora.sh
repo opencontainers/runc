@@ -1,28 +1,26 @@
 #!/bin/bash
 set -eux -o pipefail
-DNF_OPTS="-y --setopt=install_weak_deps=False --setopt=tsflags=nodocs --exclude=kernel,kernel-core"
-RPMS="bats git-core glibc-static golang jq libseccomp-devel make"
+DNF=(dnf -y --setopt=install_weak_deps=False --setopt=tsflags=nodocs --exclude="kernel,kernel-core")
+RPMS=(bats git-core glibc-static golang jq libseccomp-devel make)
 # Work around dnf mirror failures by retrying a few times.
 for i in $(seq 0 2); do
 	sleep "$i"
-	# shellcheck disable=SC2086
-	dnf $DNF_OPTS update && dnf $DNF_OPTS install $RPMS && break
+	"${DNF[@]}" update && "${DNF[@]}" install "${RPMS[@]}" && break
 done
+
+# criu-4.1-1 has a known bug (https://github.com/checkpoint-restore/criu/issues/2650)
+# which is fixed in criu-4.1-2 (currently in updates-testing). TODO: remove this later.
+if [[ $(rpm -q criu) == "criu-4.1-1.fc"* ]]; then
+	"${DNF[@]}" --enablerepo=updates-testing update criu
+fi
+
 dnf clean all
 
 # To avoid "avc: denied { nosuid_transition }" from SELinux as we run tests on /tmp.
 mount -o remount,suid /tmp
 
-# Add a user for rootless tests
-useradd -u2000 -m -d/home/rootless -s/bin/bash rootless
-
-# Allow root and rootless itself to execute `ssh rootless@localhost` in tests/rootless.sh
-ssh-keygen -t ecdsa -N "" -f /root/rootless.key
-# shellcheck disable=SC2174
-mkdir -m 0700 -p /home/rootless/.ssh
-cp /root/rootless.key /home/rootless/.ssh/id_ecdsa
-cat /root/rootless.key.pub >>/home/rootless/.ssh/authorized_keys
-chown -R rootless.rootless /home/rootless
+# Setup rootless user.
+"$(dirname "${BASH_SOURCE[0]}")"/setup_rootless.sh
 
 # Delegate cgroup v2 controllers to rootless user via --systemd-cgroup
 mkdir -p /etc/systemd/system/user@.service.d
