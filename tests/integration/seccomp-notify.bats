@@ -183,7 +183,7 @@ function scmp_act_notify_template() {
 @test "runc run [seccomp] (SCMP_ACT_NOTIFY startContainer hook)" {
 	# shellcheck disable=SC2016
 	# We use single quotes to properly delimit the $1 param to
-	# update_config(), but this shellshcheck is quite silly and fails if the
+	# update_config(), but shellcheck is quite silly and fails if the
 	# multi-line string includes some $var (even when it is properly outside of the
 	# single quotes) or when we use this syntax to execute commands in the
 	# string: $(command).

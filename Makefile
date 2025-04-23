@@ -220,7 +220,7 @@ shellcheck:
 shfmt:
 	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
 		--rm -v $(CURDIR):/src -w /src \
-		mvdan/shfmt:v3.5.1 -d -w .
+		mvdan/shfmt:v3.11.0 -d -w .
 
 .PHONY: localshfmt
 localshfmt:
