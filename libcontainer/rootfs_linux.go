@@ -1295,19 +1295,25 @@ func maskPaths(paths []string, mountLabel string) error {
 			}
 			return fmt.Errorf("can't mask path %q: %w", path, err)
 		}
-
-		dstFd := filepath.Join(procSelfFd, strconv.Itoa(int(dstFh.Fd())))
-		err = mountViaFds("", devNullSrc, path, dstFd, "", unix.MS_BIND, "")
+		st, err := dstFh.Stat()
+		if err != nil {
+			dstFh.Close()
+			return fmt.Errorf("can't mask path %q: %w", path, err)
+		}
+		var dstType string
+		if st.IsDir() {
+			// Destination is a directory: bind mount a ro tmpfs over it.
+			dstType = "dir"
+			err = mount("tmpfs", path, "tmpfs", unix.MS_RDONLY, label.FormatMountLabel("", mountLabel))
+		} else {
+			// Destination is a file: mount it to /dev/null.
+			dstType = "path"
+			dstFd := filepath.Join(procSelfFd, strconv.Itoa(int(dstFh.Fd())))
+			err = mountViaFds("", devNullSrc, path, dstFd, "", unix.MS_BIND, "")
+		}
 		dstFh.Close()
 		if err != nil {
-			if !errors.Is(err, unix.ENOTDIR) {
-				return fmt.Errorf("can't mask path %q: %w", path, err)
-			}
-			// Destination is a directory: bind mount a ro tmpfs over it.
-			err := mount("tmpfs", path, "tmpfs", unix.MS_RDONLY, label.FormatMountLabel("", mountLabel))
-			if err != nil {
-				return fmt.Errorf("can't mask dir %q: %w", path, err)
-			}
+			return fmt.Errorf("can't mask %s %q: %w", dstType, path, err)
 		}
 	}
 
