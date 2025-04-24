@@ -357,7 +357,7 @@ func mountCgroupV2(m *configs.Mount, c *mountConfig) error {
 	err := utils.WithProcfd(c.root, m.Destination, func(dstFd string) error {
 		return mountViaFds(m.Source, nil, m.Destination, dstFd, "cgroup2", uintptr(m.Flags), m.Data)
 	})
-	if err == nil || !(errors.Is(err, unix.EPERM) || errors.Is(err, unix.EBUSY)) {
+	if err == nil || (!errors.Is(err, unix.EPERM) && !errors.Is(err, unix.EBUSY)) {
 		return err
 	}
 
@@ -1260,7 +1260,7 @@ func maskPath(path string, mountLabel string) error {
 // writeSystemProperty writes the value to a path under /proc/sys as determined from the key.
 // For e.g. net.ipv4.ip_forward translated to /proc/sys/net/ipv4/ip_forward.
 func writeSystemProperty(key, value string) error {
-	keyPath := strings.Replace(key, ".", "/", -1)
+	keyPath := strings.ReplaceAll(key, ".", "/")
 	return os.WriteFile(path.Join("/proc/sys", keyPath), []byte(value), 0o644)
 }
 
