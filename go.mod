@@ -17,7 +17,7 @@ require (
 	github.com/opencontainers/cgroups v0.0.1
 	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/opencontainers/selinux v1.12.0
-	github.com/seccomp/libseccomp-golang v0.10.0
+	github.com/seccomp/libseccomp-golang v0.11.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/urfave/cli v1.22.16
 	github.com/vishvananda/netlink v1.3.0
