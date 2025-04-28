@@ -261,7 +261,7 @@ func (e *emulator) Apply(rule devices.Rule) error {
 }
 
 // emulatorFromList takes a reader to a "devices.list"-like source, and returns
-// a new Emulator that represents the state of the devices cgroup. Note that
+// a new emulator that represents the state of the devices cgroup. Note that
 // black-list devices cgroups cannot be fully reconstructed, due to limitations
 // in the devices cgroup API. Instead, such cgroups are always treated as
 // "allow all" cgroups.
@@ -301,11 +301,12 @@ func emulatorFromList(list io.Reader) (*emulator, error) {
 // disruptive rules (like denying all device access) will only be applied if
 // necessary.
 //
-// This function is the sole reason for all of Emulator -- to allow us
+// This function is the sole reason for all of emulator -- to allow us
 // to figure out how to update a containers' cgroups without causing spurious
 // device errors (if possible).
-func (source *emulator) Transition(target *emulator) ([]*devices.Rule, error) { //nolint:revive // Ignore receiver-naming warning.
+func (e *emulator) Transition(target *emulator) ([]*devices.Rule, error) {
 	var transitionRules []*devices.Rule
+	source := e
 	oldRules := source.rules
 
 	// If the default policy doesn't match, we need to include a "disruptive"

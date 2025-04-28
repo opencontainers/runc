@@ -303,6 +303,11 @@ function check_cpu_quota() {
 			# Round up to nearest 10ms.
 			ms=$(((ms + 5) / 10 * 10))
 			sd_quota="${ms}ms"
+
+			# Recalculate quota based on systemd value.
+			# Convert ms back to quota units.
+			quota=$((ms * period / 1000))
+
 		fi
 
 		# Systemd values are the same for v1 and v2.
