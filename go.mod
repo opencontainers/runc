@@ -26,13 +26,6 @@ require (
 	google.golang.org/protobuf v1.36.6
 )
 
-// https://github.com/opencontainers/runc/issues/4594
-exclude (
-	github.com/cilium/ebpf v0.17.0
-	github.com/cilium/ebpf v0.17.1
-	github.com/cilium/ebpf v0.17.2
-)
-
 require (
 	github.com/cilium/ebpf v0.17.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
