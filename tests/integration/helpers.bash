@@ -302,7 +302,28 @@ function check_systemd_value() {
 function check_cpu_quota() {
 	local quota=$1
 	local period=$2
-	local sd_quota=$3
+	local sd_quota
+
+	if [ -v RUNC_USE_SYSTEMD ]; then
+		if [ "$quota" = "-1" ]; then
+			sd_quota="infinity"
+		else
+			# In systemd world, quota (CPUQuotaPerSec) is measured in ms
+			# (per second), and systemd rounds it up to 10ms. For example,
+			# given quota=4000 and period=10000, systemd value is 400ms.
+			#
+			# Calculate milliseconds (quota/period * 1000).
+			# First multiply by 1000 to get milliseconds,
+			# then add half of period for proper rounding.
+			local ms=$(((quota * 1000 + period / 2) / period))
+			# Round up to nearest 10ms.
+			ms=$(((ms + 5) / 10 * 10))
+			sd_quota="${ms}ms"
+		fi
+
+		# Systemd values are the same for v1 and v2.
+		check_systemd_value "CPUQuotaPerSecUSec" "$sd_quota"
+	fi
 
 	if [ -v CGROUP_V2 ]; then
 		if [ "$quota" = "-1" ]; then
@@ -313,8 +334,6 @@ function check_cpu_quota() {
 		check_cgroup_value "cpu.cfs_quota_us" "$quota"
 		check_cgroup_value "cpu.cfs_period_us" "$period"
 	fi
-	# systemd values are the same for v1 and v2
-	check_systemd_value "CPUQuotaPerSecUSec" "$sd_quota"
 
 	# CPUQuotaPeriodUSec requires systemd >= v242
 	[ "$(systemd_version)" -lt 242 ] && return
