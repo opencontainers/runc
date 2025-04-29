@@ -4,9 +4,37 @@ This file documents all notable changes made to this project since runc 1.0.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased 1.3.z]
+
+## [1.3.0] - 2025-04-30
+
+> Mr. President, we must not allow a mine shaft gap!
+
+### Fixed
+ * Removed pre-emptive "full access to cgroups" warning when calling `runc
+   pause` or `runc unpause` as an unprivileged user without
+   `--systemd-cgroups`. Now the warning is only emitted if an actual permission
+   error was encountered. (#4709)
+ * Several fixes to our CI, mainly related to AlmaLinux and CRIU. (#4670,
+   #4728, #4736)
+
+### Changed
+ * In runc 1.2, we changed our mount behaviour to correctly handle clearing
+   flags. However, the error messages we returned did not provide as much
+   information to users about what clearing flags were conflicting with locked
+   mount flags. We now provide more diagnostic information if there is an error
+   when in the fallback path to handle locked mount flags. (#4734)
+ * Upgrade our CI to use golangci-lint v2.0. (#4692)
+ * `runc version` information is now filled in using `//go:embed` rather than
+   being set through `Makefile`. This allows `go install` or other non-`make`
+   builds to contain the correct version information. Note that `make
+   EXTRA_VERSION=...` still works. (#418)
+ * Remove `exclude` directives from our `go.mod` for broken `cilium/ebpf`
+   versions. `v0.17.3` resolved the issue we had, and `exclude` directives are
+   incompatible with `go install`. (#4748)
 
 ## [1.3.0-rc.2] - 2025-04-10
+
 > Eppur si muove.
 
 ### Fixed
@@ -1097,5 +1125,7 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.2.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.2.0-rc.1
 
 <!-- 1.3.z patch releases -->
+[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.0...release-1.3
+[1.3.0]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...v1.3.0
 [1.3.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.1...v1.3.0-rc.2
 [1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
