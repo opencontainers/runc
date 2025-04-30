@@ -147,6 +147,9 @@ jobs:
     - name: no toolchain in go.mod # See https://github.com/opencontainers/runc/pull/4717, https://github.com/dependabot/dependabot-core/issues/11933.
       run: |
         if grep -q '^toolchain ' go.mod; then echo "Error: go.mod must not have toolchain directive, please fix"; exit 1; fi
+    - name: no exclude nor replace in go.mod
+      run: |
+        if grep -Eq '^\s*(exclude|replace) ' go.mod; then echo "Error: go.mod must not have exclude/replace directive, it breaks go install. Please fix"; exit 1; fi
 
 
   commit:
