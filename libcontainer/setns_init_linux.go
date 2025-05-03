@@ -110,6 +110,11 @@ func (l *linuxSetnsInit) Init() error {
 	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
 		return err
 	}
+	if l.config.Config.MemoryPolicy != nil {
+		if err := setupMemoryPolicy(l.config.Config); err != nil {
+			return err
+		}
+	}
 	if l.config.Config.Personality != nil {
 		if err := setupPersonality(l.config.Config); err != nil {
 			return err

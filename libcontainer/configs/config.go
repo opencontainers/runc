@@ -1,3 +1,5 @@
+// Package configs includes configuration options for executing a
+// process inside a contained environment.
 package configs
 
 import (
@@ -207,6 +209,9 @@ type Config struct {
 	// IntelRdt specifies settings for Intel RDT group that the container is placed into
 	// to limit the resources (e.g., L3 cache, memory bandwidth) the container has available
 	IntelRdt *IntelRdt `json:"intel_rdt,omitempty"`
+
+	// MemoryPolicy specifies NUMA memory policy for the container.
+	MemoryPolicy *LinuxMemoryPolicy `json:"memoryPolicy,omitempty"`
 
 	// RootlessEUID is set when the runc was launched with non-zero EUID.
 	// Note that RootlessEUID is set to false when launched with EUID=0 in userns.

@@ -238,6 +238,13 @@ func (l *linuxStandardInit) Init() error {
 		}
 	}
 
+	// Set memory policy if specified.
+	if l.config.Config.MemoryPolicy != nil {
+		if err := setupMemoryPolicy(l.config.Config); err != nil {
+			return err
+		}
+	}
+
 	// Set personality if specified.
 	if l.config.Config.Personality != nil {
 		if err := setupPersonality(l.config.Config); err != nil {
