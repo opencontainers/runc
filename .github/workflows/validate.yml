@@ -39,7 +39,7 @@ jobs:
         run: |
           sudo apt -q update
           sudo apt -qy install libseccomp-dev
-      - uses: golangci/golangci-lint-action@v7
+      - uses: golangci/golangci-lint-action@v8
         with:
           version: v2.6
           skip-cache: true
