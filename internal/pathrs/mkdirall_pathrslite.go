@@ -23,7 +23,7 @@ import (
 	"os"
 	"path/filepath"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/cyphar/filepath-securejoin/pathrs-lite"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -45,7 +45,7 @@ import (
 // This means that the path also must not contain ".." elements, otherwise an
 // error will occur.
 //
-// This uses securejoin.MkdirAllHandle under the hood, but it has special
+// This uses (pathrs-lite).MkdirAllHandle under the hood, but it has special
 // handling if unsafePath has already been scoped within the rootfs (this is
 // needed for a lot of runc callers and fixing this would require reworking a
 // lot of path logic).
@@ -83,7 +83,7 @@ func MkdirAllInRootOpen(root, unsafePath string, mode os.FileMode) (*os.File, er
 	}
 	defer rootDir.Close()
 
-	return securejoin.MkdirAllHandle(rootDir, unsafePath, mode)
+	return pathrs.MkdirAllHandle(rootDir, unsafePath, mode)
 }
 
 // MkdirAllInRoot is a wrapper around MkdirAllInRootOpen which closes the

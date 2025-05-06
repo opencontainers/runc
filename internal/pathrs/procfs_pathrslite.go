@@ -21,10 +21,10 @@ package pathrs
 import (
 	"os"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/cyphar/filepath-securejoin/pathrs-lite"
 )
 
-// Reopen is a wrapper around securejoin.Reopen.
+// Reopen is a wrapper around pathrs.Reopen.
 func Reopen(file *os.File, flags int) (*os.File, error) {
-	return securejoin.Reopen(file, flags)
+	return pathrs.Reopen(file, flags)
 }
