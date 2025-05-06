@@ -1,0 +1,35 @@
+# This enables periodical execution of CI jobs in branches we maintain.
+#
+# CI jobs are triggered through here (instead of adding "schedule:" to the
+# appropriate files) because scheduled jobs are only run on the main branch.
+# In other words, it's a way to run periodical CI for other branches.
+
+name: scheduled
+on:
+  schedule:
+    # Runs at 00:00 UTC every Sunday, Tuesday, Thursday.
+    - cron: '0 0 * * 0,2,4'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  trigger-workflow:
+    strategy:
+      matrix:
+        branch: ["main", "release-1.3"]
+        wf_id: ["validate.yml", "test.yml"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger ${{ matrix.wf_id }} workflow on ${{ matrix.branch}} branch
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: '${{ matrix.wf_id }}',
+              ref: '${{ matrix.branch }}'
+            });
