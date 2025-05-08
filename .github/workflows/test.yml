@@ -10,6 +10,7 @@ on:
       - main
       - release-*
   pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 
