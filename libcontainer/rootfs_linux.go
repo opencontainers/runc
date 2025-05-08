@@ -296,8 +296,8 @@ func cleanupTmp(tmpdir string) {
 	_ = os.RemoveAll(tmpdir)
 }
 
-func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
-	binds, err := getCgroupMounts(m)
+func mountCgroupV1(m mountEntry, c *mountConfig) error {
+	binds, err := getCgroupMounts(m.Mount)
 	if err != nil {
 		return err
 	}
@@ -367,7 +367,7 @@ func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
 	return nil
 }
 
-func mountCgroupV2(m *configs.Mount, c *mountConfig) error {
+func mountCgroupV2(m mountEntry, c *mountConfig) error {
 	err := utils.WithProcfd(c.root, m.Destination, func(dstFd string) error {
 		return mountViaFds(m.Source, nil, m.Destination, dstFd, "cgroup2", uintptr(m.Flags), m.Data)
 	})
@@ -738,9 +738,9 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		return setRecAttr(m.Mount, rootfs)
 	case "cgroup":
 		if cgroups.IsCgroup2UnifiedMode() {
-			return mountCgroupV2(m.Mount, c)
+			return mountCgroupV2(m, c)
 		}
-		return mountCgroupV1(m.Mount, c)
+		return mountCgroupV1(m, c)
 	default:
 		return mountPropagate(m, rootfs, mountLabel)
 	}
