@@ -152,21 +152,24 @@ jobs:
       contents: read
       pull-requests: read
     runs-on: ubuntu-24.04
-    # Only check commits on pull requests.
-    if: github.event_name == 'pull_request'
     steps:
       - name: get pr commits
+        if: github.event_name == 'pull_request' # Only check commits on pull requests.
         id: 'get-pr-commits'
         uses: tim-actions/get-pr-commits@v1.3.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: check subject line length
+        if: github.event_name == 'pull_request' # Only check commits on pull requests.
         uses: tim-actions/commit-message-checker-with-regex@v0.3.2
         with:
           commits: ${{ steps.get-pr-commits.outputs.commits }}
           pattern: '^.{0,72}(\n.*)*$'
           error: 'Subject too long (max 72)'
+      - name: succeed (not a PR)
+        if: github.event_name != 'pull_request'
+        run: echo "Nothing to check here."
 
   cfmt:
     runs-on: ubuntu-24.04
