@@ -10,6 +10,7 @@ on:
       - main
       - release-*
   pull_request:
+  workflow_dispatch: # Allow it to be triggered via scheduled.yml
 permissions:
   contents: read
 
