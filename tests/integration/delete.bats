@@ -276,3 +276,43 @@ EOF
 	# Expect "no such unit" exit code.
 	run -4 systemctl status $user "$SD_UNIT_NAME"
 }
+
+@test "runc delete after create process killed" {
+	# This test verifies that a container can be properly deleted
+	# even if the runc create process was killed with SIGKILL
+
+	requires root cgroups_v1
+	set_cgroups_path
+
+	# Add many device rules to further slow down cgroup creation
+	update_config '.linux.resources.devices = []'
+	for i in {1..300}; do
+		update_config '.linux.resources.devices += [{"allow": true, "access": "rwm", "type": "c", "major": '"$i"', "minor": 0}]'
+	done
+
+	# Start runc create and kill it after 5ms with SIGKILL
+	timeout --signal=SIGKILL --kill-after=0 0.05s "$RUNC" --debug ${RUNC_USE_SYSTEMD+--systemd-cgroup} --root "$ROOT/state" create --console-socket "$CONSOLE_SOCKET" test_create_killed || true
+
+	# Wait briefly to ensure background processes complete
+	sleep 1
+
+	# Check container state - should be in stopped or paused state after SIGKILL
+	runc state test_create_killed
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"stopped"* || "$output" == *"paused"* ]]
+
+	runc delete --force test_create_killed
+	[ "$status" -eq 0 ]
+
+	# Verify container no longer exists in the list
+	runc list
+	[[ "$output" != *"test_create_killed"* ]]
+
+	# Check for any leftover runc init processes
+	remaining_inits=$(pgrep -f "runc.*init.*test_create_killed" || true)
+	[ -z "$remaining_inits" ] || fail "leftover runc init processes: $remaining_inits"
+
+	# Check for leftover cgroups using standard pattern
+	output=$(find /sys/fs/cgroup -path "$REL_CGROUPS_PATH" 2>/dev/null || true)
+	[ -z "$output" ] || fail "leftover cgroups found: $output"
+}
