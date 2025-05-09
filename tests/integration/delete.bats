@@ -276,3 +276,52 @@ EOF
 	# Expect "no such unit" exit code.
 	run -4 systemctl status $user "$SD_UNIT_NAME"
 }
+
+@test "runc delete after create process killed" {
+	# This test verifies that a container can be properly deleted
+	# even if the runc create process was killed with SIGKILL
+
+	[ $EUID -ne 0 ] && requires rootless_cgroup root cgroups_v1
+	set_cgroups_path
+
+	# Add resource limits to slow down cgroup creation
+	update_config '.linux.resources.memory.limit = 67108864' # 64MB
+	update_config '.linux.resources.cpu.shares = 100'
+	update_config '.linux.resources.cpu.quota = 10000'
+	update_config '.linux.resources.cpu.period = 100000'
+
+	# Add many device rules to further slow down cgroup creation
+	update_config '.linux.resources.devices = []'
+	for i in {1..300}; do
+		update_config '.linux.resources.devices += [{"allow": true, "access": "rwm", "type": "c", "major": '"$i"', "minor": 0}]'
+	done
+
+	# Start runc create and kill it after 5ms with SIGKILL
+	timeout --signal=SIGKILL --kill-after=0 0.05s "$RUNC" --debug ${RUNC_USE_SYSTEMD+--systemd-cgroup} --root "$ROOT/state" create --console-socket "$CONSOLE_SOCKET" test_create_killed || true
+
+	# Wait briefly to ensure background processes complete
+	sleep 1
+
+	# Check container state - should be in stopped state after SIGKILL
+	runc state test_create_killed
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"stopped"* || "$output" == *"paused"* ]]
+
+	# Try to delete the container with force flag
+	runc delete --force test_create_killed
+	[ "$status" -eq 0 ]
+
+	# Verify container no longer exists in the list
+	runc list
+	[[ "$output" != *"test_create_killed"* ]]
+
+	# Check for any leftover runc init processes
+	remaining_inits=$(pgrep -f "runc.*init.*test_create_killed" || true)
+	[ -z "$remaining_inits" ] || fail "leftover runc init processes: $remaining_inits"
+
+	# Check for leftover cgroups using standard pattern
+	if [ -d "/sys/fs/cgroup" ]; then
+		output=$(find /sys/fs/cgroup -name "*test_create_killed*" -type d 2>/dev/null || true)
+		[ -z "$output" ] || fail "leftover cgroups found: $output"
+	fi
+}
