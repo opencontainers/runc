@@ -10,6 +10,7 @@ on:
       - main
       - release-*
   pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 
@@ -32,12 +33,12 @@ jobs:
           # Disable most of criu-dev jobs, as they are expensive
           # (need to compile criu) and don't add much value/coverage.
           - criu: criu-dev
-            go-version: 1.22.x
+            go-version: 1.23.x
           - criu: criu-dev
             rootless: rootless
           - criu: criu-dev
             race: -race
-          - go-version: 1.22.x
+          - go-version: 1.23.x
             os: actuated-arm64-6cpu-8gb
           - race: "-race"
             os: actuated-arm64-6cpu-8gb
