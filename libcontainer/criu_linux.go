@@ -572,9 +572,6 @@ func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
 			tmpfs = append(tmpfs, m.Destination)
 		}
 	}
-	// Now go through all mounts and create the mountpoints
-	// if the mountpoints are not on a tmpfs, as CRIU will
-	// restore the complete tmpfs content from its checkpoint.
 	umounts := []string{}
 	defer func() {
 		for _, u := range umounts {
@@ -590,28 +587,32 @@ func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
 			})
 		}
 	}()
+	// Now go through all mounts and create the required mountpoints.
 	for _, m := range mounts {
-		if !isPathInPrefixList(m.Destination, tmpfs) {
-			if err := c.makeCriuRestoreMountpoints(m); err != nil {
+		// If the mountpoint is on a tmpfs, skip it as CRIU will
+		// restore the complete tmpfs content from its checkpoint.
+		if isPathInPrefixList(m.Destination, tmpfs) {
+			continue
+		}
+		if err := c.makeCriuRestoreMountpoints(m); err != nil {
+			return err
+		}
+		// If the mount point is a bind mount, we need to mount
+		// it now so that runc can create the necessary mount
+		// points for mounts in bind mounts.
+		// This also happens during initial container creation.
+		// Without this CRIU restore will fail
+		// See: https://github.com/opencontainers/runc/issues/2748
+		// It is also not necessary to order the mount points
+		// because during initial container creation mounts are
+		// set up in the order they are configured.
+		if m.Device == "bind" {
+			if err := utils.WithProcfd(c.config.Rootfs, m.Destination, func(dstFd string) error {
+				return mountViaFds(m.Source, nil, m.Destination, dstFd, "", unix.MS_BIND|unix.MS_REC, "")
+			}); err != nil {
 				return err
 			}
-			// If the mount point is a bind mount, we need to mount
-			// it now so that runc can create the necessary mount
-			// points for mounts in bind mounts.
-			// This also happens during initial container creation.
-			// Without this CRIU restore will fail
-			// See: https://github.com/opencontainers/runc/issues/2748
-			// It is also not necessary to order the mount points
-			// because during initial container creation mounts are
-			// set up in the order they are configured.
-			if m.Device == "bind" {
-				if err := utils.WithProcfd(c.config.Rootfs, m.Destination, func(dstFd string) error {
-					return mountViaFds(m.Source, nil, m.Destination, dstFd, "", unix.MS_BIND|unix.MS_REC, "")
-				}); err != nil {
-					return err
-				}
-				umounts = append(umounts, m.Destination)
-			}
+			umounts = append(umounts, m.Destination)
 		}
 	}
 	return nil
