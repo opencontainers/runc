@@ -519,11 +519,9 @@ func (c *Container) restoreNetwork(req *criurpc.CriuReq, criuOpts *CriuOpts) {
 	}
 }
 
-// isPathInPrefixList is a small function for CRIU restore to make sure
-// mountpoints, which are on a tmpfs, are not created in the roofs.
-func isPathInPrefixList(path string, prefix []string) bool {
-	for _, p := range prefix {
-		if strings.HasPrefix(path, p+"/") {
+func isOnTmpfs(path string, mounts []*configs.Mount) bool {
+	for _, m := range mounts {
+		if m.Device == "tmpfs" && strings.HasPrefix(path, m.Destination+"/") {
 			return true
 		}
 	}
@@ -537,14 +535,6 @@ func isPathInPrefixList(path string, prefix []string) bool {
 // This function also creates missing mountpoints as long as they
 // are not on top of a tmpfs, as CRIU will restore tmpfs content anyway.
 func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
-	// First get a list of a all tmpfs mounts
-	tmpfs := []string{}
-	for _, m := range mounts {
-		switch m.Device {
-		case "tmpfs":
-			tmpfs = append(tmpfs, m.Destination)
-		}
-	}
 	umounts := []string{}
 	defer func() {
 		for _, u := range umounts {
@@ -572,7 +562,7 @@ func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
 		}
 		// If the mountpoint is on a tmpfs, skip it as CRIU will
 		// restore the complete tmpfs content from its checkpoint.
-		if isPathInPrefixList(m.Destination, tmpfs) {
+		if isOnTmpfs(m.Destination, mounts) {
 			continue
 		}
 		if _, err := createMountpoint(c.config.Rootfs, mountEntry{Mount: m}); err != nil {
