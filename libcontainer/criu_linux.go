@@ -519,18 +519,6 @@ func (c *Container) restoreNetwork(req *criurpc.CriuReq, criuOpts *CriuOpts) {
 	}
 }
 
-// makeCriuRestoreMountpoints makes the actual mountpoints for the
-// restore using CRIU. This function is inspired from the code in
-// rootfs_linux.go.
-func (c *Container) makeCriuRestoreMountpoints(m *configs.Mount) error {
-	// TODO: pass srcFD? Not sure if criu is impacted by issue #2484.
-	me := mountEntry{Mount: m}
-	if _, err := createMountpoint(c.config.Rootfs, me); err != nil {
-		return fmt.Errorf("create criu restore mountpoint for %s mount: %w", me.Destination, err)
-	}
-	return nil
-}
-
 // isPathInPrefixList is a small function for CRIU restore to make sure
 // mountpoints, which are on a tmpfs, are not created in the roofs.
 func isPathInPrefixList(path string, prefix []string) bool {
@@ -587,8 +575,8 @@ func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
 		if isPathInPrefixList(m.Destination, tmpfs) {
 			continue
 		}
-		if err := c.makeCriuRestoreMountpoints(m); err != nil {
-			return err
+		if _, err := createMountpoint(c.config.Rootfs, mountEntry{Mount: m}); err != nil {
+			return fmt.Errorf("create criu restore mountpoint for %s mount: %w", m.Destination, err)
 		}
 		// If the mount point is a bind mount, we need to mount
 		// it now so that runc can create the necessary mount
