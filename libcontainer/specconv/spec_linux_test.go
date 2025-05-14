@@ -338,6 +338,111 @@ func TestSetupSeccomp(t *testing.T) {
 	}
 }
 
+func TestParseListSet(t *testing.T) {
+	testCases := []struct {
+		name               string
+		listSet            string
+		minValue, maxValue int
+		expectedInts       []int
+		expectedErr        string
+	}{
+		{
+			name:    "empty string",
+			listSet: "",
+		},
+		{
+			name:         "single value at max",
+			listSet:      "42",
+			expectedInts: []int{42},
+			maxValue:     42,
+		},
+		{
+			name:         "full range from min to max",
+			listSet:      "0-7",
+			expectedInts: []int{0, 1, 2, 3, 4, 5, 6, 7},
+			maxValue:     7,
+		},
+		{
+			name:         "comma separated values",
+			listSet:      "1,3",
+			expectedInts: []int{1, 3},
+			maxValue:     5,
+		},
+		{
+			name:         "comma separated values and overlapping ranges",
+			listSet:      "3-5,1,4-6",
+			expectedInts: []int{3, 4, 5, 1, 4, 5, 6},
+			maxValue:     10,
+		},
+		{
+			name:         "empty ranges, single number ranges",
+			listSet:      ",2,,4-4,",
+			expectedInts: []int{2, 4},
+			maxValue:     4,
+		},
+		{
+			name:        "value out of range",
+			listSet:     "2-4,0",
+			minValue:    1,
+			maxValue:    4,
+			expectedErr: "invalid value",
+		},
+		{
+			name:        "end of range out of range",
+			listSet:     "2-4,0",
+			maxValue:    3,
+			expectedErr: "invalid range",
+		},
+		{
+			name:        "start is greater than end",
+			listSet:     "4-3,0",
+			maxValue:    1024,
+			expectedErr: "invalid range",
+		},
+		{
+			name:        "syntax error in value",
+			listSet:     "a",
+			maxValue:    1024,
+			expectedErr: "invalid syntax",
+		},
+		{
+			name:        "syntax error at range start",
+			listSet:     "0,?-4",
+			maxValue:    1024,
+			expectedErr: "invalid syntax",
+		},
+		{
+			name:        "syntax error at range end",
+			listSet:     "0,4-,2",
+			maxValue:    1024,
+			expectedErr: "invalid syntax",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			obsInts, obsErr := parseListSet(tc.listSet, tc.minValue, tc.maxValue)
+			if len(obsInts) != len(tc.expectedInts) {
+				t.Errorf("Expected %d ints, got %d (%v)", len(tc.expectedInts), len(obsInts), obsInts)
+			}
+			for i, v := range obsInts {
+				if len(tc.expectedInts) > i && v != tc.expectedInts[i] {
+					t.Errorf("Expected at index %d value %d, got %d", i, tc.expectedInts[i], v)
+				}
+			}
+			switch {
+			case tc.expectedErr == "" && obsErr != nil:
+				t.Errorf("Expected no error, got %v", obsErr)
+			case tc.expectedErr != "" && obsErr == nil:
+				t.Errorf("Expected error %v, got nil", tc.expectedErr)
+			case tc.expectedErr != "" && obsErr != nil:
+				if !strings.Contains(obsErr.Error(), tc.expectedErr) {
+					t.Errorf("Expected error containing %q, got %v", tc.expectedErr, obsErr)
+				}
+			}
+		})
+	}
+}
+
 func TestLinuxCgroupWithMemoryResource(t *testing.T) {
 	cgroupsPath := "/user/cgroups/path/id"
 
