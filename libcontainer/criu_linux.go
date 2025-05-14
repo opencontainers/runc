@@ -527,19 +527,8 @@ func (c *Container) restoreNetwork(req *criurpc.CriuReq, criuOpts *CriuOpts) {
 // restore using CRIU. This function is inspired from the code in
 // rootfs_linux.go.
 func (c *Container) makeCriuRestoreMountpoints(m *configs.Mount) error {
-	if m.Device == "cgroup" {
-		// No mount point(s) need to be created:
-		//
-		// * for v1, mount points are saved by CRIU because
-		//   /sys/fs/cgroup is a tmpfs mount
-		//
-		// * for v2, /sys/fs/cgroup is a real mount, but
-		//   the mountpoint appears as soon as /sys is mounted
-		return nil
-	}
 	// TODO: pass srcFD? Not sure if criu is impacted by issue #2484.
 	me := mountEntry{Mount: m}
-	// For all other filesystems, just make the target.
 	if _, err := createMountpoint(c.config.Rootfs, me); err != nil {
 		return fmt.Errorf("create criu restore mountpoint for %s mount: %w", me.Destination, err)
 	}
@@ -589,6 +578,14 @@ func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
 	}()
 	// Now go through all mounts and create the required mountpoints.
 	for _, m := range mounts {
+		// No cgroup mount point(s) need to be created:
+		// * for v1, mount points are saved by CRIU because
+		//   /sys/fs/cgroup is a tmpfs mount;
+		// * for v2, /sys/fs/cgroup is a real mount, but
+		//   the mountpoint appears as soon as /sys is mounted.
+		if m.Device == "cgroup" {
+			continue
+		}
 		// If the mountpoint is on a tmpfs, skip it as CRIU will
 		// restore the complete tmpfs content from its checkpoint.
 		if isPathInPrefixList(m.Destination, tmpfs) {
