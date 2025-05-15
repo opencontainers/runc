@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -932,17 +933,18 @@ func createDevices(config *configs.Config) error {
 	return nil
 }
 
-func bindMountDeviceNode(rootfs, dest string, node *devices.Device) error {
-	f, err := os.Create(dest)
-	if err != nil && !os.IsExist(err) {
-		return err
+func bindMountDeviceNode(destDir *os.File, destName string, node *devices.Device) error {
+	dstFile, err := utils.Openat(destDir, destName, unix.O_CREAT|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0o000)
+	if err != nil {
+		return fmt.Errorf("create device inode %s: %w", node.Path, err)
 	}
-	if f != nil {
-		_ = f.Close()
-	}
-	return utils.WithProcfd(rootfs, dest, func(dstFd string) error {
-		return mountViaFds(node.Path, nil, dest, dstFd, "bind", unix.MS_BIND, "")
-	})
+	defer dstFile.Close()
+
+	dstFd, closer := utils.ProcThreadSelfFd(dstFile.Fd())
+	defer closer()
+
+	dstPath := filepath.Join(destDir.Name(), destName)
+	return mountViaFds(node.Path, nil, dstPath, dstFd, "bind", unix.MS_BIND, "")
 }
 
 // Creates the device node in the rootfs of the container.
@@ -951,31 +953,33 @@ func createDeviceNode(rootfs string, node *devices.Device, bind bool) error {
 		// The node only exists for cgroup reasons, ignore it here.
 		return nil
 	}
-	dest, err := securejoin.SecureJoin(rootfs, node.Path)
+	destPath, err := securejoin.SecureJoin(rootfs, node.Path)
 	if err != nil {
 		return err
 	}
-	if dest == rootfs {
+	if destPath == rootfs {
 		return fmt.Errorf("%w: mknod over rootfs", errRootfsToFile)
 	}
-	if err := pathrs.MkdirAllInRoot(rootfs, filepath.Dir(dest), 0o755); err != nil {
-		return err
+	destDirPath, destName := filepath.Split(destPath)
+	destDir, err := pathrs.MkdirAllInRootOpen(rootfs, destDirPath, 0o755)
+	if err != nil {
+		return fmt.Errorf("mkdir parent of device inode %q: %w", node.Path, err)
 	}
 	if bind {
-		return bindMountDeviceNode(rootfs, dest, node)
+		return bindMountDeviceNode(destDir, destName, node)
 	}
-	if err := mknodDevice(dest, node); err != nil {
+	if err := mknodDevice(destDir, destName, node); err != nil {
 		if errors.Is(err, os.ErrExist) {
 			return nil
 		} else if errors.Is(err, os.ErrPermission) {
-			return bindMountDeviceNode(rootfs, dest, node)
+			return bindMountDeviceNode(destDir, destName, node)
 		}
 		return err
 	}
 	return nil
 }
 
-func mknodDevice(dest string, node *devices.Device) error {
+func mknodDevice(destDir *os.File, destName string, node *devices.Device) error {
 	fileMode := node.FileMode
 	switch node.Type {
 	case devices.BlockDevice:
@@ -991,14 +995,44 @@ func mknodDevice(dest string, node *devices.Device) error {
 	if err != nil {
 		return err
 	}
-	if err := unix.Mknod(dest, uint32(fileMode), int(dev)); err != nil {
-		return &os.PathError{Op: "mknod", Path: dest, Err: err}
+	if err := unix.Mknodat(int(destDir.Fd()), destName, uint32(fileMode), int(dev)); err != nil {
+		return &os.PathError{Op: "mknodat", Path: filepath.Join(destDir.Name(), destName), Err: err}
 	}
-	// Ensure permission bits (can be different because of umask).
-	if err := os.Chmod(dest, fileMode); err != nil {
+
+	// Get a handle and verify that it matches the expected inode type and
+	// major:minor before we operate on it.
+	devFile, err := utils.Openat(destDir, destName, unix.O_NOFOLLOW|unix.O_PATH, 0)
+	if err != nil {
+		return fmt.Errorf("open new %c device inode %s: %w", node.Type, node.Path, err)
+	}
+	defer devFile.Close()
+
+	if err := sys.VerifyInode(devFile, func(stat *unix.Stat_t, _ *unix.Statfs_t) error {
+		if stat.Mode&unix.S_IFMT != uint32(fileMode)&unix.S_IFMT {
+			return fmt.Errorf("new %c device inode %s has incorrect ftype: %#x doesn't match expected %#v",
+				node.Type, node.Path,
+				stat.Mode&unix.S_IFMT, fileMode&unix.S_IFMT)
+		}
+		if stat.Rdev != dev {
+			return fmt.Errorf("new %c device inode %s has incorrect major:minor: %d:%d doesn't match expected %d:%d",
+				node.Type, node.Path,
+				unix.Major(stat.Rdev), unix.Minor(stat.Rdev),
+				unix.Major(dev), unix.Minor(dev))
+		}
+		return nil
+	}); err != nil {
 		return err
 	}
-	return os.Chown(dest, int(node.Uid), int(node.Gid))
+
+	// Ensure permission bits (can be different because of umask).
+	if err := sys.FchmodFile(devFile, uint32(fileMode)); err != nil {
+		return fmt.Errorf("update new %c device inode %s file mode: %w", node.Type, node.Path, err)
+	}
+	if err := sys.FchownFile(devFile, int(node.Uid), int(node.Gid)); err != nil {
+		return fmt.Errorf("update new %c device inode %s owner: %w", node.Type, node.Path, err)
+	}
+	runtime.KeepAlive(devFile)
+	return nil
 }
 
 // rootfsParentMountPrivate ensures rootfs parent mount is private.
