@@ -15,6 +15,32 @@ import (
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
+// checkPtmxHandle checks that the given file handle points to a real
+// /dev/pts/ptmx device inode on a real devpts mount. We cannot (trivially)
+// check that it is *the* /dev/pts for the container itself, but this is good
+// enough.
+func checkPtmxHandle(ptmx *os.File) error {
+	//nolint:revive,staticcheck,nolintlint // ignore "don't use ALL_CAPS" warning // nolintlint is needed to work around the different lint configs
+	const (
+		PTMX_MAJOR = 5 // from TTYAUX_MAJOR in <linux/major.h>
+		PTMX_MINOR = 2 // from mknod_ptmx in fs/devpts/inode.c
+		PTMX_INO   = 2 // from mknod_ptmx in fs/devpts/inode.c
+	)
+	return sys.VerifyInode(ptmx, func(stat *unix.Stat_t, statfs *unix.Statfs_t) error {
+		if statfs.Type != unix.DEVPTS_SUPER_MAGIC {
+			return fmt.Errorf("ptmx handle is not on a real devpts mount: super magic is %#x", statfs.Type)
+		}
+		if stat.Ino != PTMX_INO {
+			return fmt.Errorf("ptmx handle has wrong inode number: %v", stat.Ino)
+		}
+		if stat.Mode&unix.S_IFMT != unix.S_IFCHR || stat.Rdev != unix.Mkdev(PTMX_MAJOR, PTMX_MINOR) {
+			return fmt.Errorf("ptmx handle is not a real char ptmx device: ftype %#x %d:%d",
+				stat.Mode&unix.S_IFMT, unix.Major(stat.Rdev), unix.Minor(stat.Rdev))
+		}
+		return nil
+	})
+}
+
 func isPtyNoIoctlError(err error) bool {
 	// The kernel converts -ENOIOCTLCMD to -ENOTTY automatically, but handle
 	// -EINVAL just in case (which some drivers do, include pty).
@@ -68,7 +94,29 @@ func getPtyPeer(pty console.Console, unsafePeerPath string, flags int) (*os.File
 // safeAllocPty returns a new (ptmx, peer pty) allocation for use inside a
 // container.
 func safeAllocPty() (pty console.Console, peer *os.File, Err error) {
-	pty, unsafePeerPath, err := console.NewPty()
+	// TODO: Use openat2(RESOLVE_NO_SYMLINKS|RESOLVE_NO_XDEV).
+	ptmxHandle, err := os.OpenFile("/dev/pts/ptmx", unix.O_PATH|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer ptmxHandle.Close()
+
+	if err := checkPtmxHandle(ptmxHandle); err != nil {
+		return nil, nil, fmt.Errorf("verify ptmx handle: %w", err)
+	}
+
+	ptyFile, err := pathrs.Reopen(ptmxHandle, unix.O_RDWR|unix.O_NOCTTY)
+	if err != nil {
+		return nil, nil, fmt.Errorf("reopen ptmx to get new pty pair: %w", err)
+	}
+	// On success, the ownership is transferred to pty.
+	defer func() {
+		if Err != nil {
+			_ = ptyFile.Close()
+		}
+	}()
+
+	pty, unsafePeerPath, err := console.NewPtyFromFile(ptyFile)
 	if err != nil {
 		return nil, nil, err
 	}
