@@ -1,15 +1,39 @@
 package libcontainer
 
 import (
+	"fmt"
 	"os"
+	"runtime"
+
+	"github.com/containerd/console"
+	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/internal/linux"
-	"golang.org/x/sys/unix"
 )
 
-// mount initializes the console inside the rootfs mounting with the specified mount label
-// and applying the correct ownership of the console.
-func mountConsole(slavePath string) error {
+// safeAllocPty returns a new (ptmx, peer pty) allocation for use inside a
+// container.
+func safeAllocPty() (pty console.Console, peer *os.File, Err error) {
+	pty, unsafePeerPath, err := console.NewPty()
+	if err != nil {
+		return nil, nil, err
+	}
+	defer func() {
+		if Err != nil {
+			_ = pty.Close()
+		}
+	}()
+
+	peer, err = linux.GetPtyPeer(pty.Fd(), unsafePeerPath, unix.O_RDWR|unix.O_NOCTTY)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get peer end of newly-allocated console: %w", err)
+	}
+	return pty, peer, nil
+}
+
+// mountConsole bind-mounts the provided pty on top of /dev/console so programs
+// that operate on /dev/console operate on the correct container pty.
+func mountConsole(peerPty *os.File) error {
 	f, err := os.Create("/dev/console")
 	if err != nil && !os.IsExist(err) {
 		return err
@@ -21,20 +45,20 @@ func mountConsole(slavePath string) error {
 		}
 		f.Close()
 	}
-	return mount(slavePath, "/dev/console", "bind", unix.MS_BIND, "")
+	mntSrc := &mountSource{
+		Type: mountSourcePlain,
+		file: peerPty,
+	}
+	return mountViaFds(peerPty.Name(), mntSrc, "/dev/console", "", "bind", unix.MS_BIND, "")
 }
 
-// dupStdio opens the slavePath for the console and dups the fds to the current
-// processes stdio, fd 0,1,2.
-func dupStdio(slavePath string) error {
-	fd, err := linux.Open(slavePath, unix.O_RDWR, 0)
-	if err != nil {
-		return err
-	}
+// dupStdio replaces stdio with the given peerPty.
+func dupStdio(peerPty *os.File) error {
 	for _, i := range []int{0, 1, 2} {
-		if err := linux.Dup3(fd, i, 0); err != nil {
+		if err := linux.Dup3(int(peerPty.Fd()), i, 0); err != nil {
 			return err
 		}
 	}
+	runtime.KeepAlive(peerPty)
 	return nil
 }
