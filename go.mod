@@ -10,7 +10,7 @@ toolchain go1.22.4
 require (
 	github.com/checkpoint-restore/go-criu/v6 v6.3.0
 	github.com/cilium/ebpf v0.16.0
-	github.com/containerd/console v1.0.4
+	github.com/containerd/console v1.0.5
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/cyphar/filepath-securejoin v0.4.1
 	github.com/docker/go-units v0.5.0
