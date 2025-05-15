@@ -378,12 +378,13 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 	// the UID owner of the console to be the user the process will run as (so
 	// they can actually control their console).
 
-	pty, slavePath, err := console.NewPty()
+	pty, peerPty, err := safeAllocPty()
 	if err != nil {
 		return err
 	}
 	// After we return from here, we don't need the console anymore.
 	defer pty.Close()
+	defer peerPty.Close()
 
 	if config.ConsoleHeight != 0 && config.ConsoleWidth != 0 {
 		err = pty.Resize(console.WinSize{
@@ -397,7 +398,7 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 
 	// Mount the console inside our rootfs.
 	if mount {
-		if err := mountConsole(slavePath); err != nil {
+		if err := mountConsole(peerPty); err != nil {
 			return err
 		}
 	}
@@ -408,7 +409,7 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 	runtime.KeepAlive(pty)
 
 	// Now, dup over all the things.
-	return dupStdio(slavePath)
+	return dupStdio(peerPty)
 }
 
 // syncParentReady sends to the given pipe a JSON payload which indicates that
