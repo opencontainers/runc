@@ -1077,7 +1077,7 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 	logrus.Debugf("notify: %s\n", script)
 	switch script {
 	case "post-dump":
-		f, err := os.Create(filepath.Join(c.stateDir, "checkpoint"))
+		f, err := os.Create(filepath.Join(c.stateDir, "checkpoint")) //nolint:forbidigo // this is a host-side operation in a runc-controlled directory
 		if err != nil {
 			return err
 		}
