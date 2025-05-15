@@ -12,6 +12,7 @@ import (
 	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/internal/sys"
+	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 func isPtyNoIoctlError(err error) bool {
@@ -87,22 +88,20 @@ func safeAllocPty() (pty console.Console, peer *os.File, Err error) {
 // mountConsole bind-mounts the provided pty on top of /dev/console so programs
 // that operate on /dev/console operate on the correct container pty.
 func mountConsole(peerPty *os.File) error {
-	f, err := os.Create("/dev/console")
-	if err != nil && !os.IsExist(err) {
-		return err
+	console, err := os.OpenFile("/dev/console", unix.O_NOFOLLOW|unix.O_CREAT|unix.O_CLOEXEC, 0o666)
+	if err != nil {
+		return fmt.Errorf("create /dev/console mount target: %w", err)
 	}
-	if f != nil {
-		// Ensure permission bits (can be different because of umask).
-		if err := f.Chmod(0o666); err != nil {
-			return err
-		}
-		f.Close()
-	}
+	defer console.Close()
+
+	dstFd, closer := utils.ProcThreadSelfFd(console.Fd())
+	defer closer()
+
 	mntSrc := &mountSource{
 		Type: mountSourcePlain,
 		file: peerPty,
 	}
-	return mountViaFds(peerPty.Name(), mntSrc, "/dev/console", "", "bind", unix.MS_BIND, "")
+	return mountViaFds(peerPty.Name(), mntSrc, "/dev/console", dstFd, "bind", unix.MS_BIND, "")
 }
 
 // dupStdio replaces stdio with the given peerPty.
