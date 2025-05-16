@@ -215,6 +215,17 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		return fmt.Errorf("error jailing process inside rootfs: %w", err)
 	}
 
+	// Apply root mount propagation flags.
+	// This must be done after pivot_root/chroot because the mount propagation flag is applied
+	// to the current root ("/"), and not to the old rootfs before it becomes "/". Applying the
+	// flag in prepareRoot would affect the host mount namespace if the container's
+	// root mount is shared.
+	if config.RootPropagation != 0 {
+		if err := mount("", "/", "", uintptr(config.RootPropagation), ""); err != nil {
+			return fmt.Errorf("unable to apply root propagation flags: %w", err)
+		}
+	}
+
 	if setupDev {
 		if err := reOpenDevNull(); err != nil {
 			return fmt.Errorf("error reopening /dev/null inside container: %w", err)
