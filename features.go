@@ -58,6 +58,10 @@ var featuresCommand = cli.Command{
 				IntelRdt: &features.IntelRdt{
 					Enabled: &t,
 				},
+				MemoryPolicy: &features.MemoryPolicy{
+					Modes: specconv.KnownMemoryPolicyModes(),
+					Flags: specconv.KnownMemoryPolicyFlags(),
+				},
 				MountExtensions: &features.MountExtensions{
 					IDMap: &features.IDMap{
 						Enabled: &t,
