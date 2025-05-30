@@ -395,6 +395,22 @@ function check_cpu_weight() {
 	check_systemd_value "CPUWeight" "$weight"
 }
 
+function check_cgroup_dev_iops() {
+	local dev=$1 rbps=$2 wbps=$3 riops=$4 wiops=$5
+
+	if [ -v CGROUP_V2 ]; then
+		iops=$(get_cgroup_value "io.max")
+		printf "== io.max ==\n%s\n" "$iops"
+		grep "^$dev rbps=$rbps wbps=$wbps riops=$riops wiops=$wiops$" <<<"$iops"
+		return
+	fi
+
+	grep "^$dev ${rbps}$" <<<"$(get_cgroup_value blkio.throttle.read_bps_device)"
+	grep "^$dev ${wbps}$" <<<"$(get_cgroup_value blkio.throttle.write_bps_device)"
+	grep "^$dev ${riops}$" <<<"$(get_cgroup_value blkio.throttle.read_iops_device)"
+	grep "^$dev ${wiops}$" <<<"$(get_cgroup_value blkio.throttle.write_iops_device)"
+}
+
 # Helper function to set a resources limit
 function set_resources_limit() {
 	update_config '.linux.resources.pids.limit |= 100'
