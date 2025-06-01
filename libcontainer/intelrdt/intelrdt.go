@@ -15,6 +15,7 @@ import (
 
 	"github.com/opencontainers/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/sirupsen/logrus"
 )
 
 /*
@@ -161,6 +162,7 @@ func NewManager(config *configs.Config, id string, path string) *Manager {
 	}
 	if _, err := Root(); err != nil {
 		// Intel RDT is not available.
+		logrus.Errorf("Intel RDT is not available: %v", err)
 		return nil
 	}
 	return newManager(config, id, path)
