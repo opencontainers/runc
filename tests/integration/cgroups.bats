@@ -328,7 +328,7 @@ convert_hugetlb_size() {
 	check_systemd_value "MemoryHigh" 5242880
 	check_systemd_value "MemoryMax" 10485760
 	check_systemd_value "TasksMax" 99
-	check_cpu_quota 10000 100000 "100ms"
+	check_cpu_quota 10000 100000
 	check_cpu_weight 42
 }
 
@@ -390,7 +390,7 @@ convert_hugetlb_size() {
 	[ "$output" = '42' ]
 	check_systemd_value "TasksMax" 42
 
-	check_cpu_quota 5000 50000 "100ms"
+	check_cpu_quota 5000 50000
 
 	check_cpu_weight 42
 }
