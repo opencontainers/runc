@@ -649,6 +649,10 @@ func (p *initProcess) start() (retErr error) {
 		return fmt.Errorf("error creating network interfaces: %w", err)
 	}
 
+	if err := p.setupNetworkDevices(); err != nil {
+		return fmt.Errorf("error creating network interfaces: %w", err)
+	}
+
 	// initConfig.SpecState is only needed to run hooks that are executed
 	// inside a container, i.e. CreateContainer and StartContainer.
 	if p.config.Config.HasHook(configs.CreateContainer, configs.StartContainer) {
@@ -833,6 +837,30 @@ func (p *initProcess) createNetworkInterfaces() error {
 		}
 		p.config.Networks = append(p.config.Networks, n)
 	}
+	return nil
+}
+
+// setupNetworkDevices sets up and initializes any defined network interface inside the container.
+func (p *initProcess) setupNetworkDevices() error {
+	// host network pods does not move network devices.
+	if !p.config.Config.Namespaces.Contains(configs.NEWNET) {
+		return nil
+	}
+	// the container init process has already joined the provided net namespace,
+	// so we can use the process's net ns path directly.
+	nsPath := fmt.Sprintf("/proc/%d/ns/net", p.pid())
+
+	// If moving any of the network devices fails, we return an error immediately.
+	// The runtime spec requires that the kernel handles moving back any devices
+	// that were successfully moved before the failure occurred.
+	// See: https://github.com/opencontainers/runtime-spec/blob/27cb0027fd92ef81eda1ea3a8153b8337f56d94a/config-linux.md#namespace-lifecycle-and-container-termination
+	for name, netDevice := range p.config.Config.NetDevices {
+		err := devChangeNetNamespace(name, nsPath, *netDevice)
+		if err != nil {
+			return fmt.Errorf("move netDevice %s to namespace %s: %w", name, nsPath, err)
+		}
+	}
+
 	return nil
 }
 
