@@ -91,10 +91,14 @@ jobs:
         fi
         # kernel config
         script/check-config.sh
+        # network
+        cat /etc/hosts
+        cat /etc/resolv.conf
 
     - name: start sshd (used for testing rootless with systemd user session)
       if: ${{ matrix.os == 'actuated-arm64-6cpu-8gb' && matrix.rootless == 'rootless' }}
       run: |
+        cat /etc/ssh/sshd_config
         # Generate new keys to fix "sshd: no hostkeys available -- exiting."
         sudo ssh-keygen -A
         if ! sudo systemctl start ssh.service; then
