@@ -273,6 +273,25 @@ other options are ignored.
 		if r.BlockIO.Weight != nil {
 			config.Cgroups.Resources.BlkioWeight = *r.BlockIO.Weight
 		}
+		if r.BlockIO.LeafWeight != nil {
+			config.Cgroups.Resources.BlkioLeafWeight = *r.BlockIO.LeafWeight
+		}
+		// For devices, we either update an existing one, or insert a new one.
+		for _, wd := range r.BlockIO.WeightDevice {
+			config.Cgroups.Resources.BlkioWeightDevice = upsertWeightDevice(config.Cgroups.Resources.BlkioWeightDevice, wd)
+		}
+		for _, td := range r.BlockIO.ThrottleReadBpsDevice {
+			config.Cgroups.Resources.BlkioThrottleReadBpsDevice = upsertThrottleDevice(config.Cgroups.Resources.BlkioThrottleReadBpsDevice, td)
+		}
+		for _, td := range r.BlockIO.ThrottleWriteBpsDevice {
+			config.Cgroups.Resources.BlkioThrottleWriteBpsDevice = upsertThrottleDevice(config.Cgroups.Resources.BlkioThrottleWriteBpsDevice, td)
+		}
+		for _, td := range r.BlockIO.ThrottleReadIOPSDevice {
+			config.Cgroups.Resources.BlkioThrottleReadIOPSDevice = upsertThrottleDevice(config.Cgroups.Resources.BlkioThrottleReadIOPSDevice, td)
+		}
+		for _, td := range r.BlockIO.ThrottleWriteIOPSDevice {
+			config.Cgroups.Resources.BlkioThrottleWriteIOPSDevice = upsertThrottleDevice(config.Cgroups.Resources.BlkioThrottleWriteIOPSDevice, td)
+		}
 
 		// Setting CPU quota and period independently does not make much sense,
 		// but historically runc allowed it and this needs to be supported
@@ -380,4 +399,35 @@ other options are ignored.
 
 		return container.Set(config)
 	},
+}
+
+func upsertWeightDevice(slice []*cgroups.WeightDevice, wd specs.LinuxWeightDevice) []*cgroups.WeightDevice {
+	var weight, leafWeight uint16
+	if wd.Weight != nil {
+		weight = *wd.Weight
+	}
+	if wd.LeafWeight != nil {
+		leafWeight = *wd.LeafWeight
+	}
+
+	for i, dev := range slice {
+		if dev.Major == wd.Major && dev.Minor == wd.Minor {
+			slice[i].Weight = weight
+			slice[i].LeafWeight = leafWeight
+			return slice
+		}
+	}
+
+	return append(slice, cgroups.NewWeightDevice(wd.Major, wd.Minor, weight, leafWeight))
+}
+
+func upsertThrottleDevice(slice []*cgroups.ThrottleDevice, td specs.LinuxThrottleDevice) []*cgroups.ThrottleDevice {
+	for i, dev := range slice {
+		if dev.Major == td.Major && dev.Minor == td.Minor {
+			slice[i].Rate = td.Rate
+			return slice
+		}
+	}
+
+	return append(slice, cgroups.NewThrottleDevice(td.Major, td.Minor, td.Rate))
 }
