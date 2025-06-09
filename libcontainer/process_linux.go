@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -203,6 +204,28 @@ func (p *setnsProcess) start() (retErr error) {
 
 	// Get the "before" value of oom kill count.
 	oom, _ := p.manager.OOMKillCount()
+	useClone3 := false
+	if cgroups.IsCgroup2UnifiedMode() && p.initProcessPid != 0 {
+		initProcCgroupFile := fmt.Sprintf("/proc/%d/cgroup", p.initProcessPid)
+		initCg, initCgErr := cgroups.ParseCgroupFile(initProcCgroupFile)
+		if initCgErr == nil {
+			if initCgPath, ok := initCg[""]; ok {
+				useClone3 = true
+				initCgDirpath := filepath.Join(fs2.UnifiedMountpoint, initCgPath)
+				fd, err := os.Open(initCgDirpath)
+				if err != nil {
+					return fmt.Errorf("error opening cgroup dir %q: %w", initCgDirpath, err)
+				}
+				defer fd.Close()
+				if p.cmd.SysProcAttr == nil {
+					p.cmd.SysProcAttr = &syscall.SysProcAttr{}
+				}
+				p.cmd.SysProcAttr.UseCgroupFD = true
+				p.cmd.SysProcAttr.CgroupFD = int(fd.Fd())
+			}
+		}
+	}
+
 	err := p.startWithCPUAffinity()
 	// Close the child-side of the pipes (controlled by child).
 	p.comm.closeChild()
@@ -232,7 +255,11 @@ func (p *setnsProcess) start() (retErr error) {
 		return fmt.Errorf("error executing setns process: %w", err)
 	}
 	for _, path := range p.cgroupPaths {
-		if err := cgroups.WriteCgroupProc(path, p.pid()); err != nil && !p.rootlessCgroups {
+		procPid := p.pid()
+		if useClone3 {
+			procPid = -1
+		}
+		if err := cgroups.WriteCgroupProc(path, procPid); err != nil && !p.rootlessCgroups {
 			// On cgroup v2 + nesting + domain controllers, WriteCgroupProc may fail with EBUSY.
 			// https://github.com/opencontainers/runc/issues/2356#issuecomment-621277643
 			// Try to join the cgroup of InitProcessPid.
