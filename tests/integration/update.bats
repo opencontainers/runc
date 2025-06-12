@@ -905,6 +905,14 @@ EOF
 		echo "==="
 		skip "can't get device major number from /proc/partitions (got $major)"
 	fi
+	# Add an entry to check that
+	#   - existing devices can be updated;
+	#   - duplicates are handled properly;
+	# (see func upsert* in update.go).
+	update_config '	  .linux.resources.blockIO.throttleReadBpsDevice |= [
+				{ major: '"$major"', minor: 0, rate: 485760 },
+				{ major: '"$major"', minor: 0, rate: 485760 }
+			]'
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]

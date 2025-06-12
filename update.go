@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 
 	"github.com/opencontainers/cgroups"
@@ -402,7 +403,9 @@ other options are ignored.
 }
 
 func upsertWeightDevice(devices []*cgroups.WeightDevice, wd specs.LinuxWeightDevice) []*cgroups.WeightDevice {
-	for i, dev := range devices {
+	// Iterate backwards because in case of a duplicate
+	// the last one will be used.
+	for i, dev := range slices.Backward(devices) {
 		if dev.Major != wd.Major || dev.Minor != wd.Minor {
 			continue
 		}
@@ -429,7 +432,9 @@ func upsertWeightDevice(devices []*cgroups.WeightDevice, wd specs.LinuxWeightDev
 }
 
 func upsertThrottleDevice(devices []*cgroups.ThrottleDevice, td specs.LinuxThrottleDevice) []*cgroups.ThrottleDevice {
-	for i, dev := range devices {
+	// Iterate backwards because in case of a duplicate
+	// the last one will be used.
+	for i, dev := range slices.Backward(devices) {
 		if dev.Major == td.Major && dev.Minor == td.Minor {
 			devices[i].Rate = td.Rate
 			return devices
