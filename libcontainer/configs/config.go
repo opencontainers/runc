@@ -458,7 +458,7 @@ type Capabilities struct {
 	Ambient []string
 }
 
-// Deprecated: use (Hooks).Run instead.
+// Deprecated: use [Hooks.Run] instead.
 func (hooks HookList) RunHooks(state *specs.State) error {
 	for i, h := range hooks {
 		if err := h.Run(state); err != nil {
