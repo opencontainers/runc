@@ -19,7 +19,7 @@ require (
 	github.com/opencontainers/selinux v1.12.0
 	github.com/seccomp/libseccomp-golang v0.11.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/urfave/cli v1.22.16
+	github.com/urfave/cli v1.22.17
 	github.com/vishvananda/netlink v1.3.1
 	golang.org/x/net v0.41.0
 	golang.org/x/sys v0.33.0
@@ -28,7 +28,7 @@ require (
 
 require (
 	github.com/cilium/ebpf v0.17.3 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/vishvananda/netns v0.0.5 // indirect
 )
