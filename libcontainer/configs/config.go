@@ -1,3 +1,5 @@
+// Package configs provides various container-related configuration types
+// used by libcontainer.
 package configs
 
 import (
