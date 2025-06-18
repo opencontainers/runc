@@ -352,7 +352,18 @@ function check_cpu_shares() {
 	local shares=$1
 
 	if [ -v CGROUP_V2 ]; then
-		local weight=$((1 + ((shares - 2) * 9999) / 262142))
+		# Same formula as ConvertCPUSharesToCgroupV2Value.
+		local weight
+		weight=$(awk -v shares="$shares" '
+		BEGIN {
+			if (shares == 0) { print 0; exit }
+			if (shares <= 2) { print 1; exit }
+			if (shares >= 262144) { print 10000; exit }
+			l = log(shares) / log(2)
+			exponent = (l*l + 125*l) / 612.0 - 7.0/34.0
+			print int(exp(exponent * log(10)) + 0.99)
+		}')
+
 		check_cpu_weight "$weight"
 	else
 		check_cgroup_value "cpu.shares" "$shares"
