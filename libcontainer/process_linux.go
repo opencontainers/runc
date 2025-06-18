@@ -550,6 +550,20 @@ func (p *initProcess) start() (retErr error) {
 		return fmt.Errorf("unable to start init: %w", err)
 	}
 
+	// If the runc-create process is terminated due to receiving SIGKILL signal,
+	// it may lead to the runc-init process leaking due
+	// to issues like cgroup freezing,
+	// and it cannot be cleaned up by runc delete/stop
+	// because the container lacks a state.json file.
+	// This typically occurs when higher-level
+	// container runtimes terminate the runc create process due to context cancellation or timeout.
+	// If the runc-create process terminates due to SIGKILL before
+	// reaching this line of code, we won't encounter the cgroup freezing issue.
+	_, err = p.container.updateState(nil)
+	if err != nil {
+		return fmt.Errorf("unable to store init state before creating cgroup: %w", err)
+	}
+
 	defer func() {
 		if retErr != nil {
 			// Find out if init is killed by the kernel's OOM killer.
