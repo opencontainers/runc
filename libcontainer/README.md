@@ -51,7 +51,7 @@ struct describing how the container is to be created. A sample would look simila
 
 ```go
 defaultMountFlags := unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_NODEV
-var devices []*devices.Rule
+var devices []*config.Rule
 for _, device := range specconv.AllowedDevices {
 	devices = append(devices, &device.Rule)
 }
@@ -80,10 +80,10 @@ config := &configs.Config{
 		{Type: configs.NEWNET},
 		{Type: configs.NEWCGROUP},
 	}),
-	Cgroups: &configs.Cgroup{
+	Cgroups: &cgroups.Cgroup{
 		Name:   "test-container",
 		Parent: "system",
-		Resources: &configs.Resources{
+		Resources: &cgroups.Resources{
 			MemorySwappiness: nil,
 			Devices:          devices,
 		},
