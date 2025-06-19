@@ -1,3 +1,5 @@
+// Package configs provides various container-related configuration types
+// used by libcontainer.
 package configs
 
 import (
@@ -14,6 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
+	"github.com/opencontainers/cgroups"
 	devices "github.com/opencontainers/cgroups/devices/config"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -146,7 +149,7 @@ type Config struct {
 
 	// Cgroups specifies specific cgroup settings for the various subsystems that the container is
 	// placed into to limit the resources the container has available.
-	Cgroups *Cgroup `json:"cgroups"`
+	Cgroups *cgroups.Cgroup `json:"cgroups"`
 
 	// AppArmorProfile specifies the profile to apply to the process running in the container and is
 	// change at the time the process is executed.
@@ -459,7 +462,7 @@ type Capabilities struct {
 	Ambient []string `json:"Ambient,omitempty"`
 }
 
-// Deprecated: use (Hooks).Run instead.
+// Deprecated: use [Hooks.Run] instead.
 func (hooks HookList) RunHooks(state *specs.State) error {
 	for i, h := range hooks {
 		if err := h.Run(state); err != nil {
