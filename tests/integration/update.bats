@@ -545,10 +545,9 @@ EOF
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
 
-	# Check that initial values were properly set.
+	# Check that initial values (from setup) were properly set.
 	check_cpu_quota 500000 1000000
-	# Initial cpu shares of 100 corresponds to weight of 4.
-	check_cpu_weight 4
+	check_cpu_shares 100
 	check_systemd_value "TasksMax" 20
 
 	runc update -r - test_update <<EOF

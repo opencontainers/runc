@@ -164,6 +164,10 @@ func loadState(root string) (*State, error) {
 	if err := json.NewDecoder(f).Decode(&state); err != nil {
 		return nil, err
 	}
+	// Cgroup v1 fs manager expect Resources to never be nil.
+	if state.Config.Cgroups.Resources == nil {
+		state.Config.Cgroups.Resources = &cgroups.Resources{}
+	}
 	return state, nil
 }
 
