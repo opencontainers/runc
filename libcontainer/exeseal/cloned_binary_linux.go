@@ -10,6 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
+	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer/system"
 )
 
@@ -71,7 +72,7 @@ func sealFile(f **os.File) error {
 	// When sealing an O_TMPFILE-style descriptor we need to
 	// re-open the path as O_PATH to clear the existing write
 	// handle we have.
-	opath, err := os.OpenFile(fmt.Sprintf("/proc/self/fd/%d", (*f).Fd()), unix.O_PATH|unix.O_CLOEXEC, 0)
+	opath, err := pathrs.Reopen(*f, unix.O_PATH|unix.O_CLOEXEC)
 	if err != nil {
 		return fmt.Errorf("reopen tmpfile: %w", err)
 	}
