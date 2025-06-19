@@ -3,6 +3,7 @@ package validate
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -875,5 +876,170 @@ func TestValidateIOPriority(t *testing.T) {
 		if !tc.isErr && err != nil {
 			t.Errorf("iopriority: %d, expected nil, got error %v", tc.priority, err)
 		}
+	}
+}
+
+func TestValidateNetDevices(t *testing.T) {
+	testCases := []struct {
+		name   string
+		isErr  bool
+		config *configs.Config
+	}{
+		{
+			name: "network device with configured network namespace",
+			config: &configs.Config{
+				Namespaces: configs.Namespaces(
+					[]configs.Namespace{
+						{
+							Type: configs.NEWNET,
+							Path: "/var/run/netns/blue",
+						},
+					},
+				),
+				NetDevices: map[string]*configs.LinuxNetDevice{
+					"eth0": {},
+				},
+			},
+		},
+		{
+			name: "network device rename",
+			config: &configs.Config{
+				Namespaces: configs.Namespaces(
+					[]configs.Namespace{
+						{
+							Type: configs.NEWNET,
+							Path: "/var/run/netns/blue",
+						},
+					},
+				),
+				NetDevices: map[string]*configs.LinuxNetDevice{
+					"eth0": {
+						Name: "c0",
+					},
+				},
+			},
+		},
+		{
+			name: "network device network namespace created by runc",
+			config: &configs.Config{
+				Namespaces: configs.Namespaces(
+					[]configs.Namespace{
+						{
+							Type: configs.NEWNET,
+						},
+					},
+				),
+				NetDevices: map[string]*configs.LinuxNetDevice{
+					"eth0": {},
+				},
+			},
+		},
+		{
+			name:  "network device network namespace empty",
+			isErr: true,
+			config: &configs.Config{
+				Namespaces: configs.Namespaces(
+					[]configs.Namespace{},
+				),
+				NetDevices: map[string]*configs.LinuxNetDevice{
+					"eth0": {},
+				},
+			},
+		},
+		{
+			name:  "network device rootless EUID",
+			isErr: true,
+			config: &configs.Config{
+				Namespaces: configs.Namespaces(
+					[]configs.Namespace{
+						{
+							Type: configs.NEWNET,
+							Path: "/var/run/netns/blue",
+						},
+					},
+				),
+				RootlessEUID: true,
+				NetDevices: map[string]*configs.LinuxNetDevice{
+					"eth0": {},
+				},
+			},
+		},
+		{
+			name:  "network device rootless",
+			isErr: true,
+			config: &configs.Config{
+				Namespaces: configs.Namespaces(
+					[]configs.Namespace{
+						{
+							Type: configs.NEWNET,
+							Path: "/var/run/netns/blue",
+						},
+					},
+				),
+				RootlessCgroups: true,
+				NetDevices: map[string]*configs.LinuxNetDevice{
+					"eth0": {},
+				},
+			},
+		},
+		{
+			name:  "network device bad name",
+			isErr: true,
+			config: &configs.Config{
+				Namespaces: configs.Namespaces(
+					[]configs.Namespace{
+						{
+							Type: configs.NEWNET,
+							Path: "/var/run/netns/blue",
+						},
+					},
+				),
+				NetDevices: map[string]*configs.LinuxNetDevice{
+					"eth0": {
+						Name: "eth0/",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			config := tc.config
+			config.Rootfs = "/var"
+
+			err := Validate(config)
+			if tc.isErr && err == nil {
+				t.Error("expected error, got nil")
+			}
+
+			if !tc.isErr && err != nil {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestDevValidName(t *testing.T) {
+	testCases := []struct {
+		name  string
+		valid bool
+	}{
+		{name: "", valid: false},
+		{name: "a", valid: true},
+		{name: strings.Repeat("a", unix.IFNAMSIZ), valid: true},
+		{name: strings.Repeat("a", unix.IFNAMSIZ+1), valid: false},
+		{name: ".", valid: false},
+		{name: "..", valid: false},
+		{name: "dev/null", valid: false},
+		{name: "valid:name", valid: false},
+		{name: "valid name", valid: false},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if devValidName(tc.name) != tc.valid {
+				t.Fatalf("name %q, expected valid: %v", tc.name, tc.valid)
+			}
+		})
 	}
 }

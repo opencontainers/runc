@@ -480,6 +480,14 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 			}
 		}
 
+		for name, netdev := range spec.Linux.NetDevices {
+			if config.NetDevices == nil {
+				config.NetDevices = make(map[string]*configs.LinuxNetDevice)
+			}
+			config.NetDevices[name] = &configs.LinuxNetDevice{
+				Name: netdev.Name,
+			}
+		}
 	}
 
 	// Set the host UID that should own the container's cgroup.
