@@ -123,11 +123,13 @@ func setupIO(process *libcontainer.Process, container *libcontainer.Container, c
 			}
 			uc, ok := conn.(*net.UnixConn)
 			if !ok {
+				conn.Close()
 				return nil, errors.New("casting to UnixConn failed")
 			}
 			t.postStart = append(t.postStart, uc)
 			socket, err := uc.File()
 			if err != nil {
+				conn.Close()
 				return nil, err
 			}
 			t.postStart = append(t.postStart, socket)
