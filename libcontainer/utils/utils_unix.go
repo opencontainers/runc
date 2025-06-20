@@ -18,18 +18,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// EnsureProcHandle returns whether or not the given file handle is on procfs.
-func EnsureProcHandle(fh *os.File) error {
-	var buf unix.Statfs_t
-	if err := unix.Fstatfs(int(fh.Fd()), &buf); err != nil {
-		return fmt.Errorf("ensure %s is on procfs: %w", fh.Name(), err)
-	}
-	if buf.Type != unix.PROC_SUPER_MAGIC {
-		return fmt.Errorf("%s is not on procfs", fh.Name())
-	}
-	return nil
-}
-
 var (
 	haveCloseRangeCloexecBool bool
 	haveCloseRangeCloexecOnce sync.Once
@@ -65,12 +53,6 @@ func fdRangeFrom(minFd int, fn fdFunc) error {
 	}
 	defer closer()
 	defer fdDir.Close()
-
-	// NOTE: This is not really necessary since securejoin.ProcThreadSelf
-	// verifies this in a far stricter sense than EnsureProcHandle.
-	if err := EnsureProcHandle(fdDir); err != nil {
-		return err
-	}
 
 	fdList, err := fdDir.Readdirnames(-1)
 	if err != nil {
