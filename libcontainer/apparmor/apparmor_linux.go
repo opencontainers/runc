@@ -46,12 +46,6 @@ func setProcAttr(attr, value string) error {
 	defer closer()
 	defer f.Close()
 
-	// NOTE: This is not really necessary since securejoin.ProcThreadSelf
-	// verifies this in a far stricter sense than EnsureProcHandle.
-	if err := utils.EnsureProcHandle(f); err != nil {
-		return err
-	}
-
 	_, err = f.WriteString(value)
 	return err
 }
