@@ -241,7 +241,7 @@ func (c *Container) exec() error {
 				// could be because process started, ran, and completed between our 100ms timeout and our system.Stat() check.
 				// see if the fifo exists and has data (with a non-blocking open, which will succeed if the writing process is complete).
 				if err := handleFifoResult(fifoOpen(path, false)); err != nil {
-					return errors.New("container process is already dead")
+					return fmt.Errorf("container process is already dead, because %w", err)
 				}
 				return nil
 			}
@@ -283,12 +283,12 @@ func fifoOpen(path string, block bool) openResult {
 
 func handleFifoResult(result openResult) error {
 	if result.err != nil {
-		return result.err
+		return fmt.Errorf("openResult err: %w", result.err)
 	}
 	f := result.file
 	defer f.Close()
 	if err := readFromExecFifo(f); err != nil {
-		return err
+		return fmt.Errorf("read from exec fifo err: %w", err)
 	}
 	return os.Remove(f.Name())
 }
