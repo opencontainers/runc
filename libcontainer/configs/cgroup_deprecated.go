@@ -1,7 +1,8 @@
-package configs // Deprecated: use [github.com/opencontainers/cgroups].
+package configs
 
 import "github.com/opencontainers/cgroups"
 
+// Deprecated: use [github.com/opencontainers/cgroups].
 type (
 	Cgroup         = cgroups.Cgroup
 	Resources      = cgroups.Resources
@@ -14,12 +15,14 @@ type (
 	IfPrioMap      = cgroups.IfPrioMap
 )
 
+// Deprecated: use [github.com/opencontainers/cgroups].
 const (
 	Undefined = cgroups.Undefined
 	Frozen    = cgroups.Frozen
 	Thawed    = cgroups.Thawed
 )
 
+// Deprecated: use [github.com/opencontainers/cgroups].
 var (
 	NewWeightDevice   = cgroups.NewWeightDevice
 	NewThrottleDevice = cgroups.NewThrottleDevice
