@@ -86,6 +86,25 @@ func SetMempolicy(mode uint, mask *unix.CPUSet) error {
 	return os.NewSyscallError("set_mempolicy", err)
 }
 
+// Readlinkat wraps [unix.Readlinkat].
+func Readlinkat(dir *os.File, path string) (string, error) {
+	size := 4096
+	for {
+		linkBuf := make([]byte, size)
+		n, err := retryOnEINTR2(func() (int, error) {
+			return unix.Readlinkat(int(dir.Fd()), path, linkBuf)
+		})
+		if err != nil {
+			return "", &os.PathError{Op: "readlinkat", Path: dir.Name() + "/" + path, Err: err}
+		}
+		if n != size {
+			return string(linkBuf[:n]), nil
+		}
+		// Possible truncation, resize the buffer.
+		size *= 2
+	}
+}
+
 // GetPtyPeer is a wrapper for ioctl(TIOCGPTPEER).
 func GetPtyPeer(ptyFd uintptr, unsafePeerPath string, flags int) (*os.File, error) {
 	// Make sure O_NOCTTY is always set -- otherwise runc might accidentally
