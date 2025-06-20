@@ -14,12 +14,13 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/opencontainers/runc/internal/linux"
+	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
-	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"golang.org/x/sys/unix"
@@ -1695,11 +1696,9 @@ func TestFdLeaksSystemd(t *testing.T) {
 }
 
 func fdList(t *testing.T) []string {
-	procSelfFd, closer := utils.ProcThreadSelf("fd")
-	defer closer()
-
-	fdDir, err := os.Open(procSelfFd)
+	fdDir, closer, err := pathrs.ProcThreadSelfOpen("fd/", unix.O_DIRECTORY|unix.O_CLOEXEC)
 	ok(t, err)
+	defer closer()
 	defer fdDir.Close()
 
 	fds, err := fdDir.Readdirnames(-1)
@@ -1738,8 +1737,10 @@ func testFdLeaks(t *testing.T, systemd bool) {
 
 	count := 0
 
-	procSelfFd, closer := utils.ProcThreadSelf("fd/")
+	procSelfFd, closer, err := pathrs.ProcThreadSelfOpen("fd/", unix.O_DIRECTORY|unix.O_CLOEXEC)
+	ok(t, err)
 	defer closer()
+	defer procSelfFd.Close()
 
 next_fd:
 	for _, fd1 := range fds1 {
@@ -1748,7 +1749,7 @@ next_fd:
 				continue next_fd
 			}
 		}
-		dst, _ := os.Readlink(filepath.Join(procSelfFd, fd1))
+		dst, _ := linux.Readlinkat(procSelfFd, fd1)
 		for _, ex := range excludedPaths {
 			if ex == dst {
 				continue next_fd

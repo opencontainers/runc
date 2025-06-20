@@ -13,6 +13,7 @@ import (
 	_ "unsafe" // for go:linkname
 
 	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -58,15 +59,15 @@ type fdFunc func(fd int)
 // fdRangeFrom calls the passed fdFunc for each file descriptor that is open in
 // the current process.
 func fdRangeFrom(minFd int, fn fdFunc) error {
-	procSelfFd, closer := ProcThreadSelf("fd")
-	defer closer()
-
-	fdDir, err := os.Open(procSelfFd)
+	fdDir, closer, err := pathrs.ProcThreadSelfOpen("fd/", unix.O_DIRECTORY|unix.O_CLOEXEC)
 	if err != nil {
-		return err
+		return fmt.Errorf("get handle to /proc/thread-self/fd: %w", err)
 	}
+	defer closer()
 	defer fdDir.Close()
 
+	// NOTE: This is not really necessary since securejoin.ProcThreadSelf
+	// verifies this in a far stricter sense than EnsureProcHandle.
 	if err := EnsureProcHandle(fdDir); err != nil {
 		return err
 	}
