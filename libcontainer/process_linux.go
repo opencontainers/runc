@@ -854,6 +854,7 @@ func sendContainerProcessState(listenerPath string, state *specs.ContainerProces
 	if err != nil {
 		return fmt.Errorf("failed to connect with seccomp agent specified in the seccomp profile: %w", err)
 	}
+	defer conn.Close()
 
 	socket, err := conn.(*net.UnixConn).File()
 	if err != nil {
