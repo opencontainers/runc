@@ -31,6 +31,7 @@ runtime spec in the following way:
    Next, `prefix` and `name` are used to compose the  unit name, which
    is `<prefix>-<name>.scope`, unless `name` has `.slice` suffix, in
    which case `prefix` is ignored and the `name` is used as is.
+   The default value for both `prefix` and `name` is empty string.
 
 2. If `Linux.CgroupsPath` is not set or empty, it works the same way as if it
    would be set to `:runc:<container-id>`. See the description above to see
