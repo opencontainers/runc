@@ -95,7 +95,7 @@ func newProcess(p *specs.Process) (*libcontainer.Process, error) {
 }
 
 // setupIO modifies the given process config according to the options.
-func setupIO(process *libcontainer.Process, container *libcontainer.Container, createTTY, detach bool, sockpath string) (*tty, error) {
+func setupIO(process *libcontainer.Process, container *libcontainer.Container, createTTY, detach bool, sockpath string) (_ *tty, Err error) {
 	if createTTY {
 		process.Stdin = nil
 		process.Stdout = nil
@@ -117,20 +117,23 @@ func setupIO(process *libcontainer.Process, container *libcontainer.Container, c
 			}()
 		} else {
 			// the caller of runc will handle receiving the console master
-			conn, err := net.Dial("unix", sockpath)
-			if err != nil {
-				return nil, err
+			conn, Err := net.Dial("unix", sockpath)
+			if Err != nil {
+				return nil, Err
 			}
+			defer func() {
+				if Err != nil {
+					conn.Close()
+				}
+			}()
 			uc, ok := conn.(*net.UnixConn)
 			if !ok {
-				conn.Close()
 				return nil, errors.New("casting to UnixConn failed")
 			}
 			t.postStart = append(t.postStart, uc)
-			socket, err := uc.File()
-			if err != nil {
-				conn.Close()
-				return nil, err
+			socket, Err := uc.File()
+			if Err != nil {
+				return nil, Err
 			}
 			t.postStart = append(t.postStart, socket)
 			process.ConsoleSocket = socket
