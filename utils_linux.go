@@ -117,9 +117,9 @@ func setupIO(process *libcontainer.Process, container *libcontainer.Container, c
 			}()
 		} else {
 			// the caller of runc will handle receiving the console master
-			conn, Err := net.Dial("unix", sockpath)
-			if Err != nil {
-				return nil, Err
+			conn, err := net.Dial("unix", sockpath)
+			if err != nil {
+				return nil, err
 			}
 			defer func() {
 				if Err != nil {
@@ -131,9 +131,9 @@ func setupIO(process *libcontainer.Process, container *libcontainer.Container, c
 				return nil, errors.New("casting to UnixConn failed")
 			}
 			t.postStart = append(t.postStart, uc)
-			socket, Err := uc.File()
-			if Err != nil {
-				return nil, Err
+			socket, err := uc.File()
+			if err != nil {
+				return nil, err
 			}
 			t.postStart = append(t.postStart, socket)
 			process.ConsoleSocket = socket
