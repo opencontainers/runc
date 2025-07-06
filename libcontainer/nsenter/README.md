@@ -23,6 +23,10 @@ the namespaces to be joined. You can import it like this:
 import _ "github.com/opencontainers/runc/libcontainer/nsenter"
 ```
 
+The following sequence diagram illustrates the behavior:
+
+![nsenter Sequence Diagram](/contrib/nsenter-doc/nsenter.jpg)
+
 `nsexec()` will first get the file descriptor number for the init pipe
 from the environment variable `_LIBCONTAINER_INITPIPE` (which was opened
 by the parent and kept open across the fork-exec of the `nsexec()` init
