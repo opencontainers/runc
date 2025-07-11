@@ -13,9 +13,8 @@ function teardown() {
 # This needs to be placed at the top of the bats file to work around
 # a shellcheck bug. See <https://github.com/koalaman/shellcheck/issues/2873>.
 function test_events() {
-	# XXX: currently cgroups require root containers.
-	requires root
-	init_cgroup_paths
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+	set_cgroups_path
 
 	local status interval retry_every=1
 	if [ $# -eq 2 ]; then
@@ -45,8 +44,7 @@ function test_events() {
 }
 
 @test "events --stats" {
-	# XXX: currently cgroups require root containers.
-	requires root
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 	init_cgroup_paths
 
 	# run busybox detached
@@ -61,8 +59,9 @@ function test_events() {
 }
 
 @test "events --stats with psi data" {
-	requires root cgroups_v2 psi
-	init_cgroup_paths
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+	requires cgroups_v2 psi
+	set_cgroups_path
 
 	update_config '.linux.resources.cpu |= { "quota": 1000 }'
 
@@ -101,9 +100,9 @@ function test_events() {
 }
 
 @test "events oom" {
-	# XXX: currently cgroups require root containers.
+	# XXX: oom is not triggered for rootless containers.
 	requires root cgroups_swap
-	init_cgroup_paths
+	init_cgroups_path
 
 	# we need the container to hit OOM, so disable swap
 	update_config '(.. | select(.resources? != null)) .resources.memory |= {"limit": 33554432, "swap": 33554432}'
