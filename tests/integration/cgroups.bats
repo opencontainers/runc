@@ -50,7 +50,7 @@ function setup() {
 				check_cgroup_value "cgroup.controllers" "$(cat /sys/fs/cgroup/machine.slice/cgroup.controllers)"
 			else
 				# Filter out controllers that systemd is unable to delegate.
-				check_cgroup_value "cgroup.controllers" "$(sed 's/ \(hugetlb\|misc\|rdma\)//g' </sys/fs/cgroup/user.slice/user-${EUID}.slice/cgroup.controllers)"
+				check_cgroup_value "cgroup.controllers" "$(sed 's/ \(dmem\|hugetlb\|misc\|rdma\)//g' </sys/fs/cgroup/user.slice/user-${EUID}.slice/cgroup.controllers)"
 			fi
 		else
 			check_cgroup_value "cgroup.controllers" "$(cat /sys/fs/cgroup/cgroup.controllers)"
