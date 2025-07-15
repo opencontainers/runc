@@ -282,7 +282,7 @@ function check_exec_debug() {
 	# Check we can't join non-existing subcgroup.
 	runc exec --cgroup nonexistent test_busybox cat /proc/self/cgroup
 	[ "$status" -ne 0 ]
-	[[ "$output" == *" adding pid "*"/nonexistent/cgroup.procs: no such file "* ]]
+	[[ "$output" == *" can't open cgroup:"*"/nonexistent: no such file "* ]]
 
 	# Check we can join top-level cgroup (implicit).
 	runc exec test_busybox grep '^0::/$' /proc/self/cgroup
