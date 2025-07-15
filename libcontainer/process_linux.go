@@ -244,6 +244,34 @@ func (p *setnsProcess) setFinalCPUAffinity() error {
 	return nil
 }
 
+func (p *setnsProcess) addIntoCgroup() error {
+	for _, path := range p.cgroupPaths {
+		if err := cgroups.WriteCgroupProc(path, p.pid()); err != nil && !p.rootlessCgroups {
+			// On cgroup v2 + nesting + domain controllers, WriteCgroupProc may fail with EBUSY.
+			// https://github.com/opencontainers/runc/issues/2356#issuecomment-621277643
+			// Try to join the cgroup of InitProcessPid.
+			if cgroups.IsCgroup2UnifiedMode() && p.initProcessPid != 0 {
+				initProcCgroupFile := fmt.Sprintf("/proc/%d/cgroup", p.initProcessPid)
+				initCg, initCgErr := cgroups.ParseCgroupFile(initProcCgroupFile)
+				if initCgErr == nil {
+					if initCgPath, ok := initCg[""]; ok {
+						initCgDirpath := filepath.Join(fs2.UnifiedMountpoint, initCgPath)
+						logrus.Debugf("adding pid %d to cgroups %v failed (%v), attempting to join %q (obtained from %s)",
+							p.pid(), p.cgroupPaths, err, initCg, initCgDirpath)
+						// NOTE: initCgDirPath is not guaranteed to exist because we didn't pause the container.
+						err = cgroups.WriteCgroupProc(initCgDirpath, p.pid())
+					}
+				}
+			}
+			if err != nil {
+				return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
+			}
+		}
+	}
+
+	return nil
+}
+
 func (p *setnsProcess) start() (retErr error) {
 	defer p.comm.closeParent()
 
@@ -277,28 +305,8 @@ func (p *setnsProcess) start() (retErr error) {
 	if err := p.execSetns(); err != nil {
 		return fmt.Errorf("error executing setns process: %w", err)
 	}
-	for _, path := range p.cgroupPaths {
-		if err := cgroups.WriteCgroupProc(path, p.pid()); err != nil && !p.rootlessCgroups {
-			// On cgroup v2 + nesting + domain controllers, WriteCgroupProc may fail with EBUSY.
-			// https://github.com/opencontainers/runc/issues/2356#issuecomment-621277643
-			// Try to join the cgroup of InitProcessPid.
-			if cgroups.IsCgroup2UnifiedMode() && p.initProcessPid != 0 {
-				initProcCgroupFile := fmt.Sprintf("/proc/%d/cgroup", p.initProcessPid)
-				initCg, initCgErr := cgroups.ParseCgroupFile(initProcCgroupFile)
-				if initCgErr == nil {
-					if initCgPath, ok := initCg[""]; ok {
-						initCgDirpath := filepath.Join(fs2.UnifiedMountpoint, initCgPath)
-						logrus.Debugf("adding pid %d to cgroups %v failed (%v), attempting to join %q (obtained from %s)",
-							p.pid(), p.cgroupPaths, err, initCg, initCgDirpath)
-						// NOTE: initCgDirPath is not guaranteed to exist because we didn't pause the container.
-						err = cgroups.WriteCgroupProc(initCgDirpath, p.pid())
-					}
-				}
-			}
-			if err != nil {
-				return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
-			}
-		}
+	if err := p.addIntoCgroup(); err != nil {
+		return err
 	}
 	// Set final CPU affinity right after the process is moved into container's cgroup.
 	if err := p.setFinalCPUAffinity(); err != nil {
