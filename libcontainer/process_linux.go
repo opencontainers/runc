@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -229,9 +230,44 @@ func (p *setnsProcess) addIntoCgroup() error {
 func (p *setnsProcess) start() (retErr error) {
 	defer p.comm.closeParent()
 
+	useCgroupFD := false
+	if cg, ok := p.cgroupPaths[""]; ok && len(p.cgroupPaths) == 1 {
+		// Try using clone3(CLONE_INTO_CGROUP).
+		fd, err := os.OpenFile(cg, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC, 0)
+		if err != nil {
+			if !p.rootlessCgroups {
+				return fmt.Errorf("can't open cgroup: %w", err)
+			}
+		} else {
+			logrus.Debugf("using CLONE_INTO_CGROUP %q", cg)
+			defer fd.Close()
+
+			useCgroupFD = true
+			if p.cmd.SysProcAttr == nil {
+				p.cmd.SysProcAttr = &syscall.SysProcAttr{}
+			}
+			p.cmd.SysProcAttr.UseCgroupFD = true
+			p.cmd.SysProcAttr.CgroupFD = int(fd.Fd())
+		}
+	}
+
 	// Get the "before" value of oom kill count.
 	oom, _ := p.manager.OOMKillCount()
+
 	err := p.startWithCPUAffinity()
+	if err != nil && useCgroupFD &&
+		// clone3(CLONE_INTO_CGROUP) not supported.
+		(errors.Is(err, errors.ErrUnsupported) ||
+			// Nesting + domain controllers.
+			errors.Is(err, unix.EBUSY) ||
+			// Rootless has no direct access to cgroup.
+			(p.rootlessCgroups && errors.Is(err, unix.EACCES))) {
+		logrus.Debugf("exec(CLONE_INTO_CGROUP) failed with %v, retrying", err)
+		useCgroupFD = false
+		p.cmd.SysProcAttr.UseCgroupFD = false
+		err = p.startWithCPUAffinity()
+	}
+
 	// Close the child-side of the pipes (controlled by child).
 	p.comm.closeChild()
 	if err != nil {
@@ -259,8 +295,10 @@ func (p *setnsProcess) start() (retErr error) {
 	if err := p.execSetns(); err != nil {
 		return fmt.Errorf("error executing setns process: %w", err)
 	}
-	if err := p.addIntoCgroup(); err != nil {
-		return err
+	if !useCgroupFD {
+		if err := p.addIntoCgroup(); err != nil {
+			return err
+		}
 	}
 	// Set final CPU affinity right after the process is moved into container's cgroup.
 	if err := p.setFinalCPUAffinity(); err != nil {
