@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -310,18 +311,95 @@ func (p *setnsProcess) addIntoCgroupV2() error {
 }
 
 func (p *setnsProcess) addIntoCgroup() error {
+	if p.cmd.SysProcAttr.UseCgroupFD {
+		return nil
+	}
 	if cgroups.IsCgroup2UnifiedMode() {
 		return p.addIntoCgroupV2()
 	}
 	return p.addIntoCgroupV1()
 }
 
+// prepareCloneIntoCgroup sets up p.cmd to use clone3 with CLONE_INTO_CGROUP
+// to join cgroup early. It returns an *os.File which must be closed by the
+// caller after p.Cmd.Start.
+func (p *setnsProcess) prepareCloneIntoCgroup() (*os.File, error) {
+	if !cgroups.IsCgroup2UnifiedMode() {
+		return nil, nil
+	}
+
+	base := p.manager.Path("")
+	if base == "" { // No cgroup to join.
+		return nil, nil
+	}
+	sub := ""
+	if p.process.SubCgroupPaths != nil {
+		sub = p.process.SubCgroupPaths[""]
+	}
+	cgroup := path.Join(base, sub)
+	if !strings.HasPrefix(cgroup, base) {
+		return nil, fmt.Errorf("bad sub cgroup path: %s", sub)
+	}
+
+	fd, err := os.OpenFile(cgroup, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC, 0)
+	if err != nil {
+		if p.rootlessCgroups {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("can't open cgroup: %w", err)
+	}
+
+	logrus.Debugf("using CLONE_INTO_CGROUP %q", cgroup)
+	if p.cmd.SysProcAttr == nil {
+		p.cmd.SysProcAttr = &syscall.SysProcAttr{}
+	}
+	p.cmd.SysProcAttr.UseCgroupFD = true
+	p.cmd.SysProcAttr.CgroupFD = int(fd.Fd())
+
+	return fd, nil
+}
+
+func (p *setnsProcess) shouldRetryWithoutCgroupFD(err error) bool {
+	switch {
+	case !p.cmd.SysProcAttr.UseCgroupFD:
+		// CgroupFD was not used.
+		return false
+	case errors.Is(err, errors.ErrUnsupported):
+		// clone3(CLONE_INTO_CGROUP) is not supported (ENOSYS),
+		// or cgroup is in the domain invalid state (EOPNOTSUPP).
+		return true
+	case errors.Is(err, unix.EBUSY):
+		// Nesting + domain controllers.
+		return true
+	case p.rootlessCgroups && errors.Is(err, unix.EACCES):
+		// Rootless has no direct access to cgroup.
+		return true
+	}
+
+	return false
+}
+
 func (p *setnsProcess) start() (retErr error) {
 	defer p.comm.closeParent()
 
+	fd, err := p.prepareCloneIntoCgroup()
+	if err != nil {
+		return err
+	}
+
 	// Get the "before" value of oom kill count.
 	oom, _ := p.manager.OOMKillCount()
-	err := p.startWithCPUAffinity()
+
+	err = p.startWithCPUAffinity()
+	if fd != nil {
+		fd.Close()
+	}
+	if err != nil && p.shouldRetryWithoutCgroupFD(err) {
+		logrus.Debugf("exec(CLONE_INTO_CGROUP) failed with %v, retrying without it", err)
+		p.cmd.SysProcAttr.UseCgroupFD = false
+		err = p.startWithCPUAffinity()
+	}
+
 	// Close the child-side of the pipes (controlled by child).
 	p.comm.closeChild()
 	if err != nil {
