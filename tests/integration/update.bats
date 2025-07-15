@@ -895,22 +895,23 @@ EOF
 @test "update per-device iops/bps values" {
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 
-	# We need a major number of any disk device. Usually those are partitioned,
-	# with the device itself having minor of 0, and partitions are 1, 2...
-	major=$(awk '$2 == 0 {print $1; exit}' /proc/partitions)
-	if [ "$major" = "0" ] || [ "$major" = "" ]; then
-		echo "=== /proc/partitions ==="
-		cat /proc/partitions
-		echo "==="
-		skip "can't get device major number from /proc/partitions (got $major)"
+	# Need major:minor for any block device (but not a partition).
+	dev=$(lsblk -dno MAJ:MIN | head -1 | tr -d ' \t\n')
+	if [ -z "$dev" ]; then
+		echo "=== lsblk -d ===" >&2
+		lsblk -d >&2
+		echo "===" >&2
+		fail "can't get device from lsblk"
 	fi
+	IFS=':' read -r major minor <<<"$dev"
+
 	# Add an entry to check that
 	#   - existing devices can be updated;
 	#   - duplicates are handled properly;
 	# (see func upsert* in update.go).
 	update_config '	  .linux.resources.blockIO.throttleReadBpsDevice |= [
-				{ major: '"$major"', minor: 0, rate: 485760 },
-				{ major: '"$major"', minor: 0, rate: 485760 }
+				{ major: '"$major"', minor: '"$minor"', rate: 485760 },
+				{ major: '"$major"', minor: '"$minor"', rate: 485760 }
 			]'
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
@@ -922,28 +923,28 @@ EOF
     "throttleReadBpsDevice": [
       {
         "major": $major,
-        "minor": 0,
+        "minor": $minor,
         "rate": 10485760
       }
     ],
     "throttleWriteBpsDevice": [
       {
         "major": $major,
-        "minor": 0,
+        "minor": $minor,
         "rate": 9437184
       }
     ],
     "throttleReadIOPSDevice": [
       {
         "major": $major,
-        "minor": 0,
+        "minor": $minor,
         "rate": 1000
       }
     ],
     "throttleWriteIOPSDevice": [
       {
         "major": $major,
-        "minor": 0,
+        "minor": $minor,
         "rate": 900
       }
     ]
@@ -951,5 +952,5 @@ EOF
 }
 EOF
 	[ "$status" -eq 0 ]
-	check_cgroup_dev_iops "$major:0" 10485760 9437184 1000 900
+	check_cgroup_dev_iops "$dev" 10485760 9437184 1000 900
 }
