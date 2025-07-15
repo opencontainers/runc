@@ -66,6 +66,7 @@ const uint32_t C_AUDIT_ARCH_I386         = AUDIT_ARCH_I386;
 const uint32_t C_AUDIT_ARCH_X86_64       = AUDIT_ARCH_X86_64;
 const uint32_t C_AUDIT_ARCH_ARM          = AUDIT_ARCH_ARM;
 const uint32_t C_AUDIT_ARCH_AARCH64      = AUDIT_ARCH_AARCH64;
+const uint32_t C_AUDIT_ARCH_LOONGARCH64  = AUDIT_ARCH_LOONGARCH64;
 const uint32_t C_AUDIT_ARCH_MIPS         = AUDIT_ARCH_MIPS;
 const uint32_t C_AUDIT_ARCH_MIPS64       = AUDIT_ARCH_MIPS64;
 const uint32_t C_AUDIT_ARCH_MIPS64N32    = AUDIT_ARCH_MIPS64N32;
@@ -193,6 +194,8 @@ func scmpArchToAuditArch(arch libseccomp.ScmpArch) (linuxAuditArch, error) {
 		return linuxAuditArch(C.C_AUDIT_ARCH_ARM), nil
 	case libseccomp.ArchARM64:
 		return linuxAuditArch(C.C_AUDIT_ARCH_AARCH64), nil
+	case libseccomp.ArchLOONGARCH64:
+		return linuxAuditArch(C.C_AUDIT_ARCH_LOONGARCH64), nil
 	case libseccomp.ArchMIPS:
 		return linuxAuditArch(C.C_AUDIT_ARCH_MIPS), nil
 	case libseccomp.ArchMIPS64:
