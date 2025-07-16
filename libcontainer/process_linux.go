@@ -198,6 +198,17 @@ func (p *setnsProcess) setFinalCPUAffinity() error {
 	return nil
 }
 
+func (p *setnsProcess) hasExecCPUAffinity() bool {
+	aff := p.config.CPUAffinity
+	if aff == nil {
+		return false
+	}
+	if aff.Initial != nil || aff.Final != nil {
+		return true
+	}
+	return false
+}
+
 func (p *setnsProcess) start() (retErr error) {
 	defer p.comm.closeParent()
 
@@ -258,6 +269,13 @@ func (p *setnsProcess) start() (retErr error) {
 	if err := p.setFinalCPUAffinity(); err != nil {
 		return err
 	}
+
+	if !p.hasExecCPUAffinity() {
+		if err := resetAffinityMask(p.pid()); err != nil {
+			return err
+		}
+	}
+
 	if p.intelRdtPath != "" {
 		// if Intel RDT "resource control" filesystem path exists
 		_, err := os.Stat(p.intelRdtPath)
@@ -615,6 +633,11 @@ func (p *initProcess) start() (retErr error) {
 			return fmt.Errorf("unable to apply cgroup configuration: %w", err)
 		}
 	}
+
+	if err := resetAffinityMask(p.pid()); err != nil {
+		return err
+	}
+
 	if p.intelRdtManager != nil {
 		if err := p.intelRdtManager.Apply(p.pid()); err != nil {
 			return fmt.Errorf("unable to apply Intel RDT configuration: %w", err)
@@ -980,4 +1003,25 @@ func (p *Process) InitializeIO(rootuid, rootgid int) (i *IO, err error) {
 		}
 	}
 	return i, nil
+}
+
+// Set all inherited cpu affinity. Old kernels do that automatically, but
+// new kernels remember the affinity that was set before the cgroup move.
+// This is undesirable, because it inherits the systemd affinity when the container
+// should really move to the container space cpus.
+// here we can't use runtime.NumCPU() to get cpu counts because it call sched_getaffinity to get cpu counts.
+// If systemd set CPUAffinity then use runtime.NumCPU() can't get real cpu counts.
+func resetAffinityMask(pid int) error {
+	cpus, err := utils.SystemCPUCores()
+	if err != nil {
+		return err
+	}
+	cpuset := unix.CPUSet{}
+	for i := 0; i < int(cpus); i++ {
+		cpuset.Set(i)
+	}
+	if err := unix.SchedSetaffinity(pid, &cpuset); err != nil {
+		return fmt.Errorf("error resetting pid %d affinity: %w", pid, err)
+	}
+	return nil
 }
