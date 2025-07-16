@@ -12,4 +12,4 @@ ssh-keygen -t ecdsa -N "" -f "$HOME/.ssh/rootless.key"
 sudo mkdir -p -m 0700 /home/rootless/.ssh
 sudo cp "$HOME/.ssh/rootless.key" /home/rootless/.ssh/id_ecdsa
 sudo cp "$HOME/.ssh/rootless.key.pub" /home/rootless/.ssh/authorized_keys
-sudo chown -R rootless.rootless /home/rootless
+sudo chown -R rootless:rootless /home/rootless
