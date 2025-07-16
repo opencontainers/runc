@@ -41,7 +41,7 @@ jobs:
           sudo apt -qy install libseccomp-dev
       - uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.1
+          version: v2.3
       # Extra linters, only checking new code from a pull request.
       - name: lint-extra
         if: github.event_name == 'pull_request'
