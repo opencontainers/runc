@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"bufio"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -112,4 +114,32 @@ func Annotations(labels []string) (bundle string, userAnnotations map[string]str
 		}
 	}
 	return
+}
+
+// SystemCPUCores parses CPU usage information from a reader providing
+// /proc/stat format data. It returns the number of CPUs.
+func SystemCPUCores() (cpuNum uint32, _ error) {
+	f, err := os.Open("/proc/stat")
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+	return readSystemCPU(f)
+}
+
+func readSystemCPU(r io.Reader) (cpuNum uint32, _ error) {
+	reader := bufio.NewReader(r)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			return 0, fmt.Errorf("error scanning /proc/stat file: %w", err)
+		}
+		if line[:3] != "cpu" {
+			break
+		}
+		if '0' <= line[3] && line[3] <= '9' {
+			cpuNum++
+		}
+	}
+	return cpuNum, nil
 }
