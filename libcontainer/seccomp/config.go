@@ -53,6 +53,7 @@ var archs = map[string]string{
 	"SCMP_ARCH_X32":         "x32",
 	"SCMP_ARCH_ARM":         "arm",
 	"SCMP_ARCH_AARCH64":     "arm64",
+	"SCMP_ARCH_LOONGARCH64": "loong64",
 	"SCMP_ARCH_MIPS":        "mips",
 	"SCMP_ARCH_MIPS64":      "mips64",
 	"SCMP_ARCH_MIPS64N32":   "mips64n32",
