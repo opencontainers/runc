@@ -13,6 +13,7 @@ import (
 
 	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/internal/pathrs"
+	"github.com/opencontainers/runc/internal/sys"
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/keys"
@@ -132,10 +133,8 @@ func (l *linuxStandardInit) Init() error {
 		return fmt.Errorf("unable to apply apparmor profile: %w", err)
 	}
 
-	for key, value := range l.config.Config.Sysctl {
-		if err := writeSystemProperty(key, value); err != nil {
-			return err
-		}
+	if err := sys.WriteSysctls(l.config.Config.Sysctl); err != nil {
+		return err
 	}
 	for _, path := range l.config.Config.ReadonlyPaths {
 		if err := readonlyPath(path); err != nil {

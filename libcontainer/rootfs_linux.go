@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -1349,13 +1348,6 @@ func maskPaths(paths []string, mountLabel string) error {
 	}
 
 	return nil
-}
-
-// writeSystemProperty writes the value to a path under /proc/sys as determined from the key.
-// For e.g. net.ipv4.ip_forward translated to /proc/sys/net/ipv4/ip_forward.
-func writeSystemProperty(key, value string) error {
-	keyPath := strings.ReplaceAll(key, ".", "/")
-	return os.WriteFile(path.Join("/proc/sys", keyPath), []byte(value), 0o644)
 }
 
 // Do the mount operation followed by additional mounts required to take care
