@@ -290,7 +290,11 @@ func handleFifoResult(result openResult) error {
 	if err := readFromExecFifo(f); err != nil {
 		return err
 	}
-	return os.Remove(f.Name())
+	err := os.Remove(f.Name())
+	if err == nil || os.IsNotExist(err) {
+		return nil
+	}
+	return err
 }
 
 type openResult struct {
