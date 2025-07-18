@@ -24,6 +24,7 @@ import (
 	"github.com/opencontainers/cgroups"
 	devices "github.com/opencontainers/cgroups/devices/config"
 	"github.com/opencontainers/cgroups/fs2"
+	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
@@ -326,7 +327,7 @@ func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
 			// inside the tmpfs, so we don't want to resolve symlinks).
 			subsystemPath := filepath.Join(c.root, b.Destination)
 			subsystemName := filepath.Base(b.Destination)
-			if err := utils.MkdirAllInRoot(c.root, subsystemPath, 0o755); err != nil {
+			if err := pathrs.MkdirAllInRoot(c.root, subsystemPath, 0o755); err != nil {
 				return err
 			}
 			if err := utils.WithProcfd(c.root, b.Destination, func(dstFd string) error {
@@ -519,7 +520,7 @@ func createMountpoint(rootfs string, m mountEntry) (string, error) {
 			}
 			// Make the parent directory.
 			destDir, destBase := filepath.Split(dest)
-			destDirFd, err := utils.MkdirAllInRootOpen(rootfs, destDir, 0o755)
+			destDirFd, err := pathrs.MkdirAllInRootOpen(rootfs, destDir, 0o755)
 			if err != nil {
 				return "", fmt.Errorf("make parent dir of file bind-mount: %w", err)
 			}
@@ -556,7 +557,7 @@ func createMountpoint(rootfs string, m mountEntry) (string, error) {
 		}
 	}
 
-	if err := utils.MkdirAllInRoot(rootfs, dest, 0o755); err != nil {
+	if err := pathrs.MkdirAllInRoot(rootfs, dest, 0o755); err != nil {
 		return "", err
 	}
 	return dest, nil
@@ -575,7 +576,7 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		// TODO: This won't be necessary once we switch to libpathrs and we can
 		//       stop all of these symlink-exchange attacks.
 		dest := filepath.Clean(m.Destination)
-		if !utils.IsLexicallyInRoot(rootfs, dest) {
+		if !pathrs.IsLexicallyInRoot(rootfs, dest) {
 			// Do not use securejoin as it resolves symlinks.
 			dest = filepath.Join(rootfs, dest)
 		}
@@ -589,7 +590,7 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		} else if !fi.IsDir() {
 			return fmt.Errorf("filesystem %q must be mounted on ordinary directory", m.Device)
 		}
-		if err := utils.MkdirAllInRoot(rootfs, dest, 0o755); err != nil {
+		if err := pathrs.MkdirAllInRoot(rootfs, dest, 0o755); err != nil {
 			return err
 		}
 		// Selinux kernels do not support labeling of /proc or /sys.
@@ -959,7 +960,7 @@ func createDeviceNode(rootfs string, node *devices.Device, bind bool) error {
 	if dest == rootfs {
 		return fmt.Errorf("%w: mknod over rootfs", errRootfsToFile)
 	}
-	if err := utils.MkdirAllInRoot(rootfs, filepath.Dir(dest), 0o755); err != nil {
+	if err := pathrs.MkdirAllInRoot(rootfs, filepath.Dir(dest), 0o755); err != nil {
 		return err
 	}
 	if bind {
