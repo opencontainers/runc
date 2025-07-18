@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -21,6 +22,7 @@ import (
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 
+	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer/capabilities"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -511,7 +513,12 @@ func setupUser(config *initConfig) error {
 	// We don't need to use /proc/thread-self here because setgroups is a
 	// per-userns file and thus is global to all threads in a thread-group.
 	// This lets us avoid having to do runtime.LockOSThread.
-	setgroups, err := os.ReadFile("/proc/self/setgroups")
+	var setgroups []byte
+	setgroupsFile, err := pathrs.ProcSelfOpen("setgroups", unix.O_RDONLY)
+	if err == nil {
+		setgroups, err = io.ReadAll(setgroupsFile)
+		_ = setgroupsFile.Close()
+	}
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
