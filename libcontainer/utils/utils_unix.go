@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	_ "unsafe" // for go:linkname
 
@@ -267,88 +266,6 @@ func ProcThreadSelf(subpath string) (string, ProcThreadSelfCloser) {
 // without using fmt.Sprintf to avoid unneeded overhead.
 func ProcThreadSelfFd(fd uintptr) (string, ProcThreadSelfCloser) {
 	return ProcThreadSelf("fd/" + strconv.FormatUint(uint64(fd), 10))
-}
-
-// IsLexicallyInRoot is shorthand for strings.HasPrefix(path+"/", root+"/"),
-// but properly handling the case where path or root are "/".
-//
-// NOTE: The return value only make sense if the path doesn't contain "..".
-func IsLexicallyInRoot(root, path string) bool {
-	if root != "/" {
-		root += "/"
-	}
-	if path != "/" {
-		path += "/"
-	}
-	return strings.HasPrefix(path, root)
-}
-
-// MkdirAllInRootOpen attempts to make
-//
-//	path, _ := securejoin.SecureJoin(root, unsafePath)
-//	os.MkdirAll(path, mode)
-//	os.Open(path)
-//
-// safer against attacks where components in the path are changed between
-// SecureJoin returning and MkdirAll (or Open) being called. In particular, we
-// try to detect any symlink components in the path while we are doing the
-// MkdirAll.
-//
-// NOTE: If unsafePath is a subpath of root, we assume that you have already
-// called SecureJoin and so we use the provided path verbatim without resolving
-// any symlinks (this is done in a way that avoids symlink-exchange races).
-// This means that the path also must not contain ".." elements, otherwise an
-// error will occur.
-//
-// This uses securejoin.MkdirAllHandle under the hood, but it has special
-// handling if unsafePath has already been scoped within the rootfs (this is
-// needed for a lot of runc callers and fixing this would require reworking a
-// lot of path logic).
-func MkdirAllInRootOpen(root, unsafePath string, mode os.FileMode) (_ *os.File, Err error) {
-	// If the path is already "within" the root, get the path relative to the
-	// root and use that as the unsafe path. This is necessary because a lot of
-	// MkdirAllInRootOpen callers have already done SecureJoin, and refactoring
-	// all of them to stop using these SecureJoin'd paths would require a fair
-	// amount of work.
-	// TODO(cyphar): Do the refactor to libpathrs once it's ready.
-	if IsLexicallyInRoot(root, unsafePath) {
-		subPath, err := filepath.Rel(root, unsafePath)
-		if err != nil {
-			return nil, err
-		}
-		unsafePath = subPath
-	}
-
-	// Check for any silly mode bits.
-	if mode&^0o7777 != 0 {
-		return nil, fmt.Errorf("tried to include non-mode bits in MkdirAll mode: 0o%.3o", mode)
-	}
-	// Linux (and thus os.MkdirAll) silently ignores the suid and sgid bits if
-	// passed. While it would make sense to return an error in that case (since
-	// the user has asked for a mode that won't be applied), for compatibility
-	// reasons we have to ignore these bits.
-	if ignoredBits := mode &^ 0o1777; ignoredBits != 0 {
-		logrus.Warnf("MkdirAll called with no-op mode bits that are ignored by Linux: 0o%.3o", ignoredBits)
-		mode &= 0o1777
-	}
-
-	rootDir, err := os.OpenFile(root, unix.O_DIRECTORY|unix.O_CLOEXEC, 0)
-	if err != nil {
-		return nil, fmt.Errorf("open root handle: %w", err)
-	}
-	defer rootDir.Close()
-
-	return securejoin.MkdirAllHandle(rootDir, unsafePath, mode)
-}
-
-// MkdirAllInRoot is a wrapper around MkdirAllInRootOpen which closes the
-// returned handle, for callers that don't need to use it.
-func MkdirAllInRoot(root, unsafePath string, mode os.FileMode) error {
-	f, err := MkdirAllInRootOpen(root, unsafePath, mode)
-	if err == nil {
-		_ = f.Close()
-	}
-	return err
 }
 
 // Openat is a Go-friendly openat(2) wrapper.
