@@ -23,6 +23,13 @@ func u64Ptr(i uint64) *uint64 { return &i }
 func u16Ptr(i uint16) *uint16 { return &i }
 func boolPtr(b bool) *bool    { return &b }
 
+const (
+	l3CacheSchemaFlag = "l3-cache-schema"
+	memBwSchemaFlag   = "mem-bw-schema"
+	enableCMTFlag     = "enable-intelrdt-cmt"
+	enableMBMFlag     = "enable-intelrdt-mbm"
+)
+
 var updateCommand = cli.Command{
 	Name:      "update",
 	Usage:     "update container resource constraints",
@@ -130,12 +137,20 @@ other options are ignored.
 			Usage: "Maximum number of pids allowed in the container",
 		},
 		cli.StringFlag{
-			Name:  "l3-cache-schema",
+			Name:  l3CacheSchemaFlag,
 			Usage: "The string of Intel RDT/CAT L3 cache schema",
 		},
 		cli.StringFlag{
-			Name:  "mem-bw-schema",
+			Name:  memBwSchemaFlag,
 			Usage: "The string of Intel RDT/MBA memory bandwidth schema",
+		},
+		cli.BoolFlag{
+			Name:  enableCMTFlag,
+			Usage: "Enable Intel RDT/CMT metrics for the container",
+		},
+		cli.BoolFlag{
+			Name:  enableMBMFlag,
+			Usage: "Enable Intel RDT/MBM metrics for the container",
 		},
 	},
 	Action: func(context *cli.Context) error {
@@ -361,17 +376,32 @@ other options are ignored.
 		config.Cgroups.Resources.Unified = r.Unified
 
 		// Update Intel RDT
-		l3CacheSchema := context.String("l3-cache-schema")
-		memBwSchema := context.String("mem-bw-schema")
-		if l3CacheSchema != "" && !intelrdt.IsCATEnabled() {
-			return errors.New("Intel RDT/CAT: l3 cache schema is not enabled")
-		}
+		isL3CacheSchemaFlagSet := context.IsSet(l3CacheSchemaFlag)
+		l3CacheSchema := context.String(l3CacheSchemaFlag)
 
-		if memBwSchema != "" && !intelrdt.IsMBAEnabled() {
-			return errors.New("Intel RDT/MBA: memory bandwidth schema is not enabled")
-		}
+		isMemBwSchemaFlagSet := context.IsSet(memBwSchemaFlag)
+		memBwSchema := context.String(memBwSchemaFlag)
 
-		if l3CacheSchema != "" || memBwSchema != "" {
+		isEnableCMTFlagSet := context.IsSet(enableCMTFlag)
+		enableCMT := context.Bool(enableCMTFlag)
+
+		isEnableMBMFlagSet := context.IsSet(enableMBMFlag)
+		enableMBM := context.Bool(enableMBMFlag)
+
+		if isL3CacheSchemaFlagSet || isMemBwSchemaFlagSet || isEnableCMTFlagSet || isEnableMBMFlagSet {
+			if isL3CacheSchemaFlagSet && l3CacheSchema != "" && !intelrdt.IsCATEnabled() {
+				return errors.New("Intel RDT/CAT: l3 cache schema is not enabled")
+			}
+			if isMemBwSchemaFlagSet && memBwSchema != "" && !intelrdt.IsMBAEnabled() {
+				return errors.New("Intel RDT/MBA: memory bandwidth schema is not enabled")
+			}
+			if isEnableCMTFlagSet && enableCMT && !intelrdt.IsCMTEnabled() {
+				return errors.New("Intel RDT/CMT: CMT is not enabled")
+			}
+			if isEnableMBMFlagSet && enableMBM && !intelrdt.IsMBMEnabled() {
+				return errors.New("Intel RDT/MBM: MBM is not enabled")
+			}
+
 			// If intelRdt is not specified in original configuration, we just don't
 			// Apply() to create intelRdt group or attach tasks for this container.
 			// In update command, we could re-enable through IntelRdtManager.Apply()
@@ -382,13 +412,28 @@ other options are ignored.
 					return err
 				}
 				config.IntelRdt = &configs.IntelRdt{}
+				config.IntelRdt.L3CacheSchema = l3CacheSchema
+				config.IntelRdt.MemBwSchema = memBwSchema
+				config.IntelRdt.EnableCMT = enableCMT
+				config.IntelRdt.EnableMBM = enableMBM
 				intelRdtManager := intelrdt.NewManager(&config, container.ID(), state.IntelRdtPath)
 				if err := intelRdtManager.Apply(state.InitProcessPid); err != nil {
 					return err
 				}
+			} else {
+				if isL3CacheSchemaFlagSet {
+					config.IntelRdt.L3CacheSchema = l3CacheSchema
+				}
+				if isMemBwSchemaFlagSet {
+					config.IntelRdt.MemBwSchema = memBwSchema
+				}
+				if isEnableCMTFlagSet {
+					config.IntelRdt.EnableCMT = enableCMT
+				}
+				if isEnableMBMFlagSet {
+					config.IntelRdt.EnableMBM = enableMBM
+				}
 			}
-			config.IntelRdt.L3CacheSchema = l3CacheSchema
-			config.IntelRdt.MemBwSchema = memBwSchema
 		}
 
 		// XXX(kolyshkin@): currently "runc update" is unable to change
