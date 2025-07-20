@@ -840,7 +840,6 @@ func checkProcMount(rootfs, dest string, m mountEntry) error {
 		"/proc/uptime",
 		"/proc/loadavg",
 		"/proc/slabinfo",
-		"/proc/net/dev",
 		"/proc/sys/kernel/ns_last_pid",
 		"/proc/sys/crypto/fips_enabled",
 	}
