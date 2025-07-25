@@ -287,11 +287,17 @@ func intelrdtCheck(config *configs.Config) error {
 			return fmt.Errorf("invalid intelRdt.ClosID %q", config.IntelRdt.ClosID)
 		}
 
-		if !intelrdt.IsCATEnabled() && config.IntelRdt.L3CacheSchema != "" {
+		if config.IntelRdt.L3CacheSchema != "" && !intelrdt.IsCATEnabled() {
 			return errors.New("intelRdt.l3CacheSchema is specified in config, but Intel RDT/CAT is not enabled")
 		}
-		if !intelrdt.IsMBAEnabled() && config.IntelRdt.MemBwSchema != "" {
+		if config.IntelRdt.MemBwSchema != "" && !intelrdt.IsMBAEnabled() {
 			return errors.New("intelRdt.memBwSchema is specified in config, but Intel RDT/MBA is not enabled")
+		}
+		if config.IntelRdt.EnableCMT && !intelrdt.IsCMTEnabled() {
+			return errors.New("intelRdt.enableCMT is specified in config, but Intel RDT/CMT is not enabled")
+		}
+		if config.IntelRdt.EnableMBM && !intelrdt.IsMBMEnabled() {
+			return errors.New("intelRdt.enableMBM is specified in config, but Intel RDT/MBM is not enabled")
 		}
 	}
 
