@@ -282,7 +282,7 @@ function check_exec_debug() {
 	# Check we can't join non-existing subcgroup.
 	runc exec --cgroup nonexistent test_busybox cat /proc/self/cgroup
 	[ "$status" -ne 0 ]
-	[[ "$output" == *" adding pid "*"/nonexistent/cgroup.procs: no such file "* ]]
+	[[ "$output" == *" can't open cgroup:"*"/nonexistent: no such file "* ]]
 
 	# Check we can join top-level cgroup (implicit).
 	runc exec test_busybox grep '^0::/$' /proc/self/cgroup
@@ -318,7 +318,7 @@ function check_exec_debug() {
 	# Check that --cgroup / disables the init cgroup fallback.
 	runc exec --cgroup / test_busybox true
 	[ "$status" -ne 0 ]
-	[[ "$output" == *" adding pid "*" to cgroups"*"/cgroup.procs: device or resource busy"* ]]
+	[[ "$output" == *" adding pid "*" to cgroups"*"evice or resource busy"* ]]
 
 	# Check that explicit --cgroup foobar works.
 	runc exec --cgroup foobar test_busybox grep '^0::/foobar$' /proc/self/cgroup

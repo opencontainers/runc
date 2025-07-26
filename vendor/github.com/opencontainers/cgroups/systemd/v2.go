@@ -383,6 +383,13 @@ func cgroupFilesToChown() ([]string, error) {
 	return filesToChown, nil
 }
 
+func (m *UnifiedManager) AddPid(subcgroup string, pid int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return addPid(m.dbus, getUnitName(m.cgroups), subcgroup, pid)
+}
+
 func (m *UnifiedManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
