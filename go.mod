@@ -32,3 +32,8 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 )
+
+replace (
+	github.com/coreos/go-systemd/v22 => github.com/kolyshkin/go-systemd/v22 v22.5.1-0.20250725225557-871b63ece367
+	github.com/opencontainers/cgroups => github.com/kolyshkin/oc-cgroups v0.0.5-0.20250725234903-e434adf43b3e
+)

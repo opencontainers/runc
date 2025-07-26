@@ -318,7 +318,7 @@ function check_exec_debug() {
 	# Check that --cgroup / disables the init cgroup fallback.
 	runc exec --cgroup / test_busybox true
 	[ "$status" -ne 0 ]
-	[[ "$output" == *" adding pid "*" to cgroups"*"/cgroup.procs: device or resource busy"* ]]
+	[[ "$output" == *" adding pid "*" to cgroups"*"evice or resource busy"* ]]
 
 	# Check that explicit --cgroup foobar works.
 	runc exec --cgroup foobar test_busybox grep '^0::/foobar$' /proc/self/cgroup

@@ -215,6 +215,13 @@ func (m *LegacyManager) Apply(pid int) error {
 	return nil
 }
 
+func (m *LegacyManager) AddPid(subcgroup string, pid int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return addPid(m.dbus, getUnitName(m.cgroups), subcgroup, pid)
+}
+
 func (m *LegacyManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

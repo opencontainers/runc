@@ -201,6 +201,18 @@ func (p *setnsProcess) setFinalCPUAffinity() error {
 }
 
 func (p *setnsProcess) addIntoCgroupV1() error {
+	if len(p.process.SubCgroupPaths) == 0 {
+		// No sub-cgroup.
+		return p.manager.AddPid("", p.pid())
+	}
+	if subcgroup, ok := p.process.SubCgroupPaths[""]; ok {
+		// Same sub-cgroup for all controllers.
+		return p.manager.AddPid(subcgroup, p.pid())
+	}
+
+	// Per-controller cgroup paths. Not supported by AddPid (or systemd),
+	// so we have to calculate and check all sub-cgroup paths and then
+	// write directly to cgroupfs.
 	paths := maps.Clone(p.manager.GetPaths())
 	for ctrl, sub := range p.process.SubCgroupPaths {
 		base, ok := paths[ctrl]
@@ -224,18 +236,13 @@ func (p *setnsProcess) addIntoCgroupV1() error {
 }
 
 func (p *setnsProcess) addIntoCgroupV2() error {
-	base := p.manager.Path("")
 	sub := ""
 	if p.process.SubCgroupPaths != nil {
 		sub = p.process.SubCgroupPaths[""]
 	}
-	cgPath := path.Join(base, sub)
-	if !strings.HasPrefix(cgPath, base) {
-		return fmt.Errorf("%s is not a sub cgroup path", sub)
-	}
-
-	if err := cgroups.WriteCgroupProc(cgPath, p.pid()); err != nil && !p.rootlessCgroups {
-		// On cgroup v2 + nesting + domain controllers, WriteCgroupProc may fail with EBUSY.
+	err := p.manager.AddPid(sub, p.pid())
+	if err != nil && !p.rootlessCgroups {
+		// On cgroup v2 + nesting + domain controllers, adding to initial cgroup may fail with EBUSY.
 		// https://github.com/opencontainers/runc/issues/2356#issuecomment-621277643
 		// Try to join the cgroup of InitProcessPid, unless sub-cgroup is explicitly set.
 		if p.initProcessPid != 0 && sub == "" {
@@ -244,8 +251,8 @@ func (p *setnsProcess) addIntoCgroupV2() error {
 			if initCgErr == nil {
 				if initCgPath, ok := initCg[""]; ok {
 					initCgDirpath := filepath.Join(fs2.UnifiedMountpoint, initCgPath)
-					logrus.Debugf("adding pid %d to cgroup %s failed (%v), attempting to join %s",
-						p.pid(), cgPath, err, initCgDirpath)
+					logrus.Debugf("adding pid %d to cgroup failed (%v), attempting to join %s",
+						p.pid(), err, initCgDirpath)
 					// NOTE: initCgDirPath is not guaranteed to exist because we didn't pause the container.
 					err = cgroups.WriteCgroupProc(initCgDirpath, p.pid())
 				}

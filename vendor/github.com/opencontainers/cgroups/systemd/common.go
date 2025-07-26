@@ -208,6 +208,12 @@ func stopUnit(cm *dbusConnManager, unitName string) error {
 	return nil
 }
 
+func addPid(cm *dbusConnManager, unitName, subcgroup string, pid int) error {
+	return cm.retryOnDisconnect(func(c *systemdDbus.Conn) error {
+		return c.AttachProcessesToUnit(context.TODO(), unitName, subcgroup, []uint32{uint32(pid)})
+	})
+}
+
 func resetFailedUnit(cm *dbusConnManager, name string) error {
 	return cm.retryOnDisconnect(func(c *systemdDbus.Conn) error {
 		return c.ResetFailedUnitContext(context.TODO(), name)
