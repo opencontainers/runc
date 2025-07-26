@@ -6,12 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -153,7 +156,6 @@ func (p *containerProcess) wait() (*os.ProcessState, error) { //nolint:unparam
 
 type setnsProcess struct {
 	containerProcess
-	cgroupPaths     map[string]string
 	rootlessCgroups bool
 	intelRdtPath    string
 	initProcessPid  int
@@ -245,7 +247,20 @@ func (p *setnsProcess) setFinalCPUAffinity() error {
 }
 
 func (p *setnsProcess) addIntoCgroupV1() error {
-	for _, path := range p.cgroupPaths {
+	paths := maps.Clone(p.manager.GetPaths())
+	for ctrl, sub := range p.process.SubCgroupPaths {
+		base, ok := paths[ctrl]
+		if !ok {
+			return fmt.Errorf("unknown controller %s in SubCgroupPaths", ctrl)
+		}
+		cgPath := path.Join(base, sub)
+		if !strings.HasPrefix(cgPath, base) {
+			return fmt.Errorf("%s is not a sub cgroup path", sub)
+		}
+		paths[ctrl] = cgPath
+	}
+
+	for _, path := range paths {
 		if err := cgroups.WriteCgroupProc(path, p.pid()); err != nil && !p.rootlessCgroups {
 			return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
 		}
@@ -255,19 +270,28 @@ func (p *setnsProcess) addIntoCgroupV1() error {
 }
 
 func (p *setnsProcess) addIntoCgroupV2() error {
-	path := p.cgroupPaths[""]
-	if err := cgroups.WriteCgroupProc(path, p.pid()); err != nil && !p.rootlessCgroups {
+	base := p.manager.Path("")
+	sub := ""
+	if p.process.SubCgroupPaths != nil {
+		sub = p.process.SubCgroupPaths[""]
+	}
+	cgPath := path.Join(base, sub)
+	if !strings.HasPrefix(cgPath, base) {
+		return fmt.Errorf("%s is not a sub cgroup path", sub)
+	}
+
+	if err := cgroups.WriteCgroupProc(cgPath, p.pid()); err != nil && !p.rootlessCgroups {
 		// On cgroup v2 + nesting + domain controllers, WriteCgroupProc may fail with EBUSY.
 		// https://github.com/opencontainers/runc/issues/2356#issuecomment-621277643
-		// Try to join the cgroup of InitProcessPid.
-		if p.initProcessPid != 0 {
+		// Try to join the cgroup of InitProcessPid, unless sub-cgroup is explicitly set.
+		if p.initProcessPid != 0 && sub == "" {
 			initProcCgroupFile := fmt.Sprintf("/proc/%d/cgroup", p.initProcessPid)
 			initCg, initCgErr := cgroups.ParseCgroupFile(initProcCgroupFile)
 			if initCgErr == nil {
 				if initCgPath, ok := initCg[""]; ok {
 					initCgDirpath := filepath.Join(fs2.UnifiedMountpoint, initCgPath)
-					logrus.Debugf("adding pid %d to cgroups %v failed (%v), attempting to join %q (obtained from %s)",
-						p.pid(), p.cgroupPaths, err, initCg, initCgDirpath)
+					logrus.Debugf("adding pid %d to cgroup %s failed (%v), attempting to join %s",
+						p.pid(), cgPath, err, initCgDirpath)
 					// NOTE: initCgDirPath is not guaranteed to exist because we didn't pause the container.
 					err = cgroups.WriteCgroupProc(initCgDirpath, p.pid())
 				}
