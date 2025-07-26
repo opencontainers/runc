@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -655,39 +654,9 @@ func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, comm *processComm
 			bootstrapData: data,
 			container:     c,
 		},
-		cgroupPaths:     state.CgroupPaths,
 		rootlessCgroups: c.config.RootlessCgroups,
 		intelRdtPath:    state.IntelRdtPath,
 		initProcessPid:  state.InitProcessPid,
-	}
-	if len(p.SubCgroupPaths) > 0 {
-		if add, ok := p.SubCgroupPaths[""]; ok {
-			// cgroup v1: using the same path for all controllers.
-			// cgroup v2: the only possible way.
-			for k := range proc.cgroupPaths {
-				subPath := path.Join(proc.cgroupPaths[k], add)
-				if !strings.HasPrefix(subPath, proc.cgroupPaths[k]) {
-					return nil, fmt.Errorf("%s is not a sub cgroup path", add)
-				}
-				proc.cgroupPaths[k] = subPath
-			}
-			// cgroup v2: do not try to join init process's cgroup
-			// as a fallback (see (*setnsProcess).start).
-			proc.initProcessPid = 0
-		} else {
-			// Per-controller paths.
-			for ctrl, add := range p.SubCgroupPaths {
-				if val, ok := proc.cgroupPaths[ctrl]; ok {
-					subPath := path.Join(val, add)
-					if !strings.HasPrefix(subPath, val) {
-						return nil, fmt.Errorf("%s is not a sub cgroup path", add)
-					}
-					proc.cgroupPaths[ctrl] = subPath
-				} else {
-					return nil, fmt.Errorf("unknown controller %s in SubCgroupPaths", ctrl)
-				}
-			}
-		}
 	}
 	return proc, nil
 }
