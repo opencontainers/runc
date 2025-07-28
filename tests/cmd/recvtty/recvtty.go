@@ -85,13 +85,7 @@ func handleSingle(path string, noStdin bool) error {
 	// Close ln, to allow for other instances to take over.
 	ln.Close()
 
-	// Get the fd of the connection.
-	unixconn, ok := conn.(*net.UnixConn)
-	if !ok {
-		return errors.New("failed to cast to unixconn")
-	}
-
-	socket, err := unixconn.File()
+	socket, err := conn.(*net.UnixConn).File()
 	if err != nil {
 		return err
 	}
@@ -158,13 +152,7 @@ func handleNull(path string) error {
 			// Don't leave references lying around.
 			defer conn.Close()
 
-			// Get the fd of the connection.
-			unixconn, ok := conn.(*net.UnixConn)
-			if !ok {
-				return
-			}
-
-			socket, err := unixconn.File()
+			socket, err := conn.(*net.UnixConn).File()
 			if err != nil {
 				return
 			}
