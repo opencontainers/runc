@@ -121,12 +121,8 @@ func setupIO(process *libcontainer.Process, container *libcontainer.Container, c
 			if err != nil {
 				return nil, err
 			}
-			uc, ok := conn.(*net.UnixConn)
-			if !ok {
-				return nil, errors.New("casting to UnixConn failed")
-			}
-			t.postStart = append(t.postStart, uc)
-			socket, err := uc.File()
+			t.postStart = append(t.postStart, conn)
+			socket, err := conn.(*net.UnixConn).File()
 			if err != nil {
 				return nil, err
 			}
@@ -432,13 +428,7 @@ func setupPidfdSocket(process *libcontainer.Process, sockpath string) (_clean fu
 		return nil, fmt.Errorf("failed to dail %s: %w", sockpath, err)
 	}
 
-	uc, ok := conn.(*net.UnixConn)
-	if !ok {
-		conn.Close()
-		return nil, errors.New("failed to cast to UnixConn")
-	}
-
-	socket, err := uc.File()
+	socket, err := conn.(*net.UnixConn).File()
 	if err != nil {
 		conn.Close()
 		return nil, fmt.Errorf("failed to dup socket: %w", err)
