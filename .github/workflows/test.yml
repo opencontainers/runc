@@ -125,8 +125,9 @@ jobs:
         sudo apt -qy install \
           libcap-dev libnet1-dev libnl-3-dev uuid-dev \
           libprotobuf-c-dev libprotobuf-dev protobuf-c-compiler protobuf-compiler
-        git clone https://github.com/checkpoint-restore/criu.git ~/criu
-        (cd ~/criu && git checkout ${{ matrix.criu }} && sudo make install-criu)
+        git clone --depth 1 --branch ${{ matrix.criu }} --single-branch \
+          https://github.com/checkpoint-restore/criu.git ~/criu
+        (cd ~/criu && sudo make -j $(nproc) install-criu)
         rm -rf ~/criu
 
     - name: install go ${{ matrix.go-version }}
