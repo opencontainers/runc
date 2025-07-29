@@ -47,7 +47,7 @@ func parseMonFeatures(reader io.Reader) (monFeatures, error) {
 	return monFeatures, scanner.Err()
 }
 
-func getMonitoringStats(containerPath string, stats *Stats) error {
+func getMonitoringStats(containerPath string, stats *Stats, enableCMT bool, enableMBM bool) error {
 	numaFiles, err := os.ReadDir(filepath.Join(containerPath, "mon_data"))
 	if err != nil {
 		return err
@@ -59,14 +59,14 @@ func getMonitoringStats(containerPath string, stats *Stats) error {
 	for _, file := range numaFiles {
 		if file.IsDir() {
 			numaPath := filepath.Join(containerPath, "mon_data", file.Name())
-			if IsMBMEnabled() {
+			if enableMBM && IsMBMEnabled() {
 				numaMBMStats, err := getMBMNumaNodeStats(numaPath)
 				if err != nil {
 					return err
 				}
 				mbmStats = append(mbmStats, *numaMBMStats)
 			}
-			if IsCMTEnabled() {
+			if enableCMT && IsCMTEnabled() {
 				numaCMTStats, err := getCMTNumaNodeStats(numaPath)
 				if err != nil {
 					return err

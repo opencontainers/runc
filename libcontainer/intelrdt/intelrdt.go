@@ -20,33 +20,37 @@ import (
 /*
  * About Intel RDT features:
  * Intel platforms with new Xeon CPU support Resource Director Technology (RDT).
- * Cache Allocation Technology (CAT) and Memory Bandwidth Allocation (MBA) are
- * two sub-features of RDT.
+ * Cache Allocation Technology (CAT), Cache Monitoring Technology (CMT),
+ * Memory Bandwidth Allocation (MBA) and Memory Bandwidth Monitoring (MBM) are
+ * four sub-features of RDT.
  *
  * Cache Allocation Technology (CAT) provides a way for the software to restrict
  * cache allocation to a defined 'subset' of L3 cache which may be overlapping
  * with other 'subsets'. The different subsets are identified by class of
  * service (CLOS) and each CLOS has a capacity bitmask (CBM).
  *
+ * Cache Monitoring Technology (CMT) supports monitoring of the last-level cache (LLC) occupancy
+ * for each running thread simultaneously.
+ *
  * Memory Bandwidth Allocation (MBA) provides indirect and approximate throttle
  * over memory bandwidth for the software. A user controls the resource by
  * indicating the percentage of maximum memory bandwidth or memory bandwidth
  * limit in MBps unit if MBA Software Controller is enabled.
  *
- * More details about Intel RDT CAT and MBA can be found in the section 17.18
+ * Memory Bandwidth Monitoring (MBM) supports monitoring of total and local memory bandwidth
+ * for each running thread simultaneously.
+ *
+ * More details about Intel RDT CAT and MBA can be found in the section 17.18 and 17.19, Volume 3
  * of Intel Software Developer Manual:
  * https://software.intel.com/en-us/articles/intel-sdm
  *
  * About Intel RDT kernel interface:
- * In Linux 4.10 kernel or newer, the interface is defined and exposed via
+ * In Linux 4.14 kernel or newer, the interface is defined and exposed via
  * "resource control" filesystem, which is a "cgroup-like" interface.
  *
  * Comparing with cgroups, it has similar process management lifecycle and
  * interfaces in a container. But unlike cgroups' hierarchy, it has single level
  * filesystem layout.
- *
- * CAT and MBA features are introduced in Linux 4.10 and 4.12 kernel via
- * "resource control" filesystem.
  *
  * Intel RDT "resource control" filesystem hierarchy:
  * mount -t resctrl resctrl /sys/fs/resctrl
@@ -66,19 +70,37 @@ import (
  * |       |-- delay_linear
  * |       |-- min_bandwidth
  * |       |-- num_closids
- * |-- ...
+ * |-- mon_groups
+ *     |-- <rmid>
+ *         |-- ...
+ *         |-- mon_data
+ *   	       |-- mon_L3_00
+ *   	           |-- llc_occupancy
+ *                 |-- mbm_local_bytes
+ *                 |-- mbm_total_bytes
+ *             |-- ...
+ *         |-- tasks
  * |-- schemata
  * |-- tasks
  * |-- <clos>
  *     |-- ...
- *     |-- schemata
+ *     |-- mon_data
+ *         |-- mon_L3_00
+ *   	       |-- llc_occupancy
+ *             |-- mbm_local_bytes
+ *             |-- mbm_total_bytes
+ *         |-- ...
  *     |-- tasks
+ *     |-- schemata
+ * |-- ...
+ *
  *
  * For runc, we can make use of `tasks` and `schemata` configuration for L3
- * cache and memory bandwidth resources constraints.
+ * cache and memory bandwidth resources constraints, `mon_data` directory for
+ * CMT and MBM statistics.
  *
  * The file `tasks` has a list of tasks that belongs to this group (e.g.,
- * <container_id>" group). Tasks can be added to a group by writing the task ID
+ * "<clos>" group). Tasks can be added to a group by writing the task ID
  * to the "tasks" file (which will automatically remove them from the previous
  * group to which they belonged). New tasks created by fork(2) and clone(2) are
  * added to the same group as their parent.
@@ -89,7 +111,9 @@ import (
  * L3 cache schema:
  * It has allocation bitmasks/values for L3 cache on each socket, which
  * contains L3 cache id and capacity bitmask (CBM).
- * 	Format: "L3:<cache_id0>=<cbm0>;<cache_id1>=<cbm1>;..."
+ *
+ *	  Format: "L3:<cache_id0>=<cbm0>;<cache_id1>=<cbm1>;..."
+ *
  * For example, on a two-socket machine, the schema line could be "L3:0=ff;1=c0"
  * which means L3 cache id 0's CBM is 0xff, and L3 cache id 1's CBM is 0xc0.
  *
@@ -103,7 +127,9 @@ import (
  * Memory bandwidth schema:
  * It has allocation values for memory bandwidth on each socket, which contains
  * L3 cache id and memory bandwidth.
- * 	Format: "MB:<cache_id0>=bandwidth0;<cache_id1>=bandwidth1;..."
+ *
+ *	  Format: "MB:<cache_id0>=bandwidth0;<cache_id1>=bandwidth1;..."
+ *
  * For example, on a two-socket machine, the schema line could be "MB:0=20;1=70"
  *
  * The minimum bandwidth percentage value for each CPU model is predefined and
@@ -128,7 +154,9 @@ import (
  * For more information about Intel RDT kernel interface:
  * https://www.kernel.org/doc/Documentation/x86/intel_rdt_ui.txt
  *
+ *
  * An example for runc:
+ *
  * Consider a two-socket machine with two L3 caches where the default CBM is
  * 0x7ff and the max CBM length is 11 bits, and minimum memory bandwidth of 10%
  * with a memory bandwidth granularity of 10%.
@@ -141,15 +169,27 @@ import (
  *     "intelRdt": {
  *         "l3CacheSchema": "L3:0=7f0;1=1f",
  *         "memBwSchema": "MB:0=20;1=70"
- * 	}
+ *	  }
  * }
+ *
+ * Another example:
+ *
+ * We only want to monitor memory bandwidth and llc occupancy.
+ * "linux": {
+ *     "intelRdt": {
+ *         "enableMBM": true,
+ *         "enableCMT": true
+ *	  }
+ * }
+ *
  */
 
 type Manager struct {
-	mu     sync.Mutex
-	config *configs.Config
-	id     string
-	path   string
+	mu              sync.Mutex
+	config          *configs.Config
+	id              string
+	path            string
+	monitoringGroup bool
 }
 
 // NewManager returns a new instance of Manager, or nil if the Intel RDT
@@ -169,15 +209,26 @@ func NewManager(config *configs.Config, id string, path string) *Manager {
 // newManager is the same as NewManager, except it does not check if the feature
 // is actually available. Used by unit tests that mock intelrdt paths.
 func newManager(config *configs.Config, id string, path string) *Manager {
+	var monitoringGroup bool
+	if config.IntelRdt.L3CacheSchema != "" || config.IntelRdt.MemBwSchema != "" || config.IntelRdt.ClosID != "" {
+		monitoringGroup = false
+	} else if config.IntelRdt.EnableCMT || config.IntelRdt.EnableMBM {
+		monitoringGroup = true
+	} else {
+		return nil
+	}
+
 	return &Manager{
-		config: config,
-		id:     id,
-		path:   path,
+		config:          config,
+		id:              id,
+		path:            path,
+		monitoringGroup: monitoringGroup,
 	}
 }
 
 const (
-	intelRdtTasks = "tasks"
+	intelRdtTasks       = "tasks"
+	monitoringGroupRoot = "mon_groups"
 )
 
 var (
@@ -435,12 +486,16 @@ func (m *Manager) getIntelRdtPath() (string, error) {
 		return "", err
 	}
 
-	clos := m.id
+	groupName := m.id
 	if m.config.IntelRdt != nil && m.config.IntelRdt.ClosID != "" {
-		clos = m.config.IntelRdt.ClosID
+		groupName = m.config.IntelRdt.ClosID
 	}
 
-	return filepath.Join(rootPath, clos), nil
+	if m.monitoringGroup {
+		return filepath.Join(rootPath, monitoringGroupRoot, groupName), nil
+	}
+
+	return filepath.Join(rootPath, groupName), nil
 }
 
 // Apply applies Intel RDT configuration to the process with the specified pid.
@@ -518,6 +573,9 @@ func (m *Manager) GetStats() (*Stats, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	containerPath := m.GetPath()
+
 	// The read-only L3 cache and memory bandwidth schemata in root
 	tmpRootStrings, err := getIntelRdtParamString(rootPath, "schemata")
 	if err != nil {
@@ -525,9 +583,13 @@ func (m *Manager) GetStats() (*Stats, error) {
 	}
 	schemaRootStrings := strings.Split(tmpRootStrings, "\n")
 
+	closPath := containerPath
+	if m.monitoringGroup {
+		closPath = filepath.Join(containerPath, "../..")
+	}
+
 	// The L3 cache and memory bandwidth schemata in container's clos group
-	containerPath := m.GetPath()
-	tmpStrings, err := getIntelRdtParamString(containerPath, "schemata")
+	tmpStrings, err := getIntelRdtParamString(closPath, "schemata")
 	if err != nil {
 		return nil, err
 	}
@@ -579,8 +641,8 @@ func (m *Manager) GetStats() (*Stats, error) {
 		}
 	}
 
-	if IsMBMEnabled() || IsCMTEnabled() {
-		err = getMonitoringStats(containerPath, stats)
+	if (IsCMTEnabled() && m.config.IntelRdt.EnableCMT) || (IsMBMEnabled() && m.config.IntelRdt.EnableMBM) {
+		err = getMonitoringStats(containerPath, stats, m.config.IntelRdt.EnableCMT, m.config.IntelRdt.EnableMBM)
 		if err != nil {
 			return nil, err
 		}
@@ -637,9 +699,17 @@ func (m *Manager) Set(container *configs.Config) error {
 	// "MB:0=5000;1=7000" which means 5000 MBps memory bandwidth limit on
 	// socket 0 and 7000 MBps memory bandwidth limit on socket 1.
 	if container.IntelRdt != nil {
-		path := m.GetPath()
+
 		l3CacheSchema := container.IntelRdt.L3CacheSchema
 		memBwSchema := container.IntelRdt.MemBwSchema
+
+		// Write a single joint schema string to schemata file
+		if l3CacheSchema != "" || memBwSchema != "" {
+			// Schema can be set only in Control Group.
+			if m.monitoringGroup {
+				return fmt.Errorf("couldn't set IntelRdt l3CacheSchema or memBwSchema for the monitoring group")
+			}
+		}
 
 		// TODO: verify that l3CacheSchema and/or memBwSchema match the
 		// existing schemata if ClosID has been specified. This is a more
@@ -647,7 +717,8 @@ func (m *Manager) Set(container *configs.Config) error {
 		// the value written in does not necessarily match what gets read out
 		// (leading zeros, cache id ordering etc).
 
-		// Write a single joint schema string to schemata file
+		// Write a single joint schemata string to schemata file
+		path := m.GetPath()
 		if l3CacheSchema != "" && memBwSchema != "" {
 			if err := writeFile(path, "schemata", l3CacheSchema+"\n"+memBwSchema); err != nil {
 				return err

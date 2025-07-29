@@ -1,10 +1,14 @@
 package intelrdt
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 func TestIntelRdtSetL3CacheSchema(t *testing.T) {
@@ -123,5 +127,52 @@ func TestApply(t *testing.T) {
 	}
 	if pids != "1235" {
 		t.Fatalf("unexpected tasks file, expected '1235', got %q", pids)
+	}
+}
+
+func TestIntelRdtManagerSetSchemataInMonGroup(t *testing.T) {
+	helper := NewIntelRdtTestUtil(t)
+
+	intelrdt := Manager{
+		mu:              sync.Mutex{},
+		config:          helper.config,
+		id:              "",
+		path:            helper.IntelRdtPath,
+		monitoringGroup: true,
+	}
+
+	test := []struct {
+		l3Schema    string
+		memBwSchema string
+	}{
+		{
+			"L3:0=f0;1=f",
+			"",
+		},
+		{
+			"L3:0=f0;1=f",
+			"MB:0=20;1=70",
+		},
+		{
+			"",
+			"MB:0=20;1=70",
+		},
+	}
+
+	expectedError := errors.New("couldn't set IntelRdt l3CacheSchema or memBwSchema for the monitoring group")
+
+	for _, tc := range test {
+		err := intelrdt.Set(&configs.Config{IntelRdt: &configs.IntelRdt{
+			L3CacheSchema: tc.l3Schema,
+			MemBwSchema:   tc.memBwSchema,
+		}})
+
+		if err == nil {
+			t.Fatalf("Expected error: %v, got nil.", expectedError)
+		}
+
+		if err.Error() != expectedError.Error() {
+			t.Fatalf("Expected error: %v but got: %v.", expectedError, err)
+		}
 	}
 }
