@@ -95,7 +95,7 @@ func newProcess(p *specs.Process) (*libcontainer.Process, error) {
 }
 
 // setupIO modifies the given process config according to the options.
-func setupIO(process *libcontainer.Process, container *libcontainer.Container, createTTY, detach bool, sockpath string) (*tty, error) {
+func setupIO(process *libcontainer.Process, container *libcontainer.Container, createTTY, detach bool, sockpath string) (_ *tty, Err error) {
 	if createTTY {
 		process.Stdin = nil
 		process.Stdout = nil
@@ -121,6 +121,11 @@ func setupIO(process *libcontainer.Process, container *libcontainer.Container, c
 			if err != nil {
 				return nil, err
 			}
+			defer func() {
+				if Err != nil {
+					conn.Close()
+				}
+			}()
 			t.postStart = append(t.postStart, conn)
 			socket, err := conn.(*net.UnixConn).File()
 			if err != nil {
