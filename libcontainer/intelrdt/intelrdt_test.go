@@ -3,97 +3,67 @@ package intelrdt
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-func TestIntelRdtSetL3CacheSchema(t *testing.T) {
-	helper := NewIntelRdtTestUtil(t)
-
-	const (
-		l3CacheSchemaBefore = "L3:0=f;1=f0"
-		l3CacheSchemeAfter  = "L3:0=f0;1=f"
-	)
-
-	helper.writeFileContents(map[string]string{
-		"schemata": l3CacheSchemaBefore + "\n",
-	})
-
-	helper.config.IntelRdt.L3CacheSchema = l3CacheSchemeAfter
-	intelrdt := newManager(helper.config, "", helper.IntelRdtPath)
-	if err := intelrdt.Set(helper.config); err != nil {
-		t.Fatal(err)
+func TestIntelRdtSet(t *testing.T) {
+	tcs := []struct {
+		name          string
+		config        *configs.IntelRdt
+		schemataAfter []string
+	}{
+		{
+			name: "L3",
+			config: &configs.IntelRdt{
+				L3CacheSchema: "L3:0=f0;1=f",
+			},
+			schemataAfter: []string{"L3:0=f0;1=f"},
+		},
+		{
+			name: "MemBw",
+			config: &configs.IntelRdt{
+				MemBwSchema: "MB:0=70;1=20",
+			},
+			schemataAfter: []string{"MB:0=70;1=20"},
+		},
+		{
+			name: "MemBwSc",
+			config: &configs.IntelRdt{
+				MemBwSchema: "MB:0=9000;1=4000",
+			},
+			schemataAfter: []string{"MB:0=9000;1=4000"},
+		},
 	}
 
-	tmpStrings, err := getIntelRdtParamString(helper.IntelRdtPath, "schemata")
-	if err != nil {
-		t.Fatalf("Failed to parse file 'schemata' - %s", err)
-	}
-	values := strings.Split(tmpStrings, "\n")
-	value := values[0]
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			helper := NewIntelRdtTestUtil(t)
+			helper.config.IntelRdt = tc.config
 
-	if value != l3CacheSchemeAfter {
-		t.Fatal("Got the wrong value, set 'schemata' failed.")
-	}
-}
+			helper.writeFileContents(map[string]string{
+				/* Common initial value for all test cases */
+				"schemata": "MB:0=100\nL3:0=ffff\nL2:0=ffffffff\n",
+			})
 
-func TestIntelRdtSetMemBwSchema(t *testing.T) {
-	helper := NewIntelRdtTestUtil(t)
+			intelrdt := newManager(helper.config, "", helper.IntelRdtPath)
+			if err := intelrdt.Set(helper.config); err != nil {
+				t.Fatal(err)
+			}
 
-	const (
-		memBwSchemaBefore = "MB:0=20;1=70"
-		memBwSchemeAfter  = "MB:0=70;1=20"
-	)
+			tmpStrings, err := getIntelRdtParamString(helper.IntelRdtPath, "schemata")
+			if err != nil {
+				t.Fatalf("Failed to parse file 'schemata' - %s", err)
+			}
+			values := strings.Split(tmpStrings, "\n")
 
-	helper.writeFileContents(map[string]string{
-		"schemata": memBwSchemaBefore + "\n",
-	})
-
-	helper.config.IntelRdt.MemBwSchema = memBwSchemeAfter
-	intelrdt := newManager(helper.config, "", helper.IntelRdtPath)
-	if err := intelrdt.Set(helper.config); err != nil {
-		t.Fatal(err)
-	}
-
-	tmpStrings, err := getIntelRdtParamString(helper.IntelRdtPath, "schemata")
-	if err != nil {
-		t.Fatalf("Failed to parse file 'schemata' - %s", err)
-	}
-	values := strings.Split(tmpStrings, "\n")
-	value := values[0]
-
-	if value != memBwSchemeAfter {
-		t.Fatal("Got the wrong value, set 'schemata' failed.")
-	}
-}
-
-func TestIntelRdtSetMemBwScSchema(t *testing.T) {
-	helper := NewIntelRdtTestUtil(t)
-
-	const (
-		memBwScSchemaBefore = "MB:0=5000;1=7000"
-		memBwScSchemeAfter  = "MB:0=9000;1=4000"
-	)
-
-	helper.writeFileContents(map[string]string{
-		"schemata": memBwScSchemaBefore + "\n",
-	})
-
-	helper.config.IntelRdt.MemBwSchema = memBwScSchemeAfter
-	intelrdt := newManager(helper.config, "", helper.IntelRdtPath)
-	if err := intelrdt.Set(helper.config); err != nil {
-		t.Fatal(err)
-	}
-
-	tmpStrings, err := getIntelRdtParamString(helper.IntelRdtPath, "schemata")
-	if err != nil {
-		t.Fatalf("Failed to parse file 'schemata' - %s", err)
-	}
-	values := strings.Split(tmpStrings, "\n")
-	value := values[0]
-
-	if value != memBwScSchemeAfter {
-		t.Fatal("Got the wrong value, set 'schemata' failed.")
+			if slices.Compare(values, tc.schemataAfter) != 0 {
+				t.Fatalf("Got the wrong value, expected %v, got %v", tc.schemataAfter, values)
+			}
+		})
 	}
 }
 
