@@ -524,6 +524,8 @@ func (m *Manager) GetStats() (*Stats, error) {
 	}
 	schemaStrings := strings.Split(tmpStrings, "\n")
 
+	stats.Schemata = schemaStrings
+
 	if IsCATEnabled() {
 		// The read-only L3 cache information
 		l3CacheInfo, err := getL3CacheInfo()
