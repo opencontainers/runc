@@ -37,6 +37,69 @@ func TestIntelRdtSet(t *testing.T) {
 			},
 			schemataAfter: []string{"MB:0=9000;1=4000"},
 		},
+		{
+			name: "L3 and MemBw",
+			config: &configs.IntelRdt{
+				L3CacheSchema: "L3:0=f0;1=f",
+				MemBwSchema:   "MB:0=9000;1=4000",
+			},
+			schemataAfter: []string{
+				"L3:0=f0;1=f",
+				"MB:0=9000;1=4000",
+			},
+		},
+		{
+			name: "Schemata",
+			config: &configs.IntelRdt{
+				Schemata: []string{
+					"L3CODE:0=ff;1=ff",
+					"L3DATA:0=f;1=f0",
+				},
+			},
+			schemataAfter: []string{
+				"L3CODE:0=ff;1=ff",
+				"L3DATA:0=f;1=f0",
+			},
+		},
+		{
+			name: "Schemata and L3",
+			config: &configs.IntelRdt{
+				L3CacheSchema: "L3:0=f0;1=f",
+				Schemata:      []string{"L2:0=ff00;1=ff"},
+			},
+			schemataAfter: []string{
+				"L3:0=f0;1=f",
+				"L2:0=ff00;1=ff",
+			},
+		},
+		{
+			name: "Schemata and MemBw",
+			config: &configs.IntelRdt{
+				MemBwSchema: "MB:0=2000;1=4000",
+				Schemata:    []string{"L3:0=ff;1=ff"},
+			},
+			schemataAfter: []string{
+				"MB:0=2000;1=4000",
+				"L3:0=ff;1=ff",
+			},
+		},
+		{
+			name: "Schemata, L3 and MemBw",
+			config: &configs.IntelRdt{
+				L3CacheSchema: "L3:0=80;1=7f",
+				MemBwSchema:   "MB:0=2000;1=4000",
+				Schemata: []string{
+					"L2:0=ff00;1=ff",
+					"L3:0=c0;1=3f",
+				},
+			},
+			schemataAfter: []string{
+				"L3:0=80;1=7f",
+				"MB:0=2000;1=4000",
+				"L2:0=ff00;1=ff",
+				"L3:0=c0;1=3f",
+			},
+		},
 	}
 
 	for _, tc := range tcs {
