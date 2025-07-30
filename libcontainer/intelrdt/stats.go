@@ -45,6 +45,9 @@ type Stats struct {
 	// The memory bandwidth schema in 'container_id' group
 	MemBwSchema string `json:"mem_bw_schema,omitempty"`
 
+	// Schemata contains the full schemata of the ClosID (resctrl group) that the container is assigned to.
+	Schemata []string `json:"schemata,omitempty"`
+
 	// The memory bandwidth monitoring statistics from NUMA nodes in 'container_id' group
 	MBMStats *[]MBMNumaNodeStats `json:"mbm_stats,omitempty"`
 
