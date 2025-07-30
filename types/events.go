@@ -143,6 +143,9 @@ type IntelRdt struct {
 	// The memory bandwidth schema in 'container_id' group
 	MemBwSchema string `json:"mem_bw_schema,omitempty"`
 
+	// The full schemata in 'container_id' group
+	Schemata []string `json:"schemata,omitempty"`
+
 	// The memory bandwidth monitoring statistics from NUMA nodes in 'container_id' group
 	MBMStats *[]intelrdt.MBMNumaNodeStats `json:"mbm_stats,omitempty"`
 
