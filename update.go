@@ -12,7 +12,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/docker/go-units"
-	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
@@ -377,15 +376,7 @@ other options are ignored.
 			// In update command, we could re-enable through IntelRdtManager.Apply()
 			// and then update intelrdt constraint.
 			if config.IntelRdt == nil {
-				state, err := container.State()
-				if err != nil {
-					return err
-				}
-				config.IntelRdt = &configs.IntelRdt{}
-				intelRdtManager := intelrdt.NewManager(&config, container.ID(), state.IntelRdtPath)
-				if err := intelRdtManager.Apply(state.InitProcessPid); err != nil {
-					return err
-				}
+				return errors.New("updating a non-existent Intel RDT configuration is not supported")
 			}
 			if l3CacheSchema != "" {
 				config.IntelRdt.L3CacheSchema = l3CacheSchema
