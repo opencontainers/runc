@@ -367,8 +367,12 @@ other options are ignored.
 					return err
 				}
 			}
-			config.IntelRdt.L3CacheSchema = l3CacheSchema
-			config.IntelRdt.MemBwSchema = memBwSchema
+			if l3CacheSchema != "" {
+				config.IntelRdt.L3CacheSchema = l3CacheSchema
+			}
+			if memBwSchema != "" {
+				config.IntelRdt.MemBwSchema = memBwSchema
+			}
 		}
 
 		// XXX(kolyshkin@): currently "runc update" is unable to change
