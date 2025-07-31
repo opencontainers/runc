@@ -156,10 +156,24 @@ function setup() {
 
 	dev="$(setup_loopdev)"
 
+	# Some distributions (like openSUSE) have udev configured to forcefully
+	# reset the scheduler for loopN devices to be "none", which breaks this
+	# test. We cannot modify the udev behaviour of the host, but since this is
+	# usually triggered by the "change" event from losetup, we can wait for a
+	# little bit before continuing the test. For more details, see
+	# <https://github.com/opencontainers/runc/issues/4781>.
+	sleep 2s
+
 	# See if BFQ scheduler is available.
 	if ! { grep -qw bfq "/sys/block/${dev#/dev/}/queue/scheduler" &&
 		echo bfq >"/sys/block/${dev#/dev/}/queue/scheduler"; }; then
 		skip "BFQ scheduler not available"
+	fi
+
+	# Check that the device still has the right scheduler, in case we lost the
+	# race above...
+	if ! grep -qw '\[bfq\]' "/sys/block/${dev#/dev/}/queue/scheduler"; then
+		skip "udev is configured to reset loop device io scheduler"
 	fi
 
 	set_cgroups_path
