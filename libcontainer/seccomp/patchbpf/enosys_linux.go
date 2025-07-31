@@ -58,7 +58,6 @@ const uintptr_t C_FILTER_FLAG_NEW_LISTENER = SECCOMP_FILTER_FLAG_NEW_LISTENER;
 #define AUDIT_ARCH_RISCV64	(EM_RISCV|__AUDIT_ARCH_64BIT|__AUDIT_ARCH_LE)
 #endif
 
-// TODO: If loongarch support is not fully merged, at some point we will want to remove this.
 #ifndef AUDIT_ARCH_LOONGARCH64
 #ifndef EM_LOONGARCH
 #define EM_LOONGARCH		258
