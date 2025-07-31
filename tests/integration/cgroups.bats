@@ -4,6 +4,7 @@ load helpers
 
 function teardown() {
 	teardown_bundle
+	teardown_loopdevs
 }
 
 function setup() {
@@ -153,13 +154,11 @@ function setup() {
 @test "runc run (per-device io weight for bfq)" {
 	requires root # to create a loop device
 
-	dd if=/dev/zero of=backing.img bs=4096 count=1
-	dev=$(losetup --find --show backing.img) || skip "unable to create a loop device"
+	dev="$(setup_loopdev)"
 
 	# See if BFQ scheduler is available.
 	if ! { grep -qw bfq "/sys/block/${dev#/dev/}/queue/scheduler" &&
 		echo bfq >"/sys/block/${dev#/dev/}/queue/scheduler"; }; then
-		losetup -d "$dev"
 		skip "BFQ scheduler not available"
 	fi
 
@@ -198,9 +197,6 @@ function setup() {
 EOF
 	weights2=$(get_cgroup_value $file)
 
-	# The loop device itself is no longer needed.
-	losetup -d "$dev"
-
 	# Check original values.
 	grep '^default 333$' <<<"$weights1"
 	grep "^$major:$minor 444$" <<<"$weights1"
@@ -213,12 +209,8 @@ EOF
 @test "runc run (per-device multiple iops via unified)" {
 	requires root cgroups_v2
 
-	dd if=/dev/zero of=backing1.img bs=4096 count=1
-	dev1=$(losetup --find --show backing1.img) || skip "unable to create a loop device"
-
-	# Second device.
-	dd if=/dev/zero of=backing2.img bs=4096 count=1
-	dev2=$(losetup --find --show backing2.img) || skip "unable to create a loop device"
+	dev1="$(setup_loopdev)"
+	dev2="$(setup_loopdev)"
 
 	set_cgroups_path
 
@@ -232,10 +224,6 @@ EOF
 				{"io.max": "'"$major1"':'"$minor1"' riops=333 wiops=444\n'"$major2"':'"$minor2"' riops=555 wiops=666\n"}'
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_dev_weight
 	[ "$status" -eq 0 ]
-
-	# The loop devices are no longer needed.
-	losetup -d "$dev1"
-	losetup -d "$dev2"
 
 	weights=$(get_cgroup_value "io.max")
 	grep "^$major1:$minor1 .* riops=333 wiops=444$" <<<"$weights"

@@ -807,6 +807,29 @@ function teardown_seccompagent() {
 	rm -f "$SECCCOMP_AGENT_SOCKET"
 }
 
+LOOPBACK_DEVICE_LIST="$(mktemp "$BATS_TMPDIR/losetup.XXXXXX")"
+
+function setup_loopdev() {
+	local backing dev
+	backing="$(mktemp "$BATS_RUN_TMPDIR/backing.img.XXXXXX")"
+	truncate --size=4K "$backing"
+
+	dev="$(losetup --find --show "$backing")" || skip "unable to create a loop device"
+	echo "$dev" >>"$LOOPBACK_DEVICE_LIST"
+
+	unlink "$backing"
+	echo "$dev"
+}
+
+function teardown_loopdevs() {
+	[ -s "$LOOPBACK_DEVICE_LIST" ] || return 0
+	while IFS= read -r dev; do
+		echo "losetup -d '$dev'" >&2
+		losetup -d "$dev"
+	done <"$LOOPBACK_DEVICE_LIST"
+	truncate --size=0 "$LOOPBACK_DEVICE_LIST"
+}
+
 function setup_bundle() {
 	local image="$1"
 
