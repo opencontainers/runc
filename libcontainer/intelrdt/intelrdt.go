@@ -159,10 +159,23 @@ func NewManager(config *configs.Config, id string, path string) *Manager {
 	if config.IntelRdt == nil {
 		return nil
 	}
-	if _, err := Root(); err != nil {
-		// Intel RDT is not available.
+
+	rootPath, err := Root()
+	if err != nil {
 		return nil
 	}
+	// NOTE: Should we check if the path provided as arg matches the path
+	// constructed below? If not, we're screwed as we've effectively lost resctrl
+	// control of the container (e.g. because the resctrl fs was unmounted or
+	// remounted elsewhere). All operations are deemed to fail.
+	if path == "" {
+		clos := id
+		if config.IntelRdt.ClosID != "" {
+			clos = config.IntelRdt.ClosID
+		}
+		path = filepath.Join(rootPath, clos)
+	}
+
 	return newManager(config, id, path)
 }
 
@@ -428,21 +441,6 @@ func IsMBAEnabled() bool {
 	return mbaEnabled
 }
 
-// Get the path of the clos group in "resource control" filesystem that the container belongs to
-func (m *Manager) getIntelRdtPath() (string, error) {
-	rootPath, err := Root()
-	if err != nil {
-		return "", err
-	}
-
-	clos := m.id
-	if m.config.IntelRdt != nil && m.config.IntelRdt.ClosID != "" {
-		clos = m.config.IntelRdt.ClosID
-	}
-
-	return filepath.Join(rootPath, clos), nil
-}
-
 // Apply applies Intel RDT configuration to the process with the specified pid.
 func (m *Manager) Apply(pid int) (err error) {
 	// If intelRdt is not specified in config, we do nothing
@@ -450,10 +448,7 @@ func (m *Manager) Apply(pid int) (err error) {
 		return nil
 	}
 
-	path, err := m.getIntelRdtPath()
-	if err != nil {
-		return err
-	}
+	path := m.GetPath()
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -497,9 +492,6 @@ func (m *Manager) Destroy() error {
 // GetPath returns Intel RDT path to save in a state file and to be able to
 // restore the object later.
 func (m *Manager) GetPath() string {
-	if m.path == "" {
-		m.path, _ = m.getIntelRdtPath()
-	}
 	return m.path
 }
 
