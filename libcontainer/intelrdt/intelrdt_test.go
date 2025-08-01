@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 func TestIntelRdtSetL3CacheSchema(t *testing.T) {
@@ -98,30 +100,144 @@ func TestIntelRdtSetMemBwScSchema(t *testing.T) {
 }
 
 func TestApply(t *testing.T) {
-	helper := NewIntelRdtTestUtil(t)
+	const closID = "test-clos"
+	// TC-1: failure because non-pre-existing CLOS
+	{
+		helper := NewIntelRdtTestUtil(t)
+		helper.config.IntelRdt = &configs.IntelRdt{
+			ClosID: closID}
 
+		intelrdt := newManager(helper.config, "", "")
+		if err := intelrdt.Apply(1234); err == nil {
+			t.Fatal("unexpected success when applying pid")
+		}
+		closPath := filepath.Join(intelRdtRoot, closID)
+		if _, err := os.Stat(closPath); err == nil {
+			t.Fatal("closid dir should not exist")
+		}
+	}
+	// TC-2: CLOS dir should be created if some schema has been specified
+	{
+		helper := NewIntelRdtTestUtil(t)
+		helper.config.IntelRdt = &configs.IntelRdt{
+			ClosID:        closID,
+			L3CacheSchema: "L3:0=f"}
+
+		intelrdt := newManager(helper.config, "", "")
+		if err := intelrdt.Apply(1235); err != nil {
+			t.Fatalf("Apply() failed: %v", err)
+		}
+
+		closPath := filepath.Join(intelRdtRoot, closID)
+		pids, err := getIntelRdtParamString(closPath, "tasks")
+		if err != nil {
+			t.Fatalf("failed to read tasks file: %v", err)
+		}
+		if pids != "1235" {
+			t.Fatalf("unexpected tasks file, expected '1235', got %q", pids)
+		}
+	}
+	// TC-3: clos and monitoring group should be created if EnableMonitoring is true
+	{
+		helper := NewIntelRdtTestUtil(t)
+		helper.config.IntelRdt = &configs.IntelRdt{
+			EnableMonitoring: true,
+		}
+		id := "aaaa-bbbb"
+
+		intelrdt := newManager(helper.config, id, "")
+		if err := intelrdt.Apply(1236); err != nil {
+			t.Fatalf("Apply() failed: %v", err)
+		}
+
+		closPath := filepath.Join(intelRdtRoot, id)
+		pids, err := getIntelRdtParamString(closPath, "tasks")
+		if err != nil {
+			t.Fatalf("failed to read tasks file: %v", err)
+		}
+		if pids != "1236" {
+			t.Fatalf("unexpected tasks file, expected '1236', got %q", pids)
+		}
+	}
+}
+
+func TestDestroy(t *testing.T) {
 	const closID = "test-clos"
 
-	helper.config.IntelRdt.ClosID = closID
-	intelrdt := newManager(helper.config, "", helper.IntelRdtPath)
-	if err := intelrdt.Apply(1234); err == nil {
-		t.Fatal("unexpected success when applying pid")
-	}
-	if _, err := os.Stat(filepath.Join(helper.IntelRdtPath, closID)); err == nil {
-		t.Fatal("closid dir should not exist")
-	}
+	// TC-1: per-container CLOS dir should be removed
+	{
+		helper := NewIntelRdtTestUtil(t)
+		id := "abcd-efgh"
 
-	// Dir should be created if some schema has been specified
-	intelrdt.config.IntelRdt.L3CacheSchema = "L3:0=f"
-	if err := intelrdt.Apply(1235); err != nil {
-		t.Fatalf("Apply() failed: %v", err)
+		intelrdt := newManager(helper.config, id, "")
+		if err := intelrdt.Apply(1234); err != nil {
+			t.Fatalf("Apply() failed: %v", err)
+		}
+		closPath := filepath.Join(intelRdtRoot, id)
+		if _, err := os.Stat(closPath); err != nil {
+			t.Fatal("CLOS dir should exist")
+		}
+		if err := intelrdt.Destroy(); err != nil {
+			t.Fatalf("Destroy() failed: %v", err)
+		}
+		if _, err := os.Stat(closPath); err == nil {
+			t.Fatal("CLOS dir should not exist")
+		}
 	}
+	// TC-2: pre-existing CLOS should not be removed
+	{
+		helper := NewIntelRdtTestUtil(t)
+		helper.config.IntelRdt = &configs.IntelRdt{
+			ClosID: closID}
 
-	pids, err := getIntelRdtParamString(intelrdt.GetPath(), "tasks")
-	if err != nil {
-		t.Fatalf("failed to read tasks file: %v", err)
+		closPath := filepath.Join(intelRdtRoot, closID)
+		if err := os.MkdirAll(closPath, 0o755); err != nil {
+			t.Fatal(err)
+		}
+
+		intelrdt := newManager(helper.config, "", "")
+		if err := intelrdt.Apply(1234); err != nil {
+			t.Fatalf("Apply() failed: %v", err)
+		}
+		if _, err := os.Stat(closPath); err != nil {
+			t.Fatal("CLOS dir should exist")
+		}
+		if err := intelrdt.Destroy(); err != nil {
+			t.Fatalf("Destroy() failed: %v", err)
+		}
+		if _, err := os.Stat(closPath); err != nil {
+			t.Fatal("CLOS dir should exist")
+		}
 	}
-	if pids != "1235" {
-		t.Fatalf("unexpected tasks file, expected '1235', got %q", pids)
+	// TC-3: per-container MON dir in pre-existing CLOS should be removed
+	{
+		helper := NewIntelRdtTestUtil(t)
+		helper.config.IntelRdt = &configs.IntelRdt{
+			ClosID:           closID,
+			EnableMonitoring: true}
+		id := "abcd-efgh"
+
+		closPath := filepath.Join(intelRdtRoot, closID)
+		if err := os.MkdirAll(closPath, 0o755); err != nil {
+			t.Fatal(err)
+		}
+
+		intelrdt := newManager(helper.config, id, "")
+		if err := intelrdt.Apply(1234); err != nil {
+			t.Fatalf("Apply() failed: %v", err)
+		}
+		monPath := filepath.Join(closPath, "mon_groups", id)
+		if _, err := os.Stat(monPath); err != nil {
+			t.Fatal("MON dir should exist")
+		}
+		if err := intelrdt.Destroy(); err != nil {
+			t.Fatalf("Destroy() failed: %v", err)
+		}
+		if _, err := os.Stat(closPath); err != nil {
+			t.Fatalf("CLOS dir should exist: %f", err)
+		}
+		if _, err := os.Stat(monPath); err == nil {
+			t.Fatal("MON dir should not exist")
+		}
 	}
 }

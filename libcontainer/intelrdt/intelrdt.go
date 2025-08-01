@@ -474,6 +474,16 @@ func (m *Manager) Apply(pid int) (err error) {
 		return newLastCmdError(err)
 	}
 
+	// Create MON group
+	if monPath := m.GetMonPath(); monPath != "" {
+		if err := os.MkdirAll(monPath, 0o755); err != nil {
+			return newLastCmdError(err)
+		}
+		if err := WriteIntelRdtTasks(monPath, pid); err != nil {
+			return newLastCmdError(err)
+		}
+	}
+
 	m.path = path
 	return nil
 }
@@ -483,13 +493,21 @@ func (m *Manager) Destroy() error {
 	// Don't remove resctrl group if closid has been explicitly specified. The
 	// group is likely externally managed, i.e. by some other entity than us.
 	// There are probably other containers/tasks sharing the same group.
-	if m.config.IntelRdt != nil && m.config.IntelRdt.ClosID == "" {
-		m.mu.Lock()
-		defer m.mu.Unlock()
-		if err := os.RemoveAll(m.GetPath()); err != nil {
-			return err
+	if m.config.IntelRdt != nil {
+		if m.config.IntelRdt.ClosID == "" {
+			m.mu.Lock()
+			defer m.mu.Unlock()
+			if err := os.RemoveAll(m.GetPath()); err != nil {
+				return err
+			}
+			m.path = ""
+		} else if monPath := m.GetMonPath(); monPath != "" {
+			// If ClosID is not specified the possible monintoring group was
+			// removed with the CLOS above.
+			if err := os.RemoveAll(monPath); err != nil {
+				return err
+			}
 		}
-		m.path = ""
 	}
 	return nil
 }
@@ -501,6 +519,16 @@ func (m *Manager) GetPath() string {
 		m.path, _ = m.getIntelRdtPath()
 	}
 	return m.path
+}
+
+// GetMonPath returns path of the monitoring group of the container. Returns an
+// empty string if the container does not have a individual dedicated
+// monitoring group.
+func (m *Manager) GetMonPath() string {
+	if closPath := m.GetPath(); closPath != "" && m.config.IntelRdt.EnableMonitoring {
+		return filepath.Join(closPath, "mon_groups", m.id)
+	}
+	return ""
 }
 
 // GetStats returns statistics for Intel RDT.
@@ -580,7 +608,16 @@ func (m *Manager) GetStats() (*Stats, error) {
 	}
 
 	if IsMBMEnabled() || IsCMTEnabled() {
-		err = getMonitoringStats(containerPath, stats)
+		monPath := m.GetMonPath()
+		if monPath == "" {
+			// NOTE: If per-container monitoring is not enabled, the monitoring
+			// data we get here might have little to do with this container as
+			// there might be anything from this single container to the half
+			// of the system assigned in the group. Should consider not
+			// exposing stats in this case(?)
+			monPath = containerPath
+		}
+		err = getMonitoringStats(monPath, stats)
 		if err != nil {
 			return nil, err
 		}
