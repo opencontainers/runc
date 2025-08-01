@@ -31,7 +31,7 @@ TRIMPATH := -trimpath
 
 GO_BUILDMODE :=
 # Enable dynamic PIE executables on supported platforms.
-ifneq (,$(filter $(GOARCH),386 amd64 arm arm64 ppc64le riscv64 s390x))
+ifneq (,$(filter $(GOARCH),386 amd64 arm arm64 ppc64le riscv64 s390x loong64))
 	ifeq (,$(findstring -race,$(EXTRA_FLAGS)))
 		GO_BUILDMODE := "-buildmode=pie"
 	endif
@@ -109,7 +109,7 @@ static-bin:
 	$(GO_BUILD_STATIC) -o runc .
 
 .PHONY: releaseall
-releaseall: RELEASE_ARGS := "-a 386 -a amd64 -a arm64 -a armel -a armhf -a ppc64le -a riscv64 -a s390x"
+releaseall: RELEASE_ARGS := "-a 386 -a amd64 -a arm64 -a armel -a armhf -a ppc64le -a riscv64 -a s390x -a loong64"
 releaseall: release
 
 .PHONY: release
