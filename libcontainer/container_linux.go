@@ -73,6 +73,11 @@ type State struct {
 
 	// Intel RDT "resource control" filesystem path.
 	IntelRdtPath string `json:"intel_rdt_path,omitempty"`
+
+	// Path of the container specific monitoring group in resctrl filesystem.
+	// Empty if the container does not have aindividual dedicated monitoring
+	// group.
+	IntelRdtMonPath string `json:"intel_rdt_mon_path,omitempty"`
 }
 
 // ID returns the container's unique ID
@@ -942,8 +947,10 @@ func (c *Container) currentState() *State {
 	}
 
 	intelRdtPath := ""
+	intelRdtMonPath := ""
 	if c.intelRdtManager != nil {
 		intelRdtPath = c.intelRdtManager.GetPath()
+		intelRdtMonPath = c.intelRdtManager.GetMonPath()
 	}
 	state := &State{
 		BaseState: BaseState{
@@ -956,6 +963,7 @@ func (c *Container) currentState() *State {
 		Rootless:            c.config.RootlessEUID && c.config.RootlessCgroups,
 		CgroupPaths:         c.cgroupManager.GetPaths(),
 		IntelRdtPath:        intelRdtPath,
+		IntelRdtMonPath:     intelRdtMonPath,
 		NamespacePaths:      make(map[configs.NamespaceType]string),
 		ExternalDescriptors: externalDescriptors,
 	}
