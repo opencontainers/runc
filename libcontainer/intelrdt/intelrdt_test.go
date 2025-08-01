@@ -125,3 +125,32 @@ func TestApply(t *testing.T) {
 		t.Fatalf("unexpected tasks file, expected '1235', got %q", pids)
 	}
 }
+
+func TestIntelRdtSetWithClosId(t *testing.T) {
+	helper := NewIntelRdtTestUtil(t)
+
+	const (
+		closID                 = "test-clos"
+		l3CacheSchemaBefore    = "L3:0=f;1=f0"
+		l3CacheSchemeDifferent = "L3:0=f0;1=f"
+		l3CacheSchemeSame      = "L3:1=f0;0=f"
+	)
+
+	helper.config.IntelRdt.ClosID = closID
+	intelrdt := newManager(helper.config, "", helper.IntelRdtPath)
+
+	// Create an "existing" schmata file to match against.
+	helper.writeFileContents(map[string]string{
+		"schemata": l3CacheSchemaBefore + "\n",
+	})
+
+	helper.config.IntelRdt.L3CacheSchema = l3CacheSchemeDifferent
+	if err := intelrdt.Set(helper.config); err == nil {
+		t.Fatalf("expected the file comparison to fail")
+	}
+
+	helper.config.IntelRdt.L3CacheSchema = l3CacheSchemeSame
+	if err := intelrdt.Set(helper.config); err != nil {
+		t.Fatalf("expected the file comparison to succeed: %s", err)
+	}
+}
