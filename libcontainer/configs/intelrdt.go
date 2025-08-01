@@ -13,4 +13,7 @@ type IntelRdt struct {
 	// The unit of memory bandwidth is specified in "percentages" by
 	// default, and in "MBps" if MBA Software Controller is enabled.
 	MemBwSchema string `json:"memBwSchema,omitempty"`
+
+	// Create a monitoring group for the container.
+	EnableMonitoring bool `json:"enableMonitoring,omitempty"`
 }
