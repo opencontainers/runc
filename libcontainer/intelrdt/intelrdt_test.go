@@ -101,13 +101,14 @@ func TestApply(t *testing.T) {
 	helper := NewIntelRdtTestUtil(t)
 
 	const closID = "test-clos"
+	closPath := filepath.Join(helper.IntelRdtPath, closID)
 
 	helper.config.IntelRdt.ClosID = closID
-	intelrdt := newManager(helper.config, "", helper.IntelRdtPath)
+	intelrdt := newManager(helper.config, "container-1", closPath)
 	if err := intelrdt.Apply(1234); err == nil {
 		t.Fatal("unexpected success when applying pid")
 	}
-	if _, err := os.Stat(filepath.Join(helper.IntelRdtPath, closID)); err == nil {
+	if _, err := os.Stat(closPath); err == nil {
 		t.Fatal("closid dir should not exist")
 	}
 
