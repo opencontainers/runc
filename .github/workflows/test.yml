@@ -169,6 +169,7 @@ jobs:
 
     - name: integration test (systemd driver)
       run: |
+        sudo taskset -pc 0-1 1
         # Delegate all cgroup v2 controllers to rootless user via --systemd-cgroup.
         # The default (since systemd v252) is "pids memory cpu".
         sudo mkdir -p /etc/systemd/system/user@.service.d
