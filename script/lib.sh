@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# NOTE: Make sure you keep this file in sync with cc_platform.mk.
-
 # set_cross_vars sets a few environment variables used for cross-compiling,
 # based on the architecture specified in $1.
 function set_cross_vars() {
