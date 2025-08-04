@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/moby/sys/mountinfo"
 	"golang.org/x/sys/unix"
 
@@ -173,7 +174,9 @@ func NewManager(config *configs.Config, id string, path string) *Manager {
 		if config.IntelRdt.ClosID != "" {
 			clos = config.IntelRdt.ClosID
 		}
-		path = filepath.Join(rootPath, clos)
+		if path, err = securejoin.SecureJoin(rootPath, clos); err != nil {
+			return nil
+		}
 	}
 
 	return newManager(config, id, path)
