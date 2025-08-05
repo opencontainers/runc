@@ -162,7 +162,9 @@ function setup() {
 	# usually triggered by the "change" event from losetup, we can wait for a
 	# little bit before continuing the test. For more details, see
 	# <https://github.com/opencontainers/runc/issues/4781>.
-	sleep 2s
+	if host_is_os ".*suse.*"; then
+		sleep 2s
+	fi
 
 	# See if BFQ scheduler is available.
 	if ! { grep -qw bfq "/sys/block/${dev#/dev/}/queue/scheduler" &&

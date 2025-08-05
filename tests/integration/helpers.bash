@@ -673,13 +673,23 @@ function requires() {
 # variables in /etc/os-release. The arguments are regular expressions, and any
 # match will cause the test to be skipped.
 function exclude_os() {
+	if host_is_os "$@"; then
+		skip "test doesn't work on these OSes: $*"
+	fi
+}
+
+# Similar to exclude_os, but it doesn't skip the test and just returns 0 if it
+# matches, 1 if it doesn't.
+function host_is_os() {
 	local host
 	host="$(sh -c '. /etc/os-release ; echo "$ID-$VERSION_ID"')"
-	for bad_os in "$@"; do
-		if [[ "$host" =~ ^$bad_os$ ]]; then
-			skip "test doesn't work on $bad_os"
+	for os in "$@"; do
+		if [[ "$host" =~ ^$os$ ]]; then
+			echo "host is $os" >&2
+			return 0
 		fi
 	done
+	return 1
 }
 
 # Retry a command $1 times until it succeeds. Wait $2 seconds between retries.
