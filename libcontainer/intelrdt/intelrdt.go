@@ -416,6 +416,12 @@ func WriteIntelRdtTasks(dir string, pid int) error {
 	return nil
 }
 
+// IsEnabled checks if Intel RDT is enabled.
+func IsEnabled() bool {
+	fsroot, err := Root()
+	return err == nil && fsroot != ""
+}
+
 // IsCATEnabled checks if Intel RDT/CAT is enabled.
 func IsCATEnabled() bool {
 	featuresInit()
