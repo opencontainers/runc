@@ -472,7 +472,7 @@ func (m *Manager) Apply(pid int) (err error) {
 		}
 	}
 
-	if err := os.MkdirAll(path, 0o755); err != nil {
+	if err := os.Mkdir(path, 0o755); err != nil && !os.IsExist(err) {
 		return newLastCmdError(err)
 	}
 
@@ -492,7 +492,7 @@ func (m *Manager) Destroy() error {
 	if m.config.IntelRdt != nil && m.config.IntelRdt.ClosID == "" {
 		m.mu.Lock()
 		defer m.mu.Unlock()
-		if err := os.RemoveAll(m.GetPath()); err != nil {
+		if err := os.Remove(m.GetPath()); err != nil && !os.IsNotExist(err) {
 			return err
 		}
 		m.path = ""
