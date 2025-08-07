@@ -263,26 +263,26 @@ EOF
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
 
-	# check that initial values were properly set
-	check_cpu_quota 500000 1000000 "500ms"
+	# Check that initial values were properly set.
+	check_cpu_quota 500000 1000000
 	check_cpu_shares 100
 
-	# update cpu period
+	# Update cpu period.
 	runc update test_update --cpu-period 900000
 	[ "$status" -eq 0 ]
-	check_cpu_quota 500000 900000 "560ms"
+	check_cpu_quota 500000 900000
 
-	# update cpu quota
+	# Update cpu quota.
 	runc update test_update --cpu-quota 600000
 	[ "$status" -eq 0 ]
-	check_cpu_quota 600000 900000 "670ms"
+	check_cpu_quota 600000 900000
 
-	# remove cpu quota
+	# Remove cpu quota.
 	runc update test_update --cpu-quota -1
 	[ "$status" -eq 0 ]
-	check_cpu_quota -1 900000 "infinity"
+	check_cpu_quota -1 900000
 
-	# update cpu-shares
+	# Update cpu-shares.
 	runc update test_update --cpu-share 200
 	[ "$status" -eq 0 ]
 	check_cpu_shares 200
@@ -298,21 +298,21 @@ EOF
 }
 EOF
 	[ "$status" -eq 0 ]
-	check_cpu_quota 500000 1000000 "500ms"
+	check_cpu_quota 500000 1000000
 
-	# redo all the changes at once
+	# Redo all the changes at once.
 	runc update test_update \
 		--cpu-period 900000 --cpu-quota 600000 --cpu-share 200
 	[ "$status" -eq 0 ]
-	check_cpu_quota 600000 900000 "670ms"
+	check_cpu_quota 600000 900000
 	check_cpu_shares 200
 
-	# remove cpu quota and reset the period
+	# Remove cpu quota and reset the period.
 	runc update test_update --cpu-quota -1 --cpu-period 100000
 	[ "$status" -eq 0 ]
-	check_cpu_quota -1 100000 "infinity"
+	check_cpu_quota -1 100000
 
-	# reset to initial test value via json file
+	# Reset to initial test values via json file.
 	cat <<EOF >"$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json
 {
   "cpu": {
@@ -326,7 +326,7 @@ EOF
 
 	runc update -r "$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json test_update
 	[ "$status" -eq 0 ]
-	check_cpu_quota 500000 1000000 "500ms"
+	check_cpu_quota 500000 1000000
 	check_cpu_shares 100
 }
 
@@ -363,7 +363,7 @@ EOF
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
 
-	check_cpu_quota -1 1000000 "infinity"
+	check_cpu_quota -1 1000000
 }
 
 @test "set cpu period with no quota (invalid period)" {
@@ -382,7 +382,7 @@ EOF
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
-	check_cpu_quota 5000 100000 "50ms"
+	check_cpu_quota 5000 100000
 }
 
 @test "update cpu period with no previous period/quota set" {
@@ -393,10 +393,10 @@ EOF
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
 
-	# update the period alone, no old values were set
+	# Update the period alone, no old values were set.
 	runc update --cpu-period 50000 test_update
 	[ "$status" -eq 0 ]
-	check_cpu_quota -1 50000 "infinity"
+	check_cpu_quota -1 50000
 }
 
 @test "update cpu quota with no previous period/quota set" {
@@ -407,10 +407,10 @@ EOF
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
 
-	# update the quota alone, no old values were set
+	# Update the quota alone, no old values were set.
 	runc update --cpu-quota 30000 test_update
 	[ "$status" -eq 0 ]
-	check_cpu_quota 30000 100000 "300ms"
+	check_cpu_quota 30000 100000
 }
 
 @test "update cpu period in a pod cgroup with pod limit set" {
@@ -445,7 +445,7 @@ EOF
 	# Finally, the test itself: set 30% limit but with lower period.
 	runc update --cpu-period 10000 --cpu-quota 3000 test_update
 	[ "$status" -eq 0 ]
-	check_cpu_quota 3000 10000 "300ms"
+	check_cpu_quota 3000 10000
 }
 
 @test "update cgroup cpu.idle" {
@@ -545,10 +545,9 @@ EOF
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
 
-	# check that initial values were properly set
-	check_cpu_quota 500000 1000000 "500ms"
-	# initial cpu shares of 100 corresponds to weight of 4
-	check_cpu_weight 4
+	# Check that initial values (from setup) were properly set.
+	check_cpu_quota 500000 1000000
+	check_cpu_shares 100
 	check_systemd_value "TasksMax" 20
 
 	runc update -r - test_update <<EOF
@@ -561,8 +560,8 @@ EOF
 }
 EOF
 
-	# check the updated systemd unit properties
-	check_cpu_quota -1 100000 "infinity"
+	# Check the updated systemd unit properties.
+	check_cpu_quota -1 100000
 	check_cpu_weight 16
 	check_systemd_value "TasksMax" 10
 }
@@ -891,4 +890,67 @@ EOF
 	# or fail depending on the timing, so we don't check its exit code.
 	runc update test_update --memory 1024
 	wait_for_container 10 1 test_update stopped
+}
+
+@test "update per-device iops/bps values" {
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+
+	# Need major:minor for any block device (but not a partition).
+	dev=$(lsblk -dno MAJ:MIN | head -1 | tr -d ' \t\n')
+	if [ -z "$dev" ]; then
+		echo "=== lsblk -d ===" >&2
+		lsblk -d >&2
+		echo "===" >&2
+		fail "can't get device from lsblk"
+	fi
+	IFS=':' read -r major minor <<<"$dev"
+
+	# Add an entry to check that
+	#   - existing devices can be updated;
+	#   - duplicates are handled properly;
+	# (see func upsert* in update.go).
+	update_config '	  .linux.resources.blockIO.throttleReadBpsDevice |= [
+				{ major: '"$major"', minor: '"$minor"', rate: 485760 },
+				{ major: '"$major"', minor: '"$minor"', rate: 485760 }
+			]'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+
+	runc update -r - test_update <<EOF
+{
+  "blockIO": {
+    "throttleReadBpsDevice": [
+      {
+        "major": $major,
+        "minor": $minor,
+        "rate": 10485760
+      }
+    ],
+    "throttleWriteBpsDevice": [
+      {
+        "major": $major,
+        "minor": $minor,
+        "rate": 9437184
+      }
+    ],
+    "throttleReadIOPSDevice": [
+      {
+        "major": $major,
+        "minor": $minor,
+        "rate": 1000
+      }
+    ],
+    "throttleWriteIOPSDevice": [
+      {
+        "major": $major,
+        "minor": $minor,
+        "rate": 900
+      }
+    ]
+  }
+}
+EOF
+	[ "$status" -eq 0 ]
+	check_cgroup_dev_iops "$dev" 10485760 9437184 1000 900
 }

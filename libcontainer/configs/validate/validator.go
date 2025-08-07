@@ -24,6 +24,7 @@ func Validate(config *configs.Config) error {
 		cgroupsCheck,
 		rootfs,
 		network,
+		netdevices,
 		uts,
 		security,
 		namespaces,
@@ -66,6 +67,43 @@ func rootfs(config *configs.Config) error {
 	}
 	if filepath.Clean(config.Rootfs) != cleaned {
 		return errors.New("invalid rootfs: not an absolute path, or a symlink")
+	}
+	return nil
+}
+
+// https://elixir.bootlin.com/linux/v6.12/source/net/core/dev.c#L1066
+func devValidName(name string) bool {
+	if len(name) == 0 || len(name) > unix.IFNAMSIZ {
+		return false
+	}
+	if name == "." || name == ".." {
+		return false
+	}
+	if strings.ContainsAny(name, "/: ") {
+		return false
+	}
+	return true
+}
+
+func netdevices(config *configs.Config) error {
+	if len(config.NetDevices) == 0 {
+		return nil
+	}
+	if !config.Namespaces.Contains(configs.NEWNET) {
+		return errors.New("unable to move network devices without a NET namespace")
+	}
+
+	if config.RootlessEUID || config.RootlessCgroups {
+		return errors.New("network devices are not supported for rootless containers")
+	}
+
+	for name, netdev := range config.NetDevices {
+		if !devValidName(name) {
+			return fmt.Errorf("invalid network device name %q", name)
+		}
+		if netdev.Name != "" && !devValidName(netdev.Name) {
+			return fmt.Errorf("invalid network device name %q", netdev.Name)
+		}
 	}
 	return nil
 }
@@ -245,6 +283,10 @@ func sysctl(config *configs.Config) error {
 
 func intelrdtCheck(config *configs.Config) error {
 	if config.IntelRdt != nil {
+		if !intelrdt.IsEnabled() {
+			return fmt.Errorf("intelRdt is specified in config, but Intel RDT is not enabled")
+		}
+
 		if config.IntelRdt.ClosID == "." || config.IntelRdt.ClosID == ".." || strings.Contains(config.IntelRdt.ClosID, "/") {
 			return fmt.Errorf("invalid intelRdt.ClosID %q", config.IntelRdt.ClosID)
 		}

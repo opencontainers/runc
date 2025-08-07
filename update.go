@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 
 	"github.com/opencontainers/cgroups"
 	"github.com/sirupsen/logrus"
 
 	"github.com/docker/go-units"
-	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
@@ -273,6 +273,25 @@ other options are ignored.
 		if r.BlockIO.Weight != nil {
 			config.Cgroups.Resources.BlkioWeight = *r.BlockIO.Weight
 		}
+		if r.BlockIO.LeafWeight != nil {
+			config.Cgroups.Resources.BlkioLeafWeight = *r.BlockIO.LeafWeight
+		}
+		// For devices, we either update an existing one, or insert a new one.
+		for _, wd := range r.BlockIO.WeightDevice {
+			config.Cgroups.Resources.BlkioWeightDevice = upsertWeightDevice(config.Cgroups.Resources.BlkioWeightDevice, wd)
+		}
+		for _, td := range r.BlockIO.ThrottleReadBpsDevice {
+			config.Cgroups.Resources.BlkioThrottleReadBpsDevice = upsertThrottleDevice(config.Cgroups.Resources.BlkioThrottleReadBpsDevice, td)
+		}
+		for _, td := range r.BlockIO.ThrottleWriteBpsDevice {
+			config.Cgroups.Resources.BlkioThrottleWriteBpsDevice = upsertThrottleDevice(config.Cgroups.Resources.BlkioThrottleWriteBpsDevice, td)
+		}
+		for _, td := range r.BlockIO.ThrottleReadIOPSDevice {
+			config.Cgroups.Resources.BlkioThrottleReadIOPSDevice = upsertThrottleDevice(config.Cgroups.Resources.BlkioThrottleReadIOPSDevice, td)
+		}
+		for _, td := range r.BlockIO.ThrottleWriteIOPSDevice {
+			config.Cgroups.Resources.BlkioThrottleWriteIOPSDevice = upsertThrottleDevice(config.Cgroups.Resources.BlkioThrottleWriteIOPSDevice, td)
+		}
 
 		// Setting CPU quota and period independently does not make much sense,
 		// but historically runc allowed it and this needs to be supported
@@ -357,18 +376,14 @@ other options are ignored.
 			// In update command, we could re-enable through IntelRdtManager.Apply()
 			// and then update intelrdt constraint.
 			if config.IntelRdt == nil {
-				state, err := container.State()
-				if err != nil {
-					return err
-				}
-				config.IntelRdt = &configs.IntelRdt{}
-				intelRdtManager := intelrdt.NewManager(&config, container.ID(), state.IntelRdtPath)
-				if err := intelRdtManager.Apply(state.InitProcessPid); err != nil {
-					return err
-				}
+				return errors.New("updating a non-existent Intel RDT configuration is not supported")
 			}
-			config.IntelRdt.L3CacheSchema = l3CacheSchema
-			config.IntelRdt.MemBwSchema = memBwSchema
+			if l3CacheSchema != "" {
+				config.IntelRdt.L3CacheSchema = l3CacheSchema
+			}
+			if memBwSchema != "" {
+				config.IntelRdt.MemBwSchema = memBwSchema
+			}
 		}
 
 		// XXX(kolyshkin@): currently "runc update" is unable to change
@@ -380,4 +395,46 @@ other options are ignored.
 
 		return container.Set(config)
 	},
+}
+
+func upsertWeightDevice(devices []*cgroups.WeightDevice, wd specs.LinuxWeightDevice) []*cgroups.WeightDevice {
+	// Iterate backwards because in case of a duplicate
+	// the last one will be used.
+	for i, dev := range slices.Backward(devices) {
+		if dev.Major != wd.Major || dev.Minor != wd.Minor {
+			continue
+		}
+		// Update weights for existing device.
+		if wd.Weight != nil {
+			devices[i].Weight = *wd.Weight
+		}
+		if wd.LeafWeight != nil {
+			devices[i].LeafWeight = *wd.LeafWeight
+		}
+		return devices
+	}
+
+	// New device -- append it.
+	var weight, leafWeight uint16
+	if wd.Weight != nil {
+		weight = *wd.Weight
+	}
+	if wd.LeafWeight != nil {
+		leafWeight = *wd.LeafWeight
+	}
+
+	return append(devices, cgroups.NewWeightDevice(wd.Major, wd.Minor, weight, leafWeight))
+}
+
+func upsertThrottleDevice(devices []*cgroups.ThrottleDevice, td specs.LinuxThrottleDevice) []*cgroups.ThrottleDevice {
+	// Iterate backwards because in case of a duplicate
+	// the last one will be used.
+	for i, dev := range slices.Backward(devices) {
+		if dev.Major == td.Major && dev.Minor == td.Minor {
+			devices[i].Rate = td.Rate
+			return devices
+		}
+	}
+
+	return append(devices, cgroups.NewThrottleDevice(td.Major, td.Minor, td.Rate))
 }

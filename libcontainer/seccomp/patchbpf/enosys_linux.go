@@ -58,11 +58,12 @@ const uintptr_t C_FILTER_FLAG_NEW_LISTENER = SECCOMP_FILTER_FLAG_NEW_LISTENER;
 #define AUDIT_ARCH_RISCV64	(EM_RISCV|__AUDIT_ARCH_64BIT|__AUDIT_ARCH_LE)
 #endif
 
+// TODO: If loongarch support is not fully merged, at some point we will want to remove this.
 #ifndef AUDIT_ARCH_LOONGARCH64
 #ifndef EM_LOONGARCH
-#define EM_LOONGARCH        258
+#define EM_LOONGARCH		258
 #endif
-#define AUDIT_ARCH_LOONGARCH64  (EM_LOONGARCH|__AUDIT_ARCH_64BIT|__AUDIT_ARCH_LE)
+#define AUDIT_ARCH_LOONGARCH64	(EM_LOONGARCH|__AUDIT_ARCH_64BIT|__AUDIT_ARCH_LE)
 #endif
 
 // We use the AUDIT_ARCH_* values because those are the ones used by the kernel
@@ -85,7 +86,7 @@ const uint32_t C_AUDIT_ARCH_PPC64LE      = AUDIT_ARCH_PPC64LE;
 const uint32_t C_AUDIT_ARCH_S390         = AUDIT_ARCH_S390;
 const uint32_t C_AUDIT_ARCH_S390X        = AUDIT_ARCH_S390X;
 const uint32_t C_AUDIT_ARCH_RISCV64      = AUDIT_ARCH_RISCV64;
-const uint32_t C_AUDIT_ARCH_LOONGARCH64  = AUDIT_ARCH_LOONGARCH64;
+const uint32_t C_AUDIT_ARCH_LOONGARCH64  = AUDIT_ARCH_LOONGARCH64; //nolint:godot // C code, not Go comment.
 */
 import "C"
 

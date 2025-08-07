@@ -63,6 +63,9 @@ var featuresCommand = cli.Command{
 						Enabled: &t,
 					},
 				},
+				NetDevices: &features.NetDevices{
+					Enabled: &t,
+				},
 			},
 			PotentiallyUnsafeConfigAnnotations: []string{
 				"bundle",

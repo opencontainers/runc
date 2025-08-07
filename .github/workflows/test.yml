@@ -10,6 +10,7 @@ on:
       - main
       - release-*
   pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 
@@ -32,12 +33,12 @@ jobs:
           # Disable most of criu-dev jobs, as they are expensive
           # (need to compile criu) and don't add much value/coverage.
           - criu: criu-dev
-            go-version: 1.22.x
+            go-version: 1.23.x
           - criu: criu-dev
             rootless: rootless
           - criu: criu-dev
             race: -race
-          - go-version: 1.22.x
+          - go-version: 1.23.x
             os: actuated-arm64-6cpu-8gb
           - race: "-race"
             os: actuated-arm64-6cpu-8gb
@@ -124,8 +125,9 @@ jobs:
         sudo apt -qy install \
           libcap-dev libnet1-dev libnl-3-dev uuid-dev \
           libprotobuf-c-dev libprotobuf-dev protobuf-c-compiler protobuf-compiler
-        git clone https://github.com/checkpoint-restore/criu.git ~/criu
-        (cd ~/criu && git checkout ${{ matrix.criu }} && sudo make install-criu)
+        git clone --depth 1 --branch ${{ matrix.criu }} --single-branch \
+          https://github.com/checkpoint-restore/criu.git ~/criu
+        (cd ~/criu && sudo make -j $(nproc) install-criu)
         rm -rf ~/criu
 
     - name: install go ${{ matrix.go-version }}
@@ -192,8 +194,8 @@ jobs:
     - name: install deps
       run: |
         sudo dpkg --add-architecture i386
-        # add criu repo
-        sudo add-apt-repository -y ppa:criu/ppa
+        # Add criu repo. The web server returns gateway timeout, thus the retry.
+        sudo add-apt-repository -y ppa:criu/ppa || sudo add-apt-repository -y ppa:criu/ppa
         # apt-add-repository runs apt update so we don't have to.
 
         sudo apt -qy install libseccomp-dev libseccomp-dev:i386 gcc-multilib libgcc-s1:i386 criu

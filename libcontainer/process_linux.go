@@ -550,6 +550,20 @@ func (p *initProcess) start() (retErr error) {
 		return fmt.Errorf("unable to start init: %w", err)
 	}
 
+	// If the runc-create process is terminated due to receiving SIGKILL signal,
+	// it may lead to the runc-init process leaking due
+	// to issues like cgroup freezing,
+	// and it cannot be cleaned up by runc delete/stop
+	// because the container lacks a state.json file.
+	// This typically occurs when higher-level
+	// container runtimes terminate the runc create process due to context cancellation or timeout.
+	// If the runc-create process terminates due to SIGKILL before
+	// reaching this line of code, we won't encounter the cgroup freezing issue.
+	_, err = p.container.updateState(nil)
+	if err != nil {
+		return fmt.Errorf("unable to store init state before creating cgroup: %w", err)
+	}
+
 	defer func() {
 		if retErr != nil {
 			// Find out if init is killed by the kernel's OOM killer.
@@ -646,6 +660,10 @@ func (p *initProcess) start() (retErr error) {
 	}
 
 	if err := p.createNetworkInterfaces(); err != nil {
+		return fmt.Errorf("error creating network interfaces: %w", err)
+	}
+
+	if err := p.setupNetworkDevices(); err != nil {
 		return fmt.Errorf("error creating network interfaces: %w", err)
 	}
 
@@ -836,6 +854,30 @@ func (p *initProcess) createNetworkInterfaces() error {
 	return nil
 }
 
+// setupNetworkDevices sets up and initializes any defined network interface inside the container.
+func (p *initProcess) setupNetworkDevices() error {
+	// host network pods does not move network devices.
+	if !p.config.Config.Namespaces.Contains(configs.NEWNET) {
+		return nil
+	}
+	// the container init process has already joined the provided net namespace,
+	// so we can use the process's net ns path directly.
+	nsPath := fmt.Sprintf("/proc/%d/ns/net", p.pid())
+
+	// If moving any of the network devices fails, we return an error immediately.
+	// The runtime spec requires that the kernel handles moving back any devices
+	// that were successfully moved before the failure occurred.
+	// See: https://github.com/opencontainers/runtime-spec/blob/27cb0027fd92ef81eda1ea3a8153b8337f56d94a/config-linux.md#namespace-lifecycle-and-container-termination
+	for name, netDevice := range p.config.Config.NetDevices {
+		err := devChangeNetNamespace(name, nsPath, *netDevice)
+		if err != nil {
+			return fmt.Errorf("move netDevice %s to namespace %s: %w", name, nsPath, err)
+		}
+	}
+
+	return nil
+}
+
 func pidGetFd(pid, srcFd int) (*os.File, error) {
 	pidFd, err := unix.PidfdOpen(pid, 0)
 	if err != nil {
@@ -854,6 +896,7 @@ func sendContainerProcessState(listenerPath string, state *specs.ContainerProces
 	if err != nil {
 		return fmt.Errorf("failed to connect with seccomp agent specified in the seccomp profile: %w", err)
 	}
+	defer conn.Close()
 
 	socket, err := conn.(*net.UnixConn).File()
 	if err != nil {
