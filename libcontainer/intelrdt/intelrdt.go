@@ -464,7 +464,7 @@ func (m *Manager) Apply(pid int) (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.config.IntelRdt.ClosID != "" && m.config.IntelRdt.L3CacheSchema == "" && m.config.IntelRdt.MemBwSchema == "" {
+	if m.config.IntelRdt.ClosID != "" && m.config.IntelRdt.L3CacheSchema == "" && m.config.IntelRdt.MemBwSchema == "" && len(m.config.IntelRdt.Schemata) == 0 {
 		// Check that the CLOS exists, i.e. it has been pre-configured to
 		// conform with the runtime spec
 		if _, err := os.Stat(path); err != nil {
@@ -538,6 +538,8 @@ func (m *Manager) GetStats() (*Stats, error) {
 		return nil, err
 	}
 	schemaStrings := strings.Split(tmpStrings, "\n")
+
+	stats.Schemata = schemaStrings
 
 	if IsCATEnabled() {
 		// The read-only L3 cache information
@@ -653,23 +655,19 @@ func (m *Manager) Set(container *configs.Config) error {
 		// the value written in does not necessarily match what gets read out
 		// (leading zeros, cache id ordering etc).
 
+		parts := []string{}
+		if l3CacheSchema != "" {
+			parts = append(parts, l3CacheSchema)
+		}
+		if memBwSchema != "" {
+			parts = append(parts, memBwSchema)
+		}
+		parts = append(parts, container.IntelRdt.Schemata...)
+
 		// Write a single joint schema string to schemata file
-		if l3CacheSchema != "" && memBwSchema != "" {
-			if err := writeFile(path, "schemata", l3CacheSchema+"\n"+memBwSchema); err != nil {
-				return err
-			}
-		}
-
-		// Write only L3 cache schema string to schemata file
-		if l3CacheSchema != "" && memBwSchema == "" {
-			if err := writeFile(path, "schemata", l3CacheSchema); err != nil {
-				return err
-			}
-		}
-
-		// Write only memory bandwidth schema string to schemata file
-		if l3CacheSchema == "" && memBwSchema != "" {
-			if err := writeFile(path, "schemata", memBwSchema); err != nil {
+		schemata := strings.Join(parts, "\n")
+		if schemata != "" {
+			if err := writeFile(path, "schemata", schemata); err != nil {
 				return err
 			}
 		}
