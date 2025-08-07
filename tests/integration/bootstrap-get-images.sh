@@ -9,8 +9,8 @@ set -Eeuo pipefail
 # https://github.com/docker-library/bashbrew/releases
 
 images=(
-	# pinned to an older BusyBox (prior to 1.36 becoming "latest") because 1.36.0 has some unresolved bugs, especially around sha256sum
-	'https://github.com/docker-library/official-images/raw/eaed422a86b43c885a0f980d48f4bbf346086a4a/library/busybox:glibc'
+	# https://github.com/docker-library/official-images/commits/HEAD/library/busybox
+	'https://github.com/docker-library/official-images/raw/1702810da520102b52d89977e025c64a24ddd95e/library/busybox:musl'
 
 	# pinned to an older Debian Buster which has more architectures than the latest does (Buster transitioned from the Debian Security Team to the LTS Team which supports a smaller set)
 	'https://github.com/docker-library/official-images/raw/ce10f6b60289c0c0b5de6f785528b8725f225a58/library/debian:buster-slim'
@@ -76,7 +76,7 @@ bashbrew cat --format '
 		{{- $branch := $.TagEntry.ArchGitFetch . | trimPrefixes "refs/heads/" -}}
 		{{- $commit := $.TagEntry.ArchGitCommit . -}}
 		{{- $dir := $.TagEntry.ArchDirectory . -}}
-		{{- $tarball := eq $.RepoName "debian" | ternary "rootfs.tar.xz" "busybox.tar.xz" -}}
+		{{- $tarball := eq $.RepoName "debian" | ternary "rootfs.tar.xz" "rootfs.tar.gz" -}}
 
 		{{ . | replace "arm64v8" "arm64" "arm32" "arm" "i386" "386" }} {{- ")\n" -}}
 		{{- "\t" -}}# {{ $repo }}/tree/{{ $branch }}{{- "\n" -}}
