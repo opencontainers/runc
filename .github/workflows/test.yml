@@ -38,6 +38,9 @@ jobs:
             rootless: rootless
           - criu: criu-dev
             race: -race
+          # CRIU package doesn't currently on arm, only criu-dev does.
+          - os: ubuntu-24.04-arm
+            criu: ""
 
     runs-on: ${{ matrix.os }}
 
@@ -83,7 +86,7 @@ jobs:
         sudo apt update
         sudo apt -y install criu
 
-    - name: install CRIU (criu ${{ matrix.criu }})
+    - name: install CRIU (${{ matrix.criu }})
       if: ${{ matrix.criu != '' }}
       run: |
         sudo apt -qy install \
