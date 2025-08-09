@@ -151,6 +151,31 @@ fallback:
 	return io.Copy(dst, src)
 }
 
+func bitmaskFromInts(bits []int) []uint64 {
+	maxBit := 0
+	for _, bit := range bits {
+		if bit > maxBit {
+			maxBit = bit
+		}
+	}
+	mask := make([]uint64, (maxBit/64)+1)
+	for _, bit := range bits {
+		mask[bit/64] |= (1 << (bit % 64))
+	}
+	return mask
+}
+
+// SetMempolicy sets the NUMA memory policy. For more information see the set_mempolicy syscall documentation.
+func SetMempolicy(mode uint, nodes []int) error {
+	nodemask := bitmaskFromInts(nodes)
+	nodemaskPtr := unsafe.Pointer(&nodemask[0])
+	_, _, errno := unix.Syscall(unix.SYS_SET_MEMPOLICY, uintptr(mode), uintptr(nodemaskPtr), uintptr(len(nodemask)*64))
+	if errno != 0 {
+		return &os.SyscallError{Syscall: "set_mempolicy", Err: errno}
+	}
+	return nil
+}
+
 // SetLinuxPersonality sets the Linux execution personality. For more information see the personality syscall documentation.
 // checkout getLinuxPersonalityFromStr() from libcontainer/specconv/spec_linux.go for type conversion.
 func SetLinuxPersonality(personality int) error {
