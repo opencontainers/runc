@@ -6,8 +6,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/opencontainers/runc/libcontainer"
 	"golang.org/x/sys/unix"
@@ -23,6 +25,27 @@ func TestUsernsCheckpoint(t *testing.T) {
 
 func TestCheckpoint(t *testing.T) {
 	testCheckpoint(t, false)
+}
+
+func showCriuLogs(t *testing.T, dir string) {
+	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			t.Logf("Error accessing %s: %vn", path, err)
+			return nil
+		}
+
+		if !info.IsDir() && strings.HasSuffix(info.Name(), ".log") {
+			t.Logf("\n--- File: %s ---", path)
+			contents, err := os.ReadFile(path)
+			if err != nil {
+				t.Log(err)
+				return nil
+			}
+			t.Log(string(contents))
+		}
+
+		return nil
+	})
 }
 
 func testCheckpoint(t *testing.T, userns bool) {
@@ -78,6 +101,14 @@ func testCheckpoint(t *testing.T, userns bool) {
 
 	tmp := t.TempDir()
 	var parentImage string
+
+	if runtime.GOARCH == "arm64" {
+		t.Log("setting up log retrieval")
+		go func() {
+			time.Sleep(20 * time.Second)
+			showCriuLogs(t, tmp)
+		}()
+	}
 
 	// Test pre-dump if mem_dirty_track is available.
 	if criuFeature("mem_dirty_track") {
