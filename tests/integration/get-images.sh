@@ -86,7 +86,7 @@ mips64le)
 ppc64le)
 	# https://github.com/docker-library/busybox/tree/dist-ppc64le
 	# https://github.com/docker-library/busybox/tree/3bbb15b7efd6d99a73690516b4499b6642f97ef5/latest/glibc/ppc64le
-	url="https://github.com/docker-library/busybox/raw/3bbb15b7efd6d99a73690516b4499b6642f97ef5/latest/glibc/ppc64le/rootfs.tar.gz"
+	url="https://github.com/docker-library/busybox/raw/83c2287084a6f001a67d97fdfa23497c75520f2a/latest/glibc/ppc64le/rootfs.tar.gz" # TODO THIS IS A HACKED BUILD THAT SHOULD HAVE DEBUG SYMBOLS (`busybox_unstripped`) DO NOT MERGE
 	;;
 
 riscv64)
