@@ -325,7 +325,7 @@ func toCPUSet(str string) (*unix.CPUSet, error) {
 		return int(ret), nil
 	}
 
-	for _, r := range strings.Split(str, ",") {
+	for r := range strings.SplitSeq(str, ",") {
 		// Allow extra spaces around.
 		r = strings.TrimSpace(r)
 		// Allow empty elements (extra commas).

@@ -850,8 +850,8 @@ func TestMountCgroupRO(t *testing.T) {
 	buffers := runContainerOk(t, config, "mount")
 
 	mountInfo := buffers.Stdout.String()
-	lines := strings.Split(mountInfo, "\n")
-	for _, l := range lines {
+	lines := strings.SplitSeq(mountInfo, "\n")
+	for l := range lines {
 		if strings.HasPrefix(l, "tmpfs on /sys/fs/cgroup") {
 			if !strings.Contains(l, "ro") ||
 				!strings.Contains(l, "nosuid") ||
@@ -892,8 +892,8 @@ func TestMountCgroupRW(t *testing.T) {
 	buffers := runContainerOk(t, config, "mount")
 
 	mountInfo := buffers.Stdout.String()
-	lines := strings.Split(mountInfo, "\n")
-	for _, l := range lines {
+	lines := strings.SplitSeq(mountInfo, "\n")
+	for l := range lines {
 		if strings.HasPrefix(l, "tmpfs on /sys/fs/cgroup") {
 			if !strings.Contains(l, "rw") ||
 				!strings.Contains(l, "nosuid") ||
@@ -1206,8 +1206,8 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 	dir2cont = filepath.Join(dir1cont, filepath.Base(dir2host))
 
 	propagationInfo := stdout2.String()
-	lines := strings.Split(propagationInfo, "\n")
-	for _, l := range lines {
+	lines := strings.SplitSeq(propagationInfo, "\n")
+	for l := range lines {
 		linefields := strings.Split(l, " ")
 		if len(linefields) < 5 {
 			continue

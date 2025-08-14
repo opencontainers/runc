@@ -777,7 +777,6 @@ func TestInitSystemdProps(t *testing.T) {
 	spec := &specs.Spec{}
 
 	for _, tc := range testCases {
-		tc := tc
 		spec.Annotations = map[string]string{tc.in.name: tc.in.value}
 
 		outMap, err := initSystemdProps(spec)
@@ -834,7 +833,7 @@ func TestCheckPropertyName(t *testing.T) {
 }
 
 func BenchmarkCheckPropertyName(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		for _, s := range []string{"", "xx", "xxx", "someValidName", "A name", "Кир", "მადლობა", "合い言葉"} {
 			_ = checkPropertyName(s)
 		}
