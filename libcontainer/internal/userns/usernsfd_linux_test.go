@@ -42,7 +42,7 @@ func BenchmarkSpawnProc(b *testing.B) {
 		}
 	})
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		proc, err := spawnProc(mapping)
 		if err != nil {
 			b.Error(err)

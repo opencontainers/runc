@@ -30,7 +30,7 @@ func TestUnmarshalHooks(t *testing.T) {
 
 	for _, hookName := range configs.HookNameList {
 		hooks := configs.Hooks{}
-		err = hooks.UnmarshalJSON([]byte(fmt.Sprintf(`{"%s" :[%s]}`, hookName, hookJson)))
+		err = hooks.UnmarshalJSON(fmt.Appendf(nil, `{"%s" :[%s]}`, hookName, hookJson))
 		if err != nil {
 			t.Fatal(err)
 		}
