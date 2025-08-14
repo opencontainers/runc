@@ -75,8 +75,8 @@ type CpuUsage struct {
 }
 
 type Cpu struct {
-	Usage      CpuUsage   `json:"usage,omitempty"`
-	Throttling Throttling `json:"throttling,omitempty"`
+	Usage      CpuUsage   `json:"usage,omitzero"`
+	Throttling Throttling `json:"throttling,omitzero"`
 	PSI        *PSIStats  `json:"psi,omitempty"`
 }
 
@@ -103,10 +103,10 @@ type MemoryEntry struct {
 
 type Memory struct {
 	Cache     uint64            `json:"cache,omitempty"`
-	Usage     MemoryEntry       `json:"usage,omitempty"`
-	Swap      MemoryEntry       `json:"swap,omitempty"`
-	Kernel    MemoryEntry       `json:"kernel,omitempty"`
-	KernelTCP MemoryEntry       `json:"kernelTCP,omitempty"`
+	Usage     MemoryEntry       `json:"usage,omitzero"`
+	Swap      MemoryEntry       `json:"swap,omitzero"`
+	Kernel    MemoryEntry       `json:"kernel,omitzero"`
+	KernelTCP MemoryEntry       `json:"kernelTCP,omitzero"`
 	Raw       map[string]uint64 `json:"raw,omitempty"`
 	PSI       *PSIStats         `json:"psi,omitempty"`
 }
