@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, actuated-arm64-6cpu-8gb]
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
         go-version: [1.23.x, 1.24.x]
         rootless: ["rootless", ""]
         race: ["-race", ""]
@@ -34,39 +34,20 @@ jobs:
           # (need to compile criu) and don't add much value/coverage.
           - criu: criu-dev
             go-version: 1.23.x
+            os: ubuntu-24.04
           - criu: criu-dev
             rootless: rootless
-          - criu: criu-dev
-            race: -race
-          - go-version: 1.23.x
-            os: actuated-arm64-6cpu-8gb
-          - race: "-race"
-            os: actuated-arm64-6cpu-8gb
-          - criu: criu-dev
-            os: actuated-arm64-6cpu-8gb
+            os: ubuntu-24.04
+          # Do race detection only on latest Go.
+          - race: -race
+            go-version: 1.23.x
+          # CRIU package 4.1-1 from opensuse build farm doesn't work on arm.
+          - os: ubuntu-24.04-arm
+            criu: ""
 
     runs-on: ${{ matrix.os }}
 
     steps:
-# https://gist.github.com/alexellis/1f33e581c75e11e161fe613c46180771#file-metering-gha-md
-# vmmeter start
-    - name: Prepare arkade
-      uses: alexellis/arkade-get@master
-      if: matrix.os == 'actuated-arm64-6cpu-8gb'
-      with:
-        crane: latest
-        print-summary: false
-
-    - name: Install vmmeter
-      if: matrix.os == 'actuated-arm64-6cpu-8gb'
-      run: |
-        crane export --platform linux/arm64 ghcr.io/openfaasltd/vmmeter:latest | sudo tar -xvf - -C /usr/local/bin
-
-    - name: Run vmmeter
-      uses: self-actuated/vmmeter-action@master
-      if: matrix.os == 'actuated-arm64-6cpu-8gb'
-# vmmeter end
-
     - name: checkout
       uses: actions/checkout@v4
 
@@ -92,17 +73,6 @@ jobs:
         # kernel config
         script/check-config.sh
 
-    - name: start sshd (used for testing rootless with systemd user session)
-      if: ${{ matrix.os == 'actuated-arm64-6cpu-8gb' && matrix.rootless == 'rootless' }}
-      run: |
-        # Generate new keys to fix "sshd: no hostkeys available -- exiting."
-        sudo ssh-keygen -A
-        if ! sudo systemctl start ssh.service; then
-          sudo journalctl -xeu ssh.service
-          exit 1
-        fi
-        ps auxw | grep sshd
-
     - name: install deps
       run: |
         sudo apt update
@@ -119,7 +89,7 @@ jobs:
         sudo apt update
         sudo apt -y install criu
 
-    - name: install CRIU (criu ${{ matrix.criu }})
+    - name: install CRIU (${{ matrix.criu }})
       if: ${{ matrix.criu != '' }}
       run: |
         sudo apt -qy install \
@@ -150,7 +120,7 @@ jobs:
 
     - name: Allow userns for runc
       # https://discourse.ubuntu.com/t/ubuntu-24-04-lts-noble-numbat-release-notes/39890#unprivileged-user-namespace-restrictions-15
-      if: matrix.os == 'ubuntu-24.04'
+      if: startsWith(matrix.os, 'ubuntu-24.04')
       run: |
         sed "s;^profile runc /usr/sbin/;profile runc-test $PWD/;" < /etc/apparmor.d/runc | sudo apparmor_parser
 
