@@ -287,7 +287,7 @@ func intelrdtCheck(config *configs.Config) error {
 			return fmt.Errorf("intelRdt is specified in config, but Intel RDT is not enabled")
 		}
 
-		if config.IntelRdt.ClosID == "." || config.IntelRdt.ClosID == ".." || strings.Contains(config.IntelRdt.ClosID, "/") {
+		if config.IntelRdt.ClosID == "." || config.IntelRdt.ClosID == ".." || (config.IntelRdt.ClosID != "/" && strings.Contains(config.IntelRdt.ClosID, "/")) {
 			return fmt.Errorf("invalid intelRdt.ClosID %q", config.IntelRdt.ClosID)
 		}
 
