@@ -506,6 +506,16 @@ func createVTPMs(root, containerID string, spec *specs.Spec) ([]*vtpm.VTPM, erro
 		return vtpms, nil
 	}
 
+	var vtpmNames []string
+	for _, vtpm := range r.VTPMs {
+		vtpmNames = append(vtpmNames, vtpm.VTPMName)
+	}
+
+	err := vtpmhelper.CheckVTPMNames(vtpmNames)
+	if err != nil {
+		return nil, err
+	}
+
 	for _, vtpm := range r.VTPMs {
 		var major uint32
 		var minor uint32

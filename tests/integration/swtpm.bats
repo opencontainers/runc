@@ -167,3 +167,50 @@ function teardown() {
 	runc exec tst2 "${HELPER}" -devicePath=/dev/tpmtpmsame -deviceVersion=2
 	[ "$status" -eq 0 ]
 }
+
+@test "runc run with wrong VTPM names" {
+	HELPER="tpm-helper"
+	vtpm_path=$(mktemp -d)
+	update_config '	  .process.args = ["/bin/sh"]
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "", "vtpmMajor": 100, "vtpmMinor": 1}]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" tst
+	[ "$status" -ne 0 ]
+
+	update_config '	  .process.args = ["/bin/sh"]
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": 100, "vtpmMinor": 1},
+					  							 {"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": 101, "vtpmMinor": 1}
+					  ]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" tst
+	[ "$status" -ne 0 ]
+}
+
+
+@test "runc run container with 2 containers" {
+	HELPER="tpm-helper"
+	cp "${TESTBINDIR}/${HELPER}" rootfs/bin/
+	vtpm_path1=$(mktemp -d)
+	vtpm_path2=$(mktemp -d)
+	update_config '	  .process.args = ["/bin/sh"]
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": 100, "vtpmMinor": 1},
+					  							 {"statepath": "'"$vtpm_path2"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": 101, "vtpmMinor": 1}
+					  ]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" tst
+	[ "$status" -eq 0 ]
+
+	runc exec tst "${HELPER}" -devicePath=/dev/tpmtpmone -deviceVersion=2
+	[ "$status" -eq 0 ]
+	
+	runc exec tst "${HELPER}" -devicePath=/dev/tpmtpmsecond -deviceVersion=2
+	[ "$status" -eq 0 ]
+
+	${TESTBINDIR}/${HELPER} -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-tst-tpmone -deviceVersion=2
+	ret=$?
+	if [ "$ret" -ne 0 ]; then
+		fail "should be able to read from first device"
+	fi
+	${TESTBINDIR}/${HELPER} -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-tst-tpmsecond -deviceVersion=2
+	ret=$?
+	if [ "$ret" -ne 0 ]; then
+		fail "should be able to read from second device"
+	fi
+}

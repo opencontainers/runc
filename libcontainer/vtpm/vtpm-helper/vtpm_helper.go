@@ -126,3 +126,17 @@ func ApplyCGroupVTPMs(vtpms []*vtpm.VTPM, cgroupManager cgroups.Manager) error {
 	}
 	return nil
 }
+
+func CheckVTPMNames(vtpms []string) error {
+	namesMap := make(map[string]int, 0)
+	for ind, name := range vtpms {
+		if name == "" {
+			return fmt.Errorf("VTPM device %d has empty name", ind)
+		}
+		if mappedInd, ok := namesMap[name]; ok {
+			return fmt.Errorf("VTPM devices %d and %d has the same name %s", mappedInd, ind, name)
+		}
+		namesMap[name] = ind
+	}
+	return nil
+}
