@@ -173,7 +173,7 @@ function teardown() {
 	runc exec tst2 "${HELPER}" -devicePath=/dev/tpmtpmsame -deviceVersion=2
 	[ "$status" -eq 0 ]
 
-	runc delete --force ts1
+	runc delete --force tst1
 	[ "$status" -eq 0 ]
 
 	runc exec tst2 "${HELPER}" -devicePath=/dev/tpmtpmsame -deviceVersion=2
@@ -283,4 +283,72 @@ function teardown() {
 	if [ "$ret" -ne 0 ]; then
 		fail "should be able to read from right name device"
 	fi
+}
+
+@test "runc swtpm with user namespace" {
+	rm /etc/swtpm/runc.conf || true
+	HELPER="tpm-helper"
+	cp "${TESTBINDIR}/${HELPER}" rootfs/bin/
+	vtpm_path=$(mktemp -d)
+	update_config '	  .process.args = ["/bin/sh"]
+					  |.linux.namespaces += [{"type": "user"}]
+					  |.linux.uidMappings += [{"containerID": 0, "hostID": 100000, "size": 65536}]
+					  |.linux.gidMappings += [{"containerID": 0, "hostID": 100000, "size": 65536}]
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmuser", "vtpmMajor": 100, "vtpmMinor": 1}]'
+	remap_rootfs
+	
+	runc run -d --console-socket "$CONSOLE_SOCKET" tst1
+	[ "$status" -eq 0 ]
+	wait_for_container 10 1 tst1
+
+	ret=0
+	${TESTBINDIR}/${HELPER} -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-tst1-tpmuser -deviceVersion=2 || ret=$?
+	if [ "$ret" -ne 0 ]; then
+		fail "should be able to read from user namespaced container"
+	fi
+
+	runc exec tst1 "${HELPER}" -devicePath=/dev/tpmtpmuser -deviceVersion=2
+	[ "$status" -ne 0 ]
+
+	runc exec tst1 "${HELPER}" -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-tst1-tpmuser -deviceVersion=2
+	[ "$status" -eq 0 ]
+
+	runc delete --force tst1
+	[ "$status" -eq 0 ]
+}
+
+@test "runc swtpm with joined user namespace" {
+	HELPER="tpm-helper"
+	cp "${TESTBINDIR}/${HELPER}" rootfs/bin/
+	vtpm_path=$(mktemp -d)
+	update_config '	.process.args = ["sleep", "infinity"]
+					|.linux.namespaces += [{"type": "user"}]
+					|.linux.uidMappings += [{"containerID": 0, "hostID": 100000, "size": 65536}]
+					|.linux.gidMappings += [{"containerID": 0, "hostID": 100000, "size": 65536}]'
+	
+	runc run -d --console-socket "$CONSOLE_SOCKET" tmp_sleep_container
+	[ "$status" -eq 0 ]
+	wait_for_container 10 1 tmp_sleep_container
+
+	target_pid="$(__runc state tmp_sleep_container | jq .pid)"
+	update_config '.linux.namespaces |= map(if .type == "user" then (.path = "/proc/'"$target_pid"'/ns/" + .type) else . end)
+					| del(.linux.uidMappings)
+					| del(.linux.gidMappings)
+					| .linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "joined_userns", "vtpmMajor": 100, "vtpmMinor": 1}]'
+	
+	runc run -d --console-socket "$CONSOLE_SOCKET" vtpm_in_joined_userns
+	[ "$status" -eq 0 ]
+	wait_for_container 10 1 vtpm_in_joined_userns
+
+	ret=0
+	${TESTBINDIR}/${HELPER} -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-vtpm_in_joined_userns-joined_userns -deviceVersion=2 || ret=$?
+	if [ "$ret" -ne 0 ]; then
+		fail "should be able to read from user namespaced container"
+	fi
+
+	runc exec vtpm_in_joined_userns "${HELPER}" -devicePath=/dev/tpmjoined_userns -deviceVersion=2
+	[ "$status" -ne 0 ]
+
+	runc exec vtpm_in_joined_userns "${HELPER}" -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-vtpm_in_joined_userns-joined_userns -deviceVersion=2
+	[ "$status" -eq 0 ]
 }

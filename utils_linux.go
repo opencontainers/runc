@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/coreos/go-systemd/v22/activation"
+	"github.com/moby/sys/userns"
 	"github.com/opencontainers/runc/libcontainer/vtpm"
 	vtpmhelper "github.com/opencontainers/runc/libcontainer/vtpm/vtpm-helper"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -498,6 +499,15 @@ func addVTPMDevice(spec *specs.Spec, devpath string, major, minor uint32) {
 	spec.Linux.Resources.Devices = append(spec.Linux.Resources.Devices, *ld)
 }
 
+func ContainsUserNamespace(namespaces []specs.LinuxNamespace, userNs specs.LinuxNamespaceType) bool {
+	for _, ns := range namespaces {
+		if ns.Type == userNs {
+			return true
+		}
+	}
+	return false
+}
+
 func createVTPMs(root, containerID string, spec *specs.Spec) ([]*vtpm.VTPM, error) {
 	var vtpms []*vtpm.VTPM
 	type vtpmLinuxDevice struct {
@@ -563,6 +573,11 @@ func createVTPMs(root, containerID string, spec *specs.Spec) ([]*vtpm.VTPM, erro
 			minor = unix.Minor(devNumber)
 
 			devpath := "/dev/tpm" + containerVTPMName
+			// We switch to the created device name because in runc's init we will use bind command instead mknod
+			if userns.RunningInUserNS() || spec.Linux != nil && ContainsUserNamespace(spec.Linux.Namespaces, specs.UserNamespace) {
+				devpath = hostdev
+			}
+
 			device := vtpmLinuxDevice{
 				devPath: devpath,
 				major:   major,

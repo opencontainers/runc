@@ -505,8 +505,6 @@ type LinuxResources struct {
 type LinuxDevice struct {
 	// Path to the device.
 	Path string `json:"path"`
-	// Path of passed-through device on host
-	Devpath string `json:"devpath"`
 	// Device type, block, char, etc.
 	Type string `json:"type"`
 	// Major is the device's major number.
