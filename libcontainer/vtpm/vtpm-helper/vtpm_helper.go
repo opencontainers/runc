@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -130,16 +131,33 @@ func ApplyCGroupVTPMs(vtpms []*vtpm.VTPM, cgroupManager cgroups.Manager) error {
 	return nil
 }
 
-func CheckVTPMNames(vtpms []string) error {
+func CheckVTPMParams(vtpms []specs.LinuxVTPM) error {
 	namesMap := make(map[string]int, 0)
-	for ind, name := range vtpms {
+	// We need to be sure that there are not several vtpm devices with the same state path.
+	// checkPossibleChown will help to deal with other processes. This method deals with the requested vTPM devices.
+	stateMap := make(map[string]int, 0)
+	for ind, vtpm := range vtpms {
+		name := vtpm.VTPMName
+		stateDir := path.Clean(vtpm.StatePath)
+
 		if name == "" {
 			return fmt.Errorf("VTPM device %d has empty name", ind)
 		}
+
+		if stateDir == "" {
+			return fmt.Errorf("VTPM device %d has empty state dir", ind)
+		}
+
 		if mappedInd, ok := namesMap[name]; ok {
 			return fmt.Errorf("VTPM devices %d and %d has the same name %s", mappedInd, ind, name)
 		}
+
+		if mappedInd, ok := stateMap[stateDir]; ok {
+			return fmt.Errorf("VTPM devices %d and %d has the same state dir %s", mappedInd, ind, stateDir)
+		}
+
 		namesMap[name] = ind
+		stateMap[stateDir] = ind
 	}
 	return nil
 }

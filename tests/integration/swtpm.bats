@@ -207,6 +207,14 @@ function teardown() {
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst
 	[ "$status" -ne 0 ]
 
+	# the same dir
+	update_config '	  .process.args = ["/bin/sh"]
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path2"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'},
+					  							{"statepath": "'"$vtpm_path2"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": '"$test_major_second"', "vtpmMinor": '"$test_minor"'}
+					  ]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" tst
+	[ "$status" -ne 0 ]
+
 	update_config '	  .process.args = ["/bin/sh"]
 					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'}]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst1

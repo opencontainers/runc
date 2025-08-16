@@ -5,6 +5,7 @@ package vtpm
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -224,6 +225,14 @@ func (vtpm *VTPM) getLogFile() string {
 	return path.Join(vtpm.StatePath, "swtpm.log")
 }
 
+func (vtpm *VTPM) getVTPMLockFile() string {
+	return path.Join(vtpm.StatePath, ".lock")
+}
+
+func (vtpm *VTPM) getRuncLockFile() string {
+	return path.Join(vtpm.StatePath, ".runc-lock")
+}
+
 // getPidFromFile: Get the PID from the PID file
 func (vtpm *VTPM) getPidFromFile() (int, error) {
 	d, err := ioutil.ReadFile(vtpm.getPidFile())
@@ -342,6 +351,71 @@ func (vtpm *VTPM) DeleteStatePath() error {
 	return nil
 }
 
+// There are 2 possible race conditions caused by chowning files in the state dir:
+// 1) When vTPM device is already created and it will be moved to the failure mode by chowning
+// 2) When another runc is trying to create vTPM device on the same state dir
+// and vTPM creation pipeline will be failed
+func (vtpm *VTPM) checkPossibleChown() error {
+	// open first lock
+	firstLock, err := os.OpenFile(vtpm.getRuncLockFile(), os.O_CREATE|os.O_RDWR, 0600)
+	if err != nil {
+		return fmt.Errorf("can not open first lock %s: %w", vtpm.getRuncLockFile(), err)
+	}
+
+	// get first lock
+	err = unix.FcntlFlock(firstLock.Fd(), unix.F_SETLK, &unix.Flock_t{
+		Type:   unix.F_WRLCK,
+		Whence: io.SeekStart,
+		Start:  0,
+		Len:    0,
+	})
+	if err != nil {
+		firstLock.Close()
+		return fmt.Errorf("can not get first lock %s: %w", vtpm.getRuncLockFile(), err)
+	}
+
+	// open second lock
+	secondLock, err := os.OpenFile(vtpm.getVTPMLockFile(), os.O_CREATE|os.O_RDWR, 0600)
+	if err != nil {
+		firstLock.Close()
+		return fmt.Errorf("can not open second lock %s: %w", vtpm.getVTPMLockFile(), err)
+	}
+
+	// we need to close anyway
+	defer secondLock.Close()
+
+	// get second lock
+	err = unix.FcntlFlock(secondLock.Fd(), unix.F_SETLK, &unix.Flock_t{
+		Type:   unix.F_WRLCK,
+		Whence: io.SeekStart,
+		Start:  0,
+		Len:    0,
+	})
+
+	if err != nil {
+		firstLock.Close()
+		return fmt.Errorf("can not get second lock %s: %w", vtpm.getVTPMLockFile(), err)
+	}
+
+	// close second lock
+	err = unix.FcntlFlock(firstLock.Fd(), unix.F_SETLK, &unix.Flock_t{
+		Type:   unix.F_UNLCK,
+		Whence: io.SeekStart,
+		Start:  0,
+		Len:    0,
+	})
+
+	if err != nil {
+		firstLock.Close()
+		return fmt.Errorf("can not close second lock %s: %w", vtpm.getVTPMLockFile(), err)
+	}
+
+	// we do not want to close first lock now
+	// because we want to stop another runc process from creating vTPM device on the same state dir.
+	// After runc is terminated, record lock will be removed.
+	return nil
+}
+
 // createStatePath creates the TPM directory where the TPM writes its state
 // into; it also makes the directory accessible to the 'runas' user
 //
@@ -354,6 +428,10 @@ func (vtpm *VTPM) createStatePath() (bool, error) {
 			return false, fmt.Errorf("Could not create directory %s: %v", vtpm.StatePath, err)
 		}
 		created = true
+	}
+
+	if err := vtpm.checkPossibleChown(); err != nil {
+		return false, fmt.Errorf("before chown check is not passed: %w", err)
 	}
 
 	err := vtpm.chownStatePath()
@@ -553,11 +631,20 @@ func (vtpm *VTPM) startSwtpm() error {
 	if hasCapability(vtpm.swtpmCaps, "flags-opt-startup") {
 		flags += ",startup-clear"
 	}
+
+	// swtpm_cuse can not parse user by uid, get username
+	userName, err := user.LookupId(vtpm.user)
+	if err != nil {
+		return fmt.Errorf("can not look up username by id %s: %w", vtpm.user, err)
+	}
+
 	args := []string{
 		"--tpmstate", tpmstate,
 		"-n", tpm_dev_name, "--pid", pidfile, "--log", logfile,
 		"--flags", flags,
-		"--locality", "reject-locality-4,allow-set-locality"}
+		"--locality", "reject-locality-4,allow-set-locality",
+		"--runas", userName.Username,
+	}
 
 	if vtpm.major != 0 {
 		args = append(args, fmt.Sprintf("--maj=%d", vtpm.major))
@@ -584,7 +671,7 @@ func (vtpm *VTPM) startSwtpm() error {
 	}
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("swtpm failed on fd %s: %s\nlog: %s", tpm_dev_name, string(output), vtpm.ReadLog())
+		return fmt.Errorf("swtpm failed on dev name %s: %s\nlog: %s", tpm_dev_name, string(output), vtpm.ReadLog())
 	}
 	if vtpm.passwordPipeError != nil {
 		return fmt.Errorf("Error transferring password using pipe: %v", vtpm.passwordPipeError)
@@ -747,27 +834,32 @@ func (vtpm *VTPM) setupAppArmor() error {
 		tmpStateFilePattern = path.Join(vtpm.StatePath, "TMP2-00.*")
 	}
 
+	// We need to add dac_read_search and dac_override capailities in cases when runAs is not a root.
 	profile := fmt.Sprintf("\n#include <tunables/global>\n"+
 		"profile %s {\n"+
 		"  #include <abstractions/base>\n"+
 		"  capability setgid,\n"+
 		"  capability setuid,\n"+
 		"  capability sys_nice,\n"+
+		"  capability dac_read_search,\n"+
+		"  capability dac_override,\n"+
 		"  /dev/tpm[0-9]* rw,\n"+
 		"  owner /etc/group r,\n"+
 		"  owner /etc/nsswitch.conf r,\n"+
 		"  owner /etc/passwd r,\n"+
 		"  /dev/cuse rw,\n"+
 		"  %s/ rw,\n"+
-		"  %s/.lock wk,\n"+
-		"  %s w,\n"+
+		"  %s wk,\n"+
+		"  %s wk,\n"+
+		"  %s rw,\n"+
 		"  %s rw,\n"+
 		"  %s rw,\n"+
 		"  %s rw,\n"+
 		"}\n",
 		profilename,
 		vtpm.StatePath,
-		vtpm.StatePath,
+		vtpm.getRuncLockFile(),
+		vtpm.getVTPMLockFile(),
 		vtpm.getLogFile(),
 		vtpm.getPidFile(),
 		statefilepattern,

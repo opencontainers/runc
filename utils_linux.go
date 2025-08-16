@@ -522,12 +522,7 @@ func createVTPMs(root, containerID string, spec *specs.Spec) ([]*vtpm.VTPM, erro
 		return vtpms, nil
 	}
 
-	var vtpmNames []string
-	for _, vtpm := range r.VTPMs {
-		vtpmNames = append(vtpmNames, vtpm.VTPMName)
-	}
-
-	err := vtpmhelper.CheckVTPMNames(vtpmNames)
+	err := vtpmhelper.CheckVTPMParams(r.VTPMs)
 	if err != nil {
 		if vtpmhelper.CanIgnoreVTPMErrors() {
 			logrus.Errorf("createVTPMs has an error: %s", err)
