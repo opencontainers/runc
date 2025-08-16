@@ -18,7 +18,6 @@ import (
 	// "github.com/sirupsen/logrus"
 )
 
-
 // getEncryptionPassword gets the plain password from the caller
 // valid formats passed to this function are:
 // - <password>
@@ -53,7 +52,6 @@ func getEncryptionPassword(pwdString string) ([]byte, error) {
 
 // CreateVTPM create a VTPM proxy device and starts the TPM emulator with it
 func CreateVTPM(spec *specs.Spec, vtpmdev *specs.LinuxVTPM) (*vtpm.VTPM, error) {
-
 	encryptionPassword, err := getEncryptionPassword(vtpmdev.EncryptionPassword)
 	if err != nil {
 		return nil, err
@@ -115,8 +113,11 @@ func DestroyVTPMs(vtpms []*vtpm.VTPM) {
 // ApplyCGroupVTPMs puts all VTPMs into the given Cgroup manager's cgroup
 func ApplyCGroupVTPMs(vtpms []*vtpm.VTPM, cgroupManager cgroups.Manager) error {
 	for _, vtpm := range vtpms {
-		if err := cgroupManager.Apply(vtpm.Pid); err != nil {
-			return fmt.Errorf("cGroupManager failed to apply vtpm with pid %d: %v", vtpm.Pid, err)
+		pathes := cgroupManager.GetPaths()
+		for subsys, path := range pathes {
+			if err := cgroups.WriteCgroupProc(path, vtpm.Pid); err != nil {
+				return fmt.Errorf("cGroupManager failed to apply vtpm %s subsys with pid %d: %v", subsys, vtpm.Pid, err)
+			}
 		}
 	}
 	return nil
