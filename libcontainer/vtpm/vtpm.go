@@ -242,17 +242,47 @@ func (vtpm *VTPM) getPidFromFile() (int, error) {
 }
 
 // waitForPidFile: wait for the PID file to appear and read the PID from it
-func (vtpm *VTPM) waitForPidFile(loops int) (int, error) {
-	for loops >= 0 {
+// It is possible that swtpm_cuse will exit after ptm_init callback will be called.
+// E.g. if we create two devices with the same major/minor
+func (vtpm *VTPM) waitForPidFile(loops int, successLoops int) (int, error) {
+	var created bool
+	for !created && loops >= 0 || created && successLoops >= 0 {
 		pid, err := vtpm.getPidFromFile()
 		if pid > 0 && err == nil {
-			return pid, nil
+			created = true
+			if successLoops == 0 {
+				return pid, nil
+			}
+		} else if created {
+			return -1, fmt.Errorf("swtpm's pid file disappeared: log %s", vtpm.ReadLog())
+		}
+		time.Sleep(time.Millisecond * 100)
+		if created {
+			successLoops -= 1
+		} else {
+			loops -= 1
+		}
+	}
+	logrus.Error("PID file did not appear")
+	return -1, fmt.Errorf("swtpm's pid file did not appear: log %s", vtpm.ReadLog())
+}
+
+// waitForDisappearPidFile: Wait for /dev/tpm%d to appear and while waiting
+//
+//	check whether the swtpm is still alive by checking its PID file
+func (vtpm *VTPM) waitForDisappearPidFile(loops int) error {
+	pidfile := vtpm.getPidFile()
+
+	for loops >= 0 {
+		if _, err := os.Stat(pidfile); err != nil && os.IsNotExist(err) {
+			return nil
+		} else if err != nil {
+			return err
 		}
 		time.Sleep(time.Millisecond * 100)
 		loops -= 1
 	}
-	logrus.Error("PID file did not appear")
-	return -1, fmt.Errorf("swtpm's pid file did not appear")
+	return fmt.Errorf("TPM pid file %s did not disappear", pidfile)
 }
 
 // stopByPidFile: Stop the vTPM by its PID file
@@ -269,7 +299,13 @@ func (vtpm *VTPM) stopByPidFile() error {
 	}
 
 	err = p.Signal(syscall.SIGTERM)
+	if err != nil {
+		return err
+	}
 
+	// We can not use p.Wait because swtpm is forked and not our child.
+	// However, we need to be sure that swtpm_cuse process is stopped.
+	err = vtpm.waitForDisappearPidFile(10)
 	return err
 }
 
@@ -347,6 +383,13 @@ func (vtpm *VTPM) chownStatePath() error {
 	}
 
 	err = filepath.Walk(vtpm.StatePath, func(path string, info os.FileInfo, err error) error {
+		// In vtpm_helper unit tests the VTPM device is created, stopped and recreated.
+		// The "race condition" is possible because after SIGTERM signal swtpm_cuse will try to delete swtpm's pid file.
+		// However, Walk function reads the list of all names in the dir and calls os.Lstat for each file.
+		// If an error is occured, then it will be passed to this function. So, in this case we need to return nil.
+		if os.IsNotExist(err) && path != vtpm.StatePath {
+			return nil
+		}
 		if err != nil {
 			return err
 		}
@@ -546,7 +589,7 @@ func (vtpm *VTPM) startSwtpm() error {
 	// to fork and parent process will be exited. We need wait until
 	// ptm_init_done https://github.com/stefanberger/swtpm/blob/master/src/swtpm/cuse_tpm.c#L1526
 	// callback will be called.
-	vtpm.Pid, err = vtpm.waitForPidFile(10)
+	vtpm.Pid, err = vtpm.waitForPidFile(10, 5)
 	if err != nil {
 		return fmt.Errorf("wait for PidFile: %w", err)
 	}
@@ -777,6 +820,13 @@ func (vtpm *VTPM) setupSELinux() error {
 	}
 
 	err := filepath.Walk(vtpm.StatePath, func(path string, info os.FileInfo, err error) error {
+		// In vtpm_helper unit tests the VTPM device is created, stopped and recreated.
+		// The "race condition" is possible because after SIGTERM signal swtpm_cuse will try to delete swtpm's pid file.
+		// However, Walk function reads the list of all names in the dir and calls os.Lstat for each file.
+		// If an error is occured, then it will be passed to this function. So, in this case we need to return nil.
+		if os.IsNotExist(err) && path != vtpm.StatePath {
+			return nil
+		}
 		if err != nil {
 			return err
 		}

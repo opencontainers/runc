@@ -128,6 +128,10 @@ func createRestartDestroyVTPM(t *testing.T, tpmversion string, createCertificate
 		t.Fatalf("VTPM could not be stopped cleanly: %v", err)
 	}
 
+	if err := os.Remove(myvtpm.GetTPMDevpath()); err != nil && !os.IsNotExist(err) {
+		t.Fatalf("While testing the docker container, we should remove device ourselves: %s", err)
+	}
+
 	createdStatePath, err := myvtpm.Start()
 	if err != nil {
 		t.Fatalf("VTPM could not be started: %v", err)

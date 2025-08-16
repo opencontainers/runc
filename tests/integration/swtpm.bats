@@ -142,6 +142,7 @@ function teardown() {
 @test "runc with 2 container with the same devpath" {
 	HELPER="tpm-helper"
 	cp "${TESTBINDIR}/${HELPER}" rootfs/bin/
+	# first container
 	vtpm_path=$(mktemp -d)
 	update_config '	  .process.args = ["/bin/sh"]
 					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmsame", "vtpmMajor": 100, "vtpmMinor": 1}]'
@@ -149,6 +150,7 @@ function teardown() {
 	[ "$status" -eq 0 ]
 	wait_for_container 10 1 tst1
 
+	# second container
 	vtpm_pth1=$(mktemp -d)
 	update_config '	  .process.args = ["/bin/sh"]
 					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_pth1"'", "vtpmversion": "2", "vtpmname" : "tpmsame", "vtpmMajor": 101, "vtpmMinor": 1}]'
@@ -182,31 +184,60 @@ function teardown() {
 	[ "$status" -eq 0 ]
 }
 
-@test "runc run with wrong VTPM names" {
+@test "runc run with wrong VTPM params" {
 	HELPER="tpm-helper"
 	vtpm_path1=$(mktemp -d)
 	vtpm_path2=$(mktemp -d)
 	vtpm_path3=$(mktemp -d)
 
+	# empty name
 	update_config '	  .process.args = ["/bin/sh"]
 					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "", "vtpmMajor": 100, "vtpmMinor": 1}]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst
 	[ "$status" -ne 0 ]
 
+	# the same name
 	update_config '	  .process.args = ["/bin/sh"]
 					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path2"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": 100, "vtpmMinor": 1},
 					  							 {"statepath": "'"$vtpm_path3"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": 101, "vtpmMinor": 1}
 					  ]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst
 	[ "$status" -ne 0 ]
+
+	update_config '	  .process.args = ["/bin/sh"]
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": 100, "vtpmMinor": 1}]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" tst1
+	[ "$status" -eq 0 ]
+	wait_for_container 10 1 tst1
+
+	# with the same state path
+	update_config '	  .process.args = ["/bin/sh"]
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": 101, "vtpmMinor": 1}]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" tst2
+	[ "$status" -ne 0 ]
+
+	# with the same major/minor
+	update_config '	  .process.args = ["/bin/sh"]
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path2"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": 100, "vtpmMinor": 1}]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" tst3
+	[ "$status" -ne 0 ]
+
+	# with different params
+	update_config '	  .process.args = ["/bin/sh"]
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path3"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": 101, "vtpmMinor": 1}]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" tst4
+	[ "$status" -eq 0 ]
+	wait_for_container 10 1 tst4
 }
 
 
-@test "runc run container with 2 containers" {
+@test "runc run container with 2 devices" {
 	HELPER="tpm-helper"
 	cp "${TESTBINDIR}/${HELPER}" rootfs/bin/
 	vtpm_path1=$(mktemp -d)
 	vtpm_path2=$(mktemp -d)
+
+	# two devices
 	update_config '	  .process.args = ["/bin/sh"]
 					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": 100, "vtpmMinor": 1},
 					  							 {"statepath": "'"$vtpm_path2"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": 101, "vtpmMinor": 1}
