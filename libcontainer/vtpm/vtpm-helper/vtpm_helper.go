@@ -4,11 +4,14 @@ package vtpmhelper
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -16,7 +19,7 @@ import (
 
 	"github.com/opencontainers/runtime-spec/specs-go"
 	// "golang.org/x/sys/unix"
-	// "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -139,4 +142,39 @@ func CheckVTPMNames(vtpms []string) error {
 		namesMap[name] = ind
 	}
 	return nil
+}
+
+const defaultSWTPMRuncConfig = "/etc/swtpm/runc.conf"
+
+var (
+	ignoreVtpmErrors bool
+	configOnce       sync.Once
+)
+
+func CanIgnoreVTPMErrors() bool {
+	configOnce.Do(func() {
+		file, err := os.Open(defaultSWTPMRuncConfig)
+		if err != nil {
+			logrus.Errorf("can not open config %s: %s", defaultSWTPMRuncConfig, err)
+			return
+		}
+
+		data, err := io.ReadAll(file)
+		if err != nil {
+			logrus.Errorf("can not read data from config %s: %s", defaultSWTPMRuncConfig, err)
+			return
+		}
+
+		var config struct {
+			IgnoreVTPMErrors bool `json:"ignoreVTPMErrors,omitempty"`
+		}
+
+		err = json.Unmarshal(data, &config)
+		if err != nil {
+			logrus.Errorf("can not unmarshal config %s: %s", defaultSWTPMRuncConfig, err)
+			return
+		}
+		ignoreVtpmErrors = config.IgnoreVTPMErrors
+	})
+	return ignoreVtpmErrors
 }

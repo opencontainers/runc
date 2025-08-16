@@ -500,6 +500,12 @@ func addVTPMDevice(spec *specs.Spec, devpath string, major, minor uint32) {
 
 func createVTPMs(root, containerID string, spec *specs.Spec) ([]*vtpm.VTPM, error) {
 	var vtpms []*vtpm.VTPM
+	type vtpmLinuxDevice struct {
+		devPath string
+		major   uint32
+		minor   uint32
+	}
+	var devices []vtpmLinuxDevice
 
 	r := spec.Linux.Resources
 	if r == nil {
@@ -513,45 +519,73 @@ func createVTPMs(root, containerID string, spec *specs.Spec) ([]*vtpm.VTPM, erro
 
 	err := vtpmhelper.CheckVTPMNames(vtpmNames)
 	if err != nil {
+		if vtpmhelper.CanIgnoreVTPMErrors() {
+			logrus.Errorf("createVTPMs has an error: %s", err)
+			return nil, nil
+		}
 		return nil, err
 	}
 
-	for _, vtpm := range r.VTPMs {
-		var major uint32
-		var minor uint32
-		var fileInfo os.FileInfo
-		var err error
-		containerVTPMName := vtpm.VTPMName
+	for ind, vtpmSpec := range r.VTPMs {
+		vtpm, device, err := func(vtpmSpec specs.LinuxVTPM) (*vtpm.VTPM, vtpmLinuxDevice, error) {
+			var major uint32
+			var minor uint32
+			var fileInfo os.FileInfo
+			var err error
+			var vtpm *vtpm.VTPM
+			containerVTPMName := vtpmSpec.VTPMName
 
-		// Several containers can have vtpms on the same devpath that's why we need to create unique host path.
-		vtpm.VTPMName = vtpmhelper.GenerateDeviceHostPathName(root, containerID, containerVTPMName)
-		hostdev := "/dev/tpm" + vtpm.VTPMName
+			// Several containers can have vtpms on the same devpath that's why we need to create unique host path.
+			vtpmSpec.VTPMName = vtpmhelper.GenerateDeviceHostPathName(root, containerID, containerVTPMName)
+			hostdev := "/dev/tpm" + vtpmSpec.VTPMName
 
-		if fileInfo, err = os.Lstat(hostdev); err != nil {
-			v, err := vtpmhelper.CreateVTPM(spec, &vtpm)
-			if err != nil {
-				destroyVTPMs(vtpms)
-				return nil, err
+			if fileInfo, err = os.Lstat(hostdev); err != nil && os.IsNotExist(err) {
+				vtpm, err = vtpmhelper.CreateVTPM(spec, &vtpmSpec)
+				if err != nil {
+					return nil, vtpmLinuxDevice{}, fmt.Errorf("createVTPMs has an error while create %d VTPM device: %w", ind, err)
+				}
+			} else if err != nil {
+				return nil, vtpmLinuxDevice{}, fmt.Errorf("createVTPMs has an error while checking dev path %s: %s", hostdev, err)
 			}
-			vtpms = append(vtpms, v)
-		}
 
-		fileInfo, err = os.Lstat(hostdev)
+			fileInfo, err = os.Lstat(hostdev)
+			if err != nil {
+				return vtpm, vtpmLinuxDevice{}, fmt.Errorf("createVTPMs has an error while checking dev path %s: %s", hostdev, err)
+			}
+
+			stat_t, ok := fileInfo.Sys().(*syscall.Stat_t)
+			if !ok {
+				return vtpm, vtpmLinuxDevice{}, fmt.Errorf("createVTPMs has an error while checking info type for device %s: %w", hostdev, err)
+			}
+
+			devNumber := stat_t.Rdev
+			major = unix.Major(devNumber)
+			minor = unix.Minor(devNumber)
+
+			devpath := "/dev/tpm" + containerVTPMName
+			device := vtpmLinuxDevice{
+				devPath: devpath,
+				major:   major,
+				minor:   minor,
+			}
+			return vtpm, device, nil
+		}(vtpmSpec)
+
+		if vtpm != nil {
+			vtpms = append(vtpms, vtpm)
+		}
 		if err != nil {
-			return nil, fmt.Errorf("failed to stat device %q: %w", hostdev, err)
+			if vtpmhelper.CanIgnoreVTPMErrors() {
+				logrus.Error(err)
+				continue
+			}
+			destroyVTPMs(vtpms)
+			return nil, err
 		}
-
-		stat_t, ok := fileInfo.Sys().(*syscall.Stat_t)
-		if !ok {
-			return nil, fmt.Errorf("unexpected file info type for device %q", hostdev)
-		}
-
-		devNumber := stat_t.Rdev
-		major = unix.Major(devNumber)
-		minor = unix.Minor(devNumber)
-
-		devpath := "/dev/tpm" + containerVTPMName
-		addVTPMDevice(spec, devpath, major, minor)
+		devices = append(devices, device)
+	}
+	for _, device := range devices {
+		addVTPMDevice(spec, device.devPath, device.major, device.minor)
 	}
 
 	return vtpms, nil
