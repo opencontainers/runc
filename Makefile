@@ -58,6 +58,9 @@ GO_BUILD_STATIC := $(GO) build $(TRIMPATH) $(GO_BUILDMODE_STATIC) \
 
 GPG_KEYID ?= asarai@suse.de
 
+RUN_IN_CONTAINER_MAJOR := 100
+RUN_IN_CONTAINER_MINOR := 1
+
 # Some targets need cgo, which is disabled by default when cross compiling.
 # Enable cgo explicitly for those.
 # Both runc and libcontainer/integration need libcontainer/nsenter.
@@ -155,6 +158,9 @@ unittest: runcimage
 		-t --privileged --rm \
 		-v /lib/modules:/lib/modules:ro \
 		-v $(CURDIR):/go/src/$(PROJECT) \
+		--device=/dev/cuse --device-cgroup-rule "c $(RUN_IN_CONTAINER_MAJOR):$(RUN_IN_CONTAINER_MINOR) rwm" \
+		-e "RUN_IN_CONTAINER_MAJOR=$(RUN_IN_CONTAINER_MAJOR)" \
+		-e "RUN_IN_CONTAINER_MINOR=$(RUN_IN_CONTAINER_MINOR)" \
 		$(RUNC_IMAGE) make localunittest TESTFLAGS="$(TESTFLAGS)"
 
 .PHONY: localunittest

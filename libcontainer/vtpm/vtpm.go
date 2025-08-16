@@ -253,6 +253,8 @@ func NewVTPM(vtpmdev *specs.LinuxVTPM, encryptionpassword []byte) (*VTPM, error)
 		swtpmSetupCaps:     swtpmSetupCaps,
 		swtpmCaps:          swtpmCaps,
 		VtpmName:           vtpmname,
+		major:              uint32(vtpmdev.VTPMMajor),
+		minor:              uint32(vtpmdev.VTPMMinor),
 	}, nil
 }
 
@@ -570,6 +572,15 @@ func (vtpm *VTPM) waitForTPMDevice(loops int) error {
 		time.Sleep(time.Millisecond * 100)
 		loops -= 1
 	}
+	// if we testing in the docker container, we should create devices ourselves
+	if vtpm.major != 0 && vtpm.minor != 0 {
+		fileMode := 0o666 | unix.S_IFCHR
+		dev := unix.Mkdev(vtpm.major, vtpm.minor)
+		if err := unix.Mknod(devpath, uint32(fileMode), int(dev)); err != nil {
+			return &os.PathError{Op: "mknod", Path: devpath, Err: err}
+		}
+		return nil
+	}
 	return fmt.Errorf("TPM device %s did not appear", devpath)
 }
 
@@ -609,11 +620,21 @@ func (vtpm *VTPM) startSwtpm() error {
 	if hasCapability(vtpm.swtpmCaps, "flags-opt-startup") {
 		flags += ",startup-clear"
 	}
-
-	cmd := exec.Command("swtpm_cuse", "--tpmstate", tpmstate,
+	args := []string{
+		"--tpmstate", tpmstate,
 		"-n", tpm_dev_name, "--pid", pidfile, "--log", logfile,
 		"--flags", flags,
-		"--locality", "reject-locality-4,allow-set-locality")
+		"--locality", "reject-locality-4,allow-set-locality"}
+
+	if vtpm.major != 0 {
+		args = append(args, fmt.Sprintf("--maj=%d", vtpm.major))
+	}
+
+	if vtpm.minor != 0 {
+		args = append(args, fmt.Sprintf("--min=%d", vtpm.minor))
+	}
+
+	cmd := exec.Command("swtpm_cuse", args...)
 	if vtpm.Vtpmversion == VTPM_VERSION_2 {
 		cmd.Args = append(cmd.Args, "--tpm2")
 	}

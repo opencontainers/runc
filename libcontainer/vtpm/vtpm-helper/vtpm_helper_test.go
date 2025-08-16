@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -18,7 +19,7 @@ import (
 func TestCreateVTPMFail(t *testing.T) {
 	vtpmdev := specs.LinuxVTPM{}
 
-	_, err := CreateVTPM(&specs.Spec{}, &vtpmdev, 0)
+	_, err := CreateVTPM(&specs.Spec{}, &vtpmdev)
 	if err == nil {
 		t.Fatalf("Could create vTPM without statepath %v", err)
 	}
@@ -35,6 +36,30 @@ func checkPrerequisites(t *testing.T) {
 			t.Skipf("Could not run %s --help: %v", executable, err)
 		}
 	}
+}
+
+const (
+	majorEnvName = "RUN_IN_CONTAINER_MAJOR"
+	minorEnvName = "RUN_IN_CONTAINER_MINOR"
+)
+
+func getDefaultMajorMinorDevices() (uint32, uint32, error) {
+	var major, minor uint32
+	if val := os.Getenv(majorEnvName); len(val) > 0 {
+		converted, err := strconv.Atoi(val)
+		if err != nil {
+			return 0, 0, fmt.Errorf("can not use %s as a device major: %s", val, err)
+		}
+		major = uint32(converted)
+	}
+	if val := os.Getenv(minorEnvName); len(val) > 0 {
+		converted, err := strconv.Atoi(val)
+		if err != nil {
+			return 0, 0, fmt.Errorf("can not use %s as a device minor: %s", val, err)
+		}
+		minor = uint32(converted)
+	}
+	return major, minor, nil
 }
 
 func createVTPM(t *testing.T, tpmversion string, createCertificates bool, runas, encryptionPassword string) *vtpm.VTPM {
@@ -55,15 +80,23 @@ func createVTPM(t *testing.T, tpmversion string, createCertificates bool, runas,
 			Resources: &specs.LinuxResources{},
 		},
 	}
+
+	major, minor, err := getDefaultMajorMinorDevices()
+	if err != nil {
+		t.Fatalf("Could not get default device major, minor: %s", err)
+	}
+
 	vtpmdev := &specs.LinuxVTPM{
 		StatePath:          tpmdirname,
-		TPMVersion:         tpmversion,
+		VTPMVersion:        tpmversion,
 		CreateCertificates: createCertificates,
 		RunAs:              runas,
 		EncryptionPassword: encryptionPassword,
+		VTPMMajor:          major,
+		VTPMMinor:          minor,
 	}
 
-	myvtpm, err := CreateVTPM(spec, vtpmdev, 0)
+	myvtpm, err := CreateVTPM(spec, vtpmdev)
 	if err != nil {
 		if strings.Contains(err.Error(), "VTPM device driver not available") {
 			t.Skipf("%v", err)
@@ -81,6 +114,9 @@ func destroyVTPM(t *testing.T, myvtpm *vtpm.VTPM) {
 
 	if _, err := os.Stat(tpmdirname); !os.IsNotExist(err) {
 		t.Fatalf("State directory should have been removed since it was created by vtpm-helpers")
+	}
+	if err := os.Remove(myvtpm.GetTPMDevpath()); err != nil && !os.IsNotExist(err) {
+		t.Fatalf("While testing the docker container, we should remove device ourselves: %s", err)
 	}
 }
 

@@ -469,6 +469,10 @@ type LinuxVTPM struct {
 	EncryptionPassword string `json:"encryptionPassword,omitempty"`
 	// Name of the vtpm
 	VTPMName string `json:"vtpmName,omitempty"`
+	// Device's major to be created
+	VTPMMajor uint32 `json:"vtpmMajor,omitempty"`
+	// Device's minor to be created
+	VTPMMinor uint32 `json:"vtpmMinor,omitempty"`
 }
 
 // LinuxResources has container runtime resource constraints
