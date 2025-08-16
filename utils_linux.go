@@ -517,22 +517,27 @@ func createVTPMs(spec *specs.Spec) ([]*vtpm.VTPM, error) {
 			v, err := vtpmhelper.CreateVTPM(spec, &vtpm)
 			if err != nil {
 				destroyVTPMs(vtpms)
-				return vtpms, err
+				return nil, err
 			}
 			vtpms = append(vtpms, v)
 		}
-		if fileInfo, err = os.Lstat(hostdev); err == nil {
-			if stat_t, ok := fileInfo.Sys().(*syscall.Stat_t); ok {
-				devNumber := stat_t.Rdev
-				major = unix.Major(devNumber)
-				minor = unix.Minor(devNumber)
-			}
-			logrus.Infof("device major num: %d", major)
-			logrus.Infof("device minor num: %d", minor)
 
-			devpath := hostdev
-			addVTPMDevice(spec, hostdev, devpath, major, minor)
+		fileInfo, err = os.Lstat(hostdev)
+		if err != nil {
+			return nil, fmt.Errorf("failed to stat device %q: %w", hostdev, err)
 		}
+
+		stat_t, ok := fileInfo.Sys().(*syscall.Stat_t)
+		if !ok {
+			return nil, fmt.Errorf("unexpected file info type for device %q", hostdev)
+		}
+
+		devNumber := stat_t.Rdev
+		major = unix.Major(devNumber)
+		minor = unix.Minor(devNumber)
+
+		devpath := hostdev
+		addVTPMDevice(spec, hostdev, devpath, major, minor)
 	}
 
 	return vtpms, nil

@@ -81,14 +81,16 @@ const (
 )
 
 func translateUser(username string) (*user.User, error) {
-	usr, err := user.Lookup(username)
-	if err != nil {
-		usr, err = user.LookupId(username)
+	translatedUser, err := user.Lookup(username)
+	if err == nil {
+		return translatedUser, nil
 	}
+
+	translatedUser, err = user.LookupId(username)
 	if err != nil {
 		return nil, fmt.Errorf("User '%s' not available: %v", username, err)
 	}
-	return usr, nil
+	return translatedUser, nil
 }
 
 // getCapabilities gets the capabilities map of an executable by invoking it with
@@ -97,24 +99,20 @@ func translateUser(username string) (*user.User, error) {
 // Expected output looks like this:
 // { "type": "swtpm_setup", "features": [ "cmdarg-keyfile-fd", "cmdarg-pwdfile-fd" ] }
 func getCapabilities(cmd *exec.Cmd) ([]string, error) {
-	caps := make(map[string]interface{})
-
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, nil
+		return nil, err
+	}
+
+	var caps struct {
+		Features []string `json:"features"`
 	}
 
 	err = json.Unmarshal([]byte(output), &caps)
 	if err != nil {
 		return nil, fmt.Errorf("Could not unmarshal output: %s: %v\n", output, err)
 	}
-
-	features, _ := caps["features"].([]interface{})
-	res := make([]string, 0)
-	for _, f := range features {
-		res = append(res, f.(string))
-	}
-	return res, nil
+	return caps.Features, nil
 }
 
 func getSwtpmSetupCapabilities() ([]string, error) {
@@ -122,7 +120,7 @@ func getSwtpmSetupCapabilities() ([]string, error) {
 }
 
 func getSwtpmCapabilities() ([]string, error) {
-	return getCapabilities(exec.Command("swtpm", "chardev", "--print-capabilities"))
+	return getCapabilities(exec.Command("swtpm_cuse", "--print-capabilities"))
 }
 
 func hasCapability(capabilities []string, capability string) bool {
@@ -475,21 +473,6 @@ func (vtpm *VTPM) waitForTPMDevice(loops int) error {
 	return fmt.Errorf("TPM device %s did not appear", devpath)
 }
 
-func (vtpm *VTPM) GetDeviceNum() error {
-	if fileInfo, err := os.Lstat(vtpm.GetTPMDevpath()); err == nil {
-		if stat_t, ok := fileInfo.Sys().(*syscall.Stat_t); ok {
-			devNumber := stat_t.Rdev
-			vtpm.major = unix.Major(devNumber)
-			vtpm.minor = unix.Minor(devNumber)
-		}
-	} else {
-		return err
-	}
-	logrus.Infof("device major num: %d", vtpm.major)
-	logrus.Infof("device minor num: %d", vtpm.minor)
-	return nil
-}
-
 // startSwtpm creates the VTPM proxy device and start the swtpm process
 func (vtpm *VTPM) startSwtpm() error {
 	tpm_dev_name := fmt.Sprintf("tpm%s", vtpm.VtpmName)
@@ -548,6 +531,12 @@ func (vtpm *VTPM) startSwtpm() error {
 		return fmt.Errorf("Error transferring password using pipe: %v", vtpm.passwordPipeError)
 	}
 
+	// Swtpm_cuse uses cuse_lowlevel_setup function https://github.com/stefanberger/swtpm/blob/master/src/swtpm/cuse_tpm.c#L1585
+	// to setup cuse device.
+	// This function calls fuse_daemonize https://github.com/libfuse/libfuse/blob/fuse-2.9.9/lib/helper.c#L180
+	// to fork and parent process will be exited. We need wait until
+	// ptm_init_done https://github.com/stefanberger/swtpm/blob/master/src/swtpm/cuse_tpm.c#L1526
+	// callback will be called.
 	vtpm.Pid, err = vtpm.waitForPidFile(10)
 	if err != nil {
 		return err
@@ -640,7 +629,11 @@ func (vtpm *VTPM) Stop(deleteStatePath bool) error {
 		vtpm.DeleteStatePath()
 	}
 
-	return err
+	if err != nil {
+		return fmt.Errorf("can not stop swtpm process: %w", err)
+	}
+
+	return nil
 }
 
 // Get the TPM device name; this method can be called after successful Start()

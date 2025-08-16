@@ -25,11 +25,12 @@ import (
 // - fd=<filedescriptor>
 // - file=<filename>
 func getEncryptionPassword(pwdString string) ([]byte, error) {
-	if strings.HasPrefix(pwdString, "file=") {
+	switch {
+	case strings.HasPrefix(pwdString, "file="):
 		return ioutil.ReadFile(pwdString[5:])
-	} else if strings.HasPrefix(pwdString, "pass=") {
+	case strings.HasPrefix(pwdString, "pass="):
 		return []byte(pwdString[5:]), nil
-	} else if strings.HasPrefix(pwdString, "fd=") {
+	case strings.HasPrefix(pwdString, "fd="):
 		fdStr := pwdString[3:]
 		fd, err := strconv.Atoi(fdStr)
 		if err != nil {
@@ -46,8 +47,9 @@ func getEncryptionPassword(pwdString string) ([]byte, error) {
 			return nil, fmt.Errorf("could not read from file descriptor: %v", err)
 		}
 		return pwd[:n], nil
+	default:
+		return []byte(pwdString), nil
 	}
-	return []byte(pwdString), nil
 }
 
 // CreateVTPM create a VTPM proxy device and starts the TPM emulator with it
