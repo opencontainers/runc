@@ -688,7 +688,7 @@ func (vtpm *VTPM) startSwtpm() error {
 		return fmt.Errorf("wait for PidFile: %w", err)
 	}
 
-	err = vtpm.waitForTPMDevice(50)
+	err = vtpm.waitForTPMDevice(10)
 	if err != nil {
 		return fmt.Errorf("wait for waitForTPMDevice: %w", err)
 	}

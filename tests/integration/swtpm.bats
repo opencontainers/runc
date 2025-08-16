@@ -221,11 +221,11 @@ function teardown() {
 	[ "$status" -eq 0 ]
 	wait_for_container 10 1 tst1
 
-	# with the same state path
-	update_config '	  .process.args = ["/bin/sh"]
-					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": '"$test_major_second"', "vtpmMinor": '"$test_minor"'}]'
-	runc run -d --console-socket "$CONSOLE_SOCKET" tst2
-	[ "$status" -ne 0 ]
+	# with the same state path test is ignored waiting https://github.com/stefanberger/swtpm/issues/1050 to be closed
+	# update_config '	  .process.args = ["/bin/sh"]
+	#				  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": '"$test_major_second"', "vtpmMinor": '"$test_minor"'}]'
+	# runc run -d --console-socket "$CONSOLE_SOCKET" tst2
+	# [ "$status" -ne 0 ]
 
 	# with the same major/minor. major and minor are not bind to some values (unless we are running in the container).
 	# we need to know the right major/minor of tst1 vtpm device.
