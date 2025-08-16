@@ -70,18 +70,18 @@ func GenerateDeviceHostPathName(root, containerName, deviceName string) string {
 func CreateVTPM(spec *specs.Spec, vtpmdev *specs.LinuxVTPM) (*vtpm.VTPM, error) {
 	encryptionPassword, err := getEncryptionPassword(vtpmdev.EncryptionPassword)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can not get encryption password: %w", err)
 	}
 
 	vtpm, err := vtpm.NewVTPM(vtpmdev, encryptionPassword)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can not create new vtpm: %w", err)
 	}
 
 	// Start the vTPM process; once stopped, the device pair will also disappear
 	vtpm.CreatedStatepath, err = vtpm.Start()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can not start new vtpm: %w", err)
 	}
 
 	return vtpm, nil

@@ -55,6 +55,7 @@ RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
         libseccomp-dev \
         libfuse-dev \
         libglib2.0-dev \
+        gnutls-bin \
     && apt-get clean \
     && rm -rf /var/cache/apt /var/lib/apt/lists/* /etc/apt/sources.list.d/*.list
 

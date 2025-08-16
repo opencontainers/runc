@@ -76,8 +76,9 @@ type VTPM struct {
 }
 
 const (
-	VTPM_VERSION_1_2 = "1.2"
-	VTPM_VERSION_2   = "2"
+	VTPM_VERSION_1_2      = "1.2"
+	VTPM_VERSION_2        = "2"
+	SWTPM_CUSE_PERM_ERROR = 252
 )
 
 func translateUser(username string) (*user.User, error) {
@@ -120,7 +121,15 @@ func getSwtpmSetupCapabilities() ([]string, error) {
 }
 
 func getSwtpmCapabilities() ([]string, error) {
-	return getCapabilities(exec.Command("swtpm_cuse", "--print-capabilities"))
+	caps, err := getCapabilities(exec.Command("swtpm_cuse", "--print-capabilities"))
+	if err == nil {
+		return caps, nil
+	}
+	if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == SWTPM_CUSE_PERM_ERROR {
+		// https://github.com/stefanberger/swtpm/blob/master/src/swtpm/cuse_tpm.c#L1806
+		return nil, fmt.Errorf("rootless container can not have vtpm devices: %w", err)
+	}
+	return nil, err
 }
 
 func hasCapability(capabilities []string, capability string) bool {
@@ -350,7 +359,7 @@ func (vtpm *VTPM) chownStatePath() error {
 		return nil
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("error on walk: %w", err)
 	}
 
 	if uid != 0 {
@@ -452,7 +461,7 @@ func (vtpm *VTPM) waitForTPMDevice(loops int) error {
 	for loops >= 0 {
 		if _, err := os.Stat(pidfile); err != nil {
 			logrus.Errorf("swtpm process has terminated")
-			return err
+			return fmt.Errorf("waitForTPMDevice swtpm process has terminated: %w", err)
 		}
 
 		if _, err := os.Stat(devpath); err == nil {
@@ -539,12 +548,12 @@ func (vtpm *VTPM) startSwtpm() error {
 	// callback will be called.
 	vtpm.Pid, err = vtpm.waitForPidFile(10)
 	if err != nil {
-		return err
+		return fmt.Errorf("wait for PidFile: %w", err)
 	}
 
 	err = vtpm.waitForTPMDevice(50)
 	if err != nil {
-		return err
+		return fmt.Errorf("wait for waitForTPMDevice: %w", err)
 	}
 
 	vtpm.resetSELinux()
@@ -599,6 +608,11 @@ func (vtpm *VTPM) Start() (bool, error) {
 	}()
 
 	err = vtpm.chownStatePath()
+	if err != nil {
+		return false, err
+	}
+
+	err = vtpm.runSwtpmSetup()
 	if err != nil {
 		return false, err
 	}
@@ -771,6 +785,10 @@ func (vtpm *VTPM) setupSELinux() error {
 		}
 		return selinux.SetFileLabel(path, fileLabel)
 	})
+
+	if err != nil {
+		return fmt.Errorf("error on walk: %w", err)
+	}
 
 	err = selinux.SetFSCreateLabel(fileLabel)
 	if err != nil {

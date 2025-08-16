@@ -2,6 +2,8 @@
 load helpers
 
 function setup() {
+	# Root privileges are required by swtpm_cuse.
+	# https://github.com/stefanberger/swtpm/blob/master/src/swtpm/cuse_tpm.c#L1806
 	requires root
 	rm /etc/swtpm/runc.conf || true
     setup_debian
@@ -351,4 +353,107 @@ function teardown() {
 
 	runc exec vtpm_in_joined_userns "${HELPER}" -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-vtpm_in_joined_userns-joined_userns -deviceVersion=2
 	[ "$status" -eq 0 ]
+}
+
+@test "runc check swtpm_setup" {
+	HELPER="tpm-helper"
+	cp "${TESTBINDIR}/${HELPER}" rootfs/bin/
+	vtpm_path=$(mktemp -d)
+
+	update_config '	  .process.args = ["/bin/sh"]
+					  | .linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "statePathIsManaged": true, "vtpmversion": "2", "createCerts": true, "pcrBanks": "sha256,sha1", "encryptionPassword": "12345", "vtpmname" : "tpmsetup", "vtpmMajor": 100, "vtpmMinor": 1}]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" tst
+	[ "$status" -eq 0 ]
+
+	ret=0
+	${TESTBINDIR}/${HELPER} -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-tst-tpmsetup -deviceVersion=2 || ret=$?
+	if [ "$ret" -ne 0 ]; then
+		fail "should be able to read from container created by swtpm_setup"
+	fi
+
+	ret=0
+	${TESTBINDIR}/${HELPER} -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-tst-tpmsetup -deviceVersion=2 -deviceCommand=pcr -pcrs=10,16 -hashAlgo=sha256 || ret=$?
+	if [ "$ret" -ne 0 ]; then
+		fail "should be able to read activated pcrs from container created by swtpm_setup"
+	fi
+
+	ret=0
+	${TESTBINDIR}/${HELPER} -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-tst-tpmsetup -deviceVersion=2 -deviceCommand=pcr -pcrs=10,16 -hashAlgo=sha1 || ret=$?
+	if [ "$ret" -ne 0 ]; then
+		fail "should be able to read activated pcrs from container created by swtpm_setup"
+	fi
+
+	ret=0
+	${TESTBINDIR}/${HELPER} -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-tst-tpmsetup -deviceVersion=2 -deviceCommand=pcr -pcrs=10,16 -hashAlgo=sha512 || ret=$?
+	if [ "$ret" -eq 0 ]; then
+		fail "should not be able to read deactivated pcrs from container created by swtpm_setup"
+	fi
+
+	ret=0
+	${TESTBINDIR}/${HELPER} -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-tst-tpmsetup -deviceVersion=2 -deviceCommand=pubek || ret=$?
+	if [ "$ret" -ne 0 ]; then
+		fail "should be able to read pubek from container created by swtpm_setup"
+	fi
+
+	ret=0
+	${TESTBINDIR}/${HELPER} -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-tst-tpmsetup -deviceVersion=2 -deviceCommand=cert || ret=$?
+	if [ "$ret" -ne 0 ]; then
+		fail "should be able to read ek cert from container created by swtpm_setup"
+	fi
+
+	runc delete --force tst
+	[ "$status" -eq 0 ]
+
+	# wrong encryption password
+	update_config '	  .process.args = ["/bin/sh"]
+					  | .linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "statePathIsManaged": true, "vtpmversion": "2", "createCerts": true, "pcrBanks": "sha256,sha1", "encryptionPassword": "54321", "vtpmname" : "tpmsetup", "vtpmMajor": 100, "vtpmMinor": 1}]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" tst1
+	[ "$status" -ne 0 ]
+
+	# password with encryption
+	update_config '	  .process.args = ["/bin/sh"]
+					  | .linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "statePathIsManaged": true, "vtpmversion": "2", "createCerts": true, "pcrBanks": "sha256,sha1", "encryptionPassword": "pass=12345", "vtpmname" : "tpmsetup", "vtpmMajor": 100, "vtpmMinor": 1}]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" tst2
+	[ "$status" -eq 0 ]
+	wait_for_container 10 1 tst2
+
+	runc delete --force tst2
+	[ "$status" -eq 0 ]
+
+	vtpm_path1=$(mktemp -d)
+	update_config '	  .process.args = ["/bin/sh"]
+					| .linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "statePathIsManaged": true, "vtpmversion": "1.2", "createCerts": true, "encryptionPassword": "12345", "vtpmname" : "tpmsetup", "vtpmMajor": 100, "vtpmMinor": 1}]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" tst3
+	[ "$status" -eq 0 ]
+	wait_for_container 10 1 tst3
+
+	ret=0
+	${TESTBINDIR}/${HELPER} -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-tst3-tpmsetup -deviceVersion=1.2 || ret=$?
+	if [ "$ret" -ne 0 ]; then
+		fail "should be able to read from container created by swtpm_setup"
+	fi
+
+	ret=0
+	${TESTBINDIR}/${HELPER} -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-tst3-tpmsetup -deviceVersion=1.2 -deviceCommand=pcr -pcrs=10,16 || ret=$?
+	if [ "$ret" -ne 0 ]; then
+		fail "should be able to read activated pcrs from container created by swtpm_setup"
+	fi
+
+	ret=0
+	${TESTBINDIR}/${HELPER} -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-tst3-tpmsetup -deviceVersion=1.2 -deviceCommand=pubek || ret=$?
+	if [ "$ret" -ne 0 ]; then
+		fail "should be able to read pubek from container created by swtpm_setup"
+	fi
+
+	ret=0
+	${TESTBINDIR}/${HELPER} -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-tst3-tpmsetup -deviceVersion=1.2 -deviceCommand=owner || ret=$?
+	if [ "$ret" -ne 0 ]; then
+		fail "should be able to set owner to container created by swtpm_setup"
+	fi
+
+	ret=0
+	${TESTBINDIR}/${HELPER} -devicePath=/dev/tpm"$ROOT_HASH_OFFSET"-tst3-tpmsetup -deviceVersion=1.2 -deviceCommand=cert || ret=$?
+	if [ "$ret" -ne 0 ]; then
+		fail "should be able to read ek certs from container created by swtpm_setup"
+	fi
 }

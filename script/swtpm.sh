@@ -37,7 +37,8 @@ function build_swtpm() {
     tar xf "v${swtpm_ver}.tar.gz" -C "$swtpm_srcdir"
     echo $(ls -la $swtpm_srcdir)
     pushd "$swtpm_srcdir/swtpm-${swtpm_ver}" || return
-    ./autogen.sh --with-openssl --with-cuse --prefix=/usr --enable-debug
+
+    ./autogen.sh --with-openssl --with-gnutls --with-cuse  --prefix=/usr --enable-debug
     make -j4
     # make -j4 check
     make install
