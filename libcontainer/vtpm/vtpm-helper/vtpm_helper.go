@@ -77,15 +77,6 @@ func setVTPMHostDevOwner(vtpm *vtpm.VTPM, uid, gid int) error {
 	if err := os.Chown(hostdev, uid, gid); err != nil {
 		return err
 	}
-
-	host_tpmrm := fmt.Sprintf("/dev/tpmrm%s", vtpm.Tpm_dev_num)
-	if _, err := os.Lstat(host_tpmrm); err == nil {
-		// adapt ownership of the device since only root can access it
-		if err := os.Chown(host_tpmrm, uid, gid); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
