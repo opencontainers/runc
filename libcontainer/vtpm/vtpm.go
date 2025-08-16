@@ -124,11 +124,14 @@ func vtpmx_ioctl(cmd, msg uintptr) error {
 //
 // @statepath: directory where the vTPM's state will be written into
 // @statepathismanaged: whether we are allowed to delete the TPM's state
-//                      path upon destroying the vTPM
+//
+//	path upon destroying the vTPM
+//
 // @vtpmversion: The TPM version
 // @createcerts: whether to create certificates for the vTPM (on first start)
 // @runas: the account under which to run the swtpm; TPM 1.2 should be run
-//         with account tss; TPM 2 has more flexibility
+//
+//	with account tss; TPM 2 has more flexibility
 //
 // After successful creation of the object the Start() method can be called
 func NewVTPM(statepath string, statepathismanaged bool, vtpmversion string, createcerts bool, runas string, pcrbanks string) (*VTPM, error) {
@@ -430,7 +433,8 @@ func (vtpm *VTPM) runSwtpmSetup() error {
 }
 
 // waitForTPMDevice: Wait for /dev/tpm%d to appear and while waiting
-//  check whether the swtpm is still alive by checking its PID file
+//
+//	check whether the swtpm is still alive by checking its PID file
 func (vtpm *VTPM) waitForTPMDevice(loops int) error {
 	devname := vtpm.GetTPMDevname()
 	pidfile := vtpm.getPidFile()
@@ -518,13 +522,13 @@ func (vtpm *VTPM) runSwtpmBios() error {
 
 // Start starts the vTPM (swtpm)
 //
-// - ensure any still running vTPM, which wrote its PID into a file in its state path, is terminated
-//   the swtpm will, upon normal termination, remove its PID file
-// - setup the state path
-// - if the state path was created ( = swtpm runs for the first time) also create the certificates
-// - create the device pair
-// - start the swtpm process
-// - run swtpm_bios on it to initialize the vTPM as firmware would
+//   - ensure any still running vTPM, which wrote its PID into a file in its state path, is terminated
+//     the swtpm will, upon normal termination, remove its PID file
+//   - setup the state path
+//   - if the state path was created ( = swtpm runs for the first time) also create the certificates
+//   - create the device pair
+//   - start the swtpm process
+//   - run swtpm_bios on it to initialize the vTPM as firmware would
 //   - if return code is 129, restart the vTPM to activate it and run swtpm_bios again
 //
 // After this method ran successfully, the TPM device (/dev/tpm%d) is available for use
@@ -683,7 +687,7 @@ func (vtpm *VTPM) setupAppArmor() error {
 		return fmt.Errorf("apparmor_parser -r failed: %s", string(output))
 	}
 
-	err = apparmor.ApplyProfileThread(profilename)
+	err = apparmor.ApplyProfile(profilename)
 	if err != nil {
 		return err
 	}
@@ -692,7 +696,7 @@ func (vtpm *VTPM) setupAppArmor() error {
 }
 
 func (vtpm *VTPM) resetAppArmor() {
-	apparmor.ApplyProfileThread("unconfined")
+	apparmor.ApplyProfile("unconfined")
 }
 
 // teardownAppArmor removes the AppArmor profile from the system and ensures
