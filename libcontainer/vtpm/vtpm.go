@@ -783,6 +783,7 @@ func (vtpm *VTPM) CloseServer() error {
 // exec.
 func (vtpm *VTPM) setupAppArmor() error {
 	var statefilepattern string
+	var tmpStateFilePattern string
 
 	if !apparmor.IsEnabled() {
 		return nil
@@ -793,6 +794,14 @@ func (vtpm *VTPM) setupAppArmor() error {
 		statefilepattern = path.Join(vtpm.StatePath, "tpm-00.*")
 	} else {
 		statefilepattern = path.Join(vtpm.StatePath, "tpm2-00.*")
+	}
+
+	// We do not set backup as option to tpmstate dir, tmpfile (TMP{2}.*) will be used as backup.
+	// Link to SWTPM_NVRAM_GetFilenameForName function: https://github.com/stefanberger/swtpm/blob/master/src/swtpm/swtpm_nvstore.c#L273
+	if vtpm.Vtpmversion == VTPM_VERSION_1_2 {
+		tmpStateFilePattern = path.Join(vtpm.StatePath, "TMP-00.*")
+	} else {
+		tmpStateFilePattern = path.Join(vtpm.StatePath, "TMP2-00.*")
 	}
 
 	profile := fmt.Sprintf("\n#include <tunables/global>\n"+
@@ -807,19 +816,19 @@ func (vtpm *VTPM) setupAppArmor() error {
 		"  owner /etc/passwd r,\n"+
 		"  /dev/cuse rw,\n"+
 		"  %s/ rw,\n"+
-		"  %s/TMP2-00.permall rw,\n"+
 		"  %s/.lock wk,\n"+
 		"  %s w,\n"+
+		"  %s rw,\n"+
 		"  %s rw,\n"+
 		"  %s rw,\n"+
 		"}\n",
 		profilename,
 		vtpm.StatePath,
 		vtpm.StatePath,
-		vtpm.StatePath,
 		vtpm.getLogFile(),
 		vtpm.getPidFile(),
-		statefilepattern)
+		statefilepattern,
+		tmpStateFilePattern)
 
 	vtpm.aaprofile = path.Join(vtpm.StatePath, "swtpm.apparmor")
 
