@@ -18,6 +18,8 @@ github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4
 github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
 github.com/everzakov/go-tpm v0.0.0-20250815102554-13e640365049 h1:TOFYpbcgHw260lHT+hW7k97Ri7i/+UfEuQW7/3GBb8E=
 github.com/everzakov/go-tpm v0.0.0-20250815102554-13e640365049/go.mod h1:h9jEsEECg7gtLis0upRBQU+GhYVH6jMjrFxI8u6bVUY=
+github.com/everzakov/runtime-spec v0.0.0-20250816064520-f0885e035161 h1:B4CMvhQY1Sijg20viaZo4jy267Mo8/Z+huqx9x3rd7A=
+github.com/everzakov/runtime-spec v0.0.0-20250816064520-f0885e035161/go.mod h1:Kbvgc27P6fS+ifaBC6lxYMD2hmLwpmWT4+fJCvyJvRg=
 github.com/go-quicktest/qt v1.101.0 h1:O1K29Txy5P2OK0dGo59b7b0LR6wKfIhttaAhHUyn7eI=
 github.com/go-quicktest/qt v1.101.0/go.mod h1:14Bz/f7NwaXPtdYEgzsx46kqSxVwTbzVZsDC26tQJow=
 github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
@@ -51,8 +53,6 @@ github.com/mrunalp/fileutils v0.5.1 h1:F+S7ZlNKnrwHfSwdlgNSkKo67ReVf8o9fel6C3dkm
 github.com/mrunalp/fileutils v0.5.1/go.mod h1:M1WthSahJixYnrXQl/DFQuteStB1weuxD2QJNHXfbSQ=
 github.com/opencontainers/cgroups v0.0.4 h1:XVj8P/IHVms/j+7eh8ggdkTLAxjz84ZzuFyGoE28DR4=
 github.com/opencontainers/cgroups v0.0.4/go.mod h1:s8lktyhlGUqM7OSRL5P7eAW6Wb+kWPNvt4qvVfzA5vs=
-github.com/opencontainers/runtime-spec v1.2.2-0.20250401095657-e935f995dd67 h1:Q+KewUGTMamIe6Q39xCD/T1NC1POmaTlWnhjikCrZHA=
-github.com/opencontainers/runtime-spec v1.2.2-0.20250401095657-e935f995dd67/go.mod h1:jwyrGlmzljRJv/Fgzds9SsS/C5hL+LL3ko9hs6T5lQ0=
 github.com/opencontainers/selinux v1.12.0 h1:6n5JV4Cf+4y0KNXW48TLj5DwfXpvWlxXplUkdTrmPb8=
 github.com/opencontainers/selinux v1.12.0/go.mod h1:BTPX+bjVbWGXw7ZZWUbdENt8w0htPSrlgOOysQaU62U=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

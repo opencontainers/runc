@@ -507,14 +507,21 @@ func (vtpm *VTPM) waitForTPMDevice(loops int) error {
 			return fmt.Errorf("waitForTPMDevice swtpm process has terminated: %w", err)
 		}
 
-		if _, err := os.Stat(devpath); err == nil {
+		if fileInfo, err := os.Stat(devpath); err == nil {
+			// Read major/minor of the created device
+			stat_t := fileInfo.Sys().(*syscall.Stat_t)
+			devNumber := stat_t.Rdev
+			vtpm.major = unix.Major(devNumber)
+			vtpm.minor = unix.Minor(devNumber)
 			return nil
 		}
 		time.Sleep(time.Millisecond * 100)
 		loops -= 1
 	}
 	// if we testing in the docker container, we should create devices ourselves
-	if vtpm.major != 0 && vtpm.minor != 0 {
+	// If major is provided then cuse will try to register with provided minor. The minor default value is 0.
+	// https://elixir.bootlin.com/linux/v6.15.5/source/fs/fuse/cuse.c#L356
+	if vtpm.major != 0 {
 		fileMode := 0o666 | unix.S_IFCHR
 		dev := unix.Mkdev(vtpm.major, vtpm.minor)
 		if err := unix.Mknod(devpath, uint32(fileMode), int(dev)); err != nil {

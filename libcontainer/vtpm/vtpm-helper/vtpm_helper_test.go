@@ -43,21 +43,21 @@ const (
 	minorEnvName = "RUN_IN_CONTAINER_MINOR"
 )
 
-func getDefaultMajorMinorDevices() (uint32, uint32, error) {
-	var major, minor uint32
+func getDefaultMajorMinorDevices() (int64, int64, error) {
+	var major, minor int64
 	if val := os.Getenv(majorEnvName); len(val) > 0 {
 		converted, err := strconv.Atoi(val)
 		if err != nil {
 			return 0, 0, fmt.Errorf("can not use %s as a device major: %s", val, err)
 		}
-		major = uint32(converted)
+		major = int64(converted)
 	}
 	if val := os.Getenv(minorEnvName); len(val) > 0 {
 		converted, err := strconv.Atoi(val)
 		if err != nil {
 			return 0, 0, fmt.Errorf("can not use %s as a device minor: %s", val, err)
 		}
-		minor = uint32(converted)
+		minor = int64(converted)
 	}
 	return major, minor, nil
 }

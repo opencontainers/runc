@@ -35,3 +35,5 @@ require (
 )
 
 replace github.com/google/go-tpm => github.com/everzakov/go-tpm v0.0.0-20250815102554-13e640365049
+
+replace github.com/opencontainers/runtime-spec => github.com/everzakov/runtime-spec v0.0.0-20250816064520-f0885e035161
