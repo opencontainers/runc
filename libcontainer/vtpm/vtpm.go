@@ -17,13 +17,18 @@ import (
 	"unsafe"
 
 	"github.com/opencontainers/runc/libcontainer/apparmor"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	selinux "github.com/opencontainers/selinux/go-selinux"
 
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 )
 
 // object
 type VTPM struct {
+	// name of vtpm
+	VtpmName string `json:"vtpmName"`
+
 	// The path where the TPM emulator writes the TPM state to
 	StatePath string `json:"statePath"`
 
@@ -53,7 +58,7 @@ type VTPM struct {
 	user string
 
 	// The TPM device number as returned from /dev/vtpmx ioctl
-	Tpm_dev_num uint32 `json:"tpm_dev_num"`
+	Tpm_dev_num string `json:"tpm_dev_num"`
 
 	// The backend file descriptor
 	fd int32
@@ -80,15 +85,16 @@ type VTPM struct {
 // ioctl
 type vtpm_proxy_new_dev struct {
 	flags       uint32
-	tpm_dev_num uint32
+	tpm_dev_num string
 	fd          int32
 	major       uint32
 	minor       uint32
 }
 
 const (
-	ILLEGAL_FD           = -1
-	VTPM_DEV_NUM_INVALID = 0xffffffff
+	ILLEGAL_FD = -1
+
+	VTPM_DEV_NUM_INVALID = "xxxxxxx"
 
 	VTPM_PROXY_IOC_NEW_DEV = 0xc014a100
 
@@ -191,7 +197,15 @@ func hasCapability(capabilities []string, capability string) bool {
 //	with account tss; TPM 2 has more flexibility
 //
 // After successful creation of the object the Start() method can be called
-func NewVTPM(statepath string, statepathismanaged bool, vtpmversion string, createcerts bool, runas string, pcrbanks string, encryptionpassword []byte) (*VTPM, error) {
+func NewVTPM(vtpmdev *specs.LinuxVTPM, encryptionpassword []byte) (*VTPM, error) {
+	vtpmname := vtpmdev.VTPMName
+	statepath := vtpmdev.StatePath
+	vtpmversion := vtpmdev.VTPMVersion
+	runas := vtpmdev.RunAs
+	createcerts := vtpmdev.CreateCertificates
+	statepathismanaged := vtpmdev.StatePathIsManaged
+	pcrbanks := vtpmdev.PcrBanks
+
 	if len(statepath) == 0 {
 		return nil, fmt.Errorf("Missing required statpath for vTPM.")
 	}
@@ -201,13 +215,6 @@ func NewVTPM(statepath string, statepathismanaged bool, vtpmversion string, crea
 	}
 	if vtpmversion != VTPM_VERSION_1_2 && vtpmversion != VTPM_VERSION_2 {
 		return nil, fmt.Errorf("Unsupported VTPM version '%s'.", vtpmversion)
-	}
-
-	if _, err := os.Stat("/dev/vtpmx"); err != nil {
-		exec.Command("modprobe", "tpm_vtpm_proxy").Run()
-		if _, err := os.Stat("/dev/vtpmx"); err != nil {
-			return nil, fmt.Errorf("VTPM device driver not available.")
-		}
 	}
 
 	if runas == "" {
@@ -245,6 +252,7 @@ func NewVTPM(statepath string, statepathismanaged bool, vtpmversion string, crea
 		fd:                 ILLEGAL_FD,
 		swtpmSetupCaps:     swtpmSetupCaps,
 		swtpmCaps:          swtpmCaps,
+		VtpmName:           vtpmname,
 	}, nil
 }
 
@@ -283,7 +291,7 @@ func (vtpm *VTPM) createDev() error {
 
 // getPidFile creates the full path of the TPM emulator PID file
 func (vtpm *VTPM) getPidFile() string {
-	return path.Join(vtpm.StatePath, "swtpm.pid")
+	return path.Join(vtpm.StatePath, vtpm.VtpmName+"-swtpm.pid")
 }
 
 // getLogFile creates the full path of the TPM emulator log file
@@ -328,8 +336,8 @@ func (vtpm *VTPM) sendShutdown() error {
 	var err error = nil
 
 	if vtpm.Tpm_dev_num != VTPM_DEV_NUM_INVALID && vtpm.Vtpmversion == VTPM_VERSION_2 {
-		devname := vtpm.GetTPMDevname()
-		dev, err := os.OpenFile(devname, os.O_RDWR, 0666)
+		devpath := vtpm.GetTPMDevpath()
+		dev, err := os.OpenFile(devpath, os.O_RDWR, 0666)
 		if err != nil {
 			return err
 		}
@@ -339,7 +347,7 @@ func (vtpm *VTPM) sendShutdown() error {
 			0x00, 0x00, 0x01, 0x45, 0x00, 0x00}
 		n, err := dev.Write(sd)
 		if err != nil || n != len(sd) {
-			logrus.Errorf("Could not write shutdown to %s: %v", devname, err)
+			logrus.Errorf("Could not write shutdown to %s: %v", devpath, err)
 		}
 	}
 	return err
@@ -547,7 +555,7 @@ func (vtpm *VTPM) runSwtpmSetup() error {
 //
 //	check whether the swtpm is still alive by checking its PID file
 func (vtpm *VTPM) waitForTPMDevice(loops int) error {
-	devname := vtpm.GetTPMDevname()
+	devpath := vtpm.GetTPMDevpath()
 	pidfile := vtpm.getPidFile()
 
 	for loops >= 0 {
@@ -556,23 +564,35 @@ func (vtpm *VTPM) waitForTPMDevice(loops int) error {
 			return err
 		}
 
-		if _, err := os.Stat(devname); err == nil {
+		if _, err := os.Stat(devpath); err == nil {
 			return nil
 		}
 		time.Sleep(time.Millisecond * 100)
 		loops -= 1
 	}
-	return fmt.Errorf("TPM device %s did not appear", devname)
+	return fmt.Errorf("TPM device %s did not appear", devpath)
+}
+
+func (vtpm *VTPM) GetDeviceNum() error {
+	if fileInfo, err := os.Lstat(vtpm.GetTPMDevpath()); err == nil {
+		if stat_t, ok := fileInfo.Sys().(*syscall.Stat_t); ok {
+			devNumber := stat_t.Rdev
+			vtpm.major = unix.Major(devNumber)
+			vtpm.minor = unix.Minor(devNumber)
+		}
+	} else {
+		return err
+	}
+	logrus.Infof("device major num: %d", vtpm.major)
+	logrus.Infof("device minor num: %d", vtpm.minor)
+	return nil
 }
 
 // startSwtpm creates the VTPM proxy device and start the swtpm process
 func (vtpm *VTPM) startSwtpm() error {
-	err := vtpm.createDev()
-	if err != nil {
-		return err
-	}
+	tpm_dev_name := fmt.Sprintf("tpm%s", vtpm.VtpmName)
 
-	err = vtpm.setupAppArmor()
+	err := vtpm.setupAppArmor()
 	if err != nil {
 		return err
 	}
@@ -590,16 +610,13 @@ func (vtpm *VTPM) startSwtpm() error {
 		flags += ",startup-clear"
 	}
 
-	// child will get first passed fd as '3'
-	cmd := exec.Command("swtpm", "chardev", "--tpmstate", tpmstate,
-		"--daemon", "--fd", "3", "--pid", pidfile, "--log", logfile,
-		"--runas", vtpm.user, "--flags", flags,
+	cmd := exec.Command("swtpm_cuse", "--tpmstate", tpmstate,
+		"-n", tpm_dev_name, "--pid", pidfile, "--log", logfile,
+		"--flags", flags,
 		"--locality", "reject-locality-4,allow-set-locality")
 	if vtpm.Vtpmversion == VTPM_VERSION_2 {
 		cmd.Args = append(cmd.Args, "--tpm2")
 	}
-	file := os.NewFile(uintptr(vtpm.fd), "[vtpm]")
-	cmd.ExtraFiles = append(cmd.ExtraFiles, file)
 
 	if len(vtpm.encryptionPassword) > 0 {
 		piper, err := vtpm.setupPasswordPipe(vtpm.encryptionPassword)
@@ -611,7 +628,6 @@ func (vtpm *VTPM) startSwtpm() error {
 			fmt.Sprintf("pwdfd=%d,mode=aes-256-cbc,kdf=pbkdf2", 3+len(cmd.ExtraFiles)-1))
 		defer piper.Close()
 	}
-
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("swtpm failed on fd %d: %s\nlog: %s", vtpm.fd, string(output), vtpm.ReadLog())
@@ -638,7 +654,7 @@ func (vtpm *VTPM) startSwtpm() error {
 
 // runSwtpmBios runs swtpm_bios to initialize the TPM
 func (vtpm *VTPM) runSwtpmBios() error {
-	tpmname := vtpm.GetTPMDevname()
+	tpmname := vtpm.GetTPMDevpath()
 
 	cmd := exec.Command("swtpm_bios", "-n", "-cs", "-u", "--tpm-device", tpmname)
 	if vtpm.Vtpmversion == VTPM_VERSION_2 {
@@ -681,12 +697,6 @@ func (vtpm *VTPM) Start() (bool, error) {
 		}
 	}()
 
-	err = vtpm.runSwtpmSetup()
-	if err != nil {
-		return false, err
-	}
-	// set the directory accesses for vtpm.user after swtpm_setup may have needed higher
-	// privileges
 	err = vtpm.chownStatePath()
 	if err != nil {
 		return false, err
@@ -726,14 +736,14 @@ func (vtpm *VTPM) Stop(deleteStatePath bool) error {
 }
 
 // Get the TPM device name; this method can be called after successful Start()
-func (vtpm *VTPM) GetTPMDevname() string {
-	return fmt.Sprintf("/dev/tpm%d", vtpm.Tpm_dev_num)
+func (vtpm *VTPM) GetTPMDevpath() string {
+	return fmt.Sprintf("/dev/tpm%s", vtpm.VtpmName)
 }
 
 // GetTPMDevNum returns the TPM device number; this would return 10 in case
 // /dev/tpm10 was created on the host; this method can be called after
 // sucessful Start()
-func (vtpm *VTPM) GetTPMDevNum() uint32 {
+func (vtpm *VTPM) GetTPMDevNum() string {
 	return vtpm.Tpm_dev_num
 }
 
@@ -778,7 +788,7 @@ func (vtpm *VTPM) setupAppArmor() error {
 		return nil
 	}
 
-	profilename := fmt.Sprintf("runc_%d_swtpm_tpm%d", os.Getpid(), vtpm.GetTPMDevNum())
+	profilename := fmt.Sprintf("runc_%d_swtpm_tpm%s", os.Getpid(), vtpm.Tpm_dev_num)
 	if vtpm.Vtpmversion == VTPM_VERSION_1_2 {
 		statefilepattern = path.Join(vtpm.StatePath, "tpm-00.*")
 	} else {

@@ -8,44 +8,16 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/vtpm"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"golang.org/x/sys/unix"
+	// "golang.org/x/sys/unix"
+	// "github.com/sirupsen/logrus"
 )
 
-// addVTPMDevice adds a device and cgroup entry to the spec
-func addVTPMDevice(spec *specs.Spec, hostpath, devpath string, major, minor uint32) {
-	var filemode os.FileMode = 0600
-
-	device := specs.LinuxDevice{
-		Path:     hostpath,
-		Devpath:  devpath,
-		Type:     "c",
-		Major:    int64(major),
-		Minor:    int64(minor),
-		FileMode: &filemode,
-	}
-	spec.Linux.Devices = append(spec.Linux.Devices, device)
-
-	major_p := new(int64)
-	*major_p = int64(major)
-	minor_p := new(int64)
-	*minor_p = int64(minor)
-
-	ld := &specs.LinuxDeviceCgroup{
-		Allow:  true,
-		Type:   "c",
-		Major:  major_p,
-		Minor:  minor_p,
-		Access: "rwm",
-	}
-	spec.Linux.Resources.Devices = append(spec.Linux.Resources.Devices, *ld)
-}
 
 // getEncryptionPassword gets the plain password from the caller
 // valid formats passed to this function are:
@@ -80,13 +52,14 @@ func getEncryptionPassword(pwdString string) ([]byte, error) {
 }
 
 // CreateVTPM create a VTPM proxy device and starts the TPM emulator with it
-func CreateVTPM(spec *specs.Spec, vtpmdev *specs.LinuxVTPM, devnum int) (*vtpm.VTPM, error) {
+func CreateVTPM(spec *specs.Spec, vtpmdev *specs.LinuxVTPM) (*vtpm.VTPM, error) {
+
 	encryptionPassword, err := getEncryptionPassword(vtpmdev.EncryptionPassword)
 	if err != nil {
 		return nil, err
 	}
 
-	vtpm, err := vtpm.NewVTPM(vtpmdev.StatePath, vtpmdev.StatePathIsManaged, vtpmdev.TPMVersion, vtpmdev.CreateCertificates, vtpmdev.RunAs, vtpmdev.PcrBanks, encryptionPassword)
+	vtpm, err := vtpm.NewVTPM(vtpmdev, encryptionPassword)
 	if err != nil {
 		return nil, err
 	}
@@ -97,33 +70,17 @@ func CreateVTPM(spec *specs.Spec, vtpmdev *specs.LinuxVTPM, devnum int) (*vtpm.V
 		return nil, err
 	}
 
-	hostdev := vtpm.GetTPMDevname()
-	major, minor := vtpm.GetMajorMinor()
-
-	devpath := fmt.Sprintf("/dev/tpm%d", devnum)
-	addVTPMDevice(spec, hostdev, devpath, major, minor)
-
-	// for TPM 2: check if /dev/vtpmrm%d is available
-	host_tpmrm := fmt.Sprintf("/dev/tpmrm%d", vtpm.GetTPMDevNum())
-	if fileInfo, err := os.Lstat(host_tpmrm); err == nil {
-		if stat_t, ok := fileInfo.Sys().(*syscall.Stat_t); ok {
-			devNumber := stat_t.Rdev
-			devpath = fmt.Sprintf("/dev/tpmrm%d", devnum)
-			addVTPMDevice(spec, host_tpmrm, devpath, unix.Major(devNumber), unix.Minor(devNumber))
-		}
-	}
-
 	return vtpm, nil
 }
 
 func setVTPMHostDevOwner(vtpm *vtpm.VTPM, uid, gid int) error {
-	hostdev := vtpm.GetTPMDevname()
+	hostdev := vtpm.GetTPMDevpath()
 	// adapt ownership of the device since only root can access it
 	if err := os.Chown(hostdev, uid, gid); err != nil {
 		return err
 	}
 
-	host_tpmrm := fmt.Sprintf("/dev/tpmrm%d", vtpm.GetTPMDevNum())
+	host_tpmrm := fmt.Sprintf("/dev/tpmrm%s", vtpm.Tpm_dev_num)
 	if _, err := os.Lstat(host_tpmrm); err == nil {
 		// adapt ownership of the device since only root can access it
 		if err := os.Chown(host_tpmrm, uid, gid); err != nil {

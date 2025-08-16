@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"syscall"
 
 	"github.com/coreos/go-systemd/v22/activation"
 	"github.com/opencontainers/runc/libcontainer/vtpm"
@@ -469,6 +470,35 @@ func maybeLogCgroupWarning(op string, err error) {
 	}
 }
 
+// addVTPMDevice adds a device and cgroup entry to the spec
+func addVTPMDevice(spec *specs.Spec, hostpath, devpath string, major, minor uint32) {
+	var filemode os.FileMode = 0600
+
+	device := specs.LinuxDevice{
+		Path:     hostpath,
+		Devpath:  devpath,
+		Type:     "c",
+		Major:    int64(major),
+		Minor:    int64(minor),
+		FileMode: &filemode,
+	}
+	spec.Linux.Devices = append(spec.Linux.Devices, device)
+
+	major_p := new(int64)
+	*major_p = int64(major)
+	minor_p := new(int64)
+	*minor_p = int64(minor)
+
+	ld := &specs.LinuxDeviceCgroup{
+		Allow:  true,
+		Type:   "c",
+		Major:  major_p,
+		Minor:  minor_p,
+		Access: "rwm",
+	}
+	spec.Linux.Resources.Devices = append(spec.Linux.Resources.Devices, *ld)
+}
+
 func createVTPMs(spec *specs.Spec) ([]*vtpm.VTPM, error) {
 	var vtpms []*vtpm.VTPM
 
@@ -477,21 +507,41 @@ func createVTPMs(spec *specs.Spec) ([]*vtpm.VTPM, error) {
 		return vtpms, nil
 	}
 
-	devnum := 0
 	for _, vtpm := range r.VTPMs {
-		v, err := vtpmhelper.CreateVTPM(spec, &vtpm, devnum)
-		if err != nil {
-			destroyVTPMs(vtpms)
-			return vtpms, err
+		var major uint32
+		var minor uint32
+		var fileInfo os.FileInfo
+		var err error
+		hostdev := "/dev/tpm" + vtpm.VTPMName
+		if fileInfo, err = os.Lstat(hostdev); err != nil {
+			v, err := vtpmhelper.CreateVTPM(spec, &vtpm)
+			if err != nil {
+				destroyVTPMs(vtpms)
+				return vtpms, err
+			}
+			vtpms = append(vtpms, v)
 		}
-		vtpms = append(vtpms, v)
-		devnum++
+		if fileInfo, err = os.Lstat(hostdev); err == nil {
+			if stat_t, ok := fileInfo.Sys().(*syscall.Stat_t); ok {
+				devNumber := stat_t.Rdev
+				major = unix.Major(devNumber)
+				minor = unix.Minor(devNumber)
+			}
+			logrus.Infof("device major num: %d", major)
+			logrus.Infof("device minor num: %d", minor)
+
+			devpath := hostdev
+			addVTPMDevice(spec, hostdev, devpath, major, minor)
+		}
 	}
+
 	return vtpms, nil
 }
 
 func destroyVTPMs(vtpms []*vtpm.VTPM) {
-	vtpmhelper.DestroyVTPMs(vtpms)
+	if len(vtpms) > 0 {
+		vtpmhelper.DestroyVTPMs(vtpms)
+	}
 }
 
 func setVTPMHostDevsOwner(config *configs.Config) error {
