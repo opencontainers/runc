@@ -950,14 +950,7 @@ func createDeviceNode(rootfs string, node *devices.Device, bind bool) error {
 		return nil
 	}
 
-	var path string
-	if node.Devpath != "" {
-		path = node.Devpath
-	} else {
-		path = node.Path
-	}
-
-	dest, err := securejoin.SecureJoin(rootfs, path)
+	dest, err := securejoin.SecureJoin(rootfs, node.Path)
 	if err != nil {
 		return err
 	}

@@ -387,7 +387,7 @@ func startContainer(context *cli.Context, action CtAct, criuOpts *libcontainer.C
 		notifySocket.setupSpec(spec)
 	}
 
-	vtpms, err := createVTPMs(spec)
+	vtpms, err := createVTPMs(context.GlobalString("root"), id, spec)
 	if err != nil {
 		return -1, err
 	}
@@ -471,12 +471,11 @@ func maybeLogCgroupWarning(op string, err error) {
 }
 
 // addVTPMDevice adds a device and cgroup entry to the spec
-func addVTPMDevice(spec *specs.Spec, hostpath, devpath string, major, minor uint32) {
+func addVTPMDevice(spec *specs.Spec, devpath string, major, minor uint32) {
 	var filemode os.FileMode = 0600
 
 	device := specs.LinuxDevice{
-		Path:     hostpath,
-		Devpath:  devpath,
+		Path:     devpath,
 		Type:     "c",
 		Major:    int64(major),
 		Minor:    int64(minor),
@@ -499,7 +498,7 @@ func addVTPMDevice(spec *specs.Spec, hostpath, devpath string, major, minor uint
 	spec.Linux.Resources.Devices = append(spec.Linux.Resources.Devices, *ld)
 }
 
-func createVTPMs(spec *specs.Spec) ([]*vtpm.VTPM, error) {
+func createVTPMs(root, containerID string, spec *specs.Spec) ([]*vtpm.VTPM, error) {
 	var vtpms []*vtpm.VTPM
 
 	r := spec.Linux.Resources
@@ -512,7 +511,12 @@ func createVTPMs(spec *specs.Spec) ([]*vtpm.VTPM, error) {
 		var minor uint32
 		var fileInfo os.FileInfo
 		var err error
+		containerVTPMName := vtpm.VTPMName
+
+		// Several containers can have vtpms on the same devpath that's why we need to create unique host path.
+		vtpm.VTPMName = vtpmhelper.GenerateDeviceHostPathName(root, containerID, containerVTPMName)
 		hostdev := "/dev/tpm" + vtpm.VTPMName
+
 		if fileInfo, err = os.Lstat(hostdev); err != nil {
 			v, err := vtpmhelper.CreateVTPM(spec, &vtpm)
 			if err != nil {
@@ -536,8 +540,8 @@ func createVTPMs(spec *specs.Spec) ([]*vtpm.VTPM, error) {
 		major = unix.Major(devNumber)
 		minor = unix.Minor(devNumber)
 
-		devpath := hostdev
-		addVTPMDevice(spec, hostdev, devpath, major, minor)
+		devpath := "/dev/tpm" + containerVTPMName
+		addVTPMDevice(spec, devpath, major, minor)
 	}
 
 	return vtpms, nil

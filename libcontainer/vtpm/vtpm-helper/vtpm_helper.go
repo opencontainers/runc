@@ -3,6 +3,7 @@
 package vtpmhelper
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -16,6 +17,10 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	// "golang.org/x/sys/unix"
 	// "github.com/sirupsen/logrus"
+)
+
+const (
+	HashedRootOffset = 6
 )
 
 // getEncryptionPassword gets the plain password from the caller
@@ -50,6 +55,12 @@ func getEncryptionPassword(pwdString string) ([]byte, error) {
 	default:
 		return []byte(pwdString), nil
 	}
+}
+
+func GenerateDeviceHostPathName(root, containerName, deviceName string) string {
+	// In runc we do not have a namespace, so we will used hash from root as a namespace.
+	hashedValue := fmt.Sprintf("%x", sha256.Sum256(append([]byte(root), '\n')))
+	return fmt.Sprintf("%s-%s-%s", hashedValue[:HashedRootOffset], containerName, deviceName)
 }
 
 // CreateVTPM create a VTPM proxy device and starts the TPM emulator with it

@@ -1012,7 +1012,6 @@ next:
 					Minor: d.Minor,
 				},
 				Path:     d.Path,
-				Devpath:  d.Devpath,
 				FileMode: filemode,
 				Uid:      uid,
 				Gid:      gid,
