@@ -800,16 +800,22 @@ func (vtpm *VTPM) setupAppArmor() error {
 		"  #include <abstractions/base>\n"+
 		"  capability setgid,\n"+
 		"  capability setuid,\n"+
+		"  capability sys_nice,\n"+
 		"  /dev/tpm[0-9]* rw,\n"+
 		"  owner /etc/group r,\n"+
 		"  owner /etc/nsswitch.conf r,\n"+
 		"  owner /etc/passwd r,\n"+
+		"  /dev/cuse rw,\n"+
+		"  %s/ rw,\n"+
+		"  %s/TMP2-00.permall rw,\n"+
 		"  %s/.lock wk,\n"+
 		"  %s w,\n"+
 		"  %s rw,\n"+
 		"  %s rw,\n"+
 		"}\n",
 		profilename,
+		vtpm.StatePath,
+		vtpm.StatePath,
 		vtpm.StatePath,
 		vtpm.getLogFile(),
 		vtpm.getPidFile(),
