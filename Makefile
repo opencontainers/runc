@@ -58,9 +58,9 @@ GO_BUILD_STATIC := $(GO) build $(TRIMPATH) $(GO_BUILDMODE_STATIC) \
 
 GPG_KEYID ?= asarai@suse.de
 
-RUN_IN_CONTAINER_MAJOR := 100
-RUN_IN_CONTAINER_MAJOR_SECOND := 101
-RUN_IN_CONTAINER_MINOR := 1
+RUN_IN_CONTAINER_MAJOR ?= 100
+RUN_IN_CONTAINER_MAJOR_SECOND ?= 101
+RUN_IN_CONTAINER_MINOR ?= 1
 
 # Some targets need cgo, which is disabled by default when cross compiling.
 # Enable cgo explicitly for those.
@@ -178,6 +178,9 @@ integration: runcimage
 		-v $(CURDIR):/go/src/$(PROJECT) \
 		--device=/dev/cuse --device-cgroup-rule "c $(RUN_IN_CONTAINER_MAJOR):$(RUN_IN_CONTAINER_MINOR) rwm" \
 		--device-cgroup-rule "c $(RUN_IN_CONTAINER_MAJOR_SECOND):$(RUN_IN_CONTAINER_MINOR) rwm" \
+		-e "RUN_IN_CONTAINER_MAJOR=$(RUN_IN_CONTAINER_MAJOR)" \
+		-e "RUN_IN_CONTAINER_MAJOR_SECOND=$(RUN_IN_CONTAINER_MAJOR_SECOND)" \
+		-e "RUN_IN_CONTAINER_MINOR=$(RUN_IN_CONTAINER_MINOR)" \
 		$(RUNC_IMAGE) make localintegration TESTPATH="$(TESTPATH)"
 
 .PHONY: localintegration

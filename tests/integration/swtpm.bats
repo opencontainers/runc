@@ -9,6 +9,9 @@ function setup() {
     setup_debian
 	ROOT_HASH=$(sha256sum - <<<"$ROOT/state")
 	ROOT_HASH_OFFSET=${ROOT_HASH:0:6}
+	test_major=${RUN_IN_CONTAINER_MAJOR:-0}
+	test_major_second=${RUN_IN_CONTAINER_MAJOR_SECOND:-0}
+	test_minor=${RUN_IN_CONTAINER_MINOR:-0}
 }
 
 function teardown() {
@@ -28,7 +31,7 @@ function teardown() {
 	cp "${TESTBINDIR}/${HELPER}" rootfs/bin/
 	vtpm_path=$(mktemp -d)
 	update_config '	  .process.args = ["/bin/'"$HELPER"'", "-devicePath=/dev/tpmtpmm2"]
-					  | .linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmm2", "vtpmMajor": 100, "vtpmMinor": 1}]'
+					  | .linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmm2", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'}]'
 	runc run tst
 	[ "$status" -eq 0 ]
 }
@@ -38,7 +41,7 @@ function teardown() {
 	cp "${TESTBINDIR}/${HELPER}" rootfs/bin/
 	vtpm_path=$(mktemp -d)
 	update_config '	  .process.args = ["/bin/'"$HELPER"'", "-devicePath=/dev/tpmtpmm12", "-deviceVersion=1.2"]
-					  | .linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "1.2", "vtpmname" : "tpmm12", "vtpmMajor": 100, "vtpmMinor": 1}]'
+					  | .linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "1.2", "vtpmname" : "tpmm12", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'}]'
 	runc run tst
 	[ "$status" -eq 0 ]
 }
@@ -47,7 +50,7 @@ function teardown() {
     HELPER="tpm-helper"
 	vtpm_path=$(mktemp -d)
 	update_config '	  .process.args = ["/bin/sh"]
-					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmstop", "vtpmMajor": 100, "vtpmMinor": 1}]'
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmstop", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'}]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst
 	[ "$status" -eq 0 ]
 	wait_for_container 10 1 tst
@@ -73,7 +76,7 @@ function teardown() {
     HELPER="tpm-helper"
 	vtpm_path=$(mktemp -d)
 	update_config '	  .process.args = ["/bin/sh"]
-					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmkill", "vtpmMajor": 100, "vtpmMinor": 1}]'
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmkill", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'}]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst
 	[ "$status" -eq 0 ]
 	wait_for_container 10 1 tst
@@ -102,7 +105,7 @@ function teardown() {
     HELPER="tpm-helper"
 	vtpm_path=$(mktemp -d)
 	update_config '	  .process.args = ["/bin/sh"]
-					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmdelete", "vtpmMajor": 100, "vtpmMinor": 1}]'
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmdelete", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'}]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst
 	[ "$status" -eq 0 ]
 	wait_for_container 10 1 tst
@@ -122,7 +125,7 @@ function teardown() {
 	HELPER="tpm-helper"
 	vtpm_path=$(mktemp -d)
 	update_config '	  .process.args = ["/bin/sh"]
-					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmforcekill", "vtpmMajor": 100, "vtpmMinor": 1}]'
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmforcekill", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'}]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst
 	[ "$status" -eq 0 ]
 	wait_for_container 10 1 tst
@@ -145,7 +148,7 @@ function teardown() {
 	# first container
 	vtpm_path=$(mktemp -d)
 	update_config '	  .process.args = ["/bin/sh"]
-					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmsame", "vtpmMajor": 100, "vtpmMinor": 1}]'
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmsame", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'}]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst1
 	[ "$status" -eq 0 ]
 	wait_for_container 10 1 tst1
@@ -153,7 +156,7 @@ function teardown() {
 	# second container
 	vtpm_pth1=$(mktemp -d)
 	update_config '	  .process.args = ["/bin/sh"]
-					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_pth1"'", "vtpmversion": "2", "vtpmname" : "tpmsame", "vtpmMajor": 101, "vtpmMinor": 1}]'
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_pth1"'", "vtpmversion": "2", "vtpmname" : "tpmsame", "vtpmMajor": '"$test_major_second"', "vtpmMinor": '"$test_minor"'}]'
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst2
 	[ "$status" -eq 0 ]
@@ -192,39 +195,43 @@ function teardown() {
 
 	# empty name
 	update_config '	  .process.args = ["/bin/sh"]
-					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "", "vtpmMajor": 100, "vtpmMinor": 1}]'
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'}]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst
 	[ "$status" -ne 0 ]
 
 	# the same name
 	update_config '	  .process.args = ["/bin/sh"]
-					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path2"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": 100, "vtpmMinor": 1},
-					  							 {"statepath": "'"$vtpm_path3"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": 101, "vtpmMinor": 1}
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path2"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'},
+					  							{"statepath": "'"$vtpm_path3"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": '"$test_major_second"', "vtpmMinor": '"$test_minor"'}
 					  ]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst
 	[ "$status" -ne 0 ]
 
 	update_config '	  .process.args = ["/bin/sh"]
-					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": 100, "vtpmMinor": 1}]'
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'}]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst1
 	[ "$status" -eq 0 ]
 	wait_for_container 10 1 tst1
 
 	# with the same state path
 	update_config '	  .process.args = ["/bin/sh"]
-					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": 101, "vtpmMinor": 1}]'
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": '"$test_major_second"', "vtpmMinor": '"$test_minor"'}]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst2
 	[ "$status" -ne 0 ]
 
-	# with the same major/minor
+	# with the same major/minor. major and minor are not bind to some values (unless we are running in the container).
+	# we need to know the right major/minor of tst1 vtpm device.
+	the_same_minor=$(ls -la /dev/tpm"$ROOT_HASH_OFFSET"-tst1-tpmone | awk '{print $6}')
+	the_same_major_str=$(ls -la /dev/tpm"$ROOT_HASH_OFFSET"-tst1-tpmone | awk '{print $5}')
+	the_same_major=${the_same_major_str::-1}
 	update_config '	  .process.args = ["/bin/sh"]
-					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path2"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": 100, "vtpmMinor": 1}]'
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path2"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": '"$the_same_major"', "vtpmMinor": '"$the_same_minor"'}]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst3
 	[ "$status" -ne 0 ]
 
 	# with different params
 	update_config '	  .process.args = ["/bin/sh"]
-					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path3"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": 101, "vtpmMinor": 1}]'
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path3"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": '"$test_major_second"', "vtpmMinor": '"$test_minor"'}]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst4
 	[ "$status" -eq 0 ]
 	wait_for_container 10 1 tst4
@@ -239,8 +246,8 @@ function teardown() {
 
 	# two devices
 	update_config '	  .process.args = ["/bin/sh"]
-					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": 100, "vtpmMinor": 1},
-					  							 {"statepath": "'"$vtpm_path2"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": 101, "vtpmMinor": 1}
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'},
+					  							 {"statepath": "'"$vtpm_path2"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": '"$test_major_second"', "vtpmMinor": '"$test_minor"'}
 					  ]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst
 	[ "$status" -eq 0 ]
@@ -274,13 +281,13 @@ function teardown() {
 	vtpm_path4=$(mktemp -d)
 
 	update_config '	  .process.args = ["/bin/sh"]
-					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "", "vtpmMajor": 100, "vtpmMinor": 1}]'
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "vtpmversion": "2", "vtpmname" : "", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'}]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst1
 	[ "$status" -eq 0 ]
 
 	update_config '	  .process.args = ["/bin/sh"]
-					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path2"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": 100, "vtpmMinor": 1},
-					  							 {"statepath": "'"$vtpm_path3"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": 101, "vtpmMinor": 1}
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path2"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'},
+					  							 {"statepath": "'"$vtpm_path3"'", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": '"$test_major_second"', "vtpmMinor": '"$test_minor"'}
 					  ]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst2
 	[ "$status" -eq 0 ]
@@ -299,8 +306,8 @@ function teardown() {
 	fi
 
 	update_config '	  .process.args = ["/bin/sh"]
-					  |.linux.resources.vtpms = [{"statepath": "", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": 100, "vtpmMinor": 1},
-					  							 {"statepath": "'"$vtpm_path4"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": 101, "vtpmMinor": 1}
+					  |.linux.resources.vtpms = [{"statepath": "", "vtpmversion": "2", "vtpmname" : "tpmone", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'},
+					  							 {"statepath": "'"$vtpm_path4"'", "vtpmversion": "2", "vtpmname" : "tpmsecond", "vtpmMajor": '"$test_major_second"', "vtpmMinor": '"$test_minor"'}
 					  ]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst3
 	[ "$status" -eq 0 ]
@@ -327,7 +334,7 @@ function teardown() {
 					  |.linux.namespaces += [{"type": "user"}]
 					  |.linux.uidMappings += [{"containerID": 0, "hostID": 100000, "size": 65536}]
 					  |.linux.gidMappings += [{"containerID": 0, "hostID": 100000, "size": 65536}]
-					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmuser", "vtpmMajor": 100, "vtpmMinor": 1}]'
+					  |.linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "tpmuser", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'}]'
 	remap_rootfs
 	
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst1
@@ -367,7 +374,7 @@ function teardown() {
 	update_config '.linux.namespaces |= map(if .type == "user" then (.path = "/proc/'"$target_pid"'/ns/" + .type) else . end)
 					| del(.linux.uidMappings)
 					| del(.linux.gidMappings)
-					| .linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "joined_userns", "vtpmMajor": 100, "vtpmMinor": 1}]'
+					| .linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "vtpmversion": "2", "vtpmname" : "joined_userns", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'}]'
 	
 	runc run -d --console-socket "$CONSOLE_SOCKET" vtpm_in_joined_userns
 	[ "$status" -eq 0 ]
@@ -392,7 +399,7 @@ function teardown() {
 	vtpm_path=$(mktemp -d)
 
 	update_config '	  .process.args = ["/bin/sh"]
-					  | .linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "statePathIsManaged": true, "vtpmversion": "2", "createCerts": true, "pcrBanks": "sha256,sha1", "encryptionPassword": "12345", "vtpmname" : "tpmsetup", "vtpmMajor": 100, "vtpmMinor": 1}]'
+					  | .linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "statePathIsManaged": true, "vtpmversion": "2", "createCerts": true, "pcrBanks": "sha256,sha1", "encryptionPassword": "12345", "vtpmname" : "tpmsetup", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'}]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst
 	[ "$status" -eq 0 ]
 
@@ -437,13 +444,13 @@ function teardown() {
 
 	# wrong encryption password
 	update_config '	  .process.args = ["/bin/sh"]
-					  | .linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "statePathIsManaged": true, "vtpmversion": "2", "createCerts": true, "pcrBanks": "sha256,sha1", "encryptionPassword": "54321", "vtpmname" : "tpmsetup", "vtpmMajor": 100, "vtpmMinor": 1}]'
+					  | .linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "statePathIsManaged": true, "vtpmversion": "2", "createCerts": true, "pcrBanks": "sha256,sha1", "encryptionPassword": "54321", "vtpmname" : "tpmsetup", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'}]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst1
 	[ "$status" -ne 0 ]
 
 	# password with encryption
 	update_config '	  .process.args = ["/bin/sh"]
-					  | .linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "statePathIsManaged": true, "vtpmversion": "2", "createCerts": true, "pcrBanks": "sha256,sha1", "encryptionPassword": "pass=12345", "vtpmname" : "tpmsetup", "vtpmMajor": 100, "vtpmMinor": 1}]'
+					  | .linux.resources.vtpms = [{"statepath": "'"$vtpm_path"'", "statePathIsManaged": true, "vtpmversion": "2", "createCerts": true, "pcrBanks": "sha256,sha1", "encryptionPassword": "pass=12345", "vtpmname" : "tpmsetup", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'}]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst2
 	[ "$status" -eq 0 ]
 	wait_for_container 10 1 tst2
@@ -453,7 +460,7 @@ function teardown() {
 
 	vtpm_path1=$(mktemp -d)
 	update_config '	  .process.args = ["/bin/sh"]
-					| .linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "statePathIsManaged": true, "vtpmversion": "1.2", "createCerts": true, "encryptionPassword": "12345", "vtpmname" : "tpmsetup", "vtpmMajor": 100, "vtpmMinor": 1}]'
+					| .linux.resources.vtpms = [{"statepath": "'"$vtpm_path1"'", "statePathIsManaged": true, "vtpmversion": "1.2", "createCerts": true, "encryptionPassword": "12345", "vtpmname" : "tpmsetup", "vtpmMajor": '"$test_major"', "vtpmMinor": '"$test_minor"'}]'
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst3
 	[ "$status" -eq 0 ]
 	wait_for_container 10 1 tst3
