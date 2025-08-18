@@ -354,7 +354,7 @@ func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
 		}
 	}
 	for _, mc := range merged {
-		for _, ss := range strings.Split(mc, ",") {
+		for ss := range strings.SplitSeq(mc, ",") {
 			// symlink(2) is very dumb, it will just shove the path into
 			// the link and doesn't do any checks or relative path
 			// conversion. Also, don't error out if the cgroup already exists.

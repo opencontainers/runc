@@ -128,7 +128,7 @@ func (s *notifySocket) run(pid1 int) error {
 			got := buf[0:r]
 			// systemd-ready sends a single datagram with the state string as payload,
 			// so we don't need to worry about partial messages.
-			for _, line := range bytes.Split(got, []byte{'\n'}) {
+			for line := range bytes.SplitSeq(got, []byte{'\n'}) {
 				if bytes.HasPrefix(got, []byte("READY=")) {
 					fileChan <- line
 					return
