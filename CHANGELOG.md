@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (omitting children) to the new group, and leave the CLOS orphaned after
   container exit. (#4827)
 
+### Fixed
+ * Container processes will no longer inherit the CPU affinity of runc by
+   default. Instead, the default CPU affinity of container processes will be
+   the largest set of CPUs permitted by the container's cpuset cgroup and any
+   other system restrictions (such as isolated CPUs). (#4041, #4815, #4858)
+
 ## [1.3.0] - 2025-04-30
 
 > Mr. President, we must not allow a mine shaft gap!
