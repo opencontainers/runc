@@ -35,18 +35,13 @@ jobs:
             go-version: 1.22.x
           - criu: criu-dev
             go-version: 1.23.x
-            os: ubuntu-24.04
           - criu: criu-dev
             rootless: rootless
-            os: ubuntu-24.04
           # Do race detection only on latest Go.
           - race: -race
             go-version: 1.22.x
           - race: -race
             go-version: 1.23.x
-          # CRIU package 4.1-1 from opensuse build farm doesn't work on arm.
-          - os: ubuntu-24.04-arm
-            criu: ""
 
     runs-on: ${{ matrix.os }}
 
