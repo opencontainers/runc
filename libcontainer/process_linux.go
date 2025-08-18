@@ -122,6 +122,46 @@ func (p *setnsProcess) signal(sig os.Signal) error {
 	return unix.Kill(p.pid(), s)
 }
 
+// tryResetCPUAffinity tries to reset the CPU affinity of the process
+// identified by pid to include all possible CPUs (notwithstanding cgroup
+// cpuset restrictions and isolated CPUs).
+func tryResetCPUAffinity(pid int) {
+	// When resetting the CPU affinity, we want to match the configured cgroup
+	// cpuset (or the default set of all CPUs, if no cpuset is configured)
+	// rather than some more restrictive affinity we were spawned in (such as
+	// one that may have been inherited from systemd). The cpuset cgroup used
+	// to reconfigure the cpumask automatically for joining processes, but
+	// kcommit da019032819a ("sched: Enforce user requested affinity") changed
+	// this behaviour in Linux 6.2.
+	//
+	// Parsing cpuset.cpus.effective is quite inefficient (and looking at
+	// things like /proc/stat would be wrong for most nested containers), but
+	// luckily sched_setaffinity(2) will implicitly:
+	//
+	//  * Clamp the cpumask so that it matches the current number of CPUs on
+	//    the system.
+	//  * Mask out any CPUs that are not a member of the target task's
+	//    configured cgroup cpuset.
+	//
+	// So we can just pass a very large array of set cpumask bits and the
+	// kernel will silently convert that to the correct value very cheaply.
+
+	// Ideally, we would just set the array to 0xFF...FF. Unfortunately, the
+	// size depends on the architecture. It is also a private newtype, so we
+	// can't use (^0) or generics since those require us to be able to name the
+	// type. However, we can just underflow the zero value instead.
+	// TODO: Once <https://golang.org/cl/698015> is merged, switch to that.
+	cpuset := unix.CPUSet{}
+	for i := range cpuset {
+		cpuset[i]-- // underflow to 0xFF..FF
+	}
+	if err := unix.SchedSetaffinity(pid, &cpuset); err != nil {
+		logrus.WithError(
+			os.NewSyscallError("sched_setaffinity", err),
+		).Warnf("resetting the CPU affinity of pid %d failed -- the container process may inherit runc's CPU affinity", pid)
+	}
+}
+
 func (p *setnsProcess) start() (retErr error) {
 	defer p.comm.closeParent()
 
@@ -184,6 +224,9 @@ func (p *setnsProcess) start() (retErr error) {
 			}
 		}
 	}
+	// Reset the CPU affinity after cgroups are configured to make sure it
+	// matches any configured cpuset.
+	tryResetCPUAffinity(p.pid())
 	if p.intelRdtPath != "" {
 		// if Intel RDT "resource control" filesystem path exists
 		_, err := os.Stat(p.intelRdtPath)
@@ -578,6 +621,9 @@ func (p *initProcess) start() (retErr error) {
 			return fmt.Errorf("unable to apply cgroup configuration: %w", err)
 		}
 	}
+	// Reset the CPU affinity after cgroups are configured to make sure it
+	// matches any configured cpuset.
+	tryResetCPUAffinity(p.pid())
 	if p.intelRdtManager != nil {
 		if err := p.intelRdtManager.Apply(p.pid()); err != nil {
 			return fmt.Errorf("unable to apply Intel RDT configuration: %w", err)
