@@ -39,16 +39,25 @@ ARCH=$(uname -m)
 # Seccomp agent socket.
 SECCCOMP_AGENT_SOCKET="$BATS_TMPDIR/seccomp-agent.sock"
 
-# Wrapper for runc.
-function runc() {
-	run __runc "$@"
+# Wrapper around "run" that logs output to make tests easier to debug.
+function sane_run() {
+	local cmd="$1"
+	local cmdname="${CMDNAME:-$(basename "$cmd")}"
+	shift
+
+	run "$cmd" "$@"
 
 	# Some debug information to make life easier. bats will only print it if the
 	# test failed, in which case the output is useful.
 	# shellcheck disable=SC2154
-	echo "$(basename "$RUNC") $* (status=$status):" >&2
+	echo "$cmdname $* (status=$status)" >&2
 	# shellcheck disable=SC2154
 	echo "$output" >&2
+}
+
+# Wrapper for runc.
+function runc() {
+	CMDNAME="$(basename "$RUNC")" sane_run __runc "$@"
 }
 
 # Raw wrapper for runc.
