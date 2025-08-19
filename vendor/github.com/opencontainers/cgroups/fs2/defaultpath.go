@@ -51,6 +51,9 @@ func defaultDirPath(c *cgroups.Cgroup) (string, error) {
 	// making it impossible to enable controllers for its sub-cgroup.
 	// A parent cgroup (with no tasks in it) is what we need.
 	ownCgroup = filepath.Dir(ownCgroup)
+	if ownCgroup == "/system.slice" {
+		ownCgroup = "/machine.slice/machine-runc.slice"
+	}
 
 	return filepath.Join(UnifiedMountpoint, ownCgroup, innerPath), nil
 }
