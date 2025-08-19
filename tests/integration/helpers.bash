@@ -60,10 +60,17 @@ function runc() {
 	CMDNAME="$(basename "$RUNC")" sane_run __runc "$@"
 }
 
+function setup_runc_cmdline() {
+	RUNC_CMDLINE=("$RUNC")
+	[[ -v RUNC_USE_SYSTEMD ]] && RUNC_CMDLINE+=("--systemd-cgroup")
+	[[ -n "${ROOT:-}" ]] && RUNC_CMDLINE+=("--root" "$ROOT/state")
+	export RUNC_CMDLINE
+}
+
 # Raw wrapper for runc.
 function __runc() {
-	"$RUNC" ${RUNC_USE_SYSTEMD+--systemd-cgroup} \
-		${ROOT:+--root "$ROOT/state"} "$@"
+	setup_runc_cmdline
+	"${RUNC_CMDLINE[@]}" "$@"
 }
 
 # Wrapper for runc spec.
