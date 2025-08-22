@@ -15,6 +15,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/keys"
+	"github.com/opencontainers/runc/libcontainer/landlock"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
@@ -235,6 +236,12 @@ func (l *linuxStandardInit) Init() error {
 
 		if err := syncParentSeccomp(l.pipe, seccompFd); err != nil {
 			return err
+		}
+	}
+
+	if l.config.Config.Landlock != nil {
+		if err := landlock.Apply(l.config.Config.Landlock); err != nil {
+			return fmt.Errorf("failed to apply landlock restrictions: %w", err)
 		}
 	}
 

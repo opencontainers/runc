@@ -238,6 +238,9 @@ type Config struct {
 
 	// ExecCPUAffinity is CPU affinity for a non-init process to be run in the container.
 	ExecCPUAffinity *CPUAffinity `json:"exec_cpu_affinity,omitempty"`
+
+	// Landlock contains configuration for Landlock LSM restrictions.
+	Landlock *LandlockConfig `json:"landlock,omitempty"`
 }
 
 // Scheduler is based on the Linux sched_setattr(2) syscall.

@@ -9,6 +9,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.4.1
 	github.com/docker/go-units v0.5.0
 	github.com/godbus/dbus/v5 v5.1.0
+	github.com/landlock-lsm/go-landlock v0.0.0-20250303204525-1544bccde3a3
 	github.com/moby/sys/capability v0.4.0
 	github.com/moby/sys/mountinfo v0.7.2
 	github.com/moby/sys/user v0.4.0
@@ -31,4 +32,5 @@ require (
 	github.com/cilium/ebpf v0.17.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	kernel.org/pub/linux/libs/security/libcap/psx v1.2.70 // indirect
 )
