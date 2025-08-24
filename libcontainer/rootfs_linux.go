@@ -949,6 +949,7 @@ func createDeviceNode(rootfs string, node *devices.Device, bind bool) error {
 		// The node only exists for cgroup reasons, ignore it here.
 		return nil
 	}
+
 	dest, err := securejoin.SecureJoin(rootfs, node.Path)
 	if err != nil {
 		return err

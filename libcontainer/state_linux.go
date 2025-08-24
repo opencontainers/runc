@@ -7,7 +7,9 @@ import (
 
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	vtpmhelper "github.com/opencontainers/runc/libcontainer/vtpm/vtpm-helper"
 	"github.com/opencontainers/runtime-spec/specs-go"
+
 	"golang.org/x/sys/unix"
 )
 
@@ -36,6 +38,7 @@ type containerState interface {
 }
 
 func destroy(c *Container) error {
+	vtpmhelper.DestroyVTPMs(c.config.VTPMs)
 	// Usually, when a container init is gone, all other processes in its
 	// cgroup are killed by the kernel. This is not the case for a shared
 	// PID namespace container, which may have some processes left after
