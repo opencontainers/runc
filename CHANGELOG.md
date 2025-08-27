@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking
+
+- runc update no longer allows `--l3-cache-schema` or `--mem-bw-schema` if
+  `linux.intelRdt` was not present in the container’s original `config.json`.
+
+  Without `linux.intelRdt` no CLOS (resctrl group) is created at container
+  creation, so it is not possible to apply the updated options with `runc
+  update`.
+
+  Previously, this scenario did not work as expected. The `runc update` would
+  create a new CLOS but fail to apply the schema, move only the init process
+  (omitting children) to the new group, and leave the CLOS orphaned after
+  container exit. (#4827)
+
 ## [1.3.0] - 2025-04-30
 
 > Mr. President, we must not allow a mine shaft gap!
