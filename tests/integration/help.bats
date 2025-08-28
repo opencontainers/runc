@@ -22,69 +22,37 @@ function setup() {
 }
 
 @test "runc command -h" {
-	runc checkpoint -h
-	[ "$status" -eq 0 ]
-	[[ ${lines[1]} =~ runc\ checkpoint+ ]]
+	local runc
+	# shellcheck disable=SC2153
+	runc="$(basename "$RUNC")"
+	local cmds=(
+		checkpoint
+		create
+		delete
+		events
+		exec
+		kill
+		list
+		pause
+		ps
+		restore
+		resume
+		run
+		spec
+		start
+		state
+		update
+		features
+	)
 
-	runc delete -h
-	[ "$status" -eq 0 ]
-	[[ ${lines[1]} =~ runc\ delete+ ]]
-
-	runc events -h
-	[ "$status" -eq 0 ]
-	[[ ${lines[1]} =~ runc\ events+ ]]
-
-	runc exec -h
-	[ "$status" -eq 0 ]
-	[[ ${lines[1]} =~ runc\ exec+ ]]
-
-	runc kill -h
-	[ "$status" -eq 0 ]
-	[[ ${lines[1]} =~ runc\ kill+ ]]
-
-	runc list -h
-	[ "$status" -eq 0 ]
-	[[ ${lines[0]} =~ NAME:+ ]]
-	[[ ${lines[1]} =~ runc\ list+ ]]
-
-	runc list --help
-	[ "$status" -eq 0 ]
-	[[ ${lines[0]} =~ NAME:+ ]]
-	[[ ${lines[1]} =~ runc\ list+ ]]
-
-	runc pause -h
-	[ "$status" -eq 0 ]
-	[[ ${lines[1]} =~ runc\ pause+ ]]
-
-	runc restore -h
-	[ "$status" -eq 0 ]
-	[[ ${lines[1]} =~ runc\ restore+ ]]
-
-	runc resume -h
-	[ "$status" -eq 0 ]
-	[[ ${lines[1]} =~ runc\ resume+ ]]
-
-	# We don't use runc_spec here, because we're just testing the help page.
-	runc spec -h
-	[ "$status" -eq 0 ]
-	[[ ${lines[1]} =~ runc\ spec+ ]]
-
-	runc start -h
-	[ "$status" -eq 0 ]
-	[[ ${lines[1]} =~ runc\ start+ ]]
-
-	runc run -h
-	[ "$status" -eq 0 ]
-	[[ ${lines[1]} =~ runc\ run+ ]]
-
-	runc state -h
-	[ "$status" -eq 0 ]
-	[[ ${lines[1]} =~ runc\ state+ ]]
-
-	runc update -h
-	[ "$status" -eq 0 ]
-	[[ ${lines[1]} =~ runc\ update+ ]]
-
+	for cmd in "${cmds[@]}"; do
+		for arg in "-h" "--help"; do
+			runc "$cmd" "$arg"
+			[ "$status" -eq 0 ]
+			[[ ${lines[0]} =~ NAME:+ ]]
+			[[ ${lines[1]} =~ $runc\ $cmd+ ]]
+		done
+	done
 }
 
 @test "runc foo -h" {
