@@ -34,8 +34,7 @@ func BenchmarkExecTrue(b *testing.B) {
 	}()
 	ok(b, err)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		exec := &libcontainer.Process{
 			Cwd:      "/",
 			Args:     []string{"/bin/true"},
@@ -101,8 +100,7 @@ func BenchmarkExecInBigEnv(b *testing.B) {
 		wantOut.WriteString(e + "\n")
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		buffers := newStdBuffers()
 		exec := &libcontainer.Process{
 			Cwd:    "/",

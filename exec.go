@@ -132,7 +132,7 @@ func getSubCgroupPaths(args []string) (map[string]string, error) {
 		// Split into controller:path.
 		if ctr, path, ok := strings.Cut(c, ":"); ok {
 			// There may be a few comma-separated controllers.
-			for _, ctrl := range strings.Split(ctr, ",") {
+			for ctrl := range strings.SplitSeq(ctr, ",") {
 				if ctrl == "" {
 					return nil, fmt.Errorf("invalid --cgroup argument: %s (empty <controller> prefix)", c)
 				}
