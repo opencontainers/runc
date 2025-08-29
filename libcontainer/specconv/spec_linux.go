@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -41,6 +42,14 @@ var (
 		flag  int
 	}
 	complexFlags map[string]func(*configs.Mount)
+	mpolModeMap  map[specs.MemoryPolicyModeType]uint
+	mpolModeFMap map[specs.MemoryPolicyFlagType]uint
+)
+
+const (
+	// maxNumaNode is the maximum NUMA node number supported.
+	// Must be large enough to cover what the kernel supports.
+	maxNumaNode = 4095
 )
 
 func initMaps() {
@@ -148,6 +157,22 @@ func initMaps() {
 				m.IDMapping.Recursive = true
 			},
 		}
+
+		mpolModeMap = map[specs.MemoryPolicyModeType]uint{
+			specs.MpolDefault:            0,
+			specs.MpolPreferred:          1,
+			specs.MpolBind:               2,
+			specs.MpolInterleave:         3,
+			specs.MpolLocal:              4,
+			specs.MpolPreferredMany:      5,
+			specs.MpolWeightedInterleave: 6,
+		}
+
+		mpolModeFMap = map[specs.MemoryPolicyFlagType]uint{
+			specs.MpolFStaticNodes:   1 << 15,
+			specs.MpolFRelativeNodes: 1 << 14,
+			specs.MpolFNumaBalancing: 1 << 13,
+		}
 	})
 }
 
@@ -179,6 +204,30 @@ func KnownMountOptions() []string {
 	}
 	for k := range extensionFlags {
 		res = append(res, k)
+	}
+	sort.Strings(res)
+	return res
+}
+
+// KnownMemoryPolicyModes returns the list of the known memory policy modes.
+// Used by `runc features`.
+func KnownMemoryPolicyModes() []string {
+	initMaps()
+	var res []string
+	for k := range mpolModeMap {
+		res = append(res, string(k))
+	}
+	sort.Strings(res)
+	return res
+}
+
+// KnownMemoryPolicyFlags returns the list of the known memory policy mode flags.
+// Used by `runc features`.
+func KnownMemoryPolicyFlags() []string {
+	initMaps()
+	var res []string
+	for k := range mpolModeFMap {
+		res = append(res, string(k))
 	}
 	sort.Strings(res)
 	return res
@@ -466,6 +515,28 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 				L3CacheSchema: spec.Linux.IntelRdt.L3CacheSchema,
 				MemBwSchema:   spec.Linux.IntelRdt.MemBwSchema,
 			}
+		}
+		if spec.Linux.MemoryPolicy != nil &&
+			(spec.Linux.MemoryPolicy.Mode != "" ||
+				spec.Linux.MemoryPolicy.Nodes != "" ||
+				len(spec.Linux.MemoryPolicy.Flags) > 0) {
+			var ok bool
+			specMp := spec.Linux.MemoryPolicy
+			confMp := &configs.LinuxMemoryPolicy{}
+			if confMp.Mode, ok = mpolModeMap[specMp.Mode]; !ok {
+				return nil, fmt.Errorf("invalid memory policy mode %q", specMp.Mode)
+			}
+			if confMp.Nodes, err = parseListSet(specMp.Nodes, 0, maxNumaNode); err != nil {
+				return nil, fmt.Errorf("invalid memory policy nodes %q: %w", specMp.Nodes, err)
+			}
+			for _, specFlag := range specMp.Flags {
+				confModeFlag, ok := mpolModeFMap[specFlag]
+				if !ok {
+					return nil, fmt.Errorf("invalid memory policy flag %q", specFlag)
+				}
+				confMp.Mode |= confModeFlag
+			}
+			config.MemoryPolicy = confMp
 		}
 		if spec.Linux.Personality != nil {
 			if len(spec.Linux.Personality.Flags) > 0 {
@@ -1133,6 +1204,50 @@ func parseMountOptions(options []string) *configs.Mount {
 		}
 	}
 	return &m
+}
+
+// parseListSet parses "list set" syntax ("0,61-63,2") into a list ([0, 61, 62, 63, 2]).
+func parseListSet(listSet string, minValue, maxValue int) ([]int, error) {
+	var result []int
+	parts := strings.Split(listSet, ",")
+	for _, part := range parts {
+		switch {
+		case part == "":
+			continue
+		case strings.Contains(part, "-"):
+			rangeParts := strings.Split(part, "-")
+			if len(rangeParts) != 2 {
+				return nil, fmt.Errorf("invalid range: %s", part)
+			}
+			start, err := strconv.Atoi(rangeParts[0])
+			if err != nil {
+				return nil, err
+			}
+			end, err := strconv.Atoi(rangeParts[1])
+			if err != nil {
+				return nil, err
+			}
+			if start > end {
+				return nil, fmt.Errorf("invalid range %s: start > end", part)
+			}
+			if start < minValue || end > maxValue {
+				return nil, fmt.Errorf("invalid range %s: out of range %d-%d", part, minValue, maxValue)
+			}
+			for i := start; i <= end; i++ {
+				result = append(result, i)
+			}
+		default:
+			num, err := strconv.Atoi(part)
+			if err != nil {
+				return nil, err
+			}
+			if num < minValue || num > maxValue {
+				return nil, fmt.Errorf("invalid value %d: out of range %d-%d", num, minValue, maxValue)
+			}
+			result = append(result, num)
+		}
+	}
+	return result, nil
 }
 
 func SetupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
