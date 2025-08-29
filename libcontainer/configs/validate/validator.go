@@ -10,7 +10,6 @@ import (
 
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	selinux "github.com/opencontainers/selinux/go-selinux"
 	"github.com/sirupsen/logrus"
@@ -283,18 +282,19 @@ func sysctl(config *configs.Config) error {
 
 func intelrdtCheck(config *configs.Config) error {
 	if config.IntelRdt != nil {
-		if !intelrdt.IsEnabled() {
+		if !intelRdt.isEnabled() {
 			return fmt.Errorf("intelRdt is specified in config, but Intel RDT is not enabled")
 		}
 
-		if config.IntelRdt.ClosID == "." || config.IntelRdt.ClosID == ".." || strings.Contains(config.IntelRdt.ClosID, "/") {
-			return fmt.Errorf("invalid intelRdt.ClosID %q", config.IntelRdt.ClosID)
+		switch clos := config.IntelRdt.ClosID; {
+		case clos == ".", clos == "..", len(clos) > 1 && strings.Contains(clos, "/"):
+			return fmt.Errorf("invalid intelRdt.ClosID %q", clos)
 		}
 
-		if !intelrdt.IsCATEnabled() && config.IntelRdt.L3CacheSchema != "" {
+		if !intelRdt.isCATEnabled() && config.IntelRdt.L3CacheSchema != "" {
 			return errors.New("intelRdt.l3CacheSchema is specified in config, but Intel RDT/CAT is not enabled")
 		}
-		if !intelrdt.IsMBAEnabled() && config.IntelRdt.MemBwSchema != "" {
+		if !intelRdt.isMBAEnabled() && config.IntelRdt.MemBwSchema != "" {
 			return errors.New("intelRdt.memBwSchema is specified in config, but Intel RDT/MBA is not enabled")
 		}
 	}
