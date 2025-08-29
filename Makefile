@@ -51,10 +51,15 @@ ifneq (,$(filter $(GOARCH),arm64 amd64))
 		LDFLAGS_STATIC := -linkmode external -extldflags -static-pie
 	endif
 endif
-# Enable static PIE binaries on supported platforms.
 GO_BUILD_STATIC := $(GO) build $(TRIMPATH) $(GO_BUILDMODE_STATIC) \
 	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
 	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS_STATIC) $(EXTRA_LDFLAGS)"
+
+# "static" just maps to runc with a different "go build" invocation. This lets
+# us avoid rebuilding if the sources haven't changed -- even with .PHONY.
+.PHONY: static
+static: export GO_BUILD=$(GO_BUILD_STATIC)
+static: runc
 
 GPG_KEYID ?= asarai@suse.de
 
@@ -67,14 +72,13 @@ ifneq (,$(filter $(BUILDTAGS),seccomp))
 seccompagent: export CGO_ENABLED=1
 endif
 
+GO_SRC := \
+  go.mod go.sum \
+  $(shell find . -type f -name '*.go' -or -name '*.c')
+
 .DEFAULT: runc
-
-.PHONY: runc
-runc: runc-bin
-
-.PHONY: runc-bin
-runc-bin:
-	$(GO_BUILD) -o runc .
+runc: $(GO_SRC)
+	$(GO_BUILD) -o $@ .
 
 .PHONY: all
 all: runc memfd-bind
@@ -100,13 +104,6 @@ clean:
 	rm -fr $(TESTBINDIR)
 	sudo rm -rf release
 	rm -rf man/man8
-
-.PHONY: static
-static: static-bin
-
-.PHONY: static-bin
-static-bin:
-	$(GO_BUILD_STATIC) -o runc .
 
 .PHONY: releaseall
 releaseall: RELEASE_ARGS := "-a 386 -a amd64 -a arm64 -a armel -a armhf -a ppc64le -a riscv64 -a s390x"
