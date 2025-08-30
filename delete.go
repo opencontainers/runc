@@ -5,24 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/urfave/cli"
-
-	"golang.org/x/sys/unix"
 )
-
-func killContainer(container *libcontainer.Container) error {
-	_ = container.Signal(unix.SIGKILL)
-	for range 100 {
-		time.Sleep(100 * time.Millisecond)
-		if err := container.Signal(unix.Signal(0)); err != nil {
-			return container.Destroy()
-		}
-	}
-	return errors.New("container init still running")
-}
 
 var deleteCommand = cli.Command{
 	Name:  "delete",
@@ -65,25 +51,27 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 			}
 			return err
 		}
-		// When --force is given, we kill all container processes and
-		// then destroy the container. This is done even for a stopped
-		// container, because (in case it does not have its own PID
-		// namespace) there may be some leftover processes in the
-		// container's cgroup.
-		if force {
-			return killContainer(container)
-		}
 		s, err := container.Status()
 		if err != nil {
 			return err
 		}
 		switch s {
 		case libcontainer.Stopped:
-			return container.Destroy()
+			// If the container is stopped, we can just destroy it.
 		case libcontainer.Created:
-			return killContainer(container)
+			if err := container.EnsureKilled(); err != nil {
+				return err
+			}
 		default:
-			return fmt.Errorf("cannot delete container %s that is not stopped: %s", id, s)
+			if !force {
+				return fmt.Errorf("cannot delete container %s that is not stopped: %s", id, s)
+			}
+			// When --force is given, we kill all container processes and
+			// then destroy the container.
+			if err := container.EnsureKilled(); err != nil {
+				return err
+			}
 		}
+		return container.Destroy()
 	},
 }
