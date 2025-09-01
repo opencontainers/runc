@@ -1,6 +1,8 @@
 ARG GO_VERSION=1.24
 ARG BATS_VERSION=v1.11.0
 ARG LIBSECCOMP_VERSION=2.5.6
+ARG SWTPM_VERSION=0.10.1
+ARG LIBTPMS_VERSION=0.10.0
 
 FROM golang:${GO_VERSION}-bookworm
 ARG DEBIAN_FRONTEND=noninteractive
@@ -36,6 +38,24 @@ RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
         gcc-powerpc64le-linux-gnu libc-dev-ppc64el-cross \
         gcc-s390x-linux-gnu libc-dev-s390x-cross \
         gcc-riscv64-linux-gnu libc-dev-riscv64-cross \
+    && apt-get install -y --no-install-recommends \
+        automake \
+        autoconf \
+        libtool \
+        libssl-dev \
+        dh-exec \
+    && apt-get install -y --no-install-recommends \
+        dh-autoreconf \
+        libtasn1-6-dev \
+        net-tools \
+        libgnutls28-dev \
+        libjson-glib-dev \
+        expect \
+        socat \
+        libseccomp-dev \
+        libfuse-dev \
+        libglib2.0-dev \
+        gnutls-bin \
     && apt-get clean \
     && rm -rf /var/cache/apt /var/lib/apt/lists/* /etc/apt/sources.list.d/*.list
 
@@ -62,6 +82,11 @@ RUN mkdir -p /opt/libseccomp \
 ENV LIBSECCOMP_VERSION=$LIBSECCOMP_VERSION
 ENV LD_LIBRARY_PATH=/opt/libseccomp/lib
 ENV PKG_CONFIG_PATH=/opt/libseccomp/lib/pkgconfig
+
+ARG SWTPM_VERSION
+ARG LIBTPMS_VERSION
+COPY script/swtpm.sh /tmp/script/
+RUN /tmp/script/swtpm.sh "$SWTPM_VERSION" "$LIBTPMS_VERSION"
 
 # Prevent the "fatal: detected dubious ownership in repository" git complain during build.
 RUN git config --global --add safe.directory /go/src/github.com/opencontainers/runc

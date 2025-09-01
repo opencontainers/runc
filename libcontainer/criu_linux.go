@@ -288,6 +288,10 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 	//               support for doing unprivileged dumps, but the setup of
 	//               rootless containers might make this complicated.
 
+	if len(c.config.VTPMs) > 0 {
+		return fmt.Errorf("Checkpointing with attached vTPM is not supported")
+	}
+
 	// We are relying on the CRIU version RPC which was introduced with CRIU 3.0.0
 	if err := c.checkCriuVersion(30000); err != nil {
 		return err
