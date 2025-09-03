@@ -6,11 +6,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.3.z]
 
+## [1.3.1] - 2025-09-05
+
+> この瓦礫の山でよぉ
+
 ### Fixed
  * Container processes will no longer inherit the CPU affinity of runc by
    default. Instead, the default CPU affinity of container processes will be
    the largest set of CPUs permitted by the container's cpuset cgroup and any
    other system restrictions (such as isolated CPUs). (#4041, #4815, #4858)
+ * Setting `linux.rootfsPropagation` to `shared` or `unbindable` now functions
+   properly. (#1755, #1815, #4724, #4789)
+ * Close seccomp agent connection to prevent resource leaks. (#4796, #4799)
+ * `runc delete` and `runc stop` can now correctly handle cases where `runc
+   create` was killed during setup. Previously it was possible for the
+   container to be in such a state that neither `runc stop` nor `runc delete`
+   would be unable to kill or delete the container. (#4534, #4645, #4757,
+   #4793)
+ * `runc update` will no longer clear intelRdt state information. (#4828,
+   #4833)
+ * CI: Fix exclusion rules and allow us to run jobs manually. (#4760, #4763)
+
+### Changed
+ * Improvements to the deprecation warnings as part of the
+   `github.com/opencontainers/cgroups` split. (#4784, #4788)
+ * Ignore the dmem controller in our cgroup tests, as systemd does not yet
+   support it. (#4806, #4811)
+ * `/proc/net/dev` is no longer included in the permitted procfs overmount
+   list. Its inclusion was almost certainly an error, and because `/proc/net`
+   is a symlink to `/proc/self/net`, overmounting this was almost certainly
+   never useful (and will be blocked by future kernel versions). (#4817, #4820)
+ * Simplify the `prepareCriuRestoreMounts` logic for checkpoint-restore.
+   (#4765, #4871)
+ * CI: Bump `golangci-lint` to v2.1. (#4747, #4754)
+ * CI: Switch to GitHub-hosted ARM runners. Thanks again to @alexellis for
+   supporting runc's ARM CI up until now. (#4844, #4856, #4866)
 
 ## [1.3.0] - 2025-04-30
 
@@ -1089,6 +1119,7 @@ implementation (libcontainer) is *not* covered by this policy.
 
 <!-- minor releases -->
 [Unreleased]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...HEAD
+[1.3.0]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...v1.3.0
 [1.2.0]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.1...v1.2.0
 [1.1.0]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...v1.1.0
 [1.0.0]: https://github.com/opencontainers/runc/releases/tag/v1.0.0
@@ -1131,7 +1162,7 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.2.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.2.0-rc.1
 
 <!-- 1.3.z patch releases -->
-[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.0...release-1.3
-[1.3.0]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...v1.3.0
+[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.1...release-1.3
+[1.3.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.3.1
 [1.3.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.1...v1.3.0-rc.2
 [1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
