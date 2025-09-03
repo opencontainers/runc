@@ -638,7 +638,15 @@ func (m *Manager) Set(container *configs.Config) error {
 		path := filepath.Join(m.GetPath(), "schemata")
 		for _, line := range append([]string{r.L3CacheSchema, r.MemBwSchema}, r.Schemata...) {
 			if line != "" {
-				if err := os.WriteFile(path, []byte(line+"\n"), 0o600); err != nil {
+				f, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0o600)
+				if err != nil {
+					return err
+				}
+				_, err = f.Write([]byte(line + "\n"))
+				if errc := f.Close(); errc != nil && err == nil {
+					err = errc
+				}
+				if err != nil {
 					return newLastCmdError(fmt.Errorf("intelrdt: unable to write %v: %w", line, err))
 				}
 			}

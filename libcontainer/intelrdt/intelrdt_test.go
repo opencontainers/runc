@@ -106,11 +106,10 @@ func TestIntelRdtSet(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			helper := NewIntelRdtTestUtil(t)
 			helper.config.IntelRdt = tc.config
-
-			helper.writeFileContents(map[string]string{
-				/* Common initial value for all test cases */
-				"schemata": "MB:0=100\nL3:0=ffff\nL2:0=ffffffff\n",
-			})
+			// Pre-create an empty schemata file
+			if err := os.WriteFile(filepath.Join(helper.IntelRdtPath, "schemata"), []byte{}, 0o600); err != nil {
+				t.Fatal(err)
+			}
 
 			intelrdt := newManager(helper.config, "", helper.IntelRdtPath)
 			if err := intelrdt.Set(helper.config); err != nil {
