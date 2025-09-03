@@ -326,16 +326,6 @@ func getIntelRdtParamString(path, file string) (string, error) {
 	return string(bytes.TrimSpace(contents)), nil
 }
 
-func writeFile(dir, file, data string) error {
-	if dir == "" {
-		return fmt.Errorf("no such directory for %s", file)
-	}
-	if err := os.WriteFile(filepath.Join(dir, file), []byte(data+"\n"), 0o600); err != nil {
-		return newLastCmdError(fmt.Errorf("intelrdt: unable to write %v: %w", data, err))
-	}
-	return nil
-}
-
 // Get the read-only L3 cache information
 func getL3CacheInfo() (*L3CacheInfo, error) {
 	l3CacheInfo := &L3CacheInfo{}
@@ -648,8 +638,16 @@ func (m *Manager) Set(container *configs.Config) error {
 		path := filepath.Join(m.GetPath(), "schemata")
 		for _, line := range append([]string{r.L3CacheSchema, r.MemBwSchema}, r.Schemata...) {
 			if line != "" {
-				if err := os.WriteFile(path, []byte(line+"\n"), 0o600); err != nil {
+				f, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0o600)
+				if err != nil {
+					return err
+				}
+				if _, err := f.Write([]byte(line + "\n")); err != nil {
+					_ = f.Close() // Ignore error, we can't do much about it.
 					return newLastCmdError(fmt.Errorf("intelrdt: unable to write %v: %w", line, err))
+				}
+				if err := f.Close(); err != nil {
+					return newLastCmdError(fmt.Errorf("intelrdt: failed to close file after writing %v: %w", line, err))
 				}
 			}
 		}
