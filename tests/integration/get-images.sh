@@ -49,50 +49,56 @@ fi
 case $arch in
 amd64)
 	# https://github.com/docker-library/busybox/tree/dist-amd64
-	# https://github.com/docker-library/busybox/tree/31d342ad033e27c18723a516a2274ab39547be27/stable/glibc
-	url="https://github.com/docker-library/busybox/raw/31d342ad033e27c18723a516a2274ab39547be27/stable/glibc/busybox.tar.xz"
+	# https://github.com/docker-library/busybox/tree/c9d396b13758b9ef013ff0ebc31b15e246ced4d2/latest/glibc/amd64
+	url="https://github.com/docker-library/busybox/raw/c9d396b13758b9ef013ff0ebc31b15e246ced4d2/latest/glibc/amd64/rootfs.tar.gz"
 	;;
 
 armv5)
 	# https://github.com/docker-library/busybox/tree/dist-arm32v5
-	# https://github.com/docker-library/busybox/tree/96ea82ea25565f78b50bd032d5768d64985d6e11/stable/glibc
-	url="https://github.com/docker-library/busybox/raw/96ea82ea25565f78b50bd032d5768d64985d6e11/stable/glibc/busybox.tar.xz"
+	# https://github.com/docker-library/busybox/tree/731a682974d050920dff0cf9547d41ad1f898ba4/latest/glibc/arm32v5
+	url="https://github.com/docker-library/busybox/raw/731a682974d050920dff0cf9547d41ad1f898ba4/latest/glibc/arm32v5/rootfs.tar.gz"
 	;;
 
 armv7)
 	# https://github.com/docker-library/busybox/tree/dist-arm32v7
-	# https://github.com/docker-library/busybox/tree/5cb6c347469e86e4468e5e248de751b3598bb577/stable/glibc
-	url="https://github.com/docker-library/busybox/raw/5cb6c347469e86e4468e5e248de751b3598bb577/stable/glibc/busybox.tar.xz"
+	# https://github.com/docker-library/busybox/tree/f51cc9054cc8eb2996a5b48bf4364997c0c3ab93/latest/glibc/arm32v7
+	url="https://github.com/docker-library/busybox/raw/f51cc9054cc8eb2996a5b48bf4364997c0c3ab93/latest/glibc/arm32v7/rootfs.tar.gz"
 	;;
 
 arm64)
 	# https://github.com/docker-library/busybox/tree/dist-arm64v8
-	# https://github.com/docker-library/busybox/tree/94c664b5ca464546266bce54be0082874a44c7b2/stable/glibc
-	url="https://github.com/docker-library/busybox/raw/94c664b5ca464546266bce54be0082874a44c7b2/stable/glibc/busybox.tar.xz"
+	# https://github.com/docker-library/busybox/tree/ef09fbe6f4c562e34bb67a0ba372702018eaccd4/latest/glibc/arm64v8
+	url="https://github.com/docker-library/busybox/raw/ef09fbe6f4c562e34bb67a0ba372702018eaccd4/latest/glibc/arm64v8/rootfs.tar.gz"
 	;;
 
 386)
 	# https://github.com/docker-library/busybox/tree/dist-i386
-	# https://github.com/docker-library/busybox/tree/461a473aef31b7726ea99909a24551bf44565c05/stable/glibc
-	url="https://github.com/docker-library/busybox/raw/461a473aef31b7726ea99909a24551bf44565c05/stable/glibc/busybox.tar.xz"
+	# https://github.com/docker-library/busybox/tree/07b656d2484ca0788433469dbfce9da6c55658b2/latest/glibc/i386
+	url="https://github.com/docker-library/busybox/raw/07b656d2484ca0788433469dbfce9da6c55658b2/latest/glibc/i386/rootfs.tar.gz"
 	;;
 
 mips64le)
 	# https://github.com/docker-library/busybox/tree/dist-mips64le
-	# https://github.com/docker-library/busybox/tree/47f73f7c735dcd6760a976bfe0012d251b6ef0a9/stable/glibc
-	url="https://github.com/docker-library/busybox/raw/47f73f7c735dcd6760a976bfe0012d251b6ef0a9/stable/glibc/busybox.tar.xz"
+	# https://github.com/docker-library/busybox/tree/8985b768384fd6f3ed696734e7e4db34b031ee2f/latest/glibc/mips64le
+	url="https://github.com/docker-library/busybox/raw/8985b768384fd6f3ed696734e7e4db34b031ee2f/latest/glibc/mips64le/rootfs.tar.gz"
 	;;
 
 ppc64le)
 	# https://github.com/docker-library/busybox/tree/dist-ppc64le
-	# https://github.com/docker-library/busybox/tree/9ca13bc214717966383cf97e08606b444b7300e4/stable/glibc
-	url="https://github.com/docker-library/busybox/raw/9ca13bc214717966383cf97e08606b444b7300e4/stable/glibc/busybox.tar.xz"
+	# https://github.com/docker-library/busybox/tree/3bbb15b7efd6d99a73690516b4499b6642f97ef5/latest/glibc/ppc64le
+	url="https://github.com/docker-library/busybox/raw/83c2287084a6f001a67d97fdfa23497c75520f2a/latest/glibc/ppc64le/rootfs.tar.gz" # TODO THIS IS A HACKED BUILD THAT SHOULD HAVE DEBUG SYMBOLS (`busybox_unstripped`) DO NOT MERGE
+	;;
+
+riscv64)
+	# https://github.com/docker-library/busybox/tree/dist-riscv64
+	# https://github.com/docker-library/busybox/tree/0aa8d9691f136754b8dab5af01429b32dfa36490/latest/glibc/riscv64
+	url="https://github.com/docker-library/busybox/raw/0aa8d9691f136754b8dab5af01429b32dfa36490/latest/glibc/riscv64/rootfs.tar.gz"
 	;;
 
 s390x)
 	# https://github.com/docker-library/busybox/tree/dist-s390x
-	# https://github.com/docker-library/busybox/tree/a03814d21bcf97767121bb9422a742ec237a09e2/stable/glibc
-	url="https://github.com/docker-library/busybox/raw/a03814d21bcf97767121bb9422a742ec237a09e2/stable/glibc/busybox.tar.xz"
+	# https://github.com/docker-library/busybox/tree/221f9e80b411fcfea795ca453cb5d2f9ef24aeee/latest/glibc/s390x
+	url="https://github.com/docker-library/busybox/raw/221f9e80b411fcfea795ca453cb5d2f9ef24aeee/latest/glibc/s390x/rootfs.tar.gz"
 	;;
 
 *)
