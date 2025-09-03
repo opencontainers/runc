@@ -48,7 +48,7 @@ jobs:
         run: |
           golangci-lint run --config .golangci-extra.yml --new-from-rev=HEAD~1
 
-  go-fix:
+  modernize:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -64,6 +64,10 @@ jobs:
       - name: run go fix
         run: |
           go fix ./...
+          git diff --exit-code
+      - name: run modernize
+        run: |
+          go run golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest -fix -test ./...
           git diff --exit-code
 
   compile-buildtags:
@@ -260,9 +264,9 @@ jobs:
       - compile-buildtags
       - deps
       - get-images
-      - go-fix
       - keyring
       - lint
+      - modernize
       - release
       - shellcheck
       - shfmt
