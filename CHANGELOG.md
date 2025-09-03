@@ -6,8 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Breaking
+### libcontainer API
+- The deprecated `libcontainer/user` package has been removed; use
+  `github.com/moby/sys/user` instead. (#3999, #4617)
 
+### Breaking
 - runc update no longer allows `--l3-cache-schema` or `--mem-bw-schema` if
   `linux.intelRdt` was not present in the container’s original `config.json`.
 
