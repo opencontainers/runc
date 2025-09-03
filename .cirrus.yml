@@ -11,9 +11,10 @@ task:
   env:
     HOME: /root
     CIRRUS_WORKING_DIR: /home/runc
-    GO_VER_PREFIX: "1.24."
+    GO_VER_PREFIX: "1.25."
     BATS_VERSION: "v1.11.0"
     RPMS: gcc git-core iptables jq glibc-static libseccomp-devel make criu fuse-sshfs container-selinux
+    GOEXPERIMENT: jsonv2
     # yamllint disable rule:key-duplicates
     matrix:
       DISTRO: almalinux-8
