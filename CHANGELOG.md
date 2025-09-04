@@ -6,9 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0-rc.1] - 2025-09-05
+
+> おめェもボスになったんだろぉ？
+
+This version of runc requires Go 1.24 to build.
+
 ### libcontainer API
 - The deprecated `libcontainer/user` package has been removed; use
   `github.com/moby/sys/user` instead. (#3999, #4617)
+- `libcontainer/apparmor` variables containing public functions have been
+  switched to wrapper functions. (#4725)
 
 ### Breaking
 - runc update no longer allows `--l3-cache-schema` or `--mem-bw-schema` if
@@ -22,12 +30,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   create a new CLOS but fail to apply the schema, move only the init process
   (omitting children) to the new group, and leave the CLOS orphaned after
   container exit. (#4827)
+- The deprecated `--criu` flag has been removed entirely, instead the `criu`
+  binary in `$PATH` will be used. (#4722)
+
+### Added
+ * runc now supports the `linux.netDevices` field to allow for devices to be
+   moved into container network namespaces seamlessly. (#4538)
+ * `runc update` now supports per-device weight and iops cgroup limits. (#4775)
+ * intel rdt: allow explicit assignment to root CLOS. (#4854)
 
 ### Fixed
  * Container processes will no longer inherit the CPU affinity of runc by
    default. Instead, the default CPU affinity of container processes will be
    the largest set of CPUs permitted by the container's cpuset cgroup and any
    other system restrictions (such as isolated CPUs). (#4041, #4815, #4858)
+ * Use `chown(uid, -1)` when configuring the console inode, to avoid issues
+   with unmapped GIDs. (#4679)
+ * Add logging for the cases where failed keyring operations are ignored during
+   setup. (#4676)
+ * Optimise `runc exec` by avoiding calling into SELinux's `Set.*Label` when
+   `processLabel` is not set. (#4354)
+ * Fix mips64 builds for remap-rootfs. (#4723)
+ * Setting `linux.rootfsPropagation` to `shared` or `unbindable` now functions
+   properly. (#1755, #1815, #4724)
+ * runc delete and runc stop can now correctly handle cases where runc
+   create was killed during setup. Previously it was possible for the
+   container to be in such a state that neither runc stop nor runc
+   delete would be unable to kill or delete the container. (#4534,
+   #4645, #4757)
+ * Close seccomp agent connection to prevent resource leaks. (#4796)
+ * `runc update` will no longer clear intelRdt state information. (#4828)
+ * runc will now error out earlier if intelRdt is not enabled. (#4829)
+ * Improve filesystem operations within intelRdt manager. (#4840, #4831)
+ * Resolve a certain race between `runc create` and `runc delete` that would
+   previously result in spurious errors. (#4735)
+ * CI: skip bpf tests on misbehaving udev systems. (#4825)
+
+### Changes
+ * Use Go's built-in `pidfd_send_signal(2)` support when available. (#4666)
+ * Make `state.json` 25% smaller. (#4685)
+ * Migrate to Go 1.22+ features. (#4687, #4703)
+ * Provide private wrappers around common syscalls to make `-EINTR` handling
+   less cumbersome for the rest of runc. (#4697)
+ * Ignore the dmem controller in our cgroup tests, as systemd does not
+   yet support it. (#4806)
+ * `/proc/net/dev` is no longer included in the permitted procfs overmount
+   list. Its inclusion was almost certainly an error, and because
+   `/proc/net` is a symlink to `/proc/self/net`, overmounting this was
+   almost certainly never useful (and will be blocked by future kernel
+   versions). (#4817)
+ * Simplify the prepareCriuRestoreMounts logic for checkpoint-restore.
+   (#4765)
+ * Bump minimum Go version to 1.24. (#4851)
+ * CI: migrate virtualised Fedora tests from Vagrant + Cirrus to Lima + GHA. We
+   still use Cirrus for the AlmaLinux tests, since they can be run without
+   virtualisation. (#4664)
+ * CI: install fewer dependencies (#4671), bump shellcheck and bats versions
+   (#4670).
+ * CI: remove `toolchain` from `go.mod` and add a CI check to make sure it's
+   never added accidentally. (#4717, #4721)
+ * CI: do not allow `exclude` or `replace` directives in `go.mod`, to make sure
+   that `go install` doesn't get accidentally broken. (#4750)
+ * CI: fix exclusion rules and allow us to run jobs manually. (#4760)
+ * CI: Switch to GitHub-hosted ARM runners. Thanks again to @alexellis
+   for supporting runc's ARM CI up until now. (#4844, #4856)
+ * Various dependency updates. (#4659, #4658, #4662, #4663, #4689, #4694,
+   #4702, #4701, #4707, #4710, #4746, #4756, #4751, #4758, #4764, #4768, #4779,
+   #4783, #4785, #4801, #4808, #4803, #4839, #4846, #4847, #4845, #4850, #4861,
+   #4860)
 
 ## [1.3.1] - 2025-09-05
 
@@ -1231,3 +1301,6 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.3.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.3.1
 [1.3.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.1...v1.3.0-rc.2
 [1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
+
+<!-- 1.4.z patch releases -->
+[1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1
