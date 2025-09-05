@@ -4,7 +4,7 @@ This file documents all notable changes made to this project since runc 1.0.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased 1.4.z]
 
 ## [1.4.0-rc.1] - 2025-09-05
 
@@ -1303,4 +1303,5 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
 
 <!-- 1.4.z patch releases -->
+[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.1...release-1.4
 [1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1
