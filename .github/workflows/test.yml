@@ -96,7 +96,7 @@ jobs:
         rm -rf ~/criu
 
     - name: install go ${{ matrix.go-version }}
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version: ${{ matrix.go-version }}
         check-latest: true
@@ -166,7 +166,7 @@ jobs:
         sudo apt -qy install libseccomp-dev libseccomp-dev:i386 gcc-multilib libgcc-s1:i386 criu
 
     - name: install go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version: 1.x # Latest stable
         check-latest: true
