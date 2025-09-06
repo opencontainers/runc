@@ -214,6 +214,9 @@ type Config struct {
 	// to limit the resources (e.g., L3 cache, memory bandwidth) the container has available
 	IntelRdt *IntelRdt `json:"intel_rdt,omitempty"`
 
+	// MemoryPolicy specifies NUMA memory policy for the container.
+	MemoryPolicy *LinuxMemoryPolicy `json:"memoryPolicy,omitempty"`
+
 	// RootlessEUID is set when the runc was launched with non-zero EUID.
 	// Note that RootlessEUID is set to false when launched with EUID=0 in userns.
 	// When RootlessEUID is set, runc creates a new userns for the container.
