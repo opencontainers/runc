@@ -335,10 +335,23 @@ func TestSeccompMultipleConditionSameArgDeniesStdout(t *testing.T) {
 		},
 	}
 
-	buffers := runContainerOk(t, config, "ls", "/")
+	buffers, exitCode, err := runContainer(t, config, "echo", "hey")
 	// Verify that nothing was printed
-	if len(buffers.Stdout.String()) != 0 {
-		t.Fatalf("Something was written to stdout, write call succeeded!\n")
+	if out := buffers.Stdout.String(); out != "" {
+		t.Fatalf("want empty stdout, got %q", out)
+	}
+	if outErr := buffers.Stderr.String(); outErr != "" {
+		t.Fatalf("want empty stderr, got %q", outErr)
+	}
+	if exitCode == 0 {
+		t.Fatalf("want non-zero exit code, got 0")
+	}
+	if err == nil {
+		t.Fatalf("want error, got nil")
+	}
+	// TODO for some reason, exitCode from "runContainer" is -1 when it should probably be 1?
+	if errStr := err.Error(); errStr != "exit status 1" {
+		t.Fatalf("want exit status 1, got %q", errStr)
 	}
 }
 
