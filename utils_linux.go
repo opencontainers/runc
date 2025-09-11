@@ -8,8 +8,12 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"syscall"
 
 	"github.com/coreos/go-systemd/v22/activation"
+	"github.com/moby/sys/userns"
+	"github.com/opencontainers/runc/libcontainer/vtpm"
+	vtpmhelper "github.com/opencontainers/runc/libcontainer/vtpm/vtpm-helper"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	selinux "github.com/opencontainers/selinux/go-selinux"
 	"github.com/sirupsen/logrus"
@@ -179,7 +183,7 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	return os.Rename(tmpName, path)
 }
 
-func createContainer(context *cli.Context, id string, spec *specs.Spec) (*libcontainer.Container, error) {
+func createContainer(context *cli.Context, id string, spec *specs.Spec, vtpms []*vtpm.VTPM) (*libcontainer.Container, error) {
 	rootlessCg, err := shouldUseRootlessCgroupManager(context)
 	if err != nil {
 		return nil, err
@@ -192,7 +196,13 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (*libcon
 		Spec:             spec,
 		RootlessEUID:     os.Geteuid() != 0,
 		RootlessCgroups:  rootlessCg,
+		VTPMs:            vtpms,
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	err = setHostDevsOwner(config)
 	if err != nil {
 		return nil, err
 	}
@@ -378,7 +388,17 @@ func startContainer(context *cli.Context, action CtAct, criuOpts *libcontainer.C
 		notifySocket.setupSpec(spec)
 	}
 
-	container, err := createContainer(context, id, spec)
+	vtpms, err := createVTPMs(context.GlobalString("root"), id, spec)
+	if err != nil {
+		return -1, err
+	}
+	defer func() {
+		if err != nil {
+			destroyVTPMs(vtpms)
+		}
+	}()
+
+	container, err := createContainer(context, id, spec, vtpms)
 	if err != nil {
 		return -1, err
 	}
@@ -449,4 +469,156 @@ func maybeLogCgroupWarning(op string, err error) {
 	if errors.Is(err, fs.ErrPermission) {
 		logrus.Warn("runc " + op + " failure might be caused by lack of full access to cgroups")
 	}
+}
+
+// addVTPMDevice adds a device and cgroup entry to the spec
+func addVTPMDevice(spec *specs.Spec, devpath string, major, minor uint32) {
+	var filemode os.FileMode = 0600
+
+	device := specs.LinuxDevice{
+		Path:     devpath,
+		Type:     "c",
+		Major:    int64(major),
+		Minor:    int64(minor),
+		FileMode: &filemode,
+	}
+	spec.Linux.Devices = append(spec.Linux.Devices, device)
+
+	major_p := new(int64)
+	*major_p = int64(major)
+	minor_p := new(int64)
+	*minor_p = int64(minor)
+
+	ld := &specs.LinuxDeviceCgroup{
+		Allow:  true,
+		Type:   "c",
+		Major:  major_p,
+		Minor:  minor_p,
+		Access: "rwm",
+	}
+	spec.Linux.Resources.Devices = append(spec.Linux.Resources.Devices, *ld)
+}
+
+func ContainsUserNamespace(namespaces []specs.LinuxNamespace, userNs specs.LinuxNamespaceType) bool {
+	for _, ns := range namespaces {
+		if ns.Type == userNs {
+			return true
+		}
+	}
+	return false
+}
+
+func createVTPMs(root, containerID string, spec *specs.Spec) ([]*vtpm.VTPM, error) {
+	var vtpms []*vtpm.VTPM
+	type vtpmLinuxDevice struct {
+		devPath string
+		major   uint32
+		minor   uint32
+	}
+	var devices []vtpmLinuxDevice
+
+	r := spec.Linux.Resources
+	if r == nil {
+		return vtpms, nil
+	}
+
+	err := vtpmhelper.CheckVTPMParams(r.VTPMs)
+	if err != nil {
+		if vtpmhelper.CanIgnoreVTPMErrors() {
+			logrus.Errorf("createVTPMs has an error: %s", err)
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	for ind, vtpmSpec := range r.VTPMs {
+		vtpm, device, err := func(vtpmSpec specs.LinuxVTPM) (*vtpm.VTPM, vtpmLinuxDevice, error) {
+			var major uint32
+			var minor uint32
+			var fileInfo os.FileInfo
+			var err error
+			var vtpm *vtpm.VTPM
+			containerVTPMName := vtpmSpec.VTPMName
+
+			// Several containers can have vtpms on the same devpath that's why we need to create unique host path.
+			vtpmSpec.VTPMName = vtpmhelper.GenerateDeviceHostPathName(root, containerID, containerVTPMName)
+			hostdev := "/dev/tpm" + vtpmSpec.VTPMName
+
+			if fileInfo, err = os.Lstat(hostdev); err != nil && os.IsNotExist(err) {
+				vtpm, err = vtpmhelper.CreateVTPM(spec, &vtpmSpec)
+				if err != nil {
+					return nil, vtpmLinuxDevice{}, fmt.Errorf("createVTPMs has an error while create %d VTPM device: %w", ind, err)
+				}
+			} else if err != nil {
+				return nil, vtpmLinuxDevice{}, fmt.Errorf("createVTPMs has an error while checking dev path %s: %s", hostdev, err)
+			}
+
+			fileInfo, err = os.Lstat(hostdev)
+			if err != nil {
+				return vtpm, vtpmLinuxDevice{}, fmt.Errorf("createVTPMs has an error while checking dev path %s: %s", hostdev, err)
+			}
+
+			stat_t, ok := fileInfo.Sys().(*syscall.Stat_t)
+			if !ok {
+				return vtpm, vtpmLinuxDevice{}, fmt.Errorf("createVTPMs has an error while checking info type for device %s: %w", hostdev, err)
+			}
+
+			devNumber := stat_t.Rdev
+			major = unix.Major(devNumber)
+			minor = unix.Minor(devNumber)
+
+			devpath := "/dev/tpm" + containerVTPMName
+			// We switch to the created device name because in runc's init we will use bind command instead mknod
+			if userns.RunningInUserNS() || spec.Linux != nil && ContainsUserNamespace(spec.Linux.Namespaces, specs.UserNamespace) {
+				devpath = hostdev
+			}
+
+			device := vtpmLinuxDevice{
+				devPath: devpath,
+				major:   major,
+				minor:   minor,
+			}
+			return vtpm, device, nil
+		}(vtpmSpec)
+
+		if vtpm != nil {
+			vtpms = append(vtpms, vtpm)
+		}
+		if err != nil {
+			if vtpmhelper.CanIgnoreVTPMErrors() {
+				logrus.Error(err)
+				continue
+			}
+			destroyVTPMs(vtpms)
+			return nil, err
+		}
+		devices = append(devices, device)
+	}
+	for _, device := range devices {
+		addVTPMDevice(spec, device.devPath, device.major, device.minor)
+	}
+
+	return vtpms, nil
+}
+
+func destroyVTPMs(vtpms []*vtpm.VTPM) {
+	if len(vtpms) > 0 {
+		vtpmhelper.DestroyVTPMs(vtpms)
+	}
+}
+
+func setVTPMHostDevsOwner(config *configs.Config) error {
+	rootUID, err := config.HostRootUID()
+	if err != nil {
+		return err
+	}
+	rootGID, err := config.HostRootGID()
+	if err != nil {
+		return err
+	}
+	return vtpmhelper.SetVTPMHostDevsOwner(config, rootUID, rootGID)
+}
+
+func setHostDevsOwner(config *configs.Config) error {
+	return setVTPMHostDevsOwner(config)
 }

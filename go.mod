@@ -9,6 +9,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.4.1
 	github.com/docker/go-units v0.5.0
 	github.com/godbus/dbus/v5 v5.1.0
+	github.com/google/go-tpm v0.0.0-00010101000000-000000000000
 	github.com/moby/sys/capability v0.4.0
 	github.com/moby/sys/mountinfo v0.7.2
 	github.com/moby/sys/user v0.4.0
@@ -32,3 +33,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 )
+
+replace github.com/google/go-tpm => github.com/everzakov/go-tpm v0.0.0-20250815102554-13e640365049
+
+replace github.com/opencontainers/runtime-spec => github.com/everzakov/runtime-spec v0.0.0-20250816064520-f0885e035161
