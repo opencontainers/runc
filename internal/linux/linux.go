@@ -2,6 +2,7 @@ package linux
 
 import (
 	"os"
+	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
@@ -71,4 +72,29 @@ func Sendmsg(fd int, p, oob []byte, to unix.Sockaddr, flags int) error {
 		return unix.Sendmsg(fd, p, oob, to, flags)
 	})
 	return os.NewSyscallError("sendmsg", err)
+}
+
+func bitmaskFromInts(bits []int) []uint64 {
+	maxBit := 0
+	for _, bit := range bits {
+		if bit > maxBit {
+			maxBit = bit
+		}
+	}
+	mask := make([]uint64, (maxBit/64)+1)
+	for _, bit := range bits {
+		mask[bit/64] |= (1 << (bit % 64))
+	}
+	return mask
+}
+
+// SetMempolicy wraps set_mempolicy.
+func SetMempolicy(mode uint, nodes []int) error {
+	nodemask := bitmaskFromInts(nodes)
+	nodemaskPtr := unsafe.Pointer(&nodemask[0])
+	_, _, errno := unix.Syscall(unix.SYS_SET_MEMPOLICY, uintptr(mode), uintptr(nodemaskPtr), uintptr(len(nodemask)*64))
+	if errno != 0 {
+		return os.NewSyscallError("set_mempolicy", errno)
+	}
+	return nil
 }
