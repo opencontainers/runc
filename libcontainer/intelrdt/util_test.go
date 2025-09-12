@@ -42,11 +42,9 @@ func NewIntelRdtTestUtil(t *testing.T) *intelRdtTestUtil {
 }
 
 // Write the specified contents on the mock of the specified Intel RDT "resource control" files
-func (c *intelRdtTestUtil) writeFileContents(fileContents map[string]string) {
-	for file, contents := range fileContents {
-		err := writeFile(c.IntelRdtPath, file, contents)
-		if err != nil {
-			c.t.Fatal(err)
-		}
+func (c *intelRdtTestUtil) writeFile(file, contents string) {
+	err := os.WriteFile(filepath.Join(c.IntelRdtPath, file), []byte(contents), 0o600)
+	if err != nil {
+		c.t.Fatal(err)
 	}
 }
