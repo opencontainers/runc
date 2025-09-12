@@ -274,6 +274,30 @@ func sysctl(config *configs.Config) error {
 				return fmt.Errorf("sysctl %q is not allowed as it conflicts with the OCI %q field", s, "hostname")
 			}
 		}
+
+		if strings.HasPrefix(s, "user.") {
+
+			// while it is technically true that a non-userns
+			// container can write to /proc/sys/user on behalf of
+			// the init_user_ns, it was not previously supported,
+			// and doesn't guarantee that someone else spawns a
+			// different container and writes there, changing the
+			// values. in particular, setting something like
+			// max_user_namespaces to non-zero could be a vector to
+			// use 0-days where the admin had previously disabled
+			// them.
+			//
+			// additionally, this setting affects other host
+			// processes that are not container related.
+			//
+			// so let's refuse this unless we know for sure it
+			// won't touch anything else.
+			if !config.Namespaces.Contains(configs.NEWUSER) {
+				return fmt.Errorf("setting ucounts without a user namespace not allowed: %v", s)
+			}
+			continue
+		}
+
 		return fmt.Errorf("sysctl %q is not in a separate kernel namespace", s)
 	}
 
