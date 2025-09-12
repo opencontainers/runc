@@ -59,6 +59,7 @@ function exec_check_label() {
 	runc run -d --console-socket "$CONSOLE_SOCKET" tst
 	[ "$status" -eq 0 ]
 
+	runc exec tst sh -cx "/bin/$HELPER"
 	runc exec tst "/bin/$HELPER"
 	[ "$status" -eq 0 ]
 	# Key name is _ses.$CONTAINER_NAME.
