@@ -362,7 +362,7 @@ convert_hugetlb_size() {
 
 	set_cgroups_path
 	update_config ' .linux.resources.unified |= {
-				"memory.max": "20484096",
+				"memory.max": "20512768",
 				"memory.swap.max": "20971520"
 			}'
 
@@ -373,10 +373,10 @@ convert_hugetlb_size() {
 	[ "$status" -eq 0 ]
 	echo "$output"
 
-	echo "$output" | grep -q '^memory.max:20484096$'
+	echo "$output" | grep -q '^memory.max:20512768$'
 	echo "$output" | grep -q '^memory.swap.max:20971520$'
 
-	check_systemd_value "MemoryMax" 20484096
+	check_systemd_value "MemoryMax" 20512768
 	check_systemd_value "MemorySwapMax" 20971520
 }
 
