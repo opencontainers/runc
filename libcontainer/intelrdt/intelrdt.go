@@ -326,16 +326,6 @@ func getIntelRdtParamString(path, file string) (string, error) {
 	return string(bytes.TrimSpace(contents)), nil
 }
 
-func writeFile(dir, file, data string) error {
-	if dir == "" {
-		return fmt.Errorf("no such directory for %s", file)
-	}
-	if err := os.WriteFile(filepath.Join(dir, file), []byte(data+"\n"), 0o600); err != nil {
-		return newLastCmdError(fmt.Errorf("intelrdt: unable to write %v: %w", data, err))
-	}
-	return nil
-}
-
 // Get the read-only L3 cache information
 func getL3CacheInfo() (*L3CacheInfo, error) {
 	l3CacheInfo := &L3CacheInfo{}
@@ -462,11 +452,11 @@ func (m *Manager) Apply(pid int) (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.config.IntelRdt.ClosID != "" && m.config.IntelRdt.L3CacheSchema == "" && m.config.IntelRdt.MemBwSchema == "" {
+	if m.config.IntelRdt.ClosID != "" && m.config.IntelRdt.L3CacheSchema == "" && m.config.IntelRdt.MemBwSchema == "" && len(m.config.IntelRdt.Schemata) == 0 {
 		// Check that the CLOS exists, i.e. it has been pre-configured to
 		// conform with the runtime spec
 		if _, err := os.Stat(path); err != nil {
-			return fmt.Errorf("clos dir not accessible (must be pre-created when l3CacheSchema and memBwSchema are empty): %w", err)
+			return fmt.Errorf("clos dir not accessible (must be pre-created when schemata, l3CacheSchema and memBwSchema are empty): %w", err)
 		}
 	}
 
@@ -533,6 +523,8 @@ func (m *Manager) GetStats() (*Stats, error) {
 		return nil, err
 	}
 	schemaStrings := strings.Split(tmpStrings, "\n")
+
+	stats.Schemata = schemaStrings
 
 	if IsCATEnabled() {
 		// The read-only L3 cache information
@@ -637,35 +629,24 @@ func (m *Manager) Set(container *configs.Config) error {
 	// For example, on a two-socket machine, the schema line could be
 	// "MB:0=5000;1=7000" which means 5000 MBps memory bandwidth limit on
 	// socket 0 and 7000 MBps memory bandwidth limit on socket 1.
-	if container.IntelRdt != nil {
-		path := m.GetPath()
-		l3CacheSchema := container.IntelRdt.L3CacheSchema
-		memBwSchema := container.IntelRdt.MemBwSchema
-
+	if r := container.IntelRdt; r != nil {
 		// TODO: verify that l3CacheSchema and/or memBwSchema match the
 		// existing schemata if ClosID has been specified. This is a more
 		// involved than reading the file and doing plain string comparison as
 		// the value written in does not necessarily match what gets read out
 		// (leading zeros, cache id ordering etc).
-
-		// Write a single joint schema string to schemata file
-		if l3CacheSchema != "" && memBwSchema != "" {
-			if err := writeFile(path, "schemata", l3CacheSchema+"\n"+memBwSchema); err != nil {
-				return err
+		var schemata strings.Builder
+		for _, s := range append([]string{r.L3CacheSchema, r.MemBwSchema}, r.Schemata...) {
+			if s != "" {
+				schemata.WriteString(s)
+				schemata.WriteString("\n")
 			}
 		}
 
-		// Write only L3 cache schema string to schemata file
-		if l3CacheSchema != "" && memBwSchema == "" {
-			if err := writeFile(path, "schemata", l3CacheSchema); err != nil {
-				return err
-			}
-		}
-
-		// Write only memory bandwidth schema string to schemata file
-		if l3CacheSchema == "" && memBwSchema != "" {
-			if err := writeFile(path, "schemata", memBwSchema); err != nil {
-				return err
+		if schemata.Len() > 0 {
+			path := filepath.Join(m.GetPath(), "schemata")
+			if err := os.WriteFile(path, []byte(schemata.String()), 0o600); err != nil {
+				return newLastCmdError(fmt.Errorf("intelrdt: unable to write %q: %w", schemata.String(), err))
 			}
 		}
 	}

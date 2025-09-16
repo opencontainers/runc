@@ -40,13 +40,3 @@ func NewIntelRdtTestUtil(t *testing.T) *intelRdtTestUtil {
 	}
 	return &intelRdtTestUtil{config: config, IntelRdtPath: testIntelRdtPath, t: t}
 }
-
-// Write the specified contents on the mock of the specified Intel RDT "resource control" files
-func (c *intelRdtTestUtil) writeFileContents(fileContents map[string]string) {
-	for file, contents := range fileContents {
-		err := writeFile(c.IntelRdtPath, file, contents)
-		if err != nil {
-			c.t.Fatal(err)
-		}
-	}
-}
