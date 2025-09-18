@@ -36,6 +36,10 @@ github.com/docker/go-units
 # github.com/godbus/dbus/v5 v5.1.0
 ## explicit; go 1.12
 github.com/godbus/dbus/v5
+# github.com/landlock-lsm/go-landlock v0.0.0-20250303204525-1544bccde3a3
+## explicit; go 1.18
+github.com/landlock-lsm/go-landlock/landlock
+github.com/landlock-lsm/go-landlock/landlock/syscall
 # github.com/moby/sys/capability v0.4.0
 ## explicit; go 1.21
 github.com/moby/sys/capability
@@ -127,3 +131,6 @@ google.golang.org/protobuf/reflect/protoreflect
 google.golang.org/protobuf/reflect/protoregistry
 google.golang.org/protobuf/runtime/protoiface
 google.golang.org/protobuf/runtime/protoimpl
+# kernel.org/pub/linux/libs/security/libcap/psx v1.2.70
+## explicit; go 1.11
+kernel.org/pub/linux/libs/security/libcap/psx
