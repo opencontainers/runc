@@ -15,14 +15,14 @@ import (
 type intelRdtTestUtil struct {
 	config *configs.Config
 
-	// Path to the mock Intel RDT "resource control" filesystem directory
+	// Path to the mock pre-existing CLOS (or resctrl root if no CLOS is specified)
 	IntelRdtPath string
 
 	t *testing.T
 }
 
-// Creates a new test util
-func NewIntelRdtTestUtil(t *testing.T) *intelRdtTestUtil {
+// Creates a new test util. If mockClosName is non-empty, a mock CLOS with that name will be created.
+func NewIntelRdtTestUtil(t *testing.T, mockClosName string) *intelRdtTestUtil {
 	config := &configs.Config{
 		IntelRdt: &configs.IntelRdt{},
 	}
@@ -32,11 +32,12 @@ func NewIntelRdtTestUtil(t *testing.T) *intelRdtTestUtil {
 	// Make sure Root() won't even try to parse mountinfo.
 	rootOnce.Do(func() {})
 
-	testIntelRdtPath := filepath.Join(intelRdtRoot, "resctrl")
+	testIntelRdtPath := filepath.Join(intelRdtRoot, mockClosName)
 
-	// Ensure the full mock Intel RDT "resource control" filesystem path exists
-	if err := os.MkdirAll(testIntelRdtPath, 0o755); err != nil {
+	// Ensure the mocked CLOS exists
+	if err := os.MkdirAll(filepath.Join(testIntelRdtPath, "mon_groups"), 0o755); err != nil {
 		t.Fatal(err)
 	}
+
 	return &intelRdtTestUtil{config: config, IntelRdtPath: testIntelRdtPath, t: t}
 }
