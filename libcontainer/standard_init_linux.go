@@ -164,6 +164,13 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 
+	// Set personality if specified.
+	if l.config.Config.Personality != nil {
+		if err := setupPersonality(l.config.Config); err != nil {
+			return err
+		}
+	}
+
 	// Tell our parent that we're ready to exec. This must be done before the
 	// Seccomp rules have been applied, because we need to be able to read and
 	// write to a socket.
@@ -234,13 +241,6 @@ func (l *linuxStandardInit) Init() error {
 		}
 
 		if err := syncParentSeccomp(l.pipe, seccompFd); err != nil {
-			return err
-		}
-	}
-
-	// Set personality if specified.
-	if l.config.Config.Personality != nil {
-		if err := setupPersonality(l.config.Config); err != nil {
 			return err
 		}
 	}
