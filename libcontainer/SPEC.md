@@ -367,7 +367,7 @@ profile <profile_name> flags=(attach_disconnected,mediate_deleted) {
 }
 ```
 
-*TODO: seccomp work is being done to find a good default config*
+*Seccomp filtering is supported with configurable default profiles*
 
 ### Runtime and Init Process
 
