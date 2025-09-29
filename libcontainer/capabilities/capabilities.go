@@ -1,5 +1,6 @@
 //go:build linux
 
+// Package capabilities provides helpers for managing Linux capabilities.
 package capabilities
 
 import (

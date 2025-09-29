@@ -15,6 +15,17 @@
  * limitations under the License.
  */
 
+// memfd-bind is a command-line tool to construct a persistent
+// sealed-memfd-copy of a binary, to allow administrators to amortise the cost
+// of memfd cloning for runc. runc will not make its own copy of the binary if
+// it detects that the binary is already a sealed-memfd-copy.
+//
+// Usage of this tool has a lot of caveats -- see this package's README for
+// more details on what restrictions apply when using this tool.
+//
+// Deprecated: runc 1.2 and later use a different mechanism for protecting the
+// runc binary that obviates the need for this tool. Unless you are on an old
+// kernel or need to use an older runc version, this tool is no longer needed.
 package main
 
 import (

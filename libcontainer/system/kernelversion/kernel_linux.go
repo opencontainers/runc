@@ -20,6 +20,8 @@
    https://github.com/containerd/containerd/blob/v1.7.5/contrib/seccomp/kernelversion/kernel_linux.go
 */
 
+// Package kernelversion provides a method to check whether the running kernel
+// version is at least a minimum kernel version.
 package kernelversion
 
 import (

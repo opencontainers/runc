@@ -1,3 +1,6 @@
+// Package apparmor provides a minimal set of helpers to configure the AppArmor
+// profile of the current process, effectively acting as a very stripped-down
+// version of libapparmor.
 package apparmor
 
 import "errors"
