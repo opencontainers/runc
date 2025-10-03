@@ -1,3 +1,5 @@
+// Package types defines the types used for the cgroup-related events APIs
+// provided by "runc events".
 package types
 
 import (

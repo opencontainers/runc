@@ -1,3 +1,10 @@
+// key_label is a simple program to print the current session keyring name and
+// its security label, to be run inside container (see selinux.bats). Can be
+// thought of poor man's keyctl. Written in Go so we can have a static binary
+// (a program in C would require libkeyutils which is usually provided only as
+// a dynamic library).
+//
+// This tool is only intended to be used within runc's integration tests.
 package main
 
 import (
@@ -7,11 +14,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// This is a simple program to print the current session keyring name and its
-// security label, to be run inside container (see selinux.bats). Can be
-// thought of poor man's keyctl. Written in Go so we can have a static binary
-// (a program in C would require libkeyutils which is usually provided only as
-// a dynamic library).
 func main() {
 	id, err := unix.KeyctlGetKeyringID(unix.KEY_SPEC_SESSION_KEYRING, false)
 	if err != nil {

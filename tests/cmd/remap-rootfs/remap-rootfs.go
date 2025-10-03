@@ -1,3 +1,8 @@
+// remap-rootfs is a command-line tool to remap the ownership of an OCI
+// bundle's rootfs to match the user namespace id-mapping of the bundle's
+// config.json.
+//
+// This tool is only intended to be used within runc's integration tests.
 package main
 
 import (

@@ -1,3 +1,5 @@
+// Package logs provides helpers for logging used within runc (specifically for
+// forwarding logs from "runc init" to the main runc process).
 package logs
 
 import (

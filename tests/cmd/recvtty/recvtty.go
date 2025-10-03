@@ -14,6 +14,14 @@
  * limitations under the License.
  */
 
+// recvtty is a sample implementation of the consumer side of the
+// --console-socket interface for runc. It supports forwarding console events
+// to and from the container process, as well as acting like a /dev/null
+// black-hole.
+//
+// This tool is only really intended to be used within runc's integration
+// tests, but can be used as an example of how the --console-socket protocol
+// works.
 package main
 
 import (

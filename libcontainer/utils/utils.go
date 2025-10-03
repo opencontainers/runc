@@ -1,3 +1,4 @@
+// Package utils provides general helper utilities used in libcontainer.
 package utils
 
 import (

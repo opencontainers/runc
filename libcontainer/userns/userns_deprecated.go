@@ -1,3 +1,5 @@
+// Package userns provides tools for dealing with user namespaces.
+//
 // Deprecated: use github.com/moby/sys/userns
 package userns
 
