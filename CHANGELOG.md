@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### libcontainer API
+- The deprecated `libcontainer/userns` package has been removed; use
+  `github.com/moby/sys/userns` instead.
+
 ## [1.4.0-rc.1] - 2025-09-05
 
 > おめェもボスになったんだろぉ？
