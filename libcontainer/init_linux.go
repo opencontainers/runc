@@ -659,6 +659,18 @@ func setupIOPriority(config *initConfig) error {
 	return nil
 }
 
+func setupMemoryPolicy(config *configs.Config) error {
+	mpol := config.MemoryPolicy
+	if mpol == nil {
+		return nil
+	}
+	modeWithFlags := mpol.Mode
+	for _, flag := range mpol.Flags {
+		modeWithFlags |= flag
+	}
+	return linux.SetMempolicy(modeWithFlags, config.MemoryPolicy.Nodes)
+}
+
 func setupPersonality(config *configs.Config) error {
 	return system.SetLinuxPersonality(config.Personality.Domain)
 }
