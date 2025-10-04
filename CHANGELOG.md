@@ -103,6 +103,22 @@ This version of runc requires Go 1.24 to build.
    #4783, #4785, #4801, #4808, #4803, #4839, #4846, #4847, #4845, #4850, #4861,
    #4860)
 
+## [1.3.2] - 2025-10-02
+
+> Ночь, улица, фонарь, аптека...
+
+### Changed
+ * The conversion from cgroup v1 CPU shares to cgroup v2 CPU weight is
+   improved to better fit default v1 and v2 values. (#4772, #4785, #4897)
+ * Dependency github.com/opencontainers/cgroups updated from v0.0.1 to
+   v0.0.4. (#4897)
+
+### Fixed
+ * runc state: fix occasional "cgroup.freeze: no such device" error.
+   (#4798, #4808, #4897)
+ * Fixed integration test failure on ppc64, caused by 64K page size so the
+   kernel was rounding memory limit to 64K. (#4841, #4895, #4893)
+
 ## [1.3.1] - 2025-09-05
 
 > この瓦礫の山でよぉ
@@ -1301,7 +1317,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.2.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.2.0-rc.1
 
 <!-- 1.3.z patch releases -->
-[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.1...release-1.3
+[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.2...release-1.3
+[1.3.2]: https://github.com/opencontainers/runc/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.3.1
 [1.3.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.1...v1.3.0-rc.2
 [1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
