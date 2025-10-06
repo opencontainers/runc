@@ -32,8 +32,8 @@ var (
 )
 
 func closeStateFds(recvFds []int) {
-	for i := range recvFds {
-		unix.Close(i)
+	for _, fd := range recvFds {
+		_ = unix.Close(fd)
 	}
 }
 
