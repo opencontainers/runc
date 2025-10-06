@@ -183,7 +183,19 @@ func (c *Container) criuSupportsExtNS(t configs.NamespaceType) bool {
 }
 
 func criuNsToKey(t configs.NamespaceType) string {
-	return "extRoot" + strings.Title(configs.NsName(t)) + "NS" //nolint:staticcheck // SA1019: strings.Title is deprecated
+	// Construct "extRoot" + capitalize(nsName) + "NS" without allocations.
+	// Result format: "extRootNetNS", "extRootPidNS", etc.
+	nsName := configs.NsName(t)
+	out := make([]byte, 0, 32)
+	out = append(out, "extRoot"...)
+	// Capitalize the first character (this assumes it's in the a-z range).
+	if len(nsName) > 0 {
+		out = append(out, nsName[0]-'a'+'A')
+		out = append(out, nsName[1:]...)
+	}
+	out = append(out, "NS"...)
+
+	return string(out)
 }
 
 func (c *Container) handleCheckpointingExternalNamespaces(rpcOpts *criurpc.CriuOpts, t configs.NamespaceType) error {
