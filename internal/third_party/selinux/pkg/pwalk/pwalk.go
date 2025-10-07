@@ -1,18 +1,21 @@
-//go:build go1.16
-// +build go1.16
-
-package pwalkdir
+package pwalk
 
 import (
 	"errors"
 	"fmt"
-	"io/fs"
+	"os"
 	"path/filepath"
 	"runtime"
 	"sync"
 )
 
-// Walk is a wrapper for filepath.WalkDir which can call multiple walkFn
+// WalkFunc is the type of the function called by Walk to visit each
+// file or directory. It is an alias for [filepath.WalkFunc].
+//
+// Deprecated: use [github.com/opencontainers/selinux/pkg/pwalkdir] and [fs.WalkDirFunc].
+type WalkFunc = filepath.WalkFunc
+
+// Walk is a wrapper for filepath.Walk which can call multiple walkFn
 // in parallel, allowing to handle each item concurrently. A maximum of
 // twice the runtime.NumCPU() walkFn will be called at any one time.
 // If you want to change the maximum, use WalkN instead.
@@ -31,25 +34,29 @@ import (
 // - if more than one walkFn instance will return an error, only one
 // of such errors will be propagated and returned by Walk, others
 // will be silently discarded.
-func Walk(root string, walkFn fs.WalkDirFunc) error {
+//
+// Deprecated: use [github.com/opencontainers/selinux/pkg/pwalkdir.Walk]
+func Walk(root string, walkFn WalkFunc) error {
 	return WalkN(root, walkFn, runtime.NumCPU()*2)
 }
 
-// WalkN is a wrapper for filepath.WalkDir which can call multiple walkFn
+// WalkN is a wrapper for filepath.Walk which can call multiple walkFn
 // in parallel, allowing to handle each item concurrently. A maximum of
 // num walkFn will be called at any one time.
 //
 // Please see Walk documentation for caveats of using this function.
-func WalkN(root string, walkFn fs.WalkDirFunc, num int) error {
+//
+// Deprecated: use [github.com/opencontainers/selinux/pkg/pwalkdir.WalkN]
+func WalkN(root string, walkFn WalkFunc, num int) error {
 	// make sure limit is sensible
 	if num < 1 {
 		return fmt.Errorf("walk(%q): num must be > 0", root)
 	}
 
 	files := make(chan *walkArgs, 2*num)
-	errCh := make(chan error, 1) // Get the first error, ignore others.
+	errCh := make(chan error, 1) // get the first error, ignore others
 
-	// Start walking a tree asap.
+	// Start walking a tree asap
 	var (
 		err error
 		wg  sync.WaitGroup
@@ -59,29 +66,30 @@ func WalkN(root string, walkFn fs.WalkDirFunc, num int) error {
 	)
 	wg.Add(1)
 	go func() {
-		err = filepath.WalkDir(root, func(p string, entry fs.DirEntry, err error) error {
+		err = filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
 			if err != nil {
 				// Walking a file tree can race with removal,
 				// so ignore ENOENT, except for root.
 				// https://github.com/opencontainers/selinux/issues/199.
-				if errors.Is(err, fs.ErrNotExist) && len(p) != rootLen {
+				if errors.Is(err, os.ErrNotExist) && len(p) != rootLen {
 					return nil
 				}
+
 				close(files)
 				return err
 			}
 			if len(p) == rootLen {
 				// Root entry is processed separately below.
-				rootEntry = &walkArgs{path: p, entry: entry}
+				rootEntry = &walkArgs{path: p, info: &info}
 				return nil
 			}
-			// Add a file to the queue unless a callback sent an error.
+			// add a file to the queue unless a callback sent an error
 			select {
 			case e := <-errCh:
 				close(files)
 				return e
 			default:
-				files <- &walkArgs{path: p, entry: entry}
+				files <- &walkArgs{path: p, info: &info}
 				return nil
 			}
 		})
@@ -95,7 +103,7 @@ func WalkN(root string, walkFn fs.WalkDirFunc, num int) error {
 	for i := 0; i < num; i++ {
 		go func() {
 			for file := range files {
-				if e := walkFn(file.path, file.entry, nil); e != nil {
+				if e := walkFn(file.path, *file.info, nil); e != nil {
 					select {
 					case errCh <- e: // sent ok
 					default: // buffer full
@@ -109,7 +117,7 @@ func WalkN(root string, walkFn fs.WalkDirFunc, num int) error {
 	wg.Wait()
 
 	if err == nil {
-		err = walkFn(rootEntry.path, rootEntry.entry, nil)
+		err = walkFn(rootEntry.path, *rootEntry.info, nil)
 	}
 
 	return err
@@ -118,6 +126,6 @@ func WalkN(root string, walkFn fs.WalkDirFunc, num int) error {
 // walkArgs holds the arguments that were passed to the Walk or WalkN
 // functions.
 type walkArgs struct {
-	entry fs.DirEntry
-	path  string
+	info *os.FileInfo
+	path string
 }
