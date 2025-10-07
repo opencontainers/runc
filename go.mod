@@ -32,3 +32,8 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 )
+
+// FIXME: This is only intended as a short-term solution to include a patch for
+// CVE-2025-52881 in go-selinux without pushing the patches upstream. This
+// should be removed as soon as possible after the embargo is lifted.
+replace github.com/opencontainers/selinux => ./internal/third_party/selinux
