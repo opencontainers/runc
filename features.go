@@ -56,8 +56,9 @@ var featuresCommand = cli.Command{
 					Enabled: &t,
 				},
 				IntelRdt: &features.IntelRdt{
-					Enabled:  &t,
-					Schemata: &t,
+					Enabled:    &t,
+					Schemata:   &t,
+					Monitoring: &t,
 				},
 				MemoryPolicy: &features.MemoryPolicy{
 					Modes: specconv.KnownMemoryPolicyModes(),

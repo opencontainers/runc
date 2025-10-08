@@ -495,10 +495,11 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		}
 		if spec.Linux.IntelRdt != nil {
 			config.IntelRdt = &configs.IntelRdt{
-				ClosID:        spec.Linux.IntelRdt.ClosID,
-				Schemata:      spec.Linux.IntelRdt.Schemata,
-				L3CacheSchema: spec.Linux.IntelRdt.L3CacheSchema,
-				MemBwSchema:   spec.Linux.IntelRdt.MemBwSchema,
+				ClosID:           spec.Linux.IntelRdt.ClosID,
+				Schemata:         spec.Linux.IntelRdt.Schemata,
+				L3CacheSchema:    spec.Linux.IntelRdt.L3CacheSchema,
+				MemBwSchema:      spec.Linux.IntelRdt.MemBwSchema,
+				EnableMonitoring: spec.Linux.IntelRdt.EnableMonitoring,
 			}
 		}
 		if spec.Linux.MemoryPolicy != nil {
