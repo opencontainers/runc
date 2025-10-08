@@ -70,7 +70,7 @@ This version of runc requires Go 1.24 to build.
    previously result in spurious errors. (#4735)
  * CI: skip bpf tests on misbehaving udev systems. (#4825)
 
-### Changes
+### Changed
  * Use Go's built-in `pidfd_send_signal(2)` support when available. (#4666)
  * Make `state.json` 25% smaller. (#4685)
  * Migrate to Go 1.22+ features. (#4687, #4703)
@@ -85,6 +85,8 @@ This version of runc requires Go 1.24 to build.
    versions). (#4817)
  * Simplify the prepareCriuRestoreMounts logic for checkpoint-restore.
    (#4765)
+ * The conversion from cgroup v1 CPU shares to cgroup v2 CPU weight is
+   improved to better fit default v1 and v2 values. (#4772, #4785)
  * Bump minimum Go version to 1.24. (#4851)
  * CI: migrate virtualised Fedora tests from Vagrant + Cirrus to Lima + GHA. We
    still use Cirrus for the AlmaLinux tests, since they can be run without
