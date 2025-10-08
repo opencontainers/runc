@@ -19,22 +19,17 @@ func TestValidateIntelRdt(t *testing.T) {
 		isErr      bool
 	}{
 		{
-			name:       "rdt not supported, no config",
-			rdtEnabled: false,
-			config:     nil,
-			isErr:      false,
+			name: "rdt not supported, no config",
 		},
 		{
-			name:       "rdt not supported, with config",
-			rdtEnabled: false,
-			config:     &configs.IntelRdt{},
-			isErr:      true,
+			name:   "rdt not supported, with config",
+			config: &configs.IntelRdt{},
+			isErr:  true,
 		},
 		{
 			name:       "empty config",
 			rdtEnabled: true,
 			config:     &configs.IntelRdt{},
-			isErr:      false,
 		},
 		{
 			name:       "root clos",
@@ -42,7 +37,6 @@ func TestValidateIntelRdt(t *testing.T) {
 			config: &configs.IntelRdt{
 				ClosID: "/",
 			},
-			isErr: false,
 		},
 		{
 			name:       "invalid ClosID (.)",
@@ -71,7 +65,6 @@ func TestValidateIntelRdt(t *testing.T) {
 		{
 			name:       "cat not supported",
 			rdtEnabled: true,
-			catEnabled: false,
 			config: &configs.IntelRdt{
 				L3CacheSchema: "0=ff",
 			},
@@ -80,7 +73,6 @@ func TestValidateIntelRdt(t *testing.T) {
 		{
 			name:       "mba not supported",
 			rdtEnabled: true,
-			mbaEnabled: false,
 			config: &configs.IntelRdt{
 				MemBwSchema: "0=100",
 			},
@@ -96,7 +88,6 @@ func TestValidateIntelRdt(t *testing.T) {
 				L3CacheSchema: "0=ff",
 				MemBwSchema:   "0=100",
 			},
-			isErr: false,
 		},
 	}
 	for _, tc := range testCases {
