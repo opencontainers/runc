@@ -34,7 +34,7 @@ func (m Mapping) toSys() (uids, gids []syscall.SysProcIDMap) {
 			Size:        int(gid.Size),
 		})
 	}
-	return
+	return uids, gids
 }
 
 // id returns a unique identifier for this mapping, agnostic of the order of
