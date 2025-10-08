@@ -676,7 +676,7 @@ func filterFlags(config *configs.Seccomp, filter *libseccomp.ScmpFilter) (flags 
 		}
 	}
 
-	return
+	return flags, noNewPrivs, err
 }
 
 func sysSeccompSetFilter(flags uint, filter []unix.SockFilter) (fd int, err error) {
@@ -706,7 +706,7 @@ func sysSeccompSetFilter(flags uint, filter []unix.SockFilter) (fd int, err erro
 	}
 	runtime.KeepAlive(filter)
 	runtime.KeepAlive(fprog)
-	return
+	return fd, err
 }
 
 // PatchAndLoad takes a seccomp configuration and a libseccomp filter which has

@@ -112,5 +112,5 @@ func Annotations(labels []string) (bundle string, userAnnotations map[string]str
 			userAnnotations[name] = value
 		}
 	}
-	return
+	return bundle, userAnnotations
 }
