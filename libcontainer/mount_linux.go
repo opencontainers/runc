@@ -236,7 +236,7 @@ func syscallMode(i fs.FileMode) (o uint32) {
 		o |= unix.S_ISVTX
 	}
 	// No mapping for Go's ModeTemporary (plan9 only).
-	return
+	return o
 }
 
 // mountFd creates a "mount source fd" (either through open_tree(2) or just
