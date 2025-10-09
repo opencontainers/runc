@@ -184,16 +184,8 @@ func tryResetCPUAffinity(pid int) {
 	//
 	// So we can just pass a very large array of set cpumask bits and the
 	// kernel will silently convert that to the correct value very cheaply.
-
-	// Ideally, we would just set the array to 0xFF...FF. Unfortunately, the
-	// size depends on the architecture. It is also a private newtype, so we
-	// can't use (^0) or generics since those require us to be able to name the
-	// type. However, we can just underflow the zero value instead.
-	// TODO: Once <https://golang.org/cl/698015> is merged, switch to that.
-	cpuset := unix.CPUSet{}
-	for i := range cpuset {
-		cpuset[i]-- // underflow to 0xFF..FF
-	}
+	var cpuset unix.CPUSet
+	cpuset.Fill() // set all bits
 	if err := unix.SchedSetaffinity(pid, &cpuset); err != nil {
 		logrus.WithError(
 			os.NewSyscallError("sched_setaffinity", err),
