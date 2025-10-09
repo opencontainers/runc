@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.4.z]
 
+### Fixed
+ * Switched to `(*CPUSet).Fill` rather than our hacky optimisation when
+   resetting the CPU affinity of runc. (#4926, #4927)
+
 ## [1.4.0-rc.2] - 2025-10-10
 
 > 私の役目は信じるかどうかではない。行うかどうかだ。
