@@ -6,9 +6,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.4.z]
 
+## [1.4.0-rc.2] - 2025-10-10
+
+> 私の役目は信じるかどうかではない。行うかどうかだ。
+
 ### libcontainer API
-- The deprecated `libcontainer/userns` package has been removed; use
-  `github.com/moby/sys/userns` instead.
+ * The deprecated `libcontainer/userns` package has been removed; use
+   `github.com/moby/sys/userns` instead. (#4910, #4911)
+
+### Added
+ * Allow setting `user.*` sysctls for user-namespaced containers, as they are
+   namespaced and thus safe to configure. (#4889, #4892)
+ * Add support for using `clone3(2)`'s `CLONE_INTO_CGROUP` flag when
+   configuring the `runc exec` process. This also included some internal
+   changes to how we add processes to containers. (#4822, #4812, #4920)
+ * Add support for configuring the NUMA pmemory policy for a container with
+   `set_mempolicy(2)`. (opencontainers/runtime-spec#1282, #4726, #4915)
+ * Add support for `intelRdt.schemata` to allow for configuration of all
+   schemas in `resctrl`. (opencontainers/runtime-spec#1230, #4830, #4915)
+ * Add support for `intelRdt.enableMonitoring` to allow for per-container
+   `resctrl` monitoring. This replaces the old `intelRdt.enableCMT` and
+   `intelRdt.enableMBM` options which were never implemented by runc and have
+   been removed from the runtime-spec. (opencontainers/runtime-spec#1287,
+   #4832, #4921)
+
+### Fixed
+ * Configure `personality(2)` before applying seccomp profiles. (#4900, #4903)
+ * Fixed integration test failure on ppc64, caused by 64K page size so the
+   kernel was rounding memory limit to 64K. (#4841, #4895, #4893)
+ * seccompagent: fix fd close loop to prevent closing stdio in the error path.
+   (#4913, #4923)
 
 ## [1.4.0-rc.1] - 2025-09-05
 
@@ -70,7 +97,7 @@ This version of runc requires Go 1.24 to build.
    previously result in spurious errors. (#4735)
  * CI: skip bpf tests on misbehaving udev systems. (#4825)
 
-### Changes
+### Changed
  * Use Go's built-in `pidfd_send_signal(2)` support when available. (#4666)
  * Make `state.json` 25% smaller. (#4685)
  * Migrate to Go 1.22+ features. (#4687, #4703)
@@ -85,6 +112,8 @@ This version of runc requires Go 1.24 to build.
    versions). (#4817)
  * Simplify the prepareCriuRestoreMounts logic for checkpoint-restore.
    (#4765)
+ * The conversion from cgroup v1 CPU shares to cgroup v2 CPU weight is
+   improved to better fit default v1 and v2 values. (#4772, #4785)
  * Bump minimum Go version to 1.24. (#4851)
  * CI: migrate virtualised Fedora tests from Vagrant + Cirrus to Lima + GHA. We
    still use Cirrus for the AlmaLinux tests, since they can be run without
@@ -1307,5 +1336,6 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
 
 <!-- 1.4.z patch releases -->
-[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.1...release-1.4
+[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.2...release-1.4
+[1.4.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.1...v1.4.0-rc.2
 [1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1
