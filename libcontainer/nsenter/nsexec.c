@@ -208,7 +208,7 @@ static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 	 * or programming issue.
 	 */
 	if (!app)
-		bail("mapping tool not present");
+		bailx("mapping tool not present");
 
 	child = fork();
 	if (child < 0)
@@ -274,7 +274,7 @@ static void update_uidmap(const char *path, int pid, char *map, size_t map_len)
 			bail("failed to update /proc/%d/uid_map", pid);
 		write_log(DEBUG, "update /proc/%d/uid_map got -EPERM (trying %s)", pid, path);
 		if (try_mapping_tool(path, pid, map, map_len))
-			bail("failed to use newuid map on %d", pid);
+			bailx("failed to use newuid map on %d", pid);
 	}
 }
 
@@ -289,7 +289,7 @@ static void update_gidmap(const char *path, int pid, char *map, size_t map_len)
 			bail("failed to update /proc/%d/gid_map", pid);
 		write_log(DEBUG, "update /proc/%d/gid_map got -EPERM (trying %s)", pid, path);
 		if (try_mapping_tool(path, pid, map, map_len))
-			bail("failed to use newgid map on %d", pid);
+			bailx("failed to use newgid map on %d", pid);
 	}
 }
 
@@ -340,14 +340,16 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 
 	/* Retrieve the netlink header. */
 	len = read(fd, &hdr, NLMSG_HDRLEN);
+	if (len < 0)
+		bail("failed to read netlink header");
 	if (len != NLMSG_HDRLEN)
-		bail("invalid netlink header length %zu", len);
+		bailx("invalid netlink header length %zu", len);
 
 	if (hdr.nlmsg_type == NLMSG_ERROR)
-		bail("failed to read netlink message");
+		bailx("failed to read netlink message");
 
 	if (hdr.nlmsg_type != INIT_MSG)
-		bail("unexpected msg type %d", hdr.nlmsg_type);
+		bailx("unexpected msg type %d", hdr.nlmsg_type);
 
 	/* Retrieve data. */
 	size = NLMSG_PAYLOAD(&hdr, 0);
@@ -356,8 +358,10 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 		bail("failed to allocate %zu bytes of memory for nl_payload", size);
 
 	len = read(fd, data, size);
+	if (len < 0)
+		bail("failed to read netlink payload");
 	if (len != size)
-		bail("failed to read netlink payload, %zu != %zu", len, size);
+		bailx("failed to read netlink payload, %zu != %zu", len, size);
 
 	/* Parse the netlink payload. */
 	config->data = data;
@@ -456,7 +460,7 @@ static int nstype(char *name)
 	 * without corresponding handling could result in broken behaviour) and
 	 * the rest of runc doesn't allow unknown namespace types anyway.
 	 */
-	bail("unknown namespace type %s", name);
+	bailx("unknown namespace type %s", name);
 }
 
 static nsset_t __open_namespaces(char *nsspec, struct namespace_t **ns_list, size_t *ns_len)
@@ -469,7 +473,7 @@ static nsset_t __open_namespaces(char *nsspec, struct namespace_t **ns_list, siz
 	namespace = strtok_r(nsspec, ",", &saveptr);
 
 	if (!namespace || !strlen(namespace) || !strlen(nsspec))
-		bail("ns paths are empty");
+		bailx("ns paths are empty");
 
 	do {
 		int fd;
@@ -485,7 +489,7 @@ static nsset_t __open_namespaces(char *nsspec, struct namespace_t **ns_list, siz
 		/* Split 'ns:path'. */
 		path = strstr(namespace, ":");
 		if (!path)
-			bail("failed to parse %s", namespace);
+			bailx("failed to parse %s", namespace);
 		*path++ = '\0';
 
 		fd = open(path, O_RDONLY);
@@ -530,7 +534,7 @@ static nsset_t __join_namespaces(nsset_t allow, struct namespace_t *ns_list, siz
 			/* Skip permission errors. */
 			if (saved_errno == EPERM)
 				continue;
-			bail("failed to setns into %s namespace", ns->type);
+			bailx("failed to setns into %s namespace: %s", ns->type, strerror(saved_errno));
 		}
 		joined |= type;
 
@@ -597,7 +601,7 @@ static void __close_namespaces(nsset_t to_join, nsset_t joined, struct namespace
 
 	/* Make sure we joined the namespaces we planned to. */
 	if (failed_to_join)
-		bail("failed to join {%s} namespaces: %s", nsset_to_str(failed_to_join), strerror(EPERM));
+		bailx("failed to join {%s} namespaces: %s", nsset_to_str(failed_to_join), strerror(EPERM));
 
 	free(ns_list);
 }
@@ -936,7 +940,7 @@ void nsexec(void)
 					stage1_complete = true;
 					break;
 				default:
-					bail("unexpected sync value: %u", s);
+					bailx("unexpected sync value: %u", s);
 				}
 			}
 			write_log(DEBUG, "<- stage-1 synchronisation loop");
@@ -967,7 +971,7 @@ void nsexec(void)
 					stage2_complete = true;
 					break;
 				default:
-					bail("unexpected sync value: %u", s);
+					bailx("unexpected sync value: %u", s);
 				}
 			}
 			write_log(DEBUG, "<- stage-2 synchronisation loop");
@@ -1058,7 +1062,7 @@ void nsexec(void)
 				if (read(syncfd, &s, sizeof(s)) != sizeof(s))
 					bail("failed to sync with parent: read(SYNC_USERMAP_ACK)");
 				if (s != SYNC_USERMAP_ACK)
-					bail("failed to sync with parent: SYNC_USERMAP_ACK: got %u", s);
+					bailx("failed to sync with parent: SYNC_USERMAP_ACK: got %u", s);
 
 				/* Revert temporary re-dumpable setting. */
 				if (config.namespaces) {
@@ -1094,7 +1098,7 @@ void nsexec(void)
 				if (read(syncfd, &s, sizeof(s)) != sizeof(s))
 					bail("failed to sync with parent: read(SYNC_TIMEOFFSETS_ACK)");
 				if (s != SYNC_TIMEOFFSETS_ACK)
-					bail("failed to sync with parent: SYNC_TIMEOFFSETS_ACK: got %u", s);
+					bailx("failed to sync with parent: SYNC_TIMEOFFSETS_ACK: got %u", s);
 			}
 
 			/*
@@ -1130,7 +1134,7 @@ void nsexec(void)
 			}
 			if (s != SYNC_RECVPID_ACK) {
 				sane_kill(stage2_pid, SIGKILL);
-				bail("failed to sync with parent: SYNC_RECVPID_ACK: got %u", s);
+				bailx("failed to sync with parent: SYNC_RECVPID_ACK: got %u", s);
 			}
 
 			write_log(DEBUG, "signal completion to stage-0");
@@ -1177,7 +1181,7 @@ void nsexec(void)
 			if (read(syncfd, &s, sizeof(s)) != sizeof(s))
 				bail("failed to sync with parent: read(SYNC_GRANDCHILD)");
 			if (s != SYNC_GRANDCHILD)
-				bail("failed to sync with parent: SYNC_GRANDCHILD: got %u", s);
+				bailx("failed to sync with parent: SYNC_GRANDCHILD: got %u", s);
 
 			if (setsid() < 0)
 				bail("setsid failed");
@@ -1212,9 +1216,9 @@ void nsexec(void)
 		}
 		break;
 	default:
-		bail("unexpected jump value");
+		bailx("unexpected jump value");
 	}
 
 	/* Should never be reached. */
-	bail("should never be reached");
+	bailx("should never be reached");
 }
