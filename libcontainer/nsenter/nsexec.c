@@ -639,9 +639,14 @@ void join_namespaces(char *nsspec)
 
 static inline int sane_kill(pid_t pid, int signum)
 {
-	if (pid > 0)
-		return kill(pid, signum);
-	else
+	if (pid > 0) {
+		int ret, saved_errno;
+
+		saved_errno = errno;
+		ret = kill(pid, signum);
+		errno = saved_errno;
+		return ret;
+	} else
 		return 0;
 }
 
