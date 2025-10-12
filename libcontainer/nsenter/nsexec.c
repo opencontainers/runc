@@ -637,12 +637,14 @@ void join_namespaces(char *nsspec)
 	__close_namespaces(to_join, joined, ns_list, ns_len);
 }
 
-static inline int sane_kill(pid_t pid, int signum)
+static inline void sane_kill(pid_t pid, int signum)
 {
-	if (pid > 0)
-		return kill(pid, signum);
-	else
-		return 0;
+	if (pid <= 0)
+		return;
+
+	int saved_errno = errno;
+	kill(pid, signum);
+	errno = saved_errno;
 }
 
 void try_unshare(int flags, const char *msg)
