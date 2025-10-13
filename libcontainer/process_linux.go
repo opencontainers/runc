@@ -357,6 +357,7 @@ func (p *setnsProcess) start() (retErr error) {
 
 	fd, err := p.prepareCgroupFD()
 	if err != nil {
+		p.comm.closeChild()
 		return err
 	}
 
