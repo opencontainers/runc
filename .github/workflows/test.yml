@@ -218,8 +218,6 @@ jobs:
 
     # NOTE the execution environment lacks a terminal, needed for
     # some integration tests. So we use `ssh -tt` command to fake a terminal.
-    - uses: lima-vm/lima-actions/ssh@v1
-
     - name: "Run unit tests"
       run: ssh -tt lima-default sudo -i make -C /tmp/runc localunittest
 
