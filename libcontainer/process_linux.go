@@ -352,22 +352,21 @@ func (p *setnsProcess) prepareCgroupFD() (*os.File, error) {
 	return fd, nil
 }
 
-func (p *setnsProcess) start() (retErr error) {
-	defer p.comm.closeParent()
+// startWithCgroupFD starts a process via clone3 with CLONE_INTO_CGROUP,
+// with a fallback if it fails (e.g. not available).
+func (p *setnsProcess) startWithCgroupFD() error {
+	// Close the child side of the pipes.
+	defer p.comm.closeChild()
 
 	fd, err := p.prepareCgroupFD()
 	if err != nil {
-		p.comm.closeChild()
 		return err
 	}
-
-	// Get the "before" value of oom kill count.
-	oom, _ := p.manager.OOMKillCount()
+	if fd != nil {
+		defer fd.Close()
+	}
 
 	err = p.startWithCPUAffinity()
-	if fd != nil {
-		fd.Close()
-	}
 	if err != nil && p.cmd.SysProcAttr.UseCgroupFD {
 		logrus.Debugf("exec with CLONE_INTO_CGROUP failed: %v; retrying without", err)
 		// SysProcAttr.CgroupFD is never used when UseCgroupFD is unset.
@@ -375,9 +374,16 @@ func (p *setnsProcess) start() (retErr error) {
 		err = p.startWithCPUAffinity()
 	}
 
-	// Close the child-side of the pipes (controlled by child).
-	p.comm.closeChild()
-	if err != nil {
+	return err
+}
+
+func (p *setnsProcess) start() (retErr error) {
+	defer p.comm.closeParent()
+
+	// Get the "before" value of oom kill count.
+	oom, _ := p.manager.OOMKillCount()
+
+	if err := p.startWithCgroupFD(); err != nil {
 		return fmt.Errorf("error starting setns process: %w", err)
 	}
 
