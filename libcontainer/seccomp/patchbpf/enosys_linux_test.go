@@ -104,6 +104,7 @@ var testArches = []string{
 	"ppc64le",
 	"s390",
 	"s390x",
+	"loong64",
 	// Dummy value to indicate a configuration with no architecture specified.
 	"native",
 }
