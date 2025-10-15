@@ -383,6 +383,16 @@ func cgroupFilesToChown() ([]string, error) {
 	return filesToChown, nil
 }
 
+// AddPid adds a process with a given pid to an existing cgroup.
+// The subcgroup argument is either empty, or a path relative to
+// a cgroup under under the manager's cgroup.
+func (m *UnifiedManager) AddPid(subcgroup string, pid int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return addPid(m.dbus, getUnitName(m.cgroups), subcgroup, pid)
+}
+
 func (m *UnifiedManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

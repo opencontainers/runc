@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -73,6 +72,11 @@ type State struct {
 
 	// Intel RDT "resource control" filesystem path.
 	IntelRdtPath string `json:"intel_rdt_path,omitempty"`
+
+	// Path of the container specific monitoring group in resctrl filesystem.
+	// Empty if the container does not have aindividual dedicated monitoring
+	// group.
+	IntelRdtMonPath string `json:"intel_rdt_mon_path,omitempty"`
 }
 
 // ID returns the container's unique ID
@@ -290,7 +294,11 @@ func handleFifoResult(result openResult) error {
 	if err := readFromExecFifo(f); err != nil {
 		return err
 	}
-	return os.Remove(f.Name())
+	err := os.Remove(f.Name())
+	if err == nil || os.IsNotExist(err) {
+		return nil
+	}
+	return err
 }
 
 type openResult struct {
@@ -651,39 +659,9 @@ func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, comm *processComm
 			bootstrapData: data,
 			container:     c,
 		},
-		cgroupPaths:     state.CgroupPaths,
 		rootlessCgroups: c.config.RootlessCgroups,
 		intelRdtPath:    state.IntelRdtPath,
 		initProcessPid:  state.InitProcessPid,
-	}
-	if len(p.SubCgroupPaths) > 0 {
-		if add, ok := p.SubCgroupPaths[""]; ok {
-			// cgroup v1: using the same path for all controllers.
-			// cgroup v2: the only possible way.
-			for k := range proc.cgroupPaths {
-				subPath := path.Join(proc.cgroupPaths[k], add)
-				if !strings.HasPrefix(subPath, proc.cgroupPaths[k]) {
-					return nil, fmt.Errorf("%s is not a sub cgroup path", add)
-				}
-				proc.cgroupPaths[k] = subPath
-			}
-			// cgroup v2: do not try to join init process's cgroup
-			// as a fallback (see (*setnsProcess).start).
-			proc.initProcessPid = 0
-		} else {
-			// Per-controller paths.
-			for ctrl, add := range p.SubCgroupPaths {
-				if val, ok := proc.cgroupPaths[ctrl]; ok {
-					subPath := path.Join(val, add)
-					if !strings.HasPrefix(subPath, val) {
-						return nil, fmt.Errorf("%s is not a sub cgroup path", add)
-					}
-					proc.cgroupPaths[ctrl] = subPath
-				} else {
-					return nil, fmt.Errorf("unknown controller %s in SubCgroupPaths", ctrl)
-				}
-			}
-		}
 	}
 	return proc, nil
 }
@@ -938,8 +916,10 @@ func (c *Container) currentState() *State {
 	}
 
 	intelRdtPath := ""
+	intelRdtMonPath := ""
 	if c.intelRdtManager != nil {
 		intelRdtPath = c.intelRdtManager.GetPath()
+		intelRdtMonPath = c.intelRdtManager.GetMonPath()
 	}
 	state := &State{
 		BaseState: BaseState{
@@ -952,6 +932,7 @@ func (c *Container) currentState() *State {
 		Rootless:            c.config.RootlessEUID && c.config.RootlessCgroups,
 		CgroupPaths:         c.cgroupManager.GetPaths(),
 		IntelRdtPath:        intelRdtPath,
+		IntelRdtMonPath:     intelRdtMonPath,
 		NamespacePaths:      make(map[configs.NamespaceType]string),
 		ExternalDescriptors: externalDescriptors,
 	}

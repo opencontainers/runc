@@ -367,7 +367,25 @@ profile <profile_name> flags=(attach_disconnected,mediate_deleted) {
 }
 ```
 
-*TODO: seccomp work is being done to find a good default config*
+[seccomp](https://en.wikipedia.org/wiki/Seccomp) can be used to apply filters
+to the system calls used in a container. The set of filter expressions allows
+you to match against syscall numbers (automatically resolved from syscall
+names) and apply various comparison operators to syscall arguments.
+
+When a filter rule matches, the associated action is executed - such as killing
+the process or thread, returning an errno value without executing the syscall,
+forwarding the request to a user-space agent to handle, emitting a log entry,
+or permitting the syscall to execute.
+
+The primary use-case is to provide an explicit allow-list of syscalls for a
+container, to reduce the kernel API attack surface exposed to the container.
+Historically, seccomp has protected containers against various kernel 0-day
+vulnerabilities, so a strong seccomp filter is highly recommended.
+
+libcontainer does not provide a default filter, but higher-level
+runtimes tend to define their own filters for use with runc (see
+[oci-runtime-seccomp](https://github.com/opencontainers/runtime-spec/blob/v1.2.1/config-linux.md#seccomp)
+for more information on how to write your own filters).
 
 ### Runtime and Init Process
 

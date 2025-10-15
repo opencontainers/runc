@@ -1,3 +1,4 @@
+// Package utils provides general helper utilities used in libcontainer.
 package utils
 
 import (
@@ -111,5 +112,5 @@ func Annotations(labels []string) (bundle string, userAnnotations map[string]str
 			userAnnotations[name] = value
 		}
 	}
-	return
+	return bundle, userAnnotations
 }

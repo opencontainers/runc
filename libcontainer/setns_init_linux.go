@@ -80,6 +80,18 @@ func (l *linuxSetnsInit) Init() error {
 	if err := setupIOPriority(l.config); err != nil {
 		return err
 	}
+
+	// Set personality if specified.
+	if l.config.Config.Personality != nil {
+		if err := setupPersonality(l.config.Config); err != nil {
+			return err
+		}
+	}
+
+	if err := setupMemoryPolicy(l.config.Config); err != nil {
+		return err
+	}
+
 	// Tell our parent that we're ready to exec. This must be done before the
 	// Seccomp rules have been applied, because we need to be able to read and
 	// write to a socket.
@@ -109,11 +121,6 @@ func (l *linuxSetnsInit) Init() error {
 	}
 	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
 		return err
-	}
-	if l.config.Config.Personality != nil {
-		if err := setupPersonality(l.config.Config); err != nil {
-			return err
-		}
 	}
 	// Check for the arg early to make sure it exists.
 	name, err := exec.LookPath(l.config.Args[0])

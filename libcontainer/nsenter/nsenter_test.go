@@ -199,7 +199,7 @@ func newPipe(t *testing.T) (parent *os.File, child *os.File) {
 		parent.Close()
 		child.Close()
 	})
-	return
+	return parent, child
 }
 
 func reapChildren(t *testing.T, parent *os.File) {

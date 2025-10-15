@@ -1,3 +1,5 @@
+// Package types defines the types used for the cgroup-related events APIs
+// provided by "runc events".
 package types
 
 import (
@@ -75,8 +77,8 @@ type CpuUsage struct {
 }
 
 type Cpu struct {
-	Usage      CpuUsage   `json:"usage,omitempty"`
-	Throttling Throttling `json:"throttling,omitempty"`
+	Usage      CpuUsage   `json:"usage,omitzero"`
+	Throttling Throttling `json:"throttling,omitzero"`
 	PSI        *PSIStats  `json:"psi,omitempty"`
 }
 
@@ -103,10 +105,10 @@ type MemoryEntry struct {
 
 type Memory struct {
 	Cache     uint64            `json:"cache,omitempty"`
-	Usage     MemoryEntry       `json:"usage,omitempty"`
-	Swap      MemoryEntry       `json:"swap,omitempty"`
-	Kernel    MemoryEntry       `json:"kernel,omitempty"`
-	KernelTCP MemoryEntry       `json:"kernelTCP,omitempty"`
+	Usage     MemoryEntry       `json:"usage,omitzero"`
+	Swap      MemoryEntry       `json:"swap,omitzero"`
+	Kernel    MemoryEntry       `json:"kernel,omitzero"`
+	KernelTCP MemoryEntry       `json:"kernelTCP,omitzero"`
 	Raw       map[string]uint64 `json:"raw,omitempty"`
 	PSI       *PSIStats         `json:"psi,omitempty"`
 }
@@ -142,6 +144,9 @@ type IntelRdt struct {
 
 	// The memory bandwidth schema in 'container_id' group
 	MemBwSchema string `json:"mem_bw_schema,omitempty"`
+
+	// Schemata contains the full schemata of the ClosID (resctrl group) that the container is assigned to.
+	Schemata []string `json:"schemata,omitempty"`
 
 	// The memory bandwidth monitoring statistics from NUMA nodes in 'container_id' group
 	MBMStats *[]intelrdt.MBMNumaNodeStats `json:"mbm_stats,omitempty"`

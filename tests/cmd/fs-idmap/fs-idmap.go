@@ -1,3 +1,7 @@
+// fs-idmap is a command-line tool to detect if a filesystem associated with a
+// given path supports id-mapped mounts.
+//
+// This tool is only intended to be used within runc's integration tests.
 package main
 
 import (

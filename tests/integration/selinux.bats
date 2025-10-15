@@ -11,7 +11,7 @@ function setup() {
 	setup_busybox
 
 	# Use a copy of runc binary with proper selinux label set.
-	cp "$RUNC" .
+	cp "$RUNC" ./runc
 	export RUNC="$PWD/runc"
 	chcon -u system_u -r object_r -t container_runtime_exec_t "$RUNC"
 

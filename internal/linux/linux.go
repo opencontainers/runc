@@ -2,6 +2,7 @@ package linux
 
 import (
 	"os"
+	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
@@ -71,4 +72,16 @@ func Sendmsg(fd int, p, oob []byte, to unix.Sockaddr, flags int) error {
 		return unix.Sendmsg(fd, p, oob, to, flags)
 	})
 	return os.NewSyscallError("sendmsg", err)
+}
+
+// SetMempolicy wraps set_mempolicy.
+func SetMempolicy(mode uint, mask *unix.CPUSet) error {
+	err := retryOnEINTR(func() error {
+		_, _, errno := unix.Syscall(unix.SYS_SET_MEMPOLICY, uintptr(mode), uintptr(unsafe.Pointer(mask)), unsafe.Sizeof(*mask)*8)
+		if errno != 0 {
+			return errno
+		}
+		return nil
+	})
+	return os.NewSyscallError("set_mempolicy", err)
 }

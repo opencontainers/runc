@@ -62,3 +62,21 @@ function teardown() {
 	[ "$status" -eq 0 ]
 	[[ "$output" == *"x86_64"* ]]
 }
+
+# check that personality can be set when the personality syscall is blocked by seccomp
+@test "runc run with personality syscall blocked by seccomp" {
+	update_config '
+      .linux.personality = {
+                "domain": "LINUX",
+      }
+	  | .linux.seccomp = {
+                "defaultAction":"SCMP_ACT_ALLOW",
+                "syscalls":[{"names":["personality"], "action":"SCMP_ACT_ERRNO"}]
+	  }'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+	runc exec test_busybox /bin/sh -c "uname -a"
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"x86_64"* ]]
+}

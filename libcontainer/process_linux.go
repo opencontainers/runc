@@ -6,13 +6,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"sync"
+	"strings"
+	"syscall"
 	"time"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -153,10 +156,41 @@ func (p *containerProcess) wait() (*os.ProcessState, error) { //nolint:unparam
 
 type setnsProcess struct {
 	containerProcess
-	cgroupPaths     map[string]string
 	rootlessCgroups bool
 	intelRdtPath    string
 	initProcessPid  int
+}
+
+// tryResetCPUAffinity tries to reset the CPU affinity of the process
+// identified by pid to include all possible CPUs (notwithstanding cgroup
+// cpuset restrictions and isolated CPUs).
+func tryResetCPUAffinity(pid int) {
+	// When resetting the CPU affinity, we want to match the configured cgroup
+	// cpuset (or the default set of all CPUs, if no cpuset is configured)
+	// rather than some more restrictive affinity we were spawned in (such as
+	// one that may have been inherited from systemd). The cpuset cgroup used
+	// to reconfigure the cpumask automatically for joining processes, but
+	// kcommit da019032819a ("sched: Enforce user requested affinity") changed
+	// this behaviour in Linux 6.2.
+	//
+	// Parsing cpuset.cpus.effective is quite inefficient (and looking at
+	// things like /proc/stat would be wrong for most nested containers), but
+	// luckily sched_setaffinity(2) will implicitly:
+	//
+	//  * Clamp the cpumask so that it matches the current number of CPUs on
+	//    the system.
+	//  * Mask out any CPUs that are not a member of the target task's
+	//    configured cgroup cpuset.
+	//
+	// So we can just pass a very large array of set cpumask bits and the
+	// kernel will silently convert that to the correct value very cheaply.
+	var cpuset unix.CPUSet
+	cpuset.Fill() // set all bits
+	if err := unix.SchedSetaffinity(pid, &cpuset); err != nil {
+		logrus.WithError(
+			os.NewSyscallError("sched_setaffinity", err),
+		).Warnf("resetting the CPU affinity of pid %d failed -- the container process may inherit runc's CPU affinity", pid)
+	}
 }
 
 // Starts setns process with specified initial CPU affinity.
@@ -189,7 +223,13 @@ func (p *setnsProcess) startWithCPUAffinity() error {
 
 func (p *setnsProcess) setFinalCPUAffinity() error {
 	aff := p.config.CPUAffinity
-	if aff == nil || aff.Final == nil {
+	// If there was no affinity configured at all, we want to reset
+	// the affinity to make sure we don't inherit an unexpected one.
+	if aff == nil || aff.Final == nil && aff.Initial == nil {
+		tryResetCPUAffinity(p.pid())
+		return nil
+	}
+	if aff.Final == nil {
 		return nil
 	}
 	if err := unix.SchedSetaffinity(p.pid(), aff.Final); err != nil {
@@ -198,12 +238,142 @@ func (p *setnsProcess) setFinalCPUAffinity() error {
 	return nil
 }
 
+func (p *setnsProcess) addIntoCgroupV1() error {
+	if sub, ok := p.process.SubCgroupPaths[""]; ok || len(p.process.SubCgroupPaths) == 0 {
+		// Either same sub-cgroup for all paths, or no sub-cgroup.
+		err := p.manager.AddPid(sub, p.pid())
+		if err != nil && !p.rootlessCgroups {
+			return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
+		}
+		return nil
+	}
+
+	// Per-controller sub-cgroup paths. Not supported by AddPid (or systemd),
+	// so we have to calculate and check all sub-cgroup paths, and write
+	// directly to cgroupfs.
+	paths := maps.Clone(p.manager.GetPaths())
+	for ctrl, sub := range p.process.SubCgroupPaths {
+		base, ok := paths[ctrl]
+		if !ok {
+			return fmt.Errorf("unknown controller %s in SubCgroupPaths", ctrl)
+		}
+		cgPath := path.Join(base, sub)
+		if !strings.HasPrefix(cgPath, base) {
+			return fmt.Errorf("bad sub cgroup path: %s", sub)
+		}
+		paths[ctrl] = cgPath
+	}
+
+	for _, path := range paths {
+		if err := cgroups.WriteCgroupProc(path, p.pid()); err != nil && !p.rootlessCgroups {
+			return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
+		}
+	}
+
+	return nil
+}
+
+func (p *setnsProcess) addIntoCgroupV2() error {
+	sub := p.process.SubCgroupPaths[""]
+	err := p.manager.AddPid(sub, p.pid())
+	if err != nil && !p.rootlessCgroups {
+		// On cgroup v2 + nesting + domain controllers, adding to initial cgroup may fail with EBUSY.
+		// https://github.com/opencontainers/runc/issues/2356#issuecomment-621277643
+		// Try to join the cgroup of InitProcessPid, unless sub-cgroup is explicitly set.
+		if p.initProcessPid != 0 && sub == "" {
+			initProcCgroupFile := fmt.Sprintf("/proc/%d/cgroup", p.initProcessPid)
+			initCg, initCgErr := cgroups.ParseCgroupFile(initProcCgroupFile)
+			if initCgErr == nil {
+				if initCgPath, ok := initCg[""]; ok {
+					initCgDirpath := filepath.Join(fs2.UnifiedMountpoint, initCgPath)
+					logrus.Debugf("adding pid %d to cgroup failed (%v), attempting to join %s",
+						p.pid(), err, initCgDirpath)
+					// NOTE: initCgDirPath is not guaranteed to exist because we didn't pause the container.
+					err = cgroups.WriteCgroupProc(initCgDirpath, p.pid())
+				}
+			}
+		}
+		if err != nil {
+			return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
+		}
+	}
+
+	return nil
+}
+
+func (p *setnsProcess) addIntoCgroup() error {
+	if p.cmd.SysProcAttr.UseCgroupFD {
+		// We've used cgroupfd successfully, so the process is
+		// already in the proper cgroup, nothing to do here.
+		return nil
+	}
+	if cgroups.IsCgroup2UnifiedMode() {
+		return p.addIntoCgroupV2()
+	}
+	return p.addIntoCgroupV1()
+}
+
+// prepareCgroupFD sets up p.cmd to use clone3 with CLONE_INTO_CGROUP
+// to join cgroup early, in p.cmd.Start. Returns an *os.File which
+// must be closed by the caller after p.Cmd.Start return.
+func (p *setnsProcess) prepareCgroupFD() (*os.File, error) {
+	if !cgroups.IsCgroup2UnifiedMode() {
+		return nil, nil
+	}
+
+	base := p.manager.Path("")
+	if base == "" { // No cgroup to join.
+		return nil, nil
+	}
+	sub := ""
+	if p.process.SubCgroupPaths != nil {
+		sub = p.process.SubCgroupPaths[""]
+	}
+	cgroup := path.Join(base, sub)
+	if !strings.HasPrefix(cgroup, base) {
+		return nil, fmt.Errorf("bad sub cgroup path: %s", sub)
+	}
+
+	fd, err := cgroups.OpenFile(base, sub, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC)
+	if err != nil {
+		if p.rootlessCgroups {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("can't open cgroup: %w", err)
+	}
+
+	logrus.Debugf("using CLONE_INTO_CGROUP %q", cgroup)
+	if p.cmd.SysProcAttr == nil {
+		p.cmd.SysProcAttr = &syscall.SysProcAttr{}
+	}
+	p.cmd.SysProcAttr.UseCgroupFD = true
+	p.cmd.SysProcAttr.CgroupFD = int(fd.Fd())
+
+	return fd, nil
+}
+
 func (p *setnsProcess) start() (retErr error) {
 	defer p.comm.closeParent()
 
+	fd, err := p.prepareCgroupFD()
+	if err != nil {
+		return err
+	}
+
 	// Get the "before" value of oom kill count.
 	oom, _ := p.manager.OOMKillCount()
-	err := p.startWithCPUAffinity()
+
+	err = p.startWithCPUAffinity()
+	if fd != nil {
+		fd.Close()
+	}
+	if err != nil && p.cmd.SysProcAttr.UseCgroupFD {
+		logrus.Debugf("exec with CLONE_INTO_CGROUP failed: %v; retrying without", err)
+		// SysProcAttr.CgroupFD is never used when UseCgroupFD is unset.
+		p.cmd.SysProcAttr.UseCgroupFD = false
+		err = p.startWithCPUAffinity()
+	}
+
 	// Close the child-side of the pipes (controlled by child).
 	p.comm.closeChild()
 	if err != nil {
@@ -231,28 +401,8 @@ func (p *setnsProcess) start() (retErr error) {
 	if err := p.execSetns(); err != nil {
 		return fmt.Errorf("error executing setns process: %w", err)
 	}
-	for _, path := range p.cgroupPaths {
-		if err := cgroups.WriteCgroupProc(path, p.pid()); err != nil && !p.rootlessCgroups {
-			// On cgroup v2 + nesting + domain controllers, WriteCgroupProc may fail with EBUSY.
-			// https://github.com/opencontainers/runc/issues/2356#issuecomment-621277643
-			// Try to join the cgroup of InitProcessPid.
-			if cgroups.IsCgroup2UnifiedMode() && p.initProcessPid != 0 {
-				initProcCgroupFile := fmt.Sprintf("/proc/%d/cgroup", p.initProcessPid)
-				initCg, initCgErr := cgroups.ParseCgroupFile(initProcCgroupFile)
-				if initCgErr == nil {
-					if initCgPath, ok := initCg[""]; ok {
-						initCgDirpath := filepath.Join(fs2.UnifiedMountpoint, initCgPath)
-						logrus.Debugf("adding pid %d to cgroups %v failed (%v), attempting to join %q (obtained from %s)",
-							p.pid(), p.cgroupPaths, err, initCg, initCgDirpath)
-						// NOTE: initCgDirPath is not guaranteed to exist because we didn't pause the container.
-						err = cgroups.WriteCgroupProc(initCgDirpath, p.pid())
-					}
-				}
-			}
-			if err != nil {
-				return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
-			}
-		}
+	if err := p.addIntoCgroup(); err != nil {
+		return err
 	}
 	// Set final CPU affinity right after the process is moved into container's cgroup.
 	if err := p.setFinalCPUAffinity(); err != nil {
@@ -454,6 +604,8 @@ func (p *initProcess) goCreateMountSources(ctx context.Context) (mountSourceRequ
 	responseCh := make(chan response)
 
 	ctx, cancelFn := context.WithTimeout(ctx, 1*time.Minute)
+	context.AfterFunc(ctx, func() { close(requestCh) })
+
 	go func() {
 		// We lock this thread because we need to setns(2) here. There is no
 		// UnlockOSThread() here, to ensure that the Go runtime will kill this
@@ -516,8 +668,6 @@ func (p *initProcess) goCreateMountSources(ctx context.Context) (mountSourceRequ
 		return nil, nil, err
 	}
 
-	// TODO: Switch to context.AfterFunc when we switch to Go 1.21.
-	var requestChCloseOnce sync.Once
 	requestFn := func(m *configs.Mount) (*mountSource, error) {
 		var err error
 		select {
@@ -527,13 +677,13 @@ func (p *initProcess) goCreateMountSources(ctx context.Context) (mountSourceRequ
 				if ok {
 					return resp.src, resp.err
 				}
+				err = fmt.Errorf("response channel closed unexpectedly")
 			case <-ctx.Done():
 				err = fmt.Errorf("receive mount source context cancelled: %w", ctx.Err())
 			}
 		case <-ctx.Done():
 			err = fmt.Errorf("send mount request cancelled: %w", ctx.Err())
 		}
-		requestChCloseOnce.Do(func() { close(requestCh) })
 		return nil, err
 	}
 	return requestFn, cancelFn, nil
@@ -615,6 +765,9 @@ func (p *initProcess) start() (retErr error) {
 			return fmt.Errorf("unable to apply cgroup configuration: %w", err)
 		}
 	}
+	// Reset the CPU affinity after cgroups are configured to make sure it
+	// matches any configured cpuset.
+	tryResetCPUAffinity(p.pid())
 	if p.intelRdtManager != nil {
 		if err := p.intelRdtManager.Apply(p.pid()); err != nil {
 			return fmt.Errorf("unable to apply Intel RDT configuration: %w", err)

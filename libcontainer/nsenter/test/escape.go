@@ -1,8 +1,7 @@
+// Package escapetest is part of the escape_json_string unit test. It is in a
+// separate package so cgo can be used together with go test. Do not use this
+// package.
 package escapetest
-
-// This file is part of escape_json_string unit test.
-// It is in a separate package so cgo can be used together
-// with go test.
 
 // #include <stdlib.h>
 // extern char *escape_json_string(char *str);

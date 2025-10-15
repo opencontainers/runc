@@ -1,3 +1,4 @@
+// Package keys provides helpers for Linux keyrings.
 package keys
 
 import (

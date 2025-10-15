@@ -10,7 +10,6 @@ import (
 
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	selinux "github.com/opencontainers/selinux/go-selinux"
 	"github.com/sirupsen/logrus"
@@ -34,6 +33,7 @@ func Validate(config *configs.Config) error {
 		mountsStrict,
 		scheduler,
 		ioPriority,
+		memoryPolicy,
 	}
 	for _, c := range checks {
 		if err := c(config); err != nil {
@@ -275,6 +275,30 @@ func sysctl(config *configs.Config) error {
 				return fmt.Errorf("sysctl %q is not allowed as it conflicts with the OCI %q field", s, "hostname")
 			}
 		}
+
+		if strings.HasPrefix(s, "user.") {
+
+			// while it is technically true that a non-userns
+			// container can write to /proc/sys/user on behalf of
+			// the init_user_ns, it was not previously supported,
+			// and doesn't guarantee that someone else spawns a
+			// different container and writes there, changing the
+			// values. in particular, setting something like
+			// max_user_namespaces to non-zero could be a vector to
+			// use 0-days where the admin had previously disabled
+			// them.
+			//
+			// additionally, this setting affects other host
+			// processes that are not container related.
+			//
+			// so let's refuse this unless we know for sure it
+			// won't touch anything else.
+			if !config.Namespaces.Contains(configs.NEWUSER) {
+				return fmt.Errorf("setting ucounts without a user namespace not allowed: %v", s)
+			}
+			continue
+		}
+
 		return fmt.Errorf("sysctl %q is not in a separate kernel namespace", s)
 	}
 
@@ -283,18 +307,19 @@ func sysctl(config *configs.Config) error {
 
 func intelrdtCheck(config *configs.Config) error {
 	if config.IntelRdt != nil {
-		if !intelrdt.IsEnabled() {
+		if !intelRdt.isEnabled() {
 			return fmt.Errorf("intelRdt is specified in config, but Intel RDT is not enabled")
 		}
 
-		if config.IntelRdt.ClosID == "." || config.IntelRdt.ClosID == ".." || strings.Contains(config.IntelRdt.ClosID, "/") {
-			return fmt.Errorf("invalid intelRdt.ClosID %q", config.IntelRdt.ClosID)
+		switch clos := config.IntelRdt.ClosID; {
+		case clos == ".", clos == "..", len(clos) > 1 && strings.Contains(clos, "/"):
+			return fmt.Errorf("invalid intelRdt.ClosID %q", clos)
 		}
 
-		if !intelrdt.IsCATEnabled() && config.IntelRdt.L3CacheSchema != "" {
+		if !intelRdt.isCATEnabled() && config.IntelRdt.L3CacheSchema != "" {
 			return errors.New("intelRdt.l3CacheSchema is specified in config, but Intel RDT/CAT is not enabled")
 		}
-		if !intelrdt.IsMBAEnabled() && config.IntelRdt.MemBwSchema != "" {
+		if !intelRdt.isMBAEnabled() && config.IntelRdt.MemBwSchema != "" {
 			return errors.New("intelRdt.memBwSchema is specified in config, but Intel RDT/MBA is not enabled")
 		}
 	}
@@ -456,5 +481,28 @@ func ioPriority(config *configs.Config) error {
 		return fmt.Errorf("invalid ioPriority.Class: %q", class)
 	}
 
+	return nil
+}
+
+func memoryPolicy(config *configs.Config) error {
+	mpol := config.MemoryPolicy
+	if mpol == nil {
+		return nil
+	}
+	switch mpol.Mode {
+	case configs.MPOL_DEFAULT, configs.MPOL_LOCAL:
+		if mpol.Nodes != nil && mpol.Nodes.Count() != 0 {
+			return fmt.Errorf("memory policy mode requires 0 nodes but got %d", mpol.Nodes.Count())
+		}
+	case configs.MPOL_BIND, configs.MPOL_INTERLEAVE,
+		configs.MPOL_PREFERRED_MANY, configs.MPOL_WEIGHTED_INTERLEAVE:
+		if mpol.Nodes == nil || mpol.Nodes.Count() == 0 {
+			return fmt.Errorf("memory policy mode requires at least one node but got 0")
+		}
+	case configs.MPOL_PREFERRED:
+		// Zero or more nodes are allowed by the kernel.
+	default:
+		return fmt.Errorf("invalid memory policy mode: %d", mpol.Mode)
+	}
 	return nil
 }

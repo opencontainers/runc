@@ -774,7 +774,6 @@ func TestValidateIDMapMounts(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			config := tc.config
 			config.Rootfs = "/var"
@@ -1017,6 +1016,40 @@ func TestValidateNetDevices(t *testing.T) {
 				t.Error(err)
 			}
 		})
+	}
+}
+
+func TestValidateUserSysctlWithUserNamespace(t *testing.T) {
+	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
+		t.Skip("Test requires userns.")
+	}
+	config := &configs.Config{
+		Rootfs: "/var",
+		Sysctl: map[string]string{"user.max_inotify_watches": "8192"},
+		Namespaces: configs.Namespaces(
+			[]configs.Namespace{
+				{Type: configs.NEWUSER},
+			},
+		),
+		UIDMappings: []configs.IDMap{{HostID: 0, ContainerID: 123, Size: 100}},
+		GIDMappings: []configs.IDMap{{HostID: 0, ContainerID: 123, Size: 100}},
+	}
+
+	err := Validate(config)
+	if err != nil {
+		t.Errorf("Expected error to not occur with user.* sysctl and NEWUSER namespace: %+v", err)
+	}
+}
+
+func TestValidateUserSysctlWithoutUserNamespace(t *testing.T) {
+	config := &configs.Config{
+		Rootfs: "/var",
+		Sysctl: map[string]string{"user.max_inotify_watches": "8192"},
+	}
+
+	err := Validate(config)
+	if err == nil {
+		t.Error("Expected error to occur with user.* sysctl without NEWUSER namespace but it was nil")
 	}
 }
 

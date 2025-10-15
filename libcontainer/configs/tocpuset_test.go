@@ -57,10 +57,9 @@ func TestToCPUSet(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.in, func(t *testing.T) {
-			out, err := toCPUSet(tc.in)
-			t.Logf("toCPUSet(%q) = %v (error: %v)", tc.in, out, err)
+			out, err := ToCPUSet(tc.in)
+			t.Logf("ToCPUSet(%q) = %v (error: %v)", tc.in, out, err)
 			// Check the error.
 			if tc.isErr {
 				if err == nil {

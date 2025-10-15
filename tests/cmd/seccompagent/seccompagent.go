@@ -1,5 +1,10 @@
 //go:build linux && seccomp
 
+// seccompagent is an example implementation of a seccomp-agent for the seccomp
+// user notification feature. It intercepts a handful of system calls and
+// emulates them.
+//
+// This tool is only intended to be used within runc's integration tests.
 package main
 
 import (
@@ -27,8 +32,8 @@ var (
 )
 
 func closeStateFds(recvFds []int) {
-	for i := range recvFds {
-		unix.Close(i)
+	for _, fd := range recvFds {
+		_ = unix.Close(fd)
 	}
 }
 

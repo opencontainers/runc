@@ -8,6 +8,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -41,6 +42,8 @@ var (
 		flag  int
 	}
 	complexFlags map[string]func(*configs.Mount)
+	mpolModeMap  map[string]uint
+	mpolModeFMap map[string]uint
 )
 
 func initMaps() {
@@ -148,6 +151,22 @@ func initMaps() {
 				m.IDMapping.Recursive = true
 			},
 		}
+
+		mpolModeMap = map[string]uint{
+			string(specs.MpolDefault):            configs.MPOL_DEFAULT,
+			string(specs.MpolPreferred):          configs.MPOL_PREFERRED,
+			string(specs.MpolBind):               configs.MPOL_BIND,
+			string(specs.MpolInterleave):         configs.MPOL_INTERLEAVE,
+			string(specs.MpolLocal):              configs.MPOL_LOCAL,
+			string(specs.MpolPreferredMany):      configs.MPOL_PREFERRED_MANY,
+			string(specs.MpolWeightedInterleave): configs.MPOL_WEIGHTED_INTERLEAVE,
+		}
+
+		mpolModeFMap = map[string]uint{
+			string(specs.MpolFStaticNodes):   configs.MPOL_F_STATIC_NODES,
+			string(specs.MpolFRelativeNodes): configs.MPOL_F_RELATIVE_NODES,
+			string(specs.MpolFNumaBalancing): configs.MPOL_F_NUMA_BALANCING,
+		}
 	})
 }
 
@@ -182,6 +201,20 @@ func KnownMountOptions() []string {
 	}
 	sort.Strings(res)
 	return res
+}
+
+// KnownMemoryPolicyModes returns the list of the known memory policy modes.
+// Used by `runc features`.
+func KnownMemoryPolicyModes() []string {
+	initMaps()
+	return slices.Sorted(maps.Keys(mpolModeMap))
+}
+
+// KnownMemoryPolicyFlags returns the list of the known memory policy mode flags.
+// Used by `runc features`.
+func KnownMemoryPolicyFlags() []string {
+	initMaps()
+	return slices.Sorted(maps.Keys(mpolModeFMap))
 }
 
 // AllowedDevices is the set of devices which are automatically included for
@@ -462,10 +495,34 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		}
 		if spec.Linux.IntelRdt != nil {
 			config.IntelRdt = &configs.IntelRdt{
-				ClosID:        spec.Linux.IntelRdt.ClosID,
-				L3CacheSchema: spec.Linux.IntelRdt.L3CacheSchema,
-				MemBwSchema:   spec.Linux.IntelRdt.MemBwSchema,
+				ClosID:           spec.Linux.IntelRdt.ClosID,
+				Schemata:         spec.Linux.IntelRdt.Schemata,
+				L3CacheSchema:    spec.Linux.IntelRdt.L3CacheSchema,
+				MemBwSchema:      spec.Linux.IntelRdt.MemBwSchema,
+				EnableMonitoring: spec.Linux.IntelRdt.EnableMonitoring,
 			}
+		}
+		if spec.Linux.MemoryPolicy != nil {
+			var ok bool
+			var err error
+			specMp := spec.Linux.MemoryPolicy
+			confMp := &configs.LinuxMemoryPolicy{}
+			confMp.Mode, ok = mpolModeMap[string(specMp.Mode)]
+			if !ok {
+				return nil, fmt.Errorf("invalid memory policy mode %q", specMp.Mode)
+			}
+			confMp.Nodes, err = configs.ToCPUSet(specMp.Nodes)
+			if err != nil {
+				return nil, fmt.Errorf("invalid memory policy nodes %q: %w", specMp.Nodes, err)
+			}
+			for _, specFlag := range specMp.Flags {
+				confFlag, ok := mpolModeFMap[string(specFlag)]
+				if !ok {
+					return nil, fmt.Errorf("invalid memory policy flag %q", specFlag)
+				}
+				confMp.Flags |= confFlag
+			}
+			config.MemoryPolicy = confMp
 		}
 		if spec.Linux.Personality != nil {
 			if len(spec.Linux.Personality.Flags) > 0 {

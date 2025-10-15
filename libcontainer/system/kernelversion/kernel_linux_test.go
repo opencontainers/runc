@@ -67,7 +67,6 @@ func TestParseRelease(t *testing.T) {
 		{in: "3.-8", expectedErr: fmt.Errorf(`failed to parse kernel version "3.-8": expected integer`)},
 	}
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.in, func(t *testing.T) {
 			version, err := parseRelease(tc.in)
 			if tc.expectedErr != nil {
@@ -126,7 +125,6 @@ func TestGreaterEqualThan(t *testing.T) {
 		},
 	}
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.doc+": "+tc.in.String(), func(t *testing.T) {
 			ok, err := GreaterEqualThan(tc.in)
 			if err != nil {
