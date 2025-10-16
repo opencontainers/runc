@@ -28,8 +28,7 @@ test_host_pidns_kill() {
 				  ) // .)'
 	fi
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	cgpath=$(get_cgroup_path "pids")
 	init_pid=$(cat "$cgpath"/cgroup.procs)
 
@@ -57,8 +56,7 @@ test_host_pidns_kill() {
 		kill -0 "$p"
 	done
 
-	runc kill test_busybox KILL
-	[ "$status" -eq 0 ]
+	runc -0 kill test_busybox KILL
 	# Wait and check that all processes are gone.
 	wait_pids_gone 10 0.2 "${pids[@]}"
 
@@ -76,26 +74,21 @@ test_host_pidns_kill() {
 }
 
 @test "kill detached busybox" {
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 
-	runc kill test_busybox KILL
-	[ "$status" -eq 0 ]
+	runc -0 kill test_busybox KILL
 	wait_for_container 10 1 test_busybox stopped
 
 	# Check that kill errors on a stopped container.
-	runc kill test_busybox 0
-	[ "$status" -ne 0 ]
+	runc ! kill test_busybox 0
 	[[ "$output" == *"container not running"* ]]
 
 	# Check that -a (now obsoleted) makes kill return no error for a stopped container.
-	runc kill -a test_busybox 0
-	[ "$status" -eq 0 ]
+	runc -0 kill -a test_busybox 0
 
-	runc delete test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 delete test_busybox
 }
 
 # This is roughly the same as TestPIDHostInitProcessWait in libcontainer/integration.
@@ -136,22 +129,17 @@ test_host_pidns_kill() {
 @test "kill KILL [shared pidns]" {
 	update_config '.process.args = ["sleep", "infinity"]'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" target_ctr
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" target_ctr
 	testcontainer target_ctr running
 	target_pid="$(__runc state target_ctr | jq .pid)"
 	update_config '.linux.namespaces |= map(if .type == "user" or .type == "pid" then (.path = "/proc/'"$target_pid"'/ns/" + .type) else . end) | del(.linux.uidMappings) | del(.linux.gidMappings)'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" attached_ctr
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" attached_ctr
 	testcontainer attached_ctr running
 
-	runc kill attached_ctr 9
-	[ "$status" -eq 0 ]
+	runc -0 kill attached_ctr 9
 
-	runc delete --force attached_ctr
-	[ "$status" -eq 0 ]
+	runc -0 delete --force attached_ctr
 
-	runc delete --force target_ctr
-	[ "$status" -eq 0 ]
+	runc -0 delete --force target_ctr
 }

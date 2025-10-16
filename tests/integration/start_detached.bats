@@ -11,8 +11,7 @@ function teardown() {
 }
 
 @test "runc run detached" {
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	testcontainer test_busybox running
 }
 
@@ -25,15 +24,13 @@ function teardown() {
 	update_config ' (.. | select(.uid? == 0)) .uid |= 1000
 		| (.. | select(.gid? == 0)) .gid |= 100'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 }
 
 @test "runc run detached --pid-file" {
-	runc run --pid-file pid.txt -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run --pid-file pid.txt -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 
@@ -46,8 +43,7 @@ function teardown() {
 	mkdir pid_file
 	cd pid_file
 
-	runc run --pid-file pid.txt -d -b "$bundle" --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run --pid-file pid.txt -d -b "$bundle" --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 

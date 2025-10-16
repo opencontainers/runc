@@ -40,16 +40,14 @@ function teardown() {
 	update_config ' .linux.netDevices |= {"dummy0": {} }
       		| .process.args |= ["ip", "address", "show", "dev", "dummy0"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 }
 
 @test "move network device to container network namespace and restore it back" {
 	setup_netns
 	update_config ' .linux.netDevices |= {"dummy0": {} }'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	# The network namespace owner controls the lifecycle of the interface.
 	# The interface should remain on the namespace after the container was killed.
@@ -67,8 +65,7 @@ function teardown() {
 	update_config ' .linux.netDevices |= {"dummy0": {} }
       		| .process.args |= ["ip", "address", "show", "dev", "dummy0"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 
 	# Verify the interface is still present in the network namespace.
 	ip netns exec "$ns_name" ip address show dev dummy0
@@ -86,8 +83,7 @@ function teardown() {
 	ip link set down dev dummy0
 	ip address add "$global_ip" dev dummy0
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "$output" == *"$global_ip "* ]]
 
 	# Verify the interface is still present in the network namespace.
@@ -107,8 +103,7 @@ function teardown() {
 	ip link set down dev dummy0
 	ip address add "$non_global_ip" dev dummy0
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "$output" != *" $non_global_ip "* ]]
 
 	# Verify the interface is still present in the network namespace.
@@ -124,8 +119,7 @@ function teardown() {
 	# Set a custom mtu to the interface.
 	ip link set mtu "$mtu_value" dev dummy0
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "$output" == *"mtu $mtu_value "* ]]
 
 	# Verify the interface is still present in the network namespace.
@@ -142,8 +136,7 @@ function teardown() {
 	# set a custom mac address to the interface
 	ip link set address "$mac_address" dev dummy0
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "$output" == *"ether $mac_address "* ]]
 
 	# Verify the interface is still present in the network namespace.
@@ -156,8 +149,7 @@ function teardown() {
 	update_config ' .linux.netDevices |= { "dummy0": { "name" : "ctr_dummy0" } }
       		| .process.args |= ["ip", "address", "show", "dev", "ctr_dummy0"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 
 	# Verify the interface is still present in the network namespace.
 	ip netns exec "$ns_name" ip address show dev ctr_dummy0
@@ -179,8 +171,7 @@ function teardown() {
 	# Set a custom ip address to the interface.
 	ip address add "$global_ip" dev dummy0
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "$output" == *" $global_ip "* ]]
 	[[ "$output" == *"ether $mac_address "* ]]
 	[[ "$output" == *"mtu $mtu_value "* ]]

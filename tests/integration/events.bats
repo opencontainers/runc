@@ -22,8 +22,7 @@ function test_events() {
 		retry_every="$2"
 	fi
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	# Spawn two subshels:
 	# 1. Event logger that sends stats events to events.log.
@@ -47,12 +46,10 @@ function test_events() {
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 	init_cgroup_paths
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	# generate stats
-	runc events --stats test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 events --stats test_busybox
 	[[ "${lines[0]}" == [\{]"\"type\""[:]"\"stats\""[,]"\"id\""[:]"\"test_busybox\""[,]* ]]
 	[[ "${lines[0]}" == *"data"* ]]
 }
@@ -64,17 +61,14 @@ function test_events() {
 
 	update_config '.linux.resources.cpu |= { "quota": 1000 }'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	# Stress the CPU a bit. Need something that runs for more than 10s.
-	runc exec test_busybox dd if=/dev/zero bs=1 count=128K of=/dev/null
-	[ "$status" -eq 0 ]
+	runc -0 exec test_busybox dd if=/dev/zero bs=1 count=128K of=/dev/null
 
 	runc exec test_busybox sh -c 'tail /sys/fs/cgroup/*.pressure'
 
-	runc events --stats test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 events --stats test_busybox
 
 	# Check PSI metrics.
 	jq '.data.cpu.psi' <<<"${lines[0]}"
@@ -91,11 +85,9 @@ function test_events() {
 	requires cgroups_v2 cgroups_hugetlb
 	init_cgroup_paths
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
-	runc events --stats test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 events --stats test_busybox
 	# Ensure hugetlb node is present.
 	jq -e '.data.hugetlb // empty' <<<"${lines[0]}"
 }
@@ -120,8 +112,7 @@ function test_events() {
 	# we need the container to hit OOM, so disable swap
 	update_config '(.. | select(.resources? != null)) .resources.memory |= {"limit": 33554432, "swap": 33554432}'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	# spawn two sub processes (shells)
 	# the first sub process is an event logger that sends stats events to events.log

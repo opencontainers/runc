@@ -25,8 +25,7 @@ function setup() {
 	requires cgroups_memory cgroups_pids cgroups_cpuset
 	init_cgroup_paths
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update
 
 	# Set a few variables to make the code below work for both v1 and v2
 	if [ -v CGROUP_V1 ]; then
@@ -69,55 +68,47 @@ function setup() {
 	# update cpuset if possible (i.e. we're running on a multicore cpu)
 	cpu_count=$(grep -c '^processor' /proc/cpuinfo)
 	if [ "$cpu_count" -gt 1 ]; then
-		runc update test_update --cpuset-cpus "1"
-		[ "$status" -eq 0 ]
+		runc -0 update test_update --cpuset-cpus "1"
 		check_cgroup_value "cpuset.cpus" 1
 	fi
 
 	# update memory limit
-	runc update test_update --memory 67108864
-	[ "$status" -eq 0 ]
+	runc -0 update test_update --memory 67108864
 	check_cgroup_value $MEM_LIMIT 67108864
 	check_systemd_value $SD_MEM_LIMIT 67108864
 
-	runc update test_update --memory 50M
-	[ "$status" -eq 0 ]
+	runc -0 update test_update --memory 50M
 	check_cgroup_value $MEM_LIMIT 52428800
 	check_systemd_value $SD_MEM_LIMIT 52428800
 
 	# update memory soft limit
-	runc update test_update --memory-reservation 33554432
-	[ "$status" -eq 0 ]
+	runc -0 update test_update --memory-reservation 33554432
 	check_cgroup_value "$MEM_RESERVE" 33554432
 	check_systemd_value "$SD_MEM_RESERVE" 33554432
 
 	# Run swap memory tests if swap is available.
 	if [ -v HAVE_SWAP ]; then
 		# try to remove memory swap limit
-		runc update test_update --memory-swap -1
-		[ "$status" -eq 0 ]
+		runc -0 update test_update --memory-swap -1
 		check_cgroup_value "$MEM_SWAP" "$SYSTEM_MEM"
 		check_systemd_value "$SD_MEM_SWAP" "$SD_UNLIMITED"
 
 		# update memory swap
 		if [ -v CGROUP_V2 ]; then
 			# for cgroupv2, memory and swap can only be set together
-			runc update test_update --memory 52428800 --memory-swap 96468992
-			[ "$status" -eq 0 ]
+			runc -0 update test_update --memory 52428800 --memory-swap 96468992
 			# for cgroupv2, swap is a separate limit (it does not include mem)
 			check_cgroup_value "$MEM_SWAP" $((96468992 - 52428800))
 			check_systemd_value "$SD_MEM_SWAP" $((96468992 - 52428800))
 		else
-			runc update test_update --memory-swap 96468992
-			[ "$status" -eq 0 ]
+			runc -0 update test_update --memory-swap 96468992
 			check_cgroup_value "$MEM_SWAP" 96468992
 			check_systemd_value "$SD_MEM_SWAP" 96468992
 		fi
 	fi
 
 	# try to remove memory limit
-	runc update test_update --memory -1
-	[ "$status" -eq 0 ]
+	runc -0 update test_update --memory -1
 
 	# check memory limit is gone
 	check_cgroup_value "$MEM_LIMIT" "$SYSTEM_MEM"
@@ -130,19 +121,17 @@ function setup() {
 	fi
 
 	# update pids limit
-	runc update test_update --pids-limit 10
-	[ "$status" -eq 0 ]
+	runc -0 update test_update --pids-limit 10
 	check_cgroup_value "pids.max" 10
 	check_systemd_value "TasksMax" 10
 
 	# unlimited
-	runc update test_update --pids-limit -1
-	[ "$status" -eq 0 ]
+	runc -0 update test_update --pids-limit -1
 	check_cgroup_value "pids.max" max
 	check_systemd_value "TasksMax" $SD_UNLIMITED
 
 	# Revert to the test initial value via json on stdin
-	runc update -r - test_update <<EOF
+	runc -0 update -r - test_update <<EOF
 {
   "memory": {
     "limit": 33554432,
@@ -159,7 +148,6 @@ function setup() {
   }
 }
 EOF
-	[ "$status" -eq 0 ]
 	check_cgroup_value "cpuset.cpus" 0
 
 	check_cgroup_value $MEM_LIMIT 33554432
@@ -172,11 +160,10 @@ EOF
 	check_systemd_value "TasksMax" 20
 
 	# redo all the changes at once
-	runc update test_update \
+	runc -0 update test_update \
 		--cpu-period 900000 --cpu-quota 600000 --cpu-share 200 \
 		--memory 67108864 --memory-reservation 33554432 \
 		--pids-limit 10
-	[ "$status" -eq 0 ]
 	check_cgroup_value $MEM_LIMIT 67108864
 	check_systemd_value $SD_MEM_LIMIT 67108864
 
@@ -205,8 +192,7 @@ EOF
 }
 EOF
 
-	runc update -r "$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json test_update
-	[ "$status" -eq 0 ]
+	runc -0 update -r "$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json test_update
 	check_cgroup_value "cpuset.cpus" 0
 
 	check_cgroup_value $MEM_LIMIT 33554432
@@ -222,8 +208,7 @@ EOF
 		# Test case for https://github.com/opencontainers/runc/pull/592,
 		# checking github.com/opencontainers/cgroups/fs/memory.go:setMemoryAndSwap.
 
-		runc update test_update --memory 30M --memory-swap 50M
-		[ "$status" -eq 0 ]
+		runc -0 update test_update --memory 30M --memory-swap 50M
 
 		check_cgroup_value $MEM_LIMIT $((30 * 1024 * 1024))
 		check_systemd_value $SD_MEM_LIMIT $((30 * 1024 * 1024))
@@ -238,8 +223,7 @@ EOF
 		fi
 
 		# Now, set new memory to more than old swap
-		runc update test_update --memory 60M --memory-swap 80M
-		[ "$status" -eq 0 ]
+		runc -0 update test_update --memory 60M --memory-swap 80M
 
 		check_cgroup_value $MEM_LIMIT $((60 * 1024 * 1024))
 		check_systemd_value $SD_MEM_LIMIT $((60 * 1024 * 1024))
@@ -258,35 +242,30 @@ EOF
 @test "update cgroup cpu limits" {
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update
 
 	# Check that initial values were properly set.
 	check_cpu_quota 500000 1000000
 	check_cpu_shares 100
 
 	# Update cpu period.
-	runc update test_update --cpu-period 900000
-	[ "$status" -eq 0 ]
+	runc -0 update test_update --cpu-period 900000
 	check_cpu_quota 500000 900000
 
 	# Update cpu quota.
-	runc update test_update --cpu-quota 600000
-	[ "$status" -eq 0 ]
+	runc -0 update test_update --cpu-quota 600000
 	check_cpu_quota 600000 900000
 
 	# Remove cpu quota.
-	runc update test_update --cpu-quota -1
-	[ "$status" -eq 0 ]
+	runc -0 update test_update --cpu-quota -1
 	check_cpu_quota -1 900000
 
 	# Update cpu-shares.
-	runc update test_update --cpu-share 200
-	[ "$status" -eq 0 ]
+	runc -0 update test_update --cpu-share 200
 	check_cpu_shares 200
 
 	# Revert to the test initial value via json on stding
-	runc update -r - test_update <<EOF
+	runc -0 update -r - test_update <<EOF
 {
   "cpu": {
     "shares": 100,
@@ -295,19 +274,16 @@ EOF
   }
 }
 EOF
-	[ "$status" -eq 0 ]
 	check_cpu_quota 500000 1000000
 
 	# Redo all the changes at once.
-	runc update test_update \
+	runc -0 update test_update \
 		--cpu-period 900000 --cpu-quota 600000 --cpu-share 200
-	[ "$status" -eq 0 ]
 	check_cpu_quota 600000 900000
 	check_cpu_shares 200
 
 	# Remove cpu quota and reset the period.
-	runc update test_update --cpu-quota -1 --cpu-period 100000
-	[ "$status" -eq 0 ]
+	runc -0 update test_update --cpu-quota -1 --cpu-period 100000
 	check_cpu_quota -1 100000
 
 	# Reset to initial test values via json file.
@@ -321,8 +297,7 @@ EOF
 }
 EOF
 
-	runc update -r "$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json test_update
-	[ "$status" -eq 0 ]
+	runc -0 update -r "$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json test_update
 	check_cpu_quota 500000 1000000
 	check_cpu_shares 100
 }
@@ -362,24 +337,20 @@ EOF
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires cgroups_cpu_burst
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update
 	check_cpu_burst 0
 
-	runc update test_update --cpu-period 900000 --cpu-burst 500000
-	[ "$status" -eq 0 ]
+	runc -0 update test_update --cpu-period 900000 --cpu-burst 500000
 	check_cpu_burst 500000
 
 	# issue: https://github.com/opencontainers/runc/issues/4210
 	# for systemd, cpu-burst value will be cleared, it's a known issue.
 	if [ ! -v RUNC_USE_SYSTEMD ]; then
-		runc update test_update --memory 100M
-		[ "$status" -eq 0 ]
+		runc -0 update test_update --memory 100M
 		check_cpu_burst 500000
 	fi
 
-	runc update test_update --cpu-period 900000 --cpu-burst 0
-	[ "$status" -eq 0 ]
+	runc -0 update test_update --cpu-period 900000 --cpu-burst 0
 	check_cpu_burst 0
 }
 
@@ -388,8 +359,7 @@ EOF
 
 	update_config '.linux.resources.cpu |= { "period": 1000000 }'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update
 
 	check_cpu_quota -1 1000000
 }
@@ -399,8 +369,7 @@ EOF
 
 	update_config '.linux.resources.cpu |= { "period": 100 }'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 1 ]
+	runc -1 run -d --console-socket "$CONSOLE_SOCKET" test_update
 }
 
 @test "set cpu quota with no period" {
@@ -408,8 +377,7 @@ EOF
 
 	update_config '.linux.resources.cpu |= { "quota": 5000 }'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update
 	check_cpu_quota 5000 100000
 }
 
@@ -418,12 +386,10 @@ EOF
 
 	update_config '.linux.resources.cpu |= {}'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update
 
 	# Update the period alone, no old values were set.
-	runc update --cpu-period 50000 test_update
-	[ "$status" -eq 0 ]
+	runc -0 update --cpu-period 50000 test_update
 	check_cpu_quota -1 50000
 }
 
@@ -432,12 +398,10 @@ EOF
 
 	update_config '.linux.resources.cpu |= {}'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update
 
 	# Update the quota alone, no old values were set.
-	runc update --cpu-quota 30000 test_update
-	[ "$status" -eq 0 ]
+	runc -0 update --cpu-quota 30000 test_update
 	check_cpu_quota 30000 100000
 }
 
@@ -459,20 +423,17 @@ EOF
 	run -0 cat "/sys/fs/cgroup/cpu$REL_PARENT_PATH/cpu.cfs_quota_us"
 	[ "$output" -eq 50000 ]
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update
 	# Get the current period.
 	local cur
 	cur=$(get_cgroup_value cpu.cfs_period_us)
 
 	# Sanity check: as the parent cgroup sets the limit to 50%,
 	# setting a higher limit (e.g. 60%) is expected to fail.
-	runc update --cpu-quota $((cur * 6 / 10)) test_update
-	[ "$status" -eq 1 ]
+	runc -1 update --cpu-quota $((cur * 6 / 10)) test_update
 
 	# Finally, the test itself: set 30% limit but with lower period.
-	runc update --cpu-period 10000 --cpu-quota 3000 test_update
-	[ "$status" -eq 0 ]
+	runc -0 update --cpu-period 10000 --cpu-quota 3000 test_update
 	check_cpu_quota 3000 10000
 }
 
@@ -480,28 +441,24 @@ EOF
 	requires cgroups_cpu_idle
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update
 
 	check_cgroup_value "cpu.idle" "0"
 
 	local val
 	for val in 1 0 1; do
-		runc update -r - test_update <<EOF
+		runc -0 update -r - test_update <<EOF
 {
   "cpu": {
     "idle": $val
   }
 }
 EOF
-		[ "$status" -eq 0 ]
 		check_cgroup_value "cpu.idle" "$val"
 	done
 
 	for val in 1 0 1; do
-		runc update --cpu-idle "$val" test_update
-
-		[ "$status" -eq 0 ]
+		runc -0 update --cpu-idle "$val" test_update
 		check_cgroup_value "cpu.idle" "$val"
 	done
 
@@ -511,16 +468,14 @@ EOF
 	# If this ever fails, it means that the kernel now accepts values
 	# other than 0 or 1, and runc needs to adopt.
 	for val in -1 2 3; do
-		runc update --cpu-idle "$val" test_update
-		[ "$status" -ne 0 ]
+		runc ! update --cpu-idle "$val" test_update
 		check_cgroup_value "cpu.idle" "1"
 	done
 
 	# https://github.com/opencontainers/runc/issues/3786
 	[ "$(systemd_version)" -ge 252 ] && return
 	# test update other option won't impact on cpu.idle
-	runc update --cpu-period 10000 test_update
-	[ "$status" -eq 0 ]
+	runc -0 update --cpu-period 10000 test_update
 	check_cgroup_value "cpu.idle" "1"
 }
 
@@ -528,8 +483,7 @@ EOF
 	requires cgroups_v2 systemd_v252 cgroups_cpu_idle
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update
 	check_cgroup_value "cpu.idle" "0"
 
 	# If cpu-idle is set, cpu-share (converted to CPUWeight) can't be set via systemd.
@@ -570,8 +524,7 @@ EOF
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires cgroups_v2
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update
 
 	# Check that initial values (from setup) were properly set.
 	check_cpu_quota 500000 1000000
@@ -610,21 +563,19 @@ EOF
 				"Cpus": "0",
 				"Mems": "0"
 			}'
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update
 
 	# check that initial values were properly set
 	check_systemd_value "$AllowedCPUs" 0
 	check_systemd_value "$AllowedMemoryNodes" 0
 
-	runc update -r - test_update <<EOF
+	runc -0 update -r - test_update <<EOF
 {
   "CPU": {
     "Cpus": "1"
   }
 }
 EOF
-	[ "$status" -eq 0 ]
 
 	# check the updated systemd unit properties
 	check_systemd_value "$AllowedCPUs" 1
@@ -636,14 +587,13 @@ EOF
 		return 0
 	fi
 
-	runc update -r - test_update <<EOF
+	runc -0 update -r - test_update <<EOF
 {
   "CPU": {
     "Mems": "1"
   }
 }
 EOF
-	[ "$status" -eq 0 ]
 
 	# check the updated systemd unit properties
 	check_systemd_value "$AllowedMemoryNodes" 1
@@ -658,21 +608,19 @@ EOF
 				"cpuset.cpus": "0",
 				"cpuset.mems": "0"
 			}'
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update
 
 	# check that initial values were properly set
 	check_systemd_value "AllowedCPUs" 0
 	check_systemd_value "AllowedMemoryNodes" 0
 
-	runc update -r - test_update <<EOF
+	runc -0 update -r - test_update <<EOF
 {
   "unified": {
     "cpuset.cpus": "1"
   }
 }
 EOF
-	[ "$status" -eq 0 ]
 
 	# check the updated systemd unit properties
 	check_systemd_value "AllowedCPUs" 1
@@ -684,14 +632,13 @@ EOF
 		return 0
 	fi
 
-	runc update -r - test_update <<EOF
+	runc -0 update -r - test_update <<EOF
 {
   "unified": {
     "cpuset.mems": "1"
   }
 }
 EOF
-	[ "$status" -eq 0 ]
 
 	# check the updated systemd unit properties
 	check_systemd_value "AllowedMemoryNodes" 1
@@ -705,20 +652,18 @@ EOF
 	update_config ' .linux.resources.unified |= {
 				"cpuset.cpus": "0-5",
 			}'
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update
 
 	# check that the initial value was properly set
 	check_systemd_value "AllowedCPUs" "0-5"
 
-	runc update -r - test_update <<EOF
+	runc -0 update -r - test_update <<EOF
 {
   "unified": {
     "cpuset.cpus": "5-8"
   }
 }
 EOF
-	[ "$status" -eq 0 ]
 
 	# check the updated systemd unit property, the value should not be affected by byte order
 	check_systemd_value "AllowedCPUs" "5-8"
@@ -760,17 +705,15 @@ EOF
 		echo "$root_runtime" >"$target_runtime"
 	done
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update_rt
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update_rt
 
-	runc update -r - test_update_rt <<EOF
+	runc -0 update -r - test_update_rt <<EOF
 {
   "cpu": {
     "realtimeRuntime": 500001
   }
 }
 EOF
-	[ "$status" -eq 0 ]
 	check_cgroup_value "cpu.rt_period_us" "$root_period"
 	check_cgroup_value "cpu.rt_runtime_us" 500001
 
@@ -785,20 +728,17 @@ EOF
 	check_cgroup_value "cpu.rt_period_us" 800001
 	check_cgroup_value "cpu.rt_runtime_us" 500001
 
-	runc update test_update_rt --cpu-rt-period 900001 --cpu-rt-runtime 600001
-	[ "$status" -eq 0 ]
+	runc -0 update test_update_rt --cpu-rt-period 900001 --cpu-rt-runtime 600001
 
 	check_cgroup_value "cpu.rt_period_us" 900001
 	check_cgroup_value "cpu.rt_runtime_us" 600001
 
 	# https://github.com/opencontainers/runc/issues/4094
-	runc update test_update_rt --cpu-rt-period 10000 --cpu-rt-runtime 3000
-	[ "$status" -eq 0 ]
+	runc -0 update test_update_rt --cpu-rt-period 10000 --cpu-rt-runtime 3000
 	check_cgroup_value "cpu.rt_period_us" 10000
 	check_cgroup_value "cpu.rt_runtime_us" 3000
 
-	runc update test_update_rt --cpu-rt-period 100000 --cpu-rt-runtime 20000
-	[ "$status" -eq 0 ]
+	runc -0 update test_update_rt --cpu-rt-period 100000 --cpu-rt-runtime 20000
 	check_cgroup_value "cpu.rt_period_us" 100000
 	check_cgroup_value "cpu.rt_runtime_us" 20000
 }
@@ -832,17 +772,15 @@ EOF
 	retry 10 0.1 [ -e "$TMP_CONSOLE_SOCKET" ]
 
 	# Run the container in the background.
-	runc run -d --console-socket "$TMP_CONSOLE_SOCKET" test_update
+	runc -0 run -d --console-socket "$TMP_CONSOLE_SOCKET" test_update
 	cat "$CONTAINER_OUTPUT"
-	[ "$status" -eq 0 ]
 
 	# Trigger an update. This update doesn't actually change the device rules,
 	# but it will trigger the devices cgroup code to reapply the current rules.
 	# We trigger the update a few times to make sure we hit the race.
 	for _ in {1..30}; do
 		# TODO: Update "runc update" so we can change the device rules.
-		runc update --pids-limit 30 test_update
-		[ "$status" -eq 0 ]
+		runc -0 update --pids-limit 30 test_update
 	done
 
 	# Kill recvtty.
@@ -858,23 +796,19 @@ EOF
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	# Run the container in the background.
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update
 
 	# Pause the container.
-	runc pause test_update
-	[ "$status" -eq 0 ]
+	runc -0 pause test_update
 
 	# Trigger an unrelated update.
-	runc update --pids-limit 30 test_update
-	[ "$status" -eq 0 ]
+	runc -0 update --pids-limit 30 test_update
 
 	# The container should still be paused.
 	testcontainer test_update paused
 
 	# Resume the container.
-	runc resume test_update
-	[ "$status" -eq 0 ]
+	runc -0 resume test_update
 }
 
 @test "update memory vs CheckBeforeUpdate" {
@@ -883,11 +817,10 @@ EOF
 	requires cgroups_v2
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update
 
 	# Setting memory to low value with checkBeforeUpdate=true should fail.
-	runc update -r - test_update <<EOF
+	runc ! update -r - test_update <<EOF
 {
   "memory": {
     "limit": 1024,
@@ -895,12 +828,11 @@ EOF
   }
 }
 EOF
-	[ "$status" -ne 0 ]
 	[[ "$output" == *"rejecting memory limit"* ]]
 	testcontainer test_update running
 
 	# Setting memory+swap to low value with checkBeforeUpdate=true should fail.
-	runc update -r - test_update <<EOF
+	runc ! update -r - test_update <<EOF
 {
   "memory": {
     "limit": 1024,
@@ -909,7 +841,6 @@ EOF
   }
 }
 EOF
-	[ "$status" -ne 0 ]
 	[[ "$output" == *"rejecting memory+swap limit"* ]]
 	testcontainer test_update running
 
@@ -941,10 +872,9 @@ EOF
 				{ major: '"$major"', minor: '"$minor"', rate: 485760 }
 			]'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_update
 
-	runc update -r - test_update <<EOF
+	runc -0 update -r - test_update <<EOF
 {
   "blockIO": {
     "throttleReadBpsDevice": [
@@ -978,6 +908,5 @@ EOF
   }
 }
 EOF
-	[ "$status" -eq 0 ]
 	check_cgroup_dev_iops "$dev" 10485760 9437184 1000 900
 }

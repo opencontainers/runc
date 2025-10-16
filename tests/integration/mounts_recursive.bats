@@ -34,30 +34,24 @@ function teardown() {
 @test "runc run [rbind,ro mount is read-only but not recursively]" {
 	update_config ".mounts += [{source: \"${TESTVOLUME}\" , destination: \"/mnt\", options: [\"rbind\",\"ro\"]}]"
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_rbind_ro
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_rbind_ro
 
-	runc exec test_rbind_ro touch /mnt/foo
-	[ "$status" -eq 1 ]
+	runc -1 exec test_rbind_ro touch /mnt/foo
 	[[ "${output}" == *"Read-only file system"* ]]
 
-	runc exec test_rbind_ro touch /mnt/subvol/bar
-	[ "$status" -eq 0 ]
+	runc -0 exec test_rbind_ro touch /mnt/subvol/bar
 }
 
 @test "runc run [rbind,rro mount is recursively read-only]" {
 	requires_kernel 5.12
 	update_config ".mounts += [{source: \"${TESTVOLUME}\" , destination: \"/mnt\", options: [\"rbind\",\"rro\"]}]"
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_rbind_rro
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_rbind_rro
 
-	runc exec test_rbind_rro touch /mnt/foo
-	[ "$status" -eq 1 ]
+	runc -1 exec test_rbind_rro touch /mnt/foo
 	[[ "${output}" == *"Read-only file system"* ]]
 
-	runc exec test_rbind_rro touch /mnt/subvol/bar
-	[ "$status" -eq 1 ]
+	runc -1 exec test_rbind_rro touch /mnt/subvol/bar
 	[[ "${output}" == *"Read-only file system"* ]]
 }
 
@@ -65,14 +59,11 @@ function teardown() {
 	requires_kernel 5.12
 	update_config ".mounts += [{source: \"${TESTVOLUME}\" , destination: \"/mnt\", options: [\"rbind\",\"ro\",\"rro\"]}]"
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_rbind_ro_rro
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_rbind_ro_rro
 
-	runc exec test_rbind_ro_rro touch /mnt/foo
-	[ "$status" -eq 1 ]
+	runc -1 exec test_rbind_ro_rro touch /mnt/foo
 	[[ "${output}" == *"Read-only file system"* ]]
 
-	runc exec test_rbind_ro_rro touch /mnt/subvol/bar
-	[ "$status" -eq 1 ]
+	runc -1 exec test_rbind_ro_rro touch /mnt/subvol/bar
 	[[ "${output}" == *"Read-only file system"* ]]
 }

@@ -43,8 +43,7 @@ function teardown() {
 		.root.readonly |= false |
 		.process.args = ["/bin/sh", "-c", "ldconfig -p | grep librunc"]'
 
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 
 	echo "Checking create-runtime library"
 	echo "$output" | grep "$HOOKLIBCR"

@@ -18,8 +18,7 @@ function teardown() {
 	update_config ".linux.seccomp = $(<"${TESTDATA}/${TEST_NAME}.json")"
 	update_config '.process.args = ["/seccomp_test"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 }
 
 @test "runc run [seccomp defaultErrnoRet=ENXIO]" {
@@ -30,8 +29,7 @@ function teardown() {
 	update_config ".linux.seccomp = $(<"${TESTDATA}/${TEST_NAME}.json")"
 	update_config '.process.args = ["/seccomp_test2"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 }
 
 # TODO:
@@ -47,8 +45,7 @@ function teardown() {
 				"syscalls":[{"names":["mkdir","mkdirat"], "action":"SCMP_ACT_ERRNO"}]
 			}'
 
-	runc run test_busybox
-	[ "$status" -ne 0 ]
+	runc ! run test_busybox
 	[[ "$output" == *"mkdir:"*"/dev/shm/foo"*"Operation not permitted"* ]]
 }
 
@@ -61,8 +58,7 @@ function teardown() {
 				"syscalls":[{"names":["mkdir","mkdirat"], "action":"SCMP_ACT_ERRNO", "errnoRet": 100}]
 			}'
 
-	runc run test_busybox
-	[ "$status" -ne 0 ]
+	runc ! run test_busybox
 	[[ "$output" == *"Network is down"* ]]
 }
 
@@ -141,8 +137,7 @@ function flags_value() {
 			;;
 		esac
 
-		runc --debug run test_busybox
-		[ "$status" -ne 0 ]
+		runc ! --debug run test_busybox
 		[[ "$output" == *"mkdir:"*"/dev/shm/foo"*"Operation not permitted"* ]]
 
 		# Check the numeric flags value, as printed in the debug log, is as expected.
@@ -161,8 +156,7 @@ function flags_value() {
 				"syscalls":[{"names":["mkdir","mkdirat"], "action":"SCMP_ACT_KILL"}]
 			}'
 
-	runc run test_busybox
-	[ "$status" -ne 0 ]
+	runc ! run test_busybox
 }
 
 # check that a startContainer hook is run with the seccomp filters applied
@@ -180,8 +174,7 @@ function flags_value() {
 				} ]
 			}'
 
-	runc run test_busybox
-	[ "$status" -ne 0 ]
+	runc ! run test_busybox
 	[[ "$output" == *"error running startContainer hook"* ]]
 	[[ "$output" == *"bad system call"* ]]
 }

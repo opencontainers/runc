@@ -41,8 +41,7 @@ function cpus_to_mask() {
 	first="$(first_cpu)"
 	second=$((first + 1)) # Hacky; might not work in all environments.
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" ct1
 
 	for cpus in "$second" "$first-$second" "$first,$second" "$first"; do
 		proc='
@@ -65,8 +64,7 @@ function cpus_to_mask() {
 	first="$(first_cpu)"
 	second=$((first + 1)) # Hacky; might not work in all environments.
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" ct1
 
 	for cpus in "$second" "$first-$second" "$first,$second" "$first"; do
 		proc='
@@ -95,11 +93,9 @@ function cpus_to_mask() {
 	update_config "	  .process.execCPUAffinity.initial = \"$initial\"
 			| .process.execCPUAffinity.final = \"$final\""
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" ct1
 
-	runc --debug exec ct1 grep "Cpus_allowed_list:" /proc/self/status
-	[ "$status" -eq 0 ]
+	runc -0 --debug exec ct1 grep "Cpus_allowed_list:" /proc/self/status
 	mask=$(cpus_to_mask "$initial")
 	[[ "$output" == *"nsexec"*": affinity: $mask"* ]]
 	[[ "$output" == *"Cpus_allowed_list:	$final"* ]] # Mind the literal tab.
@@ -171,8 +167,7 @@ function cpus_to_mask() {
 	[ -v RUNC_USE_SYSTEMD ] || [[ "$output" == $'Cpus_allowed_list:\t'"$first-$second" ]]
 
 	# Stop the container so we can reconfigure it.
-	runc delete -f ctr
-	[ "$status" -eq 0 ]
+	runc -0 delete -f ctr
 
 	# Ditto for a cpuset that has no overlap with the original cpumask.
 	update_config '.linux.resources.cpu = {"mems": "0", "cpus": "'"$second"'"}'

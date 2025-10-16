@@ -75,45 +75,38 @@ is_allowed_fdtarget() {
 }
 
 @test "runc create" {
-	runc create --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 create --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox created
 
-	runc start test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 start test_busybox
 
 	testcontainer test_busybox running
 }
 
 @test "runc create exec" {
-	runc create --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 create --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox created
 
-	runc exec test_busybox true
-	[ "$status" -eq 0 ]
+	runc -0 exec test_busybox true
 
 	testcontainer test_busybox created
 
-	runc start test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 start test_busybox
 
 	testcontainer test_busybox running
 }
 
 @test "runc create --pid-file" {
-	runc create --pid-file pid.txt --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 create --pid-file pid.txt --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox created
 
 	[ -e pid.txt ]
 	[[ $(cat pid.txt) = $(__runc state test_busybox | jq '.pid') ]]
 
-	runc start test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 start test_busybox
 
 	testcontainer test_busybox running
 }
@@ -123,16 +116,14 @@ is_allowed_fdtarget() {
 	mkdir pid_file
 	cd pid_file
 
-	runc create --pid-file pid.txt -b "$bundle" --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 create --pid-file pid.txt -b "$bundle" --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox created
 
 	[ -e pid.txt ]
 	[[ $(cat pid.txt) = $(__runc state test_busybox | jq '.pid') ]]
 
-	runc start test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 start test_busybox
 
 	testcontainer test_busybox running
 }
@@ -156,8 +147,7 @@ is_allowed_fdtarget() {
 	fi
 
 	exp="Such configuration is strongly discouraged"
-	runc create --console-socket "$CONSOLE_SOCKET" test
-	[ "$status" -eq 0 ]
+	runc -0 create --console-socket "$CONSOLE_SOCKET" test
 	if [ $EUID -ne 0 ] && ! rootless_cgroup; then
 		[[ "$output" = *"$exp"* ]]
 	else

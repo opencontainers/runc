@@ -17,8 +17,7 @@ function teardown() {
 @test "runc create [ --pidfd-socket ] " {
 	setup_pidfd_kill "SIGTERM"
 
-	runc create --console-socket "$CONSOLE_SOCKET" --pidfd-socket "${PIDFD_SOCKET}" test_pidfd
-	[ "$status" -eq 0 ]
+	runc -0 create --console-socket "$CONSOLE_SOCKET" --pidfd-socket "${PIDFD_SOCKET}" test_pidfd
 	testcontainer test_pidfd created
 
 	pidfd_kill
@@ -28,8 +27,7 @@ function teardown() {
 @test "runc run [ --pidfd-socket ] " {
 	setup_pidfd_kill "SIGKILL"
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" --pidfd-socket "${PIDFD_SOCKET}" test_pidfd
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" --pidfd-socket "${PIDFD_SOCKET}" test_pidfd
 	testcontainer test_pidfd running
 
 	pidfd_kill
@@ -41,8 +39,7 @@ function teardown() {
 
 	set_cgroups_path
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_pidfd
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_pidfd
 	testcontainer test_pidfd running
 
 	# Use sub-cgroup to ensure that exec process has been killed
@@ -70,8 +67,7 @@ function teardown() {
 
 	set_cgroups_path
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_pidfd
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_pidfd
 	testcontainer test_pidfd running
 
 	# Use sub-cgroup to ensure that exec process has been killed
