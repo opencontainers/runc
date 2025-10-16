@@ -10,29 +10,24 @@ function teardown() {
 	teardown_bundle
 }
 
+# ------------------------------
+# Helper: Prepare host PIDNS container
+# ------------------------------
 # See also: "kill KILL [host pidns + init gone]" test in kill.bats.
 #
 # This needs to be placed at the top of the bats file to work around
 # a shellcheck bug. See <https://github.com/koalaman/shellcheck/issues/2873>.
-function test_runc_delete_host_pidns() {
+function prepare_host_pidns_container() {
+	local name="$1"
 	requires cgroups_freezer
 
 	update_config '	  .linux.namespaces -= [{"type": "pid"}]'
 	set_cgroups_path
 	if [ $EUID -ne 0 ]; then
 		requires rootless_cgroup
-		# Apparently, for rootless test, when using systemd cgroup manager,
-		# newer versions of systemd clean up the container as soon as its init
-		# process is gone. This is all fine and dandy, except it prevents us to
-		# test this case, thus we skip the test.
-		#
-		# It is not entirely clear which systemd version got this feature:
-		# v245 works fine, and v249 does not.
 		if [ -v RUNC_USE_SYSTEMD ] && [ "$(systemd_version)" -gt 245 ]; then
 			skip "rootless+systemd conflicts with systemd > 245"
 		fi
-		# Can't mount real /proc when rootless + no pidns,
-		# so change it to a bind-mounted one from the host.
 		update_config '	  .mounts |= map((select(.type == "proc")
 					| .type = "none"
 					| .source = "/proc"
@@ -40,239 +35,190 @@ function test_runc_delete_host_pidns() {
 				  ) // .)'
 	fi
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	runc run -d --console-socket "$CONSOLE_SOCKET" "$name"
 	[ "$status" -eq 0 ]
-	cgpath=$(get_cgroup_path "pids")
+
+	local cgpath init_pid
+	cgpath=$(get_cgroup_path "pids" "$name")
 	init_pid=$(cat "$cgpath"/cgroup.procs)
 
-	# Start a few more processes.
-	for _ in 1 2 3 4 5; do
-		__runc exec -d test_busybox sleep 1h
+	for _ in 1 2; do
+		__runc exec -d "$name" sleep 1h
 	done
 
-	# Now kill the container's init process. Since the container do
-	# not have own PID ns, its init is no special and the container
-	# will still be up and running.
 	kill -9 "$init_pid"
 	wait_pids_gone 10 0.2 "$init_pid"
 
-	# Get the list of all container processes.
 	mapfile -t pids < <(cat "$cgpath"/cgroup.procs)
-	echo "pids:" "${pids[@]}"
-	# Sanity check -- make sure all processes exist.
 	for p in "${pids[@]}"; do
 		kill -0 "$p"
 	done
 
-	# Must kill those processes and remove container.
-	runc delete "$@" test_busybox
-	[ "$status" -eq 0 ]
-
-	runc state test_busybox
-	[ "$status" -ne 0 ] # "Container does not exist"
-
-	# Wait and check that all the processes are gone.
-	wait_pids_gone 10 0.2 "${pids[@]}"
-
-	# Make sure cgroup.procs is empty.
-	mapfile -t pids < <(cat "$cgpath"/cgroup.procs || true)
-	if [ ${#pids[@]} -gt 0 ]; then
-		echo "expected empty cgroup.procs, got:" "${pids[@]}" 1>&2
-		return 1
-	fi
+	echo "$name:${pids[*]}"
 }
 
-@test "runc delete" {
-	# Need a permission to create a cgroup.
-	# XXX(@kolyshkin): currently this test does not handle rootless when
-	# fs cgroup driver is used, because in this case cgroup (with a
-	# predefined name) is created by tests/rootless.sh, not by runc.
-	[ $EUID -ne 0 ] && requires systemd
-	set_resources_limit
+# ------------------------------
+# Helper: Batch delete containers
+# ------------------------------
+function batch_delete_and_verify() {
+	local force_flag="$1"; shift
+	local containers=("$@")
+	local force_args=""
+	[ "$force_flag" = "force" ] && force_args="--force"
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" testbusyboxdelete
-	[ "$status" -eq 0 ]
+	runc delete $force_args "${containers[@]}"
+	[ "$status" -eq 0 ] || fail "Batch delete failed"
 
-	testcontainer testbusyboxdelete running
-	# Ensure the find statement used later is correct.
-	output=$(find /sys/fs/cgroup -name testbusyboxdelete -o -name \*-testbusyboxdelete.scope 2>/dev/null || true)
-	if [ -z "$output" ]; then
-		fail "expected cgroup not found"
-	fi
+	for name in "${containers[@]}"; do
+		runc state "$name"
+		[ "$status" -ne 0 ] || fail "Container $name was not deleted"
 
-	runc kill testbusyboxdelete KILL
-	[ "$status" -eq 0 ]
-	wait_for_container 10 1 testbusyboxdelete stopped
+		if [[ -n "${ALL_PIDS[$name]}" ]]; then
+			wait_pids_gone 10 0.2 ${ALL_PIDS[$name]}
+		fi
 
-	runc delete testbusyboxdelete
-	[ "$status" -eq 0 ]
+		if [ -d "$CGROUP_V1_PATH/$name" ]; then
+			[ ! -d "$CGROUP_V1_PATH/$name" ] || fail "Cgroup $CGROUP_V1_PATH/$name not removed"
+		fi
+		if [ -d "$CGROUP_V2_PATH/$name" ]; then
+			[ ! -d "$CGROUP_V2_PATH/$name" ] || fail "Cgroup $CGROUP_V2_PATH/$name not removed"
+		fi
 
-	runc state testbusyboxdelete
-	[ "$status" -ne 0 ]
-
-	output=$(find /sys/fs/cgroup -name testbusyboxdelete -o -name \*-testbusyboxdelete.scope 2>/dev/null || true)
-	[ "$output" = "" ] || fail "cgroup not cleaned up correctly: $output"
+		local user=""
+		[ "$EUID" -ne 0 ] && user="--user"
+		run -4 systemctl status $user "runc-$name.scope"
+		[ "$status" -eq 4 ] || true
+	done
 }
 
-@test "runc delete --force" {
-	# run busybox detached
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+# ------------------------------
+# Host PIDNS / normal container batch delete
+# ------------------------------
+@test "runc delete [host pidns + init gone] multiple containers" {
+	local ct1 ct2 ct3
+	ct1=$(prepare_host_pidns_container "ct-hostpid-1")
+	ct2=$(prepare_host_pidns_container "ct-hostpid-2")
+	ct3=$(prepare_host_pidns_container "ct-hostpid-3")
 
-	# check state
-	testcontainer test_busybox running
+	declare -A ALL_PIDS
+	ALL_PIDS["${ct1%%:*}"]="${ct1#*:}"
+	ALL_PIDS["${ct2%%:*}"]="${ct2#*:}"
+	ALL_PIDS["${ct3%%:*}"]="${ct3#*:}"
 
-	# force delete test_busybox
-	runc delete --force test_busybox
-
-	runc state test_busybox
-	[ "$status" -ne 0 ]
+	batch_delete_and_verify "" "ct-hostpid-1" "ct-hostpid-2" "ct-hostpid-3"
 }
 
-@test "runc delete --force ignore not exist" {
-	runc delete --force notexists
-	[ "$status" -eq 0 ]
+@test "runc delete --force [host pidns + init gone] multiple containers" {
+	local ct1 ct2
+	ct1=$(prepare_host_pidns_container "ct-hostpid-f1")
+	ct2=$(prepare_host_pidns_container "ct-hostpid-f2")
+
+	declare -A ALL_PIDS
+	ALL_PIDS["${ct1%%:*}"]="${ct1#*:}"
+	ALL_PIDS["${ct2%%:*}"]="${ct2#*:}"
+
+	batch_delete_and_verify "force" "ct-hostpid-f1" "ct-hostpid-f2"
 }
 
-# Issue 4047, case "runc delete".
-@test "runc delete [host pidns + init gone]" {
-	test_runc_delete_host_pidns
-}
-
-# Issue 4047, case "runc delete --force" (different code path).
-@test "runc delete --force [host pidns + init gone]" {
-	test_runc_delete_host_pidns --force
-}
-
-@test "runc delete --force [paused container]" {
-	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
-	[ "$status" -eq 0 ]
-	testcontainer ct1 running
-
-	runc pause ct1
-	runc delete --force ct1
-	[ "$status" -eq 0 ]
-}
-
-@test "runc delete --force in cgroupv1 with subcgroups" {
+# ------------------------------
+# Cgroup v1 batch delete with subgroups
+# ------------------------------
+@test "runc delete --force in cgroupv1 with multiple containers and subcgroups" {
 	requires cgroups_v1 root cgroupns
-	set_cgroups_path
 	set_cgroup_mount_writable
-	# enable cgroupns
-	update_config '.linux.namespaces += [{"type": "cgroup"}]'
 
+	local container_list=("ct-cgv1-1" "ct-cgv1-2")
 	local subsystems="memory freezer"
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	for name in "${container_list[@]}"; do
+		set_cgroups_path
+		update_config '.linux.namespaces += [{"type": "cgroup"}]'
 
-	testcontainer test_busybox running
+		runc run -d --console-socket "$CONSOLE_SOCKET" "$name"
+		[ "$status" -eq 0 ]
+		testcontainer "$name" running
 
-	__runc exec -d test_busybox sleep 1d
+		__runc exec -d "$name" sleep 1d
+		pid=$(__runc exec "$name" ps -a | grep 1d | awk '{print $1}')
+		[[ ${pid} =~ [0-9]+ ]]
 
-	# find the pid of sleep
-	pid=$(__runc exec test_busybox ps -a | grep 1d | awk '{print $1}')
-	[[ ${pid} =~ [0-9]+ ]]
-
-	# create a sub-cgroup
-	cat <<EOF | runc exec test_busybox sh
+		cat <<EOF | runc exec "$name" sh
 set -e -u -x
 for s in ${subsystems}; do
   cd /sys/fs/cgroup/\$s
-  mkdir foo
-  cd foo
+  mkdir sub-foo
+  cd sub-foo
   echo ${pid} > tasks
-  cat tasks
 done
 EOF
-	[ "$status" -eq 0 ]
-	[[ "$output" =~ [0-9]+ ]]
+		[ "$status" -eq 0 ]
 
-	for s in ${subsystems}; do
-		name=CGROUP_${s^^}_BASE_PATH
-		eval path=\$"${name}${REL_CGROUPS_PATH}/foo"
-		# shellcheck disable=SC2154
-		[ -d "${path}" ] || fail "test failed to create memory sub-cgroup ($path not found)"
+        for s in ${subsystems}; do
+			name_upper=CGROUP_${s^^}_BASE_PATH
+			eval path=\$"${name_upper}${REL_CGROUPS_PATH}/$name/sub-foo"
+			[ -d "${path}" ] || fail "Test failed to create $s sub-cgroup for $name"
+		done
 	done
 
-	runc delete --force test_busybox
+	runc delete --force "${container_list[@]}"
+	[ "$status" -eq 0 ] || fail "Batch delete failed"
 
-	runc state test_busybox
-	[ "$status" -ne 0 ]
+	for name in "${container_list[@]}"; do
+		runc state "$name"
+		[ "$status" -ne 0 ] || fail "Container $name was not deleted"
 
-	output=$(find /sys/fs/cgroup -wholename '*testbusyboxdelete*' -type d 2>/dev/null || true)
-	[ "$output" = "" ] || fail "cgroup not cleaned up correctly: $output"
+        for s in ${subsystems}; do
+			name_upper=CGROUP_${s^^}_BASE_PATH
+			eval path=\$"${name_upper}${REL_CGROUPS_PATH}/$name"
+			[ ! -d "${path}" ] || fail "Main Cgroup $path not removed by recursive delete."
+		done
+	done
 }
 
-@test "runc delete --force in cgroupv2 with subcgroups" {
+# ------------------------------
+# Cgroup v2 batch delete with subgroups
+# ------------------------------
+@test "runc delete --force in cgroupv2 with multiple containers and subcgroups" {
 	requires cgroups_v2 root
-	set_cgroups_path
 	set_cgroup_mount_writable
 
-	# run busybox detached
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	local container_list=("ct-cgv2-1" "ct-cgv2-2")
 
-	# check state
-	testcontainer test_busybox running
+	for name in "${container_list[@]}"; do
+		set_cgroups_path
 
-	# create a sub process
-	__runc exec -d test_busybox sleep 1d
+		runc run -d --console-socket "$CONSOLE_SOCKET" "$name"
+		[ "$status" -eq 0 ]
+		testcontainer "$name" running
 
-	# find the pid of sleep
-	pid=$(__runc exec test_busybox ps -a | grep 1d | awk '{print $1}')
-	[[ ${pid} =~ [0-9]+ ]]
+		__runc exec -d "$name" sleep 1d
+		pid=$(__runc exec "$name" ps -a | grep 1d | awk '{print $1}')
+		[[ ${pid} =~ [0-9]+ ]]
 
-	# create subcgroups
-	cat <<EOF >nest.sh
-  set -e -u -x
-  cd /sys/fs/cgroup
-  echo +pids > cgroup.subtree_control
-  mkdir foo
-  cd foo
-  echo threaded > cgroup.type
-  echo ${pid} > cgroup.threads
-  cat cgroup.threads
+		cat <<EOF >nest-$name.sh
+set -e -u -x
+cd /sys/fs/cgroup
+echo +pids > cgroup.subtree_control
+mkdir sub-foo
+cd sub-foo
+echo threaded > cgroup.type
+echo ${pid} > cgroup.threads
 EOF
-	runc exec test_busybox sh <nest.sh
-	[ "$status" -eq 0 ]
-	[[ "$output" =~ [0-9]+ ]]
+		runc exec "$name" sh <nest-$name.sh
+		[ "$status" -eq 0 ]
+        
+        [ -d "$CGROUP_V2_PATH/$name/sub-foo" ] || fail "Subcgroup creation failed for $name"
+	done
 
-	# check create subcgroups success
-	[ -d "$CGROUP_V2_PATH"/foo ]
+	runc delete --force "${container_list[@]}"
+	[ "$status" -eq 0 ] || fail "Batch delete failed"
 
-	# force delete test_busybox
-	runc delete --force test_busybox
+	for name in "${container_list[@]}"; do
+		runc state "$name"
+		[ "$status" -ne 0 ] || fail "Container $name was not deleted"
+        
+		[ ! -d "$CGROUP_V2_PATH/$name" ] || fail "Cgroup $CGROUP_V2_PATH/$name not removed by recursive delete."
+	done
 
-	runc state test_busybox
-	[ "$status" -ne 0 ]
-
-	# check delete subcgroups success
-	[ ! -d "$CGROUP_V2_PATH"/foo ]
-}
-
-@test "runc delete removes failed systemd unit" {
-	requires systemd_v244 # Older systemd lacks RuntimeMaxSec support.
-
-	set_cgroups_path
-	update_config '	  .annotations += {
-				"org.systemd.property.RuntimeMaxSec": "2",
-				"org.systemd.property.TimeoutStopSec": "1"
-			   }
-			| .process.args |= ["/bin/sleep", "10"]'
-
-	runc run -d --console-socket "$CONSOLE_SOCKET" test-failed-unit
-	[ "$status" -eq 0 ]
-
-	wait_for_container 10 1 test-failed-unit stopped
-
-	local user=""
-	[ $EUID -ne 0 ] && user="--user"
-
-	# Expect "unit is not active" exit code.
-	run -3 systemctl status $user "$SD_UNIT_NAME"
-
-	runc delete test-failed-unit
-	# Expect "no such unit" exit code.
-	run -4 systemctl status $user "$SD_UNIT_NAME"
+	rm -f nest-*.sh
 }

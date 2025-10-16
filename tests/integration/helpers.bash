@@ -866,10 +866,7 @@ function teardown_bundle() {
 	echo "--- teardown ---" >&2
 
 	teardown_recvtty
-	local ct
-	for ct in $(__runc list -q); do
-		__runc delete -f "$ct"
-	done
+	__runc delete -f $(__runc list -q) 2>/dev/null || true
 	rm -rf "$ROOT"
 	remove_parent
 }
