@@ -20,8 +20,7 @@ function teardown() {
 			"boottime": { "secs": 1337, "nanosecs": 3141519 }
 		}'
 
-	runc run test_busybox
-	[ "$status" -ne 0 ]
+	runc ! run test_busybox
 }
 
 @test "runc run [timens with no offsets]" {
@@ -31,8 +30,7 @@ function teardown() {
 	update_config '.linux.namespaces += [{"type": "time"}]
 		| .linux.timeOffsets = null'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	# Default offsets are 0.
 	grep -E '^monotonic\s+0\s+0$' <<<"$output"
 	grep -E '^boottime\s+0\s+0$' <<<"$output"
@@ -48,8 +46,7 @@ function teardown() {
 			"boottime": { "secs": 1337, "nanosecs": 3141519 }
 		}'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	grep -E '^monotonic\s+7881\s+2718281$' <<<"$output"
 	grep -E '^boottime\s+1337\s+3141519$' <<<"$output"
 }
@@ -65,11 +62,9 @@ function teardown() {
 			"boottime": { "secs": 1337, "nanosecs": 3141519 }
 		}'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
-	runc exec test_busybox cat /proc/self/timens_offsets
-	[ "$status" -eq 0 ]
+	runc -0 exec test_busybox cat /proc/self/timens_offsets
 	grep -E '^monotonic\s+7881\s+2718281$' <<<"$output"
 	grep -E '^boottime\s+1337\s+3141519$' <<<"$output"
 }
@@ -90,8 +85,7 @@ function teardown() {
 			"boottime": { "secs": 1337, "nanosecs": 3141519 }
 		}'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	grep -E '^monotonic\s+7881\s+2718281$' <<<"$output"
 	grep -E '^boottime\s+1337\s+3141519$' <<<"$output"
 }

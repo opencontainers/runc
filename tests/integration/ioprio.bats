@@ -14,17 +14,14 @@ function teardown() {
 	# Create a container with a specific I/O priority.
 	update_config '.process.ioPriority = {"class": "IOPRIO_CLASS_BE", "priority": 4}'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_ioprio
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_ioprio
 
 	# Check the init process.
-	runc exec test_ioprio ionice -p 1
-	[ "$status" -eq 0 ]
+	runc -0 exec test_ioprio ionice -p 1
 	[ "${lines[0]}" = 'best-effort: prio 4' ]
 
 	# Check an exec process, which should derive ioprio from config.json.
-	runc exec test_ioprio ionice
-	[ "$status" -eq 0 ]
+	runc -0 exec test_ioprio ionice
 	[ "${lines[0]}" = 'best-effort: prio 4' ]
 
 	# Check an exec with a priority taken from process.json,
@@ -38,7 +35,6 @@ function teardown() {
 	"args": [ "/usr/bin/ionice" ],
 	"cwd": "/"
 }'
-	runc exec --process <(echo "$proc") test_ioprio
-	[ "$status" -eq 0 ]
+	runc -0 exec --process <(echo "$proc") test_ioprio
 	[ "${lines[0]}" = 'idle' ]
 }

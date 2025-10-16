@@ -18,8 +18,7 @@ function test_ro_cgroup_mount() {
 	local lines status
 	# shellcheck disable=SC2016
 	update_config '.process.args |= ["sh", "-euc", "for f in `grep /sys/fs/cgroup /proc/mounts | awk \"{print \\\\$2}\"| uniq`; do test -e $f && grep -w $f /proc/mounts | tail -n1; done"]'
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[ "${#lines[@]}" -ne 0 ]
 	for line in "${lines[@]}"; do [[ "${line}" == *'ro,'* ]]; done
 }
@@ -122,8 +121,7 @@ function test_mount_order() {
 	# Check that the entire tree was copied and the mounts were done in the
 	# expected order.
 	update_config '.process.args = ["cat", "/final/x/y/z/z/x/y/z/x/file"]'
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "$output" == *"a/x"* ]] # the final "file" was from a/x.
 }
 
@@ -140,8 +138,7 @@ function test_mount_order() {
 			| .process.args |= ["ls", "-ld", "/dir1/dir2"]'
 
 	umask 022
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "${lines[0]}" == *'drwxrwxrwx'* ]]
 }
 
@@ -153,8 +150,7 @@ function test_mount_order() {
 				}]
 			| .process.args |= ["ls", "/tmp/bind/config.json"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "${lines[0]}" == *'/tmp/bind/config.json'* ]]
 }
 
@@ -168,8 +164,7 @@ function test_mount_order() {
 				}]
 			| .process.args |= ["grep", "^tmpfs /mnt", "/proc/mounts"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "${lines[0]}" == *'ro,'* ]]
 }
 
@@ -178,8 +173,7 @@ function test_mount_order() {
 	update_config '   .mounts |= map((select(.destination == "/dev") | .options += ["ro"]) // .)
 			| .process.args |= ["grep", "^tmpfs /dev", "/proc/mounts"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "${lines[0]}" == *'ro,'* ]]
 }
 
@@ -195,8 +189,7 @@ function test_mount_order() {
 					options: ["ro", "nodev", "nosuid"]
 				}]
 			| .process.args |= ["true"]'
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 }
 
 # CVE-2023-27561 CVE-2019-19921
@@ -206,8 +199,7 @@ function test_mount_order() {
 	mkdir -p rootfs/bad-proc
 	ln -sf /bad-proc rootfs/proc
 	# This should fail.
-	runc run test_busybox
-	[ "$status" -ne 0 ]
+	runc ! run test_busybox
 	[[ "$output" == *"must be mounted on ordinary directory"* ]]
 }
 
@@ -224,8 +216,7 @@ function test_mount_order() {
 	}]'
 	update_config '.process.args |= ["true"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 
 	# Verify that the setgid bit is inherited.
 	[[ "$(stat -c %a rootfs/setgid)" == 7755 ]]

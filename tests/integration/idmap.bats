@@ -113,8 +113,7 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["sh", "-c", "stat -c =%u=%g= /tmp/mount-1/foo.txt"]'
 
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=0=0="* ]]
 }
 
@@ -123,8 +122,7 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["sh", "-c", "stat -c =%u=%g= /tmp/mount-1/foo.txt"]'
 
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=100000=100000="* ]]
 }
 
@@ -134,8 +132,7 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["sh", "-c", "touch /tmp/mount-1/bar && stat -c =%u=%g= /tmp/mount-1/bar"]'
 
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=0=0="* ]]
 }
 
@@ -144,9 +141,8 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["sh", "-c", "touch /tmp/mount-1/bar && stat -c =%u=%g= /tmp/mount-1/bar"]'
 
-	runc run test_debian
+	runc ! run test_debian
 	# The write must fail because the user is unmapped.
-	[ "$status" -ne 0 ]
 	[[ "$output" == *"Value too large for defined data type"* ]] # ERANGE
 }
 
@@ -158,8 +154,7 @@ function setup_idmap_basic_mount() {
 	# Add the shared option to the idmap mount.
 	update_config '.mounts |= map((select(.source == "source-1/") | .options += ["shared"]) // .)'
 
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"shared"* ]]
 }
 
@@ -171,8 +166,7 @@ function setup_idmap_basic_mount() {
 	# Switch the mount to have a relative mount destination.
 	update_config '.mounts |= map((select(.source == "source-1/") | .destination = "tmp/mount-1") // .)'
 
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=0=0="* ]]
 }
 
@@ -183,8 +177,7 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/{,bind-}mount-1/foo.txt"]'
 
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-1/foo.txt:0=0="* ]]
 	[[ "$output" == *"=/tmp/bind-mount-1/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
 }
@@ -195,8 +188,7 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/{,bind-}mount-1/foo.txt"]'
 
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-1/foo.txt:100000=100000="* ]]
 	[[ "$output" == *"=/tmp/bind-mount-1/foo.txt:0=0="* ]]
 }
@@ -211,8 +203,7 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-[12]/foo.txt"]'
 
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-1/foo.txt:0=0="* ]]
 	[[ "$output" == *"=/tmp/mount-2/foo.txt:1=1="* ]]
 }
@@ -228,8 +219,7 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-multi1{,-alt{,-sym}}/{foo,bar,baz}.txt"]'
 
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-multi1/foo.txt:0=11="* ]]
 	[[ "$output" == *"=/tmp/mount-multi1/bar.txt:1=22="* ]]
 	[[ "$output" == *"=/tmp/mount-multi1/baz.txt:2=33="* ]]
@@ -250,8 +240,7 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-multi1{,-alt{,-sym}}/{foo,bar,baz}.txt"]'
 
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-multi1/foo.txt:100000=100011="* ]]
 	[[ "$output" == *"=/tmp/mount-multi1/bar.txt:100001=100022="* ]]
 	[[ "$output" == *"=/tmp/mount-multi1/baz.txt:100002=100033="* ]]
@@ -273,8 +262,7 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-multi[123]/{foo,bar,baz}.txt"]'
 
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-multi1/foo.txt:1100=1911="* ]]
 	[[ "$output" == *"=/tmp/mount-multi1/bar.txt:1101=1922="* ]]
 	[[ "$output" == *"=/tmp/mount-multi1/baz.txt:1102=1933="* ]]
@@ -294,8 +282,7 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-multi[123]/{foo,bar,baz}.txt"]'
 
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-multi1/foo.txt:1100=1911="* ]]
 	[[ "$output" == *"=/tmp/mount-multi1/bar.txt:1101=1922="* ]]
 	[[ "$output" == *"=/tmp/mount-multi1/baz.txt:1102=1933="* ]]
@@ -329,8 +316,7 @@ function setup_idmap_basic_mount() {
 		]'
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-multi1/{foo,bar,baz}.txt"]'
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-multi1/foo.txt:1000=1101="* ]]
 	[[ "$output" == *"=/tmp/mount-multi1/bar.txt:2000=2202="* ]]
 	[[ "$output" == *"=/tmp/mount-multi1/baz.txt:3000=3303="* ]]
@@ -356,8 +342,7 @@ function setup_idmap_basic_mount() {
 		]'
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-multi1/{foo,bar,baz}.txt"]'
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-multi1/foo.txt:1000=1101="* ]]
 	[[ "$output" == *"=/tmp/mount-multi1/bar.txt:2000=2202="* ]]
 	[[ "$output" == *"=/tmp/mount-multi1/baz.txt:3000=3303="* ]]
@@ -388,8 +373,7 @@ function setup_idmap_basic_mount() {
 		]'
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-tree/foo.txt:1000=1101="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/bar.txt:2000=2202="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/baz.txt:3000=3303="* ]]
@@ -425,8 +409,7 @@ function setup_idmap_basic_mount() {
 		]'
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-tree/foo.txt:101000=101101="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/bar.txt:102000=102202="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/baz.txt:103000=103303="* ]]
@@ -464,8 +447,7 @@ function setup_idmap_basic_mount() {
 		]'
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-tree/foo.txt:1000=1101="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/bar.txt:2000=2202="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/baz.txt:3000=3303="* ]]
@@ -501,8 +483,7 @@ function setup_idmap_basic_mount() {
 		]'
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-tree/foo.txt:101000=101101="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/bar.txt:102000=102202="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/baz.txt:103000=103303="* ]]
@@ -540,8 +521,7 @@ function setup_idmap_basic_mount() {
 		]'
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-tree/foo.txt:1000=1101="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/bar.txt:2000=2202="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/baz.txt:3000=3303="* ]]
@@ -577,8 +557,7 @@ function setup_idmap_basic_mount() {
 		]'
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-tree/foo.txt:101000=101101="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/bar.txt:102000=102202="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/baz.txt:103000=103303="* ]]
@@ -606,8 +585,7 @@ function setup_idmap_basic_mount() {
 		]'
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-tree/foo.txt:100=211="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/bar.txt:200=222="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/baz.txt:300=233="* ]]
@@ -635,8 +613,7 @@ function setup_idmap_basic_mount() {
 		]'
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-tree/foo.txt:100=211="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/bar.txt:200=222="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/baz.txt:300=233="* ]]
@@ -657,8 +634,7 @@ function setup_idmap_basic_mount() {
 		| .linux.gidMappings += [{"containerID": 0, "hostID": 100000, "size": 65536}]'
 	update_config '.process.args = ["sleep", "infinity"]'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" target_userns
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" target_userns
 
 	# Configure our container to attach to the first container's userns.
 	target_pid="$(__runc state target_userns | jq .pid)"
@@ -677,8 +653,7 @@ function setup_idmap_basic_mount() {
 		]'
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
-	runc run test_debian
-	[ "$status" -eq 0 ]
+	runc -0 run test_debian
 	[[ "$output" == *"=/tmp/mount-tree/foo.txt:100=211="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/bar.txt:200=222="* ]]
 	[[ "$output" == *"=/tmp/mount-tree/baz.txt:300=233="* ]]

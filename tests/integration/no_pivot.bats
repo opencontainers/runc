@@ -17,7 +17,6 @@ function teardown() {
 			| .process.capabilities.bounding += ["CAP_SETFCAP"]
 			| .process.capabilities.permitted += ["CAP_SETFCAP"]'
 
-	runc run --no-pivot test_no_pivot
-	[ "$status" -eq 1 ]
+	runc -1 run --no-pivot test_no_pivot
 	[[ "$output" == *"mount: permission denied"* ]]
 }
