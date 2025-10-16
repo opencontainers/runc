@@ -261,8 +261,7 @@ function teardown() {
 
 	# The interface is virtual and should not exist because
 	# is deleted during the namespace cleanup.
-	run ip link del dummy0
-	[ "$status" -ne 0 ]
+	run ! ip link del dummy0
 }
 
 @test "userns with network interface renamed" {
@@ -279,6 +278,5 @@ function teardown() {
 
 	# The interface is virtual and should not exist because
 	# is deleted during the namespace cleanup.
-	run ip link del dummy0
-	[ "$status" -ne 0 ]
+	run ! ip link del dummy0
 }

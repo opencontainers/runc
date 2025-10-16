@@ -424,9 +424,9 @@ EOF
 		echo 50000 >"/sys/fs/cgroup/cpu/$REL_PARENT_PATH/cpu.cfs_quota_us"
 	fi
 	# Sanity checks.
-	run cat "/sys/fs/cgroup/cpu$REL_PARENT_PATH/cpu.cfs_period_us"
+	run -0 cat "/sys/fs/cgroup/cpu$REL_PARENT_PATH/cpu.cfs_period_us"
 	[ "$output" -eq 100000 ]
-	run cat "/sys/fs/cgroup/cpu$REL_PARENT_PATH/cpu.cfs_quota_us"
+	run -0 cat "/sys/fs/cgroup/cpu$REL_PARENT_PATH/cpu.cfs_quota_us"
 	[ "$output" -eq 50000 ]
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update

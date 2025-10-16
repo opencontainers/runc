@@ -91,8 +91,7 @@ function teardown() {
 	[[ "$output" == *"$global_ip "* ]]
 
 	# Verify the interface is still present in the network namespace.
-	run ip netns exec "$ns_name" ip address show dev dummy0
-	[ "$status" -eq 0 ]
+	run -0 ip netns exec "$ns_name" ip address show dev dummy0
 	[[ "$output" == *"$global_ip "* ]]
 }
 
@@ -130,8 +129,7 @@ function teardown() {
 	[[ "$output" == *"mtu $mtu_value "* ]]
 
 	# Verify the interface is still present in the network namespace.
-	run ip netns exec "$ns_name" ip address show dev dummy0
-	[ "$status" -eq 0 ]
+	run -0 ip netns exec "$ns_name" ip address show dev dummy0
 	[[ "$output" == *"mtu $mtu_value "* ]]
 }
 
@@ -149,8 +147,7 @@ function teardown() {
 	[[ "$output" == *"ether $mac_address "* ]]
 
 	# Verify the interface is still present in the network namespace.
-	run ip netns exec "$ns_name" ip address show dev dummy0
-	[ "$status" -eq 0 ]
+	run -0 ip netns exec "$ns_name" ip address show dev dummy0
 	[[ "$output" == *"ether $mac_address "* ]]
 }
 
@@ -189,8 +186,7 @@ function teardown() {
 	[[ "$output" == *"mtu $mtu_value "* ]]
 
 	# Verify the interface is still present in the network namespace.
-	run ip netns exec "$ns_name" ip address show dev ctr_dummy0
-	[ "$status" -eq 0 ]
+	run -0 ip netns exec "$ns_name" ip address show dev ctr_dummy0
 	[[ "$output" == *" $global_ip "* ]]
 	[[ "$output" == *"ether $mac_address "* ]]
 	[[ "$output" == *"mtu $mtu_value "* ]]
