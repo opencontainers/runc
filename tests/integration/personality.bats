@@ -19,8 +19,7 @@ function teardown() {
                 "flags": []
 			}'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "$output" == *"i686"* ]]
 }
 
@@ -30,10 +29,8 @@ function teardown() {
                 "domain": "LINUX32",
       }'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
-	runc exec test_busybox /bin/sh -c "uname -a"
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	runc -0 exec test_busybox /bin/sh -c "uname -a"
 	[[ "$output" == *"i686"* ]]
 }
 
@@ -45,8 +42,7 @@ function teardown() {
                 "flags": []
 			}'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "$output" == *"x86_64"* ]]
 }
 
@@ -56,10 +52,8 @@ function teardown() {
                 "domain": "LINUX",
       }'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
-	runc exec test_busybox /bin/sh -c "uname -a"
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	runc -0 exec test_busybox /bin/sh -c "uname -a"
 	[[ "$output" == *"x86_64"* ]]
 }
 
@@ -74,9 +68,7 @@ function teardown() {
                 "syscalls":[{"names":["personality"], "action":"SCMP_ACT_ERRNO"}]
 	  }'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
-	runc exec test_busybox /bin/sh -c "uname -a"
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	runc -0 exec test_busybox /bin/sh -c "uname -a"
 	[[ "$output" == *"x86_64"* ]]
 }

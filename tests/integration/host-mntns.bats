@@ -23,8 +23,7 @@ function teardown() {
 			| .linux.namespaces -= [{"type": "mount"}]
 			| .linux.maskedPaths = []
 			| .linux.readonlyPaths = []'
-	runc run test_host_mntns
-	[ "$status" -eq 0 ]
+	runc -0 run test_host_mntns
 	runc delete -f test_host_mntns
 
 	# There should be one such file.
