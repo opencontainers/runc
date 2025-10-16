@@ -125,7 +125,7 @@ func getSealableFile(comment, tmpDir string) (file *os.File, sealFn SealFunc, er
 	// First, try an executable memfd (supported since Linux 3.17).
 	file, sealFn, err = Memfd(comment)
 	if err == nil {
-		return
+		return file, sealFn, err
 	}
 	logrus.Debugf("memfd cloned binary failed, falling back to O_TMPFILE: %v", err)
 
@@ -154,7 +154,7 @@ func getSealableFile(comment, tmpDir string) (file *os.File, sealFn SealFunc, er
 			file.Close()
 			continue
 		}
-		return
+		return file, sealFn, err
 	}
 	logrus.Debugf("O_TMPFILE cloned binary failed, falling back to mktemp(): %v", err)
 	// Finally, try a classic unlinked temporary file.
@@ -168,7 +168,7 @@ func getSealableFile(comment, tmpDir string) (file *os.File, sealFn SealFunc, er
 			file.Close()
 			continue
 		}
-		return
+		return file, sealFn, err
 	}
 	return nil, nil, fmt.Errorf("could not create sealable file for cloned binary: %w", err)
 }
