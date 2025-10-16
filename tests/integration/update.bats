@@ -891,3 +891,66 @@ EOF
 	runc update test_update --memory 1024
 	wait_for_container 10 1 test_update stopped
 }
+
+@test "update per-device iops/bps values" {
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+
+	# Need major:minor for any block device (but not a partition).
+	dev=$(lsblk -dno MAJ:MIN | head -1 | tr -d ' \t\n')
+	if [ -z "$dev" ]; then
+		echo "=== lsblk -d ===" >&2
+		lsblk -d >&2
+		echo "===" >&2
+		fail "can't get device from lsblk"
+	fi
+	IFS=':' read -r major minor <<<"$dev"
+
+	# Add an entry to check that
+	#   - existing devices can be updated;
+	#   - duplicates are handled properly;
+	# (see func upsert* in update.go).
+	update_config '	  .linux.resources.blockIO.throttleReadBpsDevice |= [
+				{ major: '"$major"', minor: '"$minor"', rate: 485760 },
+				{ major: '"$major"', minor: '"$minor"', rate: 485760 }
+			]'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+
+	runc update -r - test_update <<EOF
+{
+  "blockIO": {
+    "throttleReadBpsDevice": [
+      {
+        "major": $major,
+        "minor": $minor,
+        "rate": 10485760
+      }
+    ],
+    "throttleWriteBpsDevice": [
+      {
+        "major": $major,
+        "minor": $minor,
+        "rate": 9437184
+      }
+    ],
+    "throttleReadIOPSDevice": [
+      {
+        "major": $major,
+        "minor": $minor,
+        "rate": 1000
+      }
+    ],
+    "throttleWriteIOPSDevice": [
+      {
+        "major": $major,
+        "minor": $minor,
+        "rate": 900
+      }
+    ]
+  }
+}
+EOF
+	[ "$status" -eq 0 ]
+	check_cgroup_dev_iops "$dev" 10485760 9437184 1000 900
+}

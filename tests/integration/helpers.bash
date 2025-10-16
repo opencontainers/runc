@@ -395,6 +395,22 @@ function check_cpu_weight() {
 	check_systemd_value "CPUWeight" "$weight"
 }
 
+function check_cgroup_dev_iops() {
+	local dev=$1 rbps=$2 wbps=$3 riops=$4 wiops=$5
+
+	if [ -v CGROUP_V2 ]; then
+		iops=$(get_cgroup_value "io.max")
+		printf "== io.max ==\n%s\n" "$iops"
+		grep "^$dev rbps=$rbps wbps=$wbps riops=$riops wiops=$wiops$" <<<"$iops"
+		return
+	fi
+
+	grep "^$dev ${rbps}$" <<<"$(get_cgroup_value blkio.throttle.read_bps_device)"
+	grep "^$dev ${wbps}$" <<<"$(get_cgroup_value blkio.throttle.write_bps_device)"
+	grep "^$dev ${riops}$" <<<"$(get_cgroup_value blkio.throttle.read_iops_device)"
+	grep "^$dev ${wiops}$" <<<"$(get_cgroup_value blkio.throttle.write_iops_device)"
+}
+
 # Helper function to set a resources limit
 function set_resources_limit() {
 	update_config '.linux.resources.pids.limit |= 100'
@@ -789,6 +805,29 @@ function teardown_seccompagent() {
 	fi
 	rm -f "$BATS_TMPDIR/seccompagent.pid"
 	rm -f "$SECCCOMP_AGENT_SOCKET"
+}
+
+LOOPBACK_DEVICE_LIST="$(mktemp "$BATS_TMPDIR/losetup.XXXXXX")"
+
+function setup_loopdev() {
+	local backing dev
+	backing="$(mktemp "$BATS_RUN_TMPDIR/backing.img.XXXXXX")"
+	truncate --size=4K "$backing"
+
+	dev="$(losetup --find --show "$backing")" || skip "unable to create a loop device"
+	echo "$dev" >>"$LOOPBACK_DEVICE_LIST"
+
+	unlink "$backing"
+	echo "$dev"
+}
+
+function teardown_loopdevs() {
+	[ -s "$LOOPBACK_DEVICE_LIST" ] || return 0
+	while IFS= read -r dev; do
+		echo "losetup -d '$dev'" >&2
+		losetup -d "$dev"
+	done <"$LOOPBACK_DEVICE_LIST"
+	truncate --size=0 "$LOOPBACK_DEVICE_LIST"
 }
 
 function setup_bundle() {
