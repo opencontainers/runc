@@ -27,63 +27,74 @@ func killContainer(container *libcontainer.Container) error {
 var deleteCommand = cli.Command{
 	Name:  "delete",
 	Usage: "delete any resources held by the container often used with detached container",
-	ArgsUsage: `<container-id>
+	ArgsUsage: `<container-id> [<container-id> ...]
 
-Where "<container-id>" is the name for the instance of the container.
+Where "<container-id>" is the name(s) of the container(s) to delete.
 
 EXAMPLE:
-For example, if the container id is "ubuntu01" and runc list currently shows the
-status of "ubuntu01" as "stopped" the following will delete resources held for
-"ubuntu01" removing "ubuntu01" from the runc list of containers:
+For example, if the container ids are "ubuntu01" and "nginx01", and both are stopped, the following will delete resources for both containers:
 
-       # runc delete ubuntu01`,
+       # runc delete ubuntu01 nginx01`,
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "force, f",
-			Usage: "Forcibly deletes the container if it is still running (uses SIGKILL)",
+			Usage: "Forcibly deletes the container(s) if still running (uses SIGKILL)",
 		},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+		if err := checkArgs(context, 1, minArgs); err != nil {
 			return err
 		}
 
-		id := context.Args().First()
 		force := context.Bool("force")
-		container, err := getContainer(context)
-		if err != nil {
-			if errors.Is(err, libcontainer.ErrNotExist) {
-				// if there was an aborted start or something of the sort then the container's directory could exist but
-				// libcontainer does not see it because the state.json file inside that directory was never created.
-				path := filepath.Join(context.GlobalString("root"), id)
-				if e := os.RemoveAll(path); e != nil {
-					fmt.Fprintf(os.Stderr, "remove %s: %v\n", path, e)
+		var errs []error
+
+		for _, id := range context.Args() {
+			container, err := getContainerByID(context, id)
+			if err != nil {
+				if errors.Is(err, libcontainer.ErrNotExist) {
+					// if container directory exists but no state.json, remove manually
+					path := filepath.Join(context.GlobalString("root"), id)
+					if e := os.RemoveAll(path); e != nil {
+						fmt.Fprintf(os.Stderr, "remove %s: %v\n", path, e)
+						errs = append(errs, e)
+					}
+					continue
 				}
-				if force {
-					return nil
-				}
+				errs = append(errs, err)
+				continue
 			}
-			return err
+
+			if force {
+				if err := killContainer(container); err != nil {
+					errs = append(errs, err)
+				}
+				continue
+			}
+
+			s, err := container.Status()
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+
+			switch s {
+			case libcontainer.Stopped:
+				if err := container.Destroy(); err != nil {
+					errs = append(errs, err)
+				}
+			case libcontainer.Created:
+				if err := killContainer(container); err != nil {
+					errs = append(errs, err)
+				}
+			default:
+				errs = append(errs, fmt.Errorf("cannot delete container %s that is not stopped: %s", id, s))
+			}
 		}
-		// When --force is given, we kill all container processes and
-		// then destroy the container. This is done even for a stopped
-		// container, because (in case it does not have its own PID
-		// namespace) there may be some leftover processes in the
-		// container's cgroup.
-		if force {
-			return killContainer(container)
+
+		if len(errs) > 0 {
+			return errors.Join(errs...)
 		}
-		s, err := container.Status()
-		if err != nil {
-			return err
-		}
-		switch s {
-		case libcontainer.Stopped:
-			return container.Destroy()
-		case libcontainer.Created:
-			return killContainer(container)
-		default:
-			return fmt.Errorf("cannot delete container %s that is not stopped: %s", id, s)
-		}
+		return nil
 	},
 }

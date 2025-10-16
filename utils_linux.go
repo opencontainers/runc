@@ -36,6 +36,16 @@ func getContainer(context *cli.Context) (*libcontainer.Container, error) {
 	return libcontainer.Load(root, id)
 }
 
+// getContainerByID returns the specified container instance by loading it from
+// a state directory (root) using the provided id.
+func getContainerByID(context *cli.Context, id string) (*libcontainer.Container, error) {
+	if id == "" {
+		return nil, errEmptyID
+	}
+	root := context.GlobalString("root")
+	return libcontainer.Load(root, id)
+}
+
 func getDefaultImagePath() string {
 	cwd, err := os.Getwd()
 	if err != nil {
