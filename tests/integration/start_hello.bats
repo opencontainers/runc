@@ -12,11 +12,8 @@ function teardown() {
 }
 
 @test "runc run" {
-	# run hello-world
 	runc run test_hello
 	[ "$status" -eq 0 ]
-
-	# check expected output
 	[[ "${output}" == *"Hello"* ]]
 }
 
@@ -29,11 +26,8 @@ function teardown() {
 	update_config ' (.. | select(.uid? == 0)) .uid |= 1000
 		| (.. | select(.gid? == 0)) .gid |= 100'
 
-	# run hello-world
 	runc run test_hello
 	[ "$status" -eq 0 ]
-
-	# check expected output
 	[[ "${output}" == *"Hello"* ]]
 }
 
@@ -72,21 +66,17 @@ function teardown() {
 	cd rootfs
 	update_config '(.. | select(. == "rootfs")) |= "."'
 
-	# run hello-world
 	runc run test_hello
 	[ "$status" -eq 0 ]
 	[[ "${output}" == *"Hello"* ]]
 }
 
 @test "runc run --pid-file" {
-	# run hello-world
 	runc run --pid-file pid.txt test_hello
 	[ "$status" -eq 0 ]
 	[[ "${output}" == *"Hello"* ]]
 
-	# check pid.txt was generated
 	[ -e pid.txt ]
-
 	[[ "$(cat pid.txt)" =~ [0-9]+ ]]
 }
 

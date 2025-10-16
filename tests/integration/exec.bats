@@ -11,7 +11,6 @@ function teardown() {
 }
 
 @test "runc exec" {
-	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
@@ -42,7 +41,6 @@ function teardown() {
 }
 
 @test "runc exec --pid-file" {
-	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
@@ -51,9 +49,7 @@ function teardown() {
 	echo text echoed = "'""${output}""'"
 	[[ "${output}" == *"Hello from exec"* ]]
 
-	# check pid.txt was generated
 	[ -e pid.txt ]
-
 	output=$(cat pid.txt)
 	[[ "$output" =~ [0-9]+ ]]
 	[[ "$output" != $(__runc state test_busybox | jq '.pid') ]]
@@ -61,11 +57,9 @@ function teardown() {
 
 @test "runc exec --pid-file with new CWD" {
 	bundle="$(pwd)"
-	# create pid_file directory as the CWD
 	mkdir pid_file
 	cd pid_file
 
-	# run busybox detached
 	runc run -d -b "$bundle" --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
@@ -74,16 +68,13 @@ function teardown() {
 	echo text echoed = "'""${output}""'"
 	[[ "${output}" == *"Hello from exec"* ]]
 
-	# check pid.txt was generated
 	[ -e pid.txt ]
-
 	output=$(cat pid.txt)
 	[[ "$output" =~ [0-9]+ ]]
 	[[ "$output" != $(__runc state test_busybox | jq '.pid') ]]
 }
 
 @test "runc exec ls -la" {
-	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
@@ -95,7 +86,6 @@ function teardown() {
 }
 
 @test "runc exec ls -la with --cwd" {
-	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
@@ -105,7 +95,6 @@ function teardown() {
 }
 
 @test "runc exec --env" {
-	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
@@ -119,7 +108,6 @@ function teardown() {
 	# --user can't work in rootless containers that don't have idmap.
 	[ $EUID -ne 0 ] && requires rootless_idmap
 
-	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
@@ -159,7 +147,6 @@ function teardown() {
 @test "runc exec --additional-gids" {
 	requires root
 
-	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
@@ -171,7 +158,6 @@ function teardown() {
 }
 
 @test "runc exec --preserve-fds" {
-	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
