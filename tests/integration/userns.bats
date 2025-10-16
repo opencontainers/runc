@@ -40,8 +40,7 @@ function teardown() {
 	update_config ' .process.args += ["-c", "stat /tmp/mount-1/foo.txt"]
 		| .mounts += [{"source": "source-accessible/dir", "destination": "/tmp/mount-1", "options": ["bind"]}] '
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 }
 
 # We had bugs where 1 mount worked but not 2+, test with 2 as it is a more
@@ -58,8 +57,7 @@ function teardown() {
 	# (with env var _LIBCONTAINER_MOUNT_FDS). Idem for
 	# source-inaccessible-2.
 	# On rootless, the owner is the same so it is accessible.
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 }
 
 # exec + bindmounts + user ns is a special case in the code. Test that it works.
@@ -68,11 +66,9 @@ function teardown() {
 					{ "source": "source-inaccessible-2/dir", "destination": "/tmp/mount-2", "options": ["bind"] }
 			         ]'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
-	runc exec test_busybox stat /tmp/mount-1/foo.txt /tmp/mount-2/foo.txt
-	[ "$status" -eq 0 ]
+	runc -0 exec test_busybox stat /tmp/mount-1/foo.txt /tmp/mount-2/foo.txt
 }
 
 # Issue fixed by https://github.com/opencontainers/runc/pull/3510.
@@ -86,38 +82,32 @@ function teardown() {
 	update_config '	  .mounts |= map(if .destination == "/sys/fs/cgroup" then ({"source": "source-accessible/dir", "destination": "/tmp/mount-1", "options": ["bind"]}, .) else . end)
 			| .linux.namespaces -= [{"type": "cgroup"}]'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	# Make sure this is real cgroupfs.
-	runc exec test_busybox cat /sys/fs/cgroup/{pids,memory}/tasks
-	[ "$status" -eq 0 ]
+	runc -0 exec test_busybox cat /sys/fs/cgroup/{pids,memory}/tasks
 }
 
 @test "userns join other container userns" {
 	# Create a detached container with the id-mapping we want.
 	update_config '.process.args = ["sleep", "infinity"]'
-	runc run -d --console-socket "$CONSOLE_SOCKET" target_userns
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" target_userns
 
 	# Configure our container to attach to the first container's userns.
 	target_pid="$(__runc state target_userns | jq .pid)"
 	update_config '.linux.namespaces |= map(if .type == "user" then (.path = "/proc/'"$target_pid"'/ns/" + .type) else . end)
 		| del(.linux.uidMappings)
 		| del(.linux.gidMappings)'
-	runc run -d --console-socket "$CONSOLE_SOCKET" in_userns
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" in_userns
 
-	runc exec in_userns cat /proc/self/uid_map
-	[ "$status" -eq 0 ]
+	runc -0 exec in_userns cat /proc/self/uid_map
 	if [ $EUID -eq 0 ]; then
 		grep -E '^\s+0\s+100000\s+65534$' <<<"$output"
 	else
 		grep -E '^\s+0\s+'$EUID'\s+1$' <<<"$output"
 	fi
 
-	runc exec in_userns cat /proc/self/gid_map
-	[ "$status" -eq 0 ]
+	runc -0 exec in_userns cat /proc/self/gid_map
 	if [ $EUID -eq 0 ]; then
 		grep -E '^\s+0\s+200000\s+65534$' <<<"$output"
 	else
@@ -132,8 +122,7 @@ function teardown() {
 	fi
 	# Create a detached container with the id-mapping we want.
 	update_config '.process.args = ["sleep", "infinity"]'
-	runc run -d --console-socket "$CONSOLE_SOCKET" target_userns
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" target_userns
 
 	# Configure our container to attach to the first container's userns.
 	target_pid="$(__runc state target_userns | jq .pid)"
@@ -141,8 +130,7 @@ function teardown() {
 		| del(.linux.uidMappings)
 		| del(.linux.gidMappings)
 		| .linux.mountLabel="system_u:object_r:container_file_t:s0:c344,c805"'
-	runc run -d --console-socket "$CONSOLE_SOCKET" in_userns
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" in_userns
 }
 
 @test "userns join other container userns [bind-mounted nsfd]" {
@@ -150,8 +138,7 @@ function teardown() {
 
 	# Create a detached container with the id-mapping we want.
 	update_config '.process.args = ["sleep", "infinity"]'
-	runc run -d --console-socket "$CONSOLE_SOCKET" target_userns
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" target_userns
 
 	# Bind-mount the first containers userns nsfd to a different path, to
 	# exercise the non-fast-path (where runc has to join the userns to get the
@@ -165,19 +152,16 @@ function teardown() {
 	update_config '.linux.namespaces |= map(if .type == "user" then (.path = "'"$userns_path"'") else . end)
 		| del(.linux.uidMappings)
 		| del(.linux.gidMappings)'
-	runc run -d --console-socket "$CONSOLE_SOCKET" in_userns
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" in_userns
 
-	runc exec in_userns cat /proc/self/uid_map
-	[ "$status" -eq 0 ]
+	runc -0 exec in_userns cat /proc/self/uid_map
 	if [ $EUID -eq 0 ]; then
 		grep -E '^\s+0\s+100000\s+65534$' <<<"$output"
 	else
 		grep -E '^\s+0\s+'$EUID'\s+1$' <<<"$output"
 	fi
 
-	runc exec in_userns cat /proc/self/gid_map
-	[ "$status" -eq 0 ]
+	runc -0 exec in_userns cat /proc/self/gid_map
 	if [ $EUID -eq 0 ]; then
 		grep -E '^\s+0\s+200000\s+65534$' <<<"$output"
 	else
@@ -194,8 +178,7 @@ function teardown() {
 	# automatically use an identity mapping (which breaks this test) so we need
 	# to use runc to create the userns.
 	update_config '.process.args = ["sleep", "infinity"]'
-	runc run -d --console-socket "$CONSOLE_SOCKET" target_userns
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" target_userns
 
 	# Bind-mount the first containers userns nsfd to a different path, to
 	# exercise the non-fast-path (where runc has to join the userns to get the
@@ -206,8 +189,7 @@ function teardown() {
 	echo "$userns_path" >>"$to_umount_list"
 
 	# Kill the container -- we have the userns bind-mounted.
-	runc delete -f target_userns
-	[ "$status" -eq 0 ]
+	runc -0 delete -f target_userns
 
 	# Configure our container to attach to the external userns.
 	update_config '.linux.namespaces |= map(if .type == "user" then (.path = "'"$userns_path"'") else . end)
@@ -232,18 +214,15 @@ function teardown() {
 
 	# Create a detached container to verify the namespaces are correct.
 	update_config '.process.args = ["sleep", "infinity"]'
-	runc --debug run -d --console-socket "$CONSOLE_SOCKET" ctr
-	[ "$status" -eq 0 ]
+	runc -0 --debug run -d --console-socket "$CONSOLE_SOCKET" ctr
 
 	userns_id="user:[$(stat -c "%i" "$userns_path")]"
 	netns_id="net:[$(stat -c "%i" "$netns_path")]"
 
-	runc exec ctr readlink /proc/self/ns/user
-	[ "$status" -eq 0 ]
+	runc -0 exec ctr readlink /proc/self/ns/user
 	[[ "$output" == "$userns_id" ]]
 
-	runc exec ctr readlink /proc/self/ns/net
-	[ "$status" -eq 0 ]
+	runc -0 exec ctr readlink /proc/self/ns/net
 	[[ "$output" == "$netns_id" ]]
 }
 
@@ -256,8 +235,7 @@ function teardown() {
 	update_config ' .linux.netDevices |= {"dummy0": {} }
 		| .process.args |= ["ip", "address", "show", "dev", "dummy0"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 
 	# The interface is virtual and should not exist because
 	# is deleted during the namespace cleanup.
@@ -273,8 +251,7 @@ function teardown() {
 	update_config ' .linux.netDevices |= { "dummy0": { "name" : "ctr_dummy0" } }
 		| .process.args |= ["ip", "address", "show", "dev", "ctr_dummy0"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 
 	# The interface is virtual and should not exist because
 	# is deleted during the namespace cleanup.
