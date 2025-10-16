@@ -94,6 +94,7 @@ jobs:
           https://github.com/checkpoint-restore/criu.git ~/criu
         (cd ~/criu && sudo make -j $(nproc) install-criu)
         rm -rf ~/criu
+        criu --version
 
     - name: install go ${{ matrix.go-version }}
       uses: actions/setup-go@v6
