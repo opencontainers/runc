@@ -16,7 +16,6 @@ function teardown() {
 
 	testcontainer test_busybox created
 
-	# start the command
 	runc start test_busybox
 	[ "$status" -eq 0 ]
 
@@ -34,7 +33,6 @@ function teardown() {
 
 	testcontainer test_busybox created
 
-	# start the command
 	runc start test_busybox
 	[ "$status" -eq 0 ]
 
@@ -47,12 +45,9 @@ function teardown() {
 
 	testcontainer test_busybox created
 
-	# check pid.txt was generated
 	[ -e pid.txt ]
-
 	[[ $(cat pid.txt) = $(__runc state test_busybox | jq '.pid') ]]
 
-	# start the command
 	runc start test_busybox
 	[ "$status" -eq 0 ]
 
@@ -61,7 +56,6 @@ function teardown() {
 
 @test "runc create --pid-file with new CWD" {
 	bundle="$(pwd)"
-	# create pid_file directory as the CWD
 	mkdir pid_file
 	cd pid_file
 
@@ -70,12 +64,9 @@ function teardown() {
 
 	testcontainer test_busybox created
 
-	# check pid.txt was generated
 	[ -e pid.txt ]
-
 	[[ $(cat pid.txt) = $(__runc state test_busybox | jq '.pid') ]]
 
-	# start the command
 	runc start test_busybox
 	[ "$status" -eq 0 ]
 

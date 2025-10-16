@@ -25,7 +25,6 @@ function setup() {
 	requires cgroups_memory cgroups_pids cgroups_cpuset
 	init_cgroup_paths
 
-	# run a few busyboxes detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
 
@@ -259,7 +258,6 @@ EOF
 @test "update cgroup cpu limits" {
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 
-	# run a few busyboxes detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
 
@@ -732,7 +730,6 @@ EOF
 		echo "$root_runtime" >"$target_runtime"
 	done
 
-	# run a detached busybox
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update_rt
 	[ "$status" -eq 0 ]
 

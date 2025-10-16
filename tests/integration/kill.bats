@@ -76,11 +76,9 @@ test_host_pidns_kill() {
 }
 
 @test "kill detached busybox" {
-	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
-	# check state
 	testcontainer test_busybox running
 
 	runc kill test_busybox KILL

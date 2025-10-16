@@ -18,7 +18,6 @@ function check_debug() {
 }
 
 @test "global --debug" {
-	# run hello-world
 	runc --debug run test_hello
 	[ "$status" -eq 0 ]
 
@@ -28,7 +27,6 @@ function check_debug() {
 }
 
 @test "global --debug to --log" {
-	# run hello-world
 	runc --log log.out --debug run test_hello
 	[ "$status" -eq 0 ]
 
@@ -43,7 +41,6 @@ function check_debug() {
 }
 
 @test "global --debug to --log --log-format 'text'" {
-	# run hello-world
 	runc --log log.out --log-format "text" --debug run test_hello
 	[ "$status" -eq 0 ]
 
@@ -58,7 +55,6 @@ function check_debug() {
 }
 
 @test "global --debug to --log --log-format 'json'" {
-	# run hello-world
 	runc --log log.out --log-format "json" --debug run test_hello
 	[ "$status" -eq 0 ]
 
