@@ -1158,7 +1158,7 @@ func msMoveRoot(rootfs string) error {
 			strings.HasPrefix(info.Mountpoint, rootfs) {
 			skip = true
 		}
-		return
+		return skip, stop
 	})
 	if err != nil {
 		return err

@@ -209,7 +209,7 @@ func runContainer(t testing.TB, config *configs.Config, args ...string) (buffers
 	} else {
 		return buffers, -1, err
 	}
-	return
+	return buffers, exitCode, err
 }
 
 // runContainerOk is a wrapper for runContainer, simplifying its use for cases
