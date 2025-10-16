@@ -36,35 +36,45 @@ ARCH=$(uname -m)
 # Seccomp agent socket.
 SECCCOMP_AGENT_SOCKET="$BATS_TMPDIR/seccomp-agent.sock"
 
-# Wrapper around "run" that logs output to make tests easier to debug.
-function sane_run() {
-	local cmd="$1"
-	local cmdname="${CMDNAME:-$(basename "$cmd")}"
-	shift
-
-	run "$cmd" "$@"
-
-	# Some debug information to make life easier. bats will only print it if the
-	# test failed, in which case the output is useful.
-	# shellcheck disable=SC2154
-	echo "$cmdname $* (status=$status)" >&2
-	# shellcheck disable=SC2154
-	echo "$output" >&2
-}
-
-# Wrapper for runc.
+# Wrapper for runc to run it via bats run helper.
+#
+# Optional $1 parameter (as in bats run):
+#   -N  expect exit status N (0-255), fail otherwise;
+#   !   expect nonzero exit status (1-255), fail if command succeeds.
+#
+# Optional environment:
+#   RUNC_PRE_CMD  a command to insert before runc (taskset, timeout etc.)
 function runc() {
-	CMDNAME="$(basename "$RUNC")" sane_run __runc "$@"
+	local run=(run)
+	local show=yes
+	case $1 in
+	"!" | -[0-9]*)
+		run+=("$1")
+		# When -N or ! option is used, run shows the failed command
+		# on error so we don't have to.
+		unset show
+		shift
+		;;
+	esac
+	setup_runc_cmdline
+	[ -v show ] && echo "# ${RUNC_CMDLINE[*]} $*" | sed "s| $RUNC | runc |" >&2
+	"${run[@]}" "${RUNC_CMDLINE[@]}" "$@"
 }
 
 function setup_runc_cmdline() {
-	RUNC_CMDLINE=("$RUNC")
+	RUNC_CMDLINE=()
+	# If RUNC_PRE_CMD is set, prepend it.
+	for pre in ${RUNC_PRE_CMD:+$RUNC_PRE_CMD}; do
+		RUNC_CMDLINE+=("$pre")
+	done
+	RUNC_CMDLINE+=("$RUNC")
 	[[ -v RUNC_USE_SYSTEMD ]] && RUNC_CMDLINE+=("--systemd-cgroup")
 	[[ -n "${ROOT:-}" ]] && RUNC_CMDLINE+=("--root" "$ROOT/state")
 	export RUNC_CMDLINE
 }
 
-# Raw wrapper for runc.
+# Raw wrapper for runc (no bats' run helper, use in special cases,
+# e.g. if I/O redirection is needed).
 function __runc() {
 	setup_runc_cmdline
 	"${RUNC_CMDLINE[@]}" "$@"
@@ -708,12 +718,14 @@ function retry() {
 
 	for ((i = 0; i < attempts; i++)); do
 		run "$@"
+		# shellcheck disable=SC2154
 		if [[ "$status" -eq 0 ]]; then
 			return 0
 		fi
 		sleep "$delay"
 	done
 
+	# shellcheck disable=SC2154
 	echo "Command \"$*\" failed $attempts times. Output: $output"
 	false
 }
