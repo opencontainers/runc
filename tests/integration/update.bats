@@ -320,7 +320,6 @@ EOF
   }
 }
 EOF
-	[ "$status" -eq 0 ]
 
 	runc update -r "$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json test_update
 	[ "$status" -eq 0 ]
