@@ -42,9 +42,9 @@ jobs:
       - uses: golangci/golangci-lint-action@v8
         with:
           version: v2.5
-      # Extra linters, only checking new code from a pull request.
+      # Extra linters, only checking new code from a pull request to main.
       - name: lint-extra
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.base_ref == 'main'
         run: |
           golangci-lint run --config .golangci-extra.yml --new-from-rev=HEAD~1
 
