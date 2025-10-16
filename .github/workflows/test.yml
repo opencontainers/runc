@@ -93,6 +93,7 @@ jobs:
         git clone https://github.com/checkpoint-restore/criu.git ~/criu
         (cd ~/criu && git checkout ${{ matrix.criu }} && sudo make install-criu)
         rm -rf ~/criu
+        criu --version
 
     - name: install go ${{ matrix.go-version }}
       uses: actions/setup-go@v5
