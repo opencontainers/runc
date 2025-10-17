@@ -156,7 +156,7 @@ function simple_cr_with_netdevice() {
 	[ "$status" -eq 0 ]
 
 	testcontainer test_busybox_netdevice running
-	run runc exec test_busybox_netdevice ip address show dev dummy0
+	runc exec test_busybox_netdevice ip address show dev dummy0
 	[ "$status" -eq 0 ]
 	[[ "$output" == *" $global_ip "* ]]
 	[[ "$output" == *"ether $mac_address "* ]]
@@ -172,7 +172,7 @@ function simple_cr_with_netdevice() {
 		[ "$status" -eq 0 ]
 
 		testcontainer test_busybox_netdevice running
-		run runc exec test_busybox_netdevice ip address show dev dummy0
+		runc exec test_busybox_netdevice ip address show dev dummy0
 		[ "$status" -eq 0 ]
 		[[ "$output" == *" $global_ip "* ]]
 		[[ "$output" == *"ether $mac_address "* ]]
