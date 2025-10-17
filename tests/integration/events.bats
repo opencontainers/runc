@@ -66,7 +66,7 @@ function test_events() {
 	# Stress the CPU a bit. Need something that runs for more than 10s.
 	runc -0 exec test_busybox dd if=/dev/zero bs=1 count=128K of=/dev/null
 
-	runc exec test_busybox sh -c 'tail /sys/fs/cgroup/*.pressure'
+	runc -0 exec test_busybox sh -c 'tail /sys/fs/cgroup/*.pressure'
 
 	runc -0 events --stats test_busybox
 
