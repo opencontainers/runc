@@ -51,7 +51,7 @@ function teardown() {
 
 	# The network namespace owner controls the lifecycle of the interface.
 	# The interface should remain on the namespace after the container was killed.
-	runc delete --force test_busybox
+	runc -0 delete --force test_busybox
 
 	# Move back the interface to the root namespace (pid 1).
 	ip netns exec "$ns_name" ip link set dev dummy0 netns 1
