@@ -19,7 +19,7 @@ function teardown() {
 
 	testcontainer test_busybox running
 
-	runc delete --force test_busybox
+	runc -0 delete --force test_busybox
 
 	runc ! state test_busybox
 }

@@ -24,7 +24,7 @@ function teardown() {
 
 	runc -0 state test_run_keep
 
-	runc delete test_run_keep
+	runc -0 delete test_run_keep
 
 	runc ! state test_run_keep
 }
@@ -45,7 +45,7 @@ function teardown() {
 	# check that cgroup exists
 	check_cgroup_value "pids.max" "max"
 
-	runc delete test_run_keep
+	runc -0 delete test_run_keep
 
 	runc ! state test_run_keep
 }
@@ -177,7 +177,7 @@ function teardown() {
 	fi
 
 	# ... as well as the timens offsets.
-	runc exec attached_ctr cat /proc/self/timens_offsets
+	runc -0 exec attached_ctr cat /proc/self/timens_offsets
 	grep -E '^monotonic\s+7881\s+2718281$' <<<"$output"
 	grep -E '^boottime\s+1337\s+3141519$' <<<"$output"
 }
