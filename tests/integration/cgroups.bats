@@ -490,7 +490,7 @@ convert_hugetlb_size() {
 		runc resume ct1
 	) &
 
-	# Exec should not timeout or succeed.
+	# Exec should succeed (once the container is resumed).
 	runc exec --ignore-paused ct1 echo ok
 	[ "$status" -eq 0 ]
 	[ "$output" = "ok" ]
