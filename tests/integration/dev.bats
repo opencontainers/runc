@@ -51,7 +51,7 @@ function teardown() {
 	runc -1 exec test_deny sh -c 'head -n 1 /dev/kmsg'
 	[[ "${output}" == *'Operation not permitted'* ]]
 
-	runc update test_deny --pids-limit 42
+	runc -0 update test_deny --pids-limit 42
 
 	# test write
 	runc -1 exec test_deny sh -c 'hostname | tee /dev/kmsg'
@@ -133,6 +133,6 @@ function teardown() {
 	requires systemd_v230
 
 	set_cgroups_path
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_need_reload
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_need_reload
 	check_systemd_value "NeedDaemonReload" "no"
 }

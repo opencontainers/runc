@@ -99,7 +99,7 @@ function setup() {
 	[[ ${lines[0]} = "0::/foo" ]]
 
 	# teardown: remove "/foo"
-	cat <<'EOF' | runc exec test_cgroups_group sh -eux
+	cat <<'EOF' | runc -0 exec test_cgroups_group sh -eux
 echo -memory > /sys/fs/cgroup/cgroup.subtree_control
 for pid in $(cat /sys/fs/cgroup/foo/cgroup.procs); do
 	echo $pid > /sys/fs/cgroup/cgroup.procs || true
@@ -133,7 +133,7 @@ EOF
 	if [[ "$status" -eq 0 ]]; then
 		[ "$output" = 'default 750' ]
 	else
-		runc exec test_cgroups_unified sh -c 'cat /sys/fs/cgroup/io.weight'
+		runc -0 exec test_cgroups_unified sh -c 'cat /sys/fs/cgroup/io.weight'
 		[ "$output" = 'default 7475' ]
 	fi
 }
@@ -181,7 +181,7 @@ EOF
 	weights1=$(get_cgroup_value $file)
 
 	# Check that runc update works.
-	runc update -r - test_dev_weight <<EOF
+	runc -0 update -r - test_dev_weight <<EOF
 {
   "blockIO": {
     "weight": 111,
@@ -484,7 +484,7 @@ convert_hugetlb_size() {
 	# Resume the container a bit later.
 	(
 		sleep 2
-		runc resume ct1
+		runc -0 resume ct1
 	) &
 
 	# Exec should succeed (once the container is resumed).

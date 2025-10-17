@@ -487,18 +487,18 @@ EOF
 	check_cgroup_value "cpu.idle" "0"
 
 	# If cpu-idle is set, cpu-share (converted to CPUWeight) can't be set via systemd.
-	runc update --cpu-share 200 --cpu-idle 1 test_update
+	runc -1 update --cpu-share 200 --cpu-idle 1 test_update
 	[[ "$output" == *"unable to apply both"* ]]
 	check_cgroup_value "cpu.idle" "1"
 
 	# Changing cpu-shares (converted to CPU weight) resets cpu.idle to 0.
-	runc update --cpu-share 200 test_update
+	runc -0 update --cpu-share 200 test_update
 	check_cgroup_value "cpu.idle" "0"
 
 	# Setting values via unified map.
 
 	# If cpu.idle is set, cpu.weight is ignored.
-	runc update -r - test_update <<EOF
+	runc -1 update -r - test_update <<EOF
 {
   "unified": {
     "cpu.idle": "1",
@@ -510,7 +510,7 @@ EOF
 	check_cgroup_value "cpu.idle" "1"
 
 	# Setting any cpu.weight should reset cpu.idle to 0.
-	runc update -r - test_update <<EOF
+	runc -0 update -r - test_update <<EOF
 {
   "unified": {
     "cpu.weight": "8"
@@ -531,7 +531,7 @@ EOF
 	check_cpu_shares 100
 	check_systemd_value "TasksMax" 20
 
-	runc update -r - test_update <<EOF
+	runc -0 update -r - test_update <<EOF
 {
   "unified": {
     "cpu.max": "max 100000",
@@ -717,7 +717,7 @@ EOF
 	check_cgroup_value "cpu.rt_period_us" "$root_period"
 	check_cgroup_value "cpu.rt_runtime_us" 500001
 
-	runc update -r - test_update_rt <<EOF
+	runc -0 update -r - test_update_rt <<EOF
 {
   "cpu": {
     "realtimePeriod": 800001,

@@ -73,7 +73,7 @@ function scmp_act_notify_template() {
 
 	scmp_act_notify_template "sleep infinity" true '"mkdir"'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	runc -0 exec test_busybox /bin/sh -c "mkdir /dev/shm/foo && stat /dev/shm/foo-bar"
 }
 
