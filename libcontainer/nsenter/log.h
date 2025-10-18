@@ -36,5 +36,15 @@ extern int logfd;
 		exit(1);                                             \
 	} while(0)
 
+/* bailx is the same as bail, except it does not add ": %m" (errno). */
+#define bailx(fmt, ...)                                                     \
+	do {                                                                \
+		if (logfd < 0)                                              \
+			fprintf(stderr, "FATAL: " fmt "\n", ##__VA_ARGS__); \
+		else                                                        \
+			write_log(FATAL, fmt, ##__VA_ARGS__);               \
+		exit(1);                                                    \
+	} while(0)
+
 
 #endif /* NSENTER_LOG_H */
