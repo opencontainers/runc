@@ -142,11 +142,19 @@ function test_runc_delete_host_pidns() {
 }
 
 @test "runc delete --force [paused container]" {
+	requires cgroups_freezer
+	if [ $EUID -ne 0 ]; then
+		requires rootless_cgroup
+		# Rootless containers have no default cgroup path.
+		set_cgroups_path
+	fi
+
 	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
 	[ "$status" -eq 0 ]
 	testcontainer ct1 running
 
 	runc pause ct1
+	[ "$status" -eq 0 ]
 	runc delete --force ct1
 	[ "$status" -eq 0 ]
 }
