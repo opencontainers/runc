@@ -94,6 +94,7 @@ jobs:
           https://github.com/checkpoint-restore/criu.git ~/criu
         (cd ~/criu && sudo make -j $(nproc) install-criu)
         rm -rf ~/criu
+        criu --version
 
     - name: install go ${{ matrix.go-version }}
       uses: actions/setup-go@v6
@@ -107,7 +108,7 @@ jobs:
     - name: Setup Bats and bats libs
       uses: bats-core/bats-action@3.0.1
       with:
-        bats-version: 1.9.0
+        bats-version: 1.11.1 # Known as BATS_VERSION in other places.
         support-install: false
         assert-install: false
         detik-install: false
