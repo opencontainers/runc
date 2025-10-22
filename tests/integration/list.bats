@@ -16,7 +16,6 @@ function teardown() {
 
 @test "list" {
 	bundle=$(pwd)
-	# run a few busyboxes detached
 	ROOT=$ALT_ROOT runc run -d --console-socket "$CONSOLE_SOCKET" test_box1
 	[ "$status" -eq 0 ]
 

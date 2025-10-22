@@ -113,11 +113,15 @@ function setup() {
 	[[ ${lines[0]} = "0::/foo" ]]
 
 	# teardown: remove "/foo"
-	# shellcheck disable=SC2016
-	runc exec test_cgroups_group sh -uxc 'echo -memory > /sys/fs/cgroup/cgroup.subtree_control; for f in $(cat /sys/fs/cgroup/foo/cgroup.procs); do echo $f > /sys/fs/cgroup/cgroup.procs; done; rmdir /sys/fs/cgroup/foo'
+	cat <<'EOF' | runc exec test_cgroups_group sh -eux
+echo -memory > /sys/fs/cgroup/cgroup.subtree_control
+for pid in $(cat /sys/fs/cgroup/foo/cgroup.procs); do
+	echo $pid > /sys/fs/cgroup/cgroup.procs || true
+done
+rmdir /sys/fs/cgroup/foo
+EOF
 	runc exec test_cgroups_group test ! -d /sys/fs/cgroup/foo
 	[ "$status" -eq 0 ]
-	#
 }
 
 @test "runc run (cgroup v1 + unified resources should fail)" {
@@ -490,7 +494,7 @@ convert_hugetlb_size() {
 		runc resume ct1
 	) &
 
-	# Exec should not timeout or succeed.
+	# Exec should succeed (once the container is resumed).
 	runc exec --ignore-paused ct1 echo ok
 	[ "$status" -eq 0 ]
 	[ "$output" = "ok" ]

@@ -25,7 +25,6 @@ function setup() {
 	requires cgroups_memory cgroups_pids cgroups_cpuset
 	init_cgroup_paths
 
-	# run a few busyboxes detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
 
@@ -259,7 +258,6 @@ EOF
 @test "update cgroup cpu limits" {
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 
-	# run a few busyboxes detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
 
@@ -322,7 +320,6 @@ EOF
   }
 }
 EOF
-	[ "$status" -eq 0 ]
 
 	runc update -r "$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json test_update
 	[ "$status" -eq 0 ]
@@ -426,9 +423,9 @@ EOF
 		echo 50000 >"/sys/fs/cgroup/cpu/$REL_PARENT_PATH/cpu.cfs_quota_us"
 	fi
 	# Sanity checks.
-	run cat "/sys/fs/cgroup/cpu$REL_PARENT_PATH/cpu.cfs_period_us"
+	run -0 cat "/sys/fs/cgroup/cpu$REL_PARENT_PATH/cpu.cfs_period_us"
 	[ "$output" -eq 100000 ]
-	run cat "/sys/fs/cgroup/cpu$REL_PARENT_PATH/cpu.cfs_quota_us"
+	run -0 cat "/sys/fs/cgroup/cpu$REL_PARENT_PATH/cpu.cfs_quota_us"
 	[ "$output" -eq 50000 ]
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
@@ -732,7 +729,6 @@ EOF
 		echo "$root_runtime" >"$target_runtime"
 	done
 
-	# run a detached busybox
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update_rt
 	[ "$status" -eq 0 ]
 

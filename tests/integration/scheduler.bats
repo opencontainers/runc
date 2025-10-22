@@ -51,7 +51,7 @@ function teardown() {
 }'
 	__runc exec -d --pid-file pid.txt --process <(echo "$proc") test_scheduler
 
-	run chrt -p "$(cat pid.txt)"
+	run -0 chrt -p "$(cat pid.txt)"
 	[[ "${lines[0]}" == *"scheduling policy: SCHED_DEADLINE|SCHED_RESET_ON_FORK" ]]
 	[[ "${lines[1]}" == *"priority: 0" ]]
 	[[ "${lines[2]}" == *"runtime/deadline/period parameters: 42000/100000/1000000" ]]

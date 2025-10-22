@@ -10,7 +10,9 @@ to end.
 
 Integration tests are written in *bash* using the
 [bats (Bash Automated Testing System)](https://github.com/bats-core/bats-core)
-framework.
+framework. Please see
+[bats documentation](https://bats-core.readthedocs.io/en/stable/index.html)
+for more details.
 
 ## Running integration tests
 
@@ -43,38 +45,9 @@ cd bats-core
 ./install.sh /usr/local
 ```
 
-> **Note**: There are known issues running the integration tests using
-> **devicemapper** as a storage driver, make sure that your docker daemon
-> is using **aufs** if you want to successfully run the integration tests.
-
 ## Writing integration tests
 
-[helper functions](https://github.com/opencontainers/runc/blob/master/tests/integration/helpers.bash)
+[Helper functions](https://github.com/opencontainers/runc/blob/master/tests/integration/helpers.bash)
 are provided in order to facilitate writing tests.
 
-```sh
-#!/usr/bin/env bats
-
-# This will load the helpers.
-load helpers
-
-# setup is called at the beginning of every test.
-function setup() {
-  setup_busybox
-}
-
-# teardown is called at the end of every test.
-function teardown() {
-  teardown_bundle
-}
-
-@test "this is a simple test" {
-  runc run containerid
-  # "The runc macro" automatically populates $status, $output and $lines.
-  # Please refer to bats documentation to find out more.
-  [ "$status" -eq 0 ]
-
-  # check expected output
-  [[ "${output}" == *"Hello"* ]]
-}
-```
+Please see existing tests for examples.
