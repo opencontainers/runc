@@ -15,7 +15,7 @@ require (
 	github.com/moby/sys/userns v0.1.0
 	github.com/mrunalp/fileutils v0.5.1
 	github.com/opencontainers/cgroups v0.0.5
-	github.com/opencontainers/runtime-spec v1.2.2-0.20250818071321-383cadbf08c0
+	github.com/opencontainers/runtime-spec v1.2.2-0.20251022072015-5caf3047c341
 	github.com/opencontainers/selinux v1.12.0
 	github.com/seccomp/libseccomp-golang v0.11.1
 	github.com/sirupsen/logrus v1.9.3
@@ -32,3 +32,5 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 )
+
+replace github.com/opencontainers/cgroups v0.0.5 => github.com/cyphar/oci-cgroups v0.0.0-20251025144234-7c34f099ee0b
