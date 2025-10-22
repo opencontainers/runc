@@ -252,7 +252,9 @@ other options are ignored.
 				}
 			}
 
-			r.Pids.Limit = int64(context.Int("pids-limit"))
+			if context.IsSet("pids-limit") {
+				r.Pids.Limit = i64Ptr(int64(context.Int("pids-limit")))
+			}
 		}
 
 		// Fix up values
