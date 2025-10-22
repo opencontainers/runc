@@ -22,6 +22,7 @@ runc binary  | seccomp
 `ppc64le`    | `SCMP_ARCH_PPC64LE`
 `riscv64`    | `SCMP_ARCH_RISCV64`
 `s390x`      | `SCMP_ARCH_S390`, `SCMP_ARCH_S390X`
+`loong64`    | `SCMP_ARCH_LOONGARCH64`
 
 The runc binary might be compilable for i386, big-endian PPC64,
 and several MIPS variants too, but these architectures are not officially supported.
