@@ -299,8 +299,8 @@ func TestEnosysStub_SingleArch(t *testing.T) {
 }
 
 func TestEnosysStub_MultiArch(t *testing.T) {
-	for end := 0; end < len(testArches); end++ {
-		for start := 0; start < end; start++ {
+	for end := range len(testArches) {
+		for start := range end {
 			var arches []string
 			for _, arch := range testArches[start:end] {
 				// "native" indicates a blank architecture field for seccomp, to test
