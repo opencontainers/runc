@@ -324,6 +324,36 @@ convert_hugetlb_size() {
 	done
 }
 
+# https://github.com/opencontainers/runc/issues/4014.
+@test "runc run (pids.limit=0 is 0)" {
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+	requires cgroups_pids
+
+	set_cgroups_path
+	update_config '.linux.resources.pids.limit = 0'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_pids
+	[ "$status" -eq 0 ]
+	# systemd doesn't support TasksMax=0 so runc will silently remap it to 1.
+	check_cgroup_value "pids.max" "1"
+	check_systemd_value "TasksMax" "1"
+}
+
+# https://github.com/opencontainers/runc/issues/4014.
+@test "runc run (pids.limit=-1 means unlimited)" {
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+	requires cgroups_pids
+
+	set_cgroups_path
+	update_config '.linux.resources.pids.limit = -1'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_pids
+	[ "$status" -eq 0 ]
+	check_cgroup_value "pids.max" "max"
+	# systemd < v227 shows UINT64_MAX instead of "infinity".
+	check_systemd_value "TasksMax" "infinity" "18446744073709551615"
+}
+
 @test "runc run (cgroup v2 resources.unified only)" {
 	requires root cgroups_v2
 
@@ -390,6 +420,7 @@ convert_hugetlb_size() {
 	set_cgroups_path
 	# CPU shares of 3333 corresponds to CPU weight of 128.
 	update_config '   .linux.resources.memory |= {"limit": 33554432}
+			| .linux.resources.pids.limit = 100
 			| .linux.resources.cpu |= {
 				"shares": 3333,
 				"quota": 40000,
