@@ -132,6 +132,36 @@ int setns(int fd, int nstype)
 }
 #endif
 
+/*
+ * CHECK_IO calls op (read or write) and checks its return value.
+ * If a syscall returns -1 (error), it calls bail() to report errno.
+ * Otherwise, check for a short read/write and call bailx() on error.
+ */
+#define CHECK_IO(op, fd, buf, count, ...) \
+	do { \
+		ssize_t __ret = op(fd, buf, count); \
+		if (__ret < 0) \
+			bail(__VA_ARGS__); \
+		if (__ret != (ssize_t)(count)) \
+			bailx(__VA_ARGS__ ": short " #op); \
+	} while (0)
+
+/*
+ * CHECK_IO_KILL is a variant of CHECK_IO that kills PIDs before bailing.
+ * Use this when you need to kill child process(es) on I/O failure.
+ */
+#define CHECK_IO_KILL(op, fd, buf, count, pid1, pid2, ...) \
+	do { \
+		ssize_t __ret = op(fd, buf, count); \
+		if (__ret != (ssize_t)(count)) { \
+			sane_kill(pid1, SIGKILL); \
+			sane_kill(pid2, SIGKILL); \
+			if (__ret < 0) \
+				bail(__VA_ARGS__); \
+			bailx(__VA_ARGS__ ": short " #op); \
+		} \
+	} while (0)
+
 /* XXX: This is ugly. */
 static int syncfd = -1;
 
@@ -208,7 +238,7 @@ static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 	 * or programming issue.
 	 */
 	if (!app)
-		bail("mapping tool not present");
+		bailx("mapping tool not present");
 
 	child = fork();
 	if (child < 0)
@@ -274,7 +304,7 @@ static void update_uidmap(const char *path, int pid, char *map, size_t map_len)
 			bail("failed to update /proc/%d/uid_map", pid);
 		write_log(DEBUG, "update /proc/%d/uid_map got -EPERM (trying %s)", pid, path);
 		if (try_mapping_tool(path, pid, map, map_len))
-			bail("failed to use newuid map on %d", pid);
+			bailx("failed to use newuid map on %d", pid);
 	}
 }
 
@@ -289,7 +319,7 @@ static void update_gidmap(const char *path, int pid, char *map, size_t map_len)
 			bail("failed to update /proc/%d/gid_map", pid);
 		write_log(DEBUG, "update /proc/%d/gid_map got -EPERM (trying %s)", pid, path);
 		if (try_mapping_tool(path, pid, map, map_len))
-			bail("failed to use newgid map on %d", pid);
+			bailx("failed to use newgid map on %d", pid);
 	}
 }
 
@@ -334,20 +364,18 @@ static uint8_t readint8(char *buf)
 
 static void nl_parse(int fd, struct nlconfig_t *config)
 {
-	size_t len, size;
+	size_t size;
 	struct nlmsghdr hdr;
 	char *data, *current;
 
 	/* Retrieve the netlink header. */
-	len = read(fd, &hdr, NLMSG_HDRLEN);
-	if (len != NLMSG_HDRLEN)
-		bail("invalid netlink header length %zu", len);
+	CHECK_IO(read, fd, &hdr, NLMSG_HDRLEN, "failed to read netlink header");
 
 	if (hdr.nlmsg_type == NLMSG_ERROR)
-		bail("failed to read netlink message");
+		bailx("failed to read netlink message");
 
 	if (hdr.nlmsg_type != INIT_MSG)
-		bail("unexpected msg type %d", hdr.nlmsg_type);
+		bailx("unexpected msg type %d", hdr.nlmsg_type);
 
 	/* Retrieve data. */
 	size = NLMSG_PAYLOAD(&hdr, 0);
@@ -355,9 +383,7 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 	if (!data)
 		bail("failed to allocate %zu bytes of memory for nl_payload", size);
 
-	len = read(fd, data, size);
-	if (len != size)
-		bail("failed to read netlink payload, %zu != %zu", len, size);
+	CHECK_IO(read, fd, data, size, "failed to read netlink payload");
 
 	/* Parse the netlink payload. */
 	config->data = data;
@@ -456,7 +482,7 @@ static int nstype(char *name)
 	 * without corresponding handling could result in broken behaviour) and
 	 * the rest of runc doesn't allow unknown namespace types anyway.
 	 */
-	bail("unknown namespace type %s", name);
+	bailx("unknown namespace type %s", name);
 }
 
 static nsset_t __open_namespaces(char *nsspec, struct namespace_t **ns_list, size_t *ns_len)
@@ -469,7 +495,7 @@ static nsset_t __open_namespaces(char *nsspec, struct namespace_t **ns_list, siz
 	namespace = strtok_r(nsspec, ",", &saveptr);
 
 	if (!namespace || !strlen(namespace) || !strlen(nsspec))
-		bail("ns paths are empty");
+		bailx("ns paths are empty");
 
 	do {
 		int fd;
@@ -485,7 +511,7 @@ static nsset_t __open_namespaces(char *nsspec, struct namespace_t **ns_list, siz
 		/* Split 'ns:path'. */
 		path = strstr(namespace, ":");
 		if (!path)
-			bail("failed to parse %s", namespace);
+			bailx("failed to parse %s", namespace);
 		*path++ = '\0';
 
 		fd = open(path, O_RDONLY);
@@ -530,7 +556,7 @@ static nsset_t __join_namespaces(nsset_t allow, struct namespace_t *ns_list, siz
 			/* Skip permission errors. */
 			if (saved_errno == EPERM)
 				continue;
-			bail("failed to setns into %s namespace", ns->type);
+			bailx("failed to setns into %s namespace: %s", ns->type, strerror(saved_errno));
 		}
 		joined |= type;
 
@@ -597,7 +623,7 @@ static void __close_namespaces(nsset_t to_join, nsset_t joined, struct namespace
 
 	/* Make sure we joined the namespaces we planned to. */
 	if (failed_to_join)
-		bail("failed to join {%s} namespaces: %s", nsset_to_str(failed_to_join), strerror(EPERM));
+		bailx("failed to join {%s} namespaces: %s", nsset_to_str(failed_to_join), strerror(EPERM));
 
 	free(ns_list);
 }
@@ -639,9 +665,14 @@ void join_namespaces(char *nsspec)
 
 static inline int sane_kill(pid_t pid, int signum)
 {
-	if (pid > 0)
-		return kill(pid, signum);
-	else
+	if (pid > 0) {
+		int ret, saved_errno;
+
+		saved_errno = errno;
+		ret = kill(pid, signum);
+		errno = saved_errno;
+		return ret;
+	} else
 		return 0;
 }
 
@@ -854,8 +885,7 @@ void nsexec(void)
 			while (!stage1_complete) {
 				enum sync_t s;
 
-				if (read(syncfd, &s, sizeof(s)) != sizeof(s))
-					bail("failed to sync with stage-1: next state");
+				CHECK_IO(read, syncfd, &s, sizeof(s), "failed to sync with stage-1: next state");
 
 				switch (s) {
 				case SYNC_USERMAP_PLS:
@@ -879,28 +909,20 @@ void nsexec(void)
 					update_gidmap(config.gidmappath, stage1_pid, config.gidmap, config.gidmap_len);
 
 					s = SYNC_USERMAP_ACK;
-					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
-						sane_kill(stage1_pid, SIGKILL);
-						sane_kill(stage2_pid, SIGKILL);
-						bail("failed to sync with stage-1: write(SYNC_USERMAP_ACK)");
-					}
+					CHECK_IO_KILL(write, syncfd, &s, sizeof(s), stage1_pid, stage2_pid,
+						      "failed to sync with stage-1: write(SYNC_USERMAP_ACK)");
 					break;
 				case SYNC_RECVPID_PLS:
 					write_log(DEBUG, "stage-1 requested pid to be forwarded");
 
 					/* Get the stage-2 pid. */
-					if (read(syncfd, &stage2_pid, sizeof(stage2_pid)) != sizeof(stage2_pid)) {
-						sane_kill(stage1_pid, SIGKILL);
-						bail("failed to sync with stage-1: read(stage2_pid)");
-					}
+					CHECK_IO_KILL(read, syncfd, &stage2_pid, sizeof(stage2_pid), stage1_pid, -1,
+						      "failed to sync with stage-1: read(stage2_pid)");
 
 					/* Send ACK. */
 					s = SYNC_RECVPID_ACK;
-					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
-						sane_kill(stage1_pid, SIGKILL);
-						sane_kill(stage2_pid, SIGKILL);
-						bail("failed to sync with stage-1: write(SYNC_RECVPID_ACK)");
-					}
+					CHECK_IO_KILL(write, syncfd, &s, sizeof(s), stage1_pid, stage2_pid,
+						      "failed to sync with stage-1: write(SYNC_RECVPID_ACK)");
 
 					/*
 					 * Send both the stage-1 and stage-2 pids back to runc.
@@ -924,17 +946,15 @@ void nsexec(void)
 					write_log(DEBUG, "stage-1 requested timens offsets to be configured");
 					update_timens_offsets(stage1_pid, config.timensoffset, config.timensoffset_len);
 					s = SYNC_TIMEOFFSETS_ACK;
-					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
-						sane_kill(stage1_pid, SIGKILL);
-						bail("failed to sync with child: write(SYNC_TIMEOFFSETS_ACK)");
-					}
+					CHECK_IO_KILL(write, syncfd, &s, sizeof(s), stage1_pid, -1,
+						      "failed to sync with child: write(SYNC_TIMEOFFSETS_ACK)");
 					break;
 				case SYNC_CHILD_FINISH:
 					write_log(DEBUG, "stage-1 complete");
 					stage1_complete = true;
 					break;
 				default:
-					bail("unexpected sync value: %u", s);
+					bailx("unexpected sync value: %u", s);
 				}
 			}
 			write_log(DEBUG, "<- stage-1 synchronisation loop");
@@ -951,13 +971,10 @@ void nsexec(void)
 
 				write_log(DEBUG, "signalling stage-2 to run");
 				s = SYNC_GRANDCHILD;
-				if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
-					sane_kill(stage2_pid, SIGKILL);
-					bail("failed to sync with child: write(SYNC_GRANDCHILD)");
-				}
+				CHECK_IO_KILL(write, syncfd, &s, sizeof(s), stage2_pid, -1,
+					      "failed to sync with child: write(SYNC_GRANDCHILD)");
 
-				if (read(syncfd, &s, sizeof(s)) != sizeof(s))
-					bail("failed to sync with child: next state");
+				CHECK_IO(read, syncfd, &s, sizeof(s), "failed to sync with child: next state");
 
 				switch (s) {
 				case SYNC_CHILD_FINISH:
@@ -965,7 +982,7 @@ void nsexec(void)
 					stage2_complete = true;
 					break;
 				default:
-					bail("unexpected sync value: %u", s);
+					bailx("unexpected sync value: %u", s);
 				}
 			}
 			write_log(DEBUG, "<- stage-2 synchronisation loop");
@@ -1048,15 +1065,15 @@ void nsexec(void)
 				 */
 				write_log(DEBUG, "request stage-0 to map user namespace");
 				s = SYNC_USERMAP_PLS;
-				if (write(syncfd, &s, sizeof(s)) != sizeof(s))
-					bail("failed to sync with parent: write(SYNC_USERMAP_PLS)");
+				CHECK_IO(write, syncfd, &s, sizeof(s),
+					 "failed to sync with parent: write(SYNC_USERMAP_PLS)");
 
 				/* ... wait for mapping ... */
 				write_log(DEBUG, "waiting stage-0 to complete the mapping of user namespace");
-				if (read(syncfd, &s, sizeof(s)) != sizeof(s))
-					bail("failed to sync with parent: read(SYNC_USERMAP_ACK)");
+				CHECK_IO(read, syncfd, &s, sizeof(s),
+					 "failed to sync with parent: read(SYNC_USERMAP_ACK)");
 				if (s != SYNC_USERMAP_ACK)
-					bail("failed to sync with parent: SYNC_USERMAP_ACK: got %u", s);
+					bailx("failed to sync with parent: SYNC_USERMAP_ACK: got %u", s);
 
 				/* Revert temporary re-dumpable setting. */
 				if (config.namespaces) {
@@ -1086,13 +1103,13 @@ void nsexec(void)
 				write_log(DEBUG, "request stage-0 to write timens offsets");
 
 				s = SYNC_TIMEOFFSETS_PLS;
-				if (write(syncfd, &s, sizeof(s)) != sizeof(s))
-					bail("failed to sync with parent: write(SYNC_TIMEOFFSETS_PLS)");
+				CHECK_IO(write, syncfd, &s, sizeof(s),
+					 "failed to sync with parent: write(SYNC_TIMEOFFSETS_PLS)");
 
-				if (read(syncfd, &s, sizeof(s)) != sizeof(s))
-					bail("failed to sync with parent: read(SYNC_TIMEOFFSETS_ACK)");
+				CHECK_IO(read, syncfd, &s, sizeof(s),
+					 "failed to sync with parent: read(SYNC_TIMEOFFSETS_ACK)");
 				if (s != SYNC_TIMEOFFSETS_ACK)
-					bail("failed to sync with parent: SYNC_TIMEOFFSETS_ACK: got %u", s);
+					bailx("failed to sync with parent: SYNC_TIMEOFFSETS_ACK: got %u", s);
 			}
 
 			/*
@@ -1112,31 +1129,23 @@ void nsexec(void)
 			/* Send the child to our parent, which knows what it's doing. */
 			write_log(DEBUG, "request stage-0 to forward stage-2 pid (%d)", stage2_pid);
 			s = SYNC_RECVPID_PLS;
-			if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
-				sane_kill(stage2_pid, SIGKILL);
-				bail("failed to sync with parent: write(SYNC_RECVPID_PLS)");
-			}
-			if (write(syncfd, &stage2_pid, sizeof(stage2_pid)) != sizeof(stage2_pid)) {
-				sane_kill(stage2_pid, SIGKILL);
-				bail("failed to sync with parent: write(stage2_pid)");
-			}
+			CHECK_IO_KILL(write, syncfd, &s, sizeof(s), stage2_pid, -1,
+				      "failed to sync with parent: write(SYNC_RECVPID_PLS)");
+			CHECK_IO_KILL(write, syncfd, &stage2_pid, sizeof(stage2_pid), stage2_pid, -1,
+				      "failed to sync with parent: write(stage2_pid)");
 
 			/* ... wait for parent to get the pid ... */
-			if (read(syncfd, &s, sizeof(s)) != sizeof(s)) {
-				sane_kill(stage2_pid, SIGKILL);
-				bail("failed to sync with parent: read(SYNC_RECVPID_ACK)");
-			}
+			CHECK_IO_KILL(read, syncfd, &s, sizeof(s), stage2_pid, -1,
+				      "failed to sync with parent: read(SYNC_RECVPID_ACK)");
 			if (s != SYNC_RECVPID_ACK) {
 				sane_kill(stage2_pid, SIGKILL);
-				bail("failed to sync with parent: SYNC_RECVPID_ACK: got %u", s);
+				bailx("failed to sync with parent: SYNC_RECVPID_ACK: got %u", s);
 			}
 
 			write_log(DEBUG, "signal completion to stage-0");
 			s = SYNC_CHILD_FINISH;
-			if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
-				sane_kill(stage2_pid, SIGKILL);
-				bail("failed to sync with parent: write(SYNC_CHILD_FINISH)");
-			}
+			CHECK_IO_KILL(write, syncfd, &s, sizeof(s), stage2_pid, -1,
+				      "failed to sync with parent: write(SYNC_CHILD_FINISH)");
 
 			/* Our work is done. [Stage 2: STAGE_INIT] is doing the rest of the work. */
 			write_log(DEBUG, "<~ nsexec stage-1");
@@ -1172,10 +1181,9 @@ void nsexec(void)
 			prctl(PR_SET_NAME, (unsigned long)"runc:[2:INIT]", 0, 0, 0);
 			write_log(DEBUG, "~> nsexec stage-2");
 
-			if (read(syncfd, &s, sizeof(s)) != sizeof(s))
-				bail("failed to sync with parent: read(SYNC_GRANDCHILD)");
+			CHECK_IO(read, syncfd, &s, sizeof(s), "failed to sync with parent: read(SYNC_GRANDCHILD)");
 			if (s != SYNC_GRANDCHILD)
-				bail("failed to sync with parent: SYNC_GRANDCHILD: got %u", s);
+				bailx("failed to sync with parent: SYNC_GRANDCHILD: got %u", s);
 
 			if (setsid() < 0)
 				bail("setsid failed");
@@ -1193,8 +1201,7 @@ void nsexec(void)
 
 			write_log(DEBUG, "signal completion to stage-0");
 			s = SYNC_CHILD_FINISH;
-			if (write(syncfd, &s, sizeof(s)) != sizeof(s))
-				bail("failed to sync with parent: write(SYNC_CHILD_FINISH)");
+			CHECK_IO(write, syncfd, &s, sizeof(s), "failed to sync with parent: write(SYNC_CHILD_FINISH)");
 
 			/* Close sync pipes. */
 			if (close(sync_grandchild_pipe[0]) < 0)
@@ -1210,9 +1217,9 @@ void nsexec(void)
 		}
 		break;
 	default:
-		bail("unexpected jump value");
+		bailx("unexpected jump value");
 	}
 
 	/* Should never be reached. */
-	bail("should never be reached");
+	bailx("should never be reached");
 }
