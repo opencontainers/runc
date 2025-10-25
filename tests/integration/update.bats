@@ -327,6 +327,37 @@ EOF
 	check_cpu_shares 100
 }
 
+@test "update pids.limit" {
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+	requires cgroups_pids
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+
+	check_cgroup_value "pids.max" 20
+	check_systemd_value "TasksMax" 20
+
+	runc update test_update --pids-limit 12345
+	[ "$status" -eq 0 ]
+
+	check_cgroup_value "pids.max" "12345"
+	check_systemd_value "TasksMax" "12345"
+
+	runc update test_update --pids-limit -1
+	[ "$status" -eq 0 ]
+
+	check_cgroup_value "pids.max" "max"
+	# systemd < v227 shows UINT64_MAX instead of "infinity".
+	check_systemd_value "TasksMax" "infinity" "18446744073709551615"
+
+	runc update test_update --pids-limit 0
+	[ "$status" -eq 0 ]
+
+	# systemd doesn't support TasksMax=0 so runc will silently remap it to 1.
+	check_cgroup_value "pids.max" "1"
+	check_systemd_value "TasksMax" "1"
+}
+
 @test "cpu burst" {
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires cgroups_cpu_burst
