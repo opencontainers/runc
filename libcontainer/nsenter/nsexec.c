@@ -848,8 +848,10 @@ void nsexec(void)
 				bail("unable to spawn stage-1");
 
 			syncfd = sync_child_pipe[1];
-			if (close(sync_child_pipe[0]) < 0)
+			if (close(sync_child_pipe[0]) < 0) {
+				sane_kill(stage1_pid, SIGKILL);
 				bail("failed to close sync_child_pipe[0] fd");
+			}
 
 			/*
 			 * State machine for synchronisation with the children. We only
@@ -860,8 +862,11 @@ void nsexec(void)
 			while (!stage1_complete) {
 				enum sync_t s;
 
-				if (read(syncfd, &s, sizeof(s)) != sizeof(s))
+				if (read(syncfd, &s, sizeof(s)) != sizeof(s)) {
+					sane_kill(stage1_pid, SIGKILL);
+					sane_kill(stage2_pid, SIGKILL);
 					bail("failed to sync with stage-1: next state");
+				}
 
 				switch (s) {
 				case SYNC_USERMAP_PLS:
@@ -887,7 +892,6 @@ void nsexec(void)
 					s = SYNC_USERMAP_ACK;
 					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
 						sane_kill(stage1_pid, SIGKILL);
-						sane_kill(stage2_pid, SIGKILL);
 						bail("failed to sync with stage-1: write(SYNC_USERMAP_ACK)");
 					}
 					break;
@@ -938,8 +942,11 @@ void nsexec(void)
 				case SYNC_CHILD_FINISH:
 					write_log(DEBUG, "stage-1 complete");
 					stage1_complete = true;
+					stage1_pid = -1;
 					break;
 				default:
+					sane_kill(stage1_pid, SIGKILL);
+					sane_kill(stage2_pid, SIGKILL);
 					bailx("unexpected sync value: %u", s);
 				}
 			}
@@ -947,8 +954,10 @@ void nsexec(void)
 
 			/* Now sync with grandchild. */
 			syncfd = sync_grandchild_pipe[1];
-			if (close(sync_grandchild_pipe[0]) < 0)
+			if (close(sync_grandchild_pipe[0]) < 0) {
+				sane_kill(stage2_pid, SIGKILL);
 				bail("failed to close sync_grandchild_pipe[0] fd");
+			}
 
 			write_log(DEBUG, "-> stage-2 synchronisation loop");
 			stage2_complete = false;
@@ -962,15 +971,19 @@ void nsexec(void)
 					bail("failed to sync with child: write(SYNC_GRANDCHILD)");
 				}
 
-				if (read(syncfd, &s, sizeof(s)) != sizeof(s))
+				if (read(syncfd, &s, sizeof(s)) != sizeof(s)) {
+					sane_kill(stage2_pid, SIGKILL);
 					bail("failed to sync with child: next state");
+				}
 
 				switch (s) {
 				case SYNC_CHILD_FINISH:
 					write_log(DEBUG, "stage-2 complete");
 					stage2_complete = true;
+					stage2_pid = -1;
 					break;
 				default:
+					sane_kill(stage2_pid, SIGKILL);
 					bailx("unexpected sync value: %u", s);
 				}
 			}
