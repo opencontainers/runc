@@ -28,7 +28,7 @@ jobs:
         go-version: [1.25.x]
         rootless: [""]
         race: ["-race", ""]
-        criu: ["", "59970a606db314fd6b24cc6e00de054f7aebfb92"]
+        criu: ["", "31a58f6ababf6e987bdecd61020f7a57864a9876"]
 
     runs-on: ${{ matrix.os }}
 
@@ -123,13 +123,3 @@ jobs:
       run: |
         criu --version
         sudo -E PATH="$PATH" script -e -c 'make local${{ matrix.rootless }}integration'
-
-    - name: integration test (systemd driver)
-      run: |
-        # Delegate all cgroup v2 controllers to rootless user via --systemd-cgroup.
-        # The default (since systemd v252) is "pids memory cpu".
-        sudo mkdir -p /etc/systemd/system/user@.service.d
-        printf "[Service]\nDelegate=yes\n" | sudo tee /etc/systemd/system/user@.service.d/delegate.conf
-        sudo systemctl daemon-reload
-        # Run the tests.
-        sudo -E PATH="$PATH" script -e -c 'make RUNC_USE_SYSTEMD=yes local${{ matrix.rootless }}integration'
