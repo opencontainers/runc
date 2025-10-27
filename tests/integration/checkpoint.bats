@@ -31,6 +31,7 @@ function teardown() {
 	ip link del dev dummy0
 	delete_netns
 	teardown_bundle
+	rm -f /etc/criu/default.conf
 }
 
 function setup_pipes() {
@@ -172,7 +173,22 @@ function simple_cr_with_netdevice() {
 }
 
 @test "checkpoint and restore" {
-	simple_cr
+	ls -l /etc/criu/ || true
+	tail /etc/criu/* || true
+	ls -l ~/.criu/ || true
+	tail ~/.criu/* || true
+
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+
+	testcontainer test_busybox running
+
+	for _ in $(seq 2); do
+		runc -0 "$@" checkpoint --work-path ./work-dir test_busybox
+		testcontainer test_busybox checkpointed
+
+		runc -0 "$@" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+		testcontainer test_busybox running
+	done
 }
 
 @test "checkpoint and restore (bind mount, destination is symlink)" {
@@ -381,22 +397,21 @@ function simple_cr_with_netdevice() {
 
 @test "checkpoint and restore with container specific CRIU config" {
 	tmp=$(mktemp /tmp/runc-criu-XXXXXX.conf)
-	# This is the file we write to /etc/criu/default.conf
+	# Name we write to /etc/criu/default.conf.
 	tmplog1=$(mktemp /tmp/runc-criu-log-XXXXXX.log)
 	unlink "$tmplog1"
 	tmplog1=$(basename "$tmplog1")
-	# That is the actual configuration file to be used
+	# Actual configuration file name to be used.
 	tmplog2=$(mktemp /tmp/runc-criu-log-XXXXXX.log)
 	unlink "$tmplog2"
 	tmplog2=$(basename "$tmplog2")
-	# This adds the annotation 'org.criu.config' to set a container
-	# specific CRIU config file.
+	# Add the annotation to set a container specific CRIU config file.
 	update_config '.annotations += {"org.criu.config": "'"$tmp"'"}'
 
-	# Tell CRIU to use another configuration file
+	# Tell CRIU to use another configuration file.
 	mkdir -p /etc/criu
 	echo "log-file=$tmplog1" >/etc/criu/default.conf
-	# Make sure the RPC defined configuration file overwrites the previous
+	# Make sure the RPC defined configuration file overwrites the default.conf.
 	echo "log-file=$tmplog2" >"$tmp"
 
 	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
