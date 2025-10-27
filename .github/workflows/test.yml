@@ -28,7 +28,7 @@ jobs:
         go-version: [1.25.x]
         rootless: [""]
         race: ["-race", ""]
-        criu: ["", "08fa6c369a82b9945867c9f06fb1a44ff7a023c0"]
+        criu: ["", "68230aa58d9061f2435475f7e8f91f34724a24eb"]
 
     runs-on: ${{ matrix.os }}
 
