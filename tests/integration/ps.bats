@@ -11,8 +11,7 @@ function setup() {
 	# Rootless does not have default cgroup path.
 	[ $EUID -ne 0 ] && set_cgroups_path
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	testcontainer test_busybox running
 }
 
@@ -21,33 +20,27 @@ function teardown() {
 }
 
 @test "ps" {
-	runc ps test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 ps test_busybox
 	[[ "$output" =~ UID\ +PID\ +PPID\ +C\ +STIME\ +TTY\ +TIME\ +CMD+ ]]
 	[[ "$output" == *"$(id -un 2>/dev/null)"*[0-9]* ]]
 }
 
 @test "ps -f json" {
-	runc ps -f json test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 ps -f json test_busybox
 	[[ "$output" =~ [0-9]+ ]]
 }
 
 @test "ps -e -x" {
-	runc ps test_busybox -e -x
-	[ "$status" -eq 0 ]
+	runc -0 ps test_busybox -e -x
 	[[ "$output" =~ \ +PID\ +TTY\ +STAT\ +TIME\ +COMMAND+ ]]
 	[[ "$output" =~ [0-9]+ ]]
 }
 
 @test "ps after the container stopped" {
-	runc ps test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 ps test_busybox
 
-	runc kill test_busybox KILL
-	[ "$status" -eq 0 ]
+	runc -0 kill test_busybox KILL
 	wait_for_container 10 1 test_busybox stopped
 
-	runc ps test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 ps test_busybox
 }
