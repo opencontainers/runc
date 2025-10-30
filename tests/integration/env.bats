@@ -23,8 +23,7 @@ function teardown() {
 	update_config ' .process.env += ["HOME=/override"]'
 	update_config ' .process.args += ["-c", "echo $HOME"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "${lines[0]}" == '/override' ]]
 }
 
@@ -32,8 +31,7 @@ function teardown() {
 	update_config ' .process.env += ["HOME="]'
 	update_config ' .process.args += ["-c", "echo $HOME"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "${lines[0]}" == '/root' ]]
 }
 
@@ -41,8 +39,7 @@ function teardown() {
 	update_config ' .process.env += ["HOME=/override", "HOME="]'
 	update_config ' .process.args += ["-c", "echo $HOME"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "${lines[0]}" == '/root' ]]
 }
 
@@ -51,8 +48,7 @@ function teardown() {
 	update_config ' .process.args = ["env"]'
 	update_config ' .process.env = ["HOME=", "PATH=/usr/bin:/bin"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 
 	# There should be 2 words/env-vars: HOME and PATH.
 	[ "$(wc -w <<<"$output")" -eq 2 ]
@@ -63,8 +59,7 @@ function teardown() {
 	update_config ' .process.args = ["env"]'
 	update_config ' .process.env = ["ONE=two", "ONE=", "PATH=/usr/bin:/bin"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 
 	# There should be 3 words/env-vars: ONE, PATH and HOME.
 	[ "$(wc -w <<<"$output")" -eq 3 ]
@@ -74,8 +69,7 @@ function teardown() {
 	update_config ' .process.env += ["ONE=two", "ONE=three"]'
 	update_config ' .process.args += ["-c", "echo ONE=\"$ONE\""]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "${lines[0]}" == "ONE=three" ]]
 }
 
@@ -83,8 +77,7 @@ function teardown() {
 	update_config ' .process.env = ["NEW_LINE_ENV=\n", "PATH=/usr/bin:/bin"]'
 	update_config ' .process.args = ["env"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 
 	# There should be 4 lines
 	# NEW_LINE is a \n and when printed, it takes another line:

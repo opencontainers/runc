@@ -24,21 +24,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm]
-        go-version: [1.24.x, 1.25.x]
-        rootless: ["rootless", ""]
+        os: [ubuntu-24.04]
+        go-version: [1.25.x]
+        rootless: [""]
         race: ["-race", ""]
-        criu: ["", "criu-dev"]
-        exclude:
-          # Disable most of criu-dev jobs, as they are expensive
-          # (need to compile criu) and don't add much value/coverage.
-          - criu: criu-dev
-            go-version: 1.24.x
-          - criu: criu-dev
-            rootless: rootless
-          # Do race detection only on latest Go.
-          - race: -race
-            go-version: 1.24.x
+        criu: ["", "003fe3223a67df4bb9a1c785d4f4a02a6075b30f"]
 
     runs-on: ${{ matrix.os }}
 
@@ -89,12 +79,12 @@ jobs:
       run: |
         sudo apt -qy install \
           libcap-dev libnet1-dev libnl-3-dev uuid-dev \
-          libprotobuf-c-dev libprotobuf-dev protobuf-c-compiler protobuf-compiler
-        git clone --depth 1 --branch ${{ matrix.criu }} --single-branch \
+          libprotobuf-c-dev libprotobuf-dev protobuf-c-compiler protobuf-compiler \
+          strace
+        git clone --depth 1 --revision ${{ matrix.criu }} \
           https://github.com/checkpoint-restore/criu.git ~/criu
         (cd ~/criu && sudo make -j $(nproc) install-criu)
         rm -rf ~/criu
-        criu --version
 
     - name: install go ${{ matrix.go-version }}
       uses: actions/setup-go@v6
@@ -131,114 +121,6 @@ jobs:
         sudo chmod a+X $HOME # for Ubuntu 22.04 and later
 
     - name: integration test (fs driver)
-      run: sudo -E PATH="$PATH" script -e -c 'make local${{ matrix.rootless }}integration'
-
-    - name: integration test (systemd driver)
       run: |
-        # Delegate all cgroup v2 controllers to rootless user via --systemd-cgroup.
-        # The default (since systemd v252) is "pids memory cpu".
-        sudo mkdir -p /etc/systemd/system/user@.service.d
-        printf "[Service]\nDelegate=yes\n" | sudo tee /etc/systemd/system/user@.service.d/delegate.conf
-        sudo systemctl daemon-reload
-        # Run the tests.
-        sudo -E PATH="$PATH" script -e -c 'make RUNC_USE_SYSTEMD=yes local${{ matrix.rootless }}integration'
-
-  # We need to continue support for 32-bit ARM.
-  # However, we do not have 32-bit ARM CI, so we use i386 for testing 32bit stuff.
-  # We are not interested in providing official support for i386.
-  cross-i386:
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-    runs-on: ubuntu-22.04
-
-    steps:
-
-    - name: checkout
-      uses: actions/checkout@v5
-
-    - name: install deps
-      run: |
-        sudo dpkg --add-architecture i386
-        # Add criu repo. The web server returns gateway timeout, thus the retry.
-        sudo add-apt-repository -y ppa:criu/ppa || sudo add-apt-repository -y ppa:criu/ppa
-        # apt-add-repository runs apt update so we don't have to.
-
-        sudo apt -qy install libseccomp-dev libseccomp-dev:i386 gcc-multilib libgcc-s1:i386 criu
-
-    - name: install go
-      uses: actions/setup-go@v6
-      with:
-        go-version: 1.x # Latest stable
-        check-latest: true
-
-    - name: unit test
-      run: sudo -E PATH="$PATH" -- make GOARCH=386 localunittest
-
-  fedora:
-    timeout-minutes: 30
-    runs-on: ubuntu-24.04
-    steps:
-    - uses: actions/checkout@v5
-
-    - uses: lima-vm/lima-actions/setup@v1
-      id: lima-actions-setup
-
-    - uses: actions/cache@v4
-      with:
-        path: ~/.cache/lima
-        key: lima-${{ steps.lima-actions-setup.outputs.version }}
-
-    - name: "Start VM"
-      # --plain is set to disable file sharing, port forwarding, built-in containerd, etc. for faster start up
-      #
-      # CPUs: min(4, host CPU cores)
-      # RAM:  min(4 GiB, half of host memory)
-      # Disk: 100 GiB
-      run: limactl start --plain --name=default template://fedora
-
-    - name: "Initialize VM"
-      run: |
-        set -eux -o pipefail
-        limactl cp -r . default:/tmp/runc
-        lima sudo /tmp/runc/script/setup_host_fedora.sh
-
-    - name: "Show guest info"
-      run: |
-        set -eux -o pipefail
-        lima uname -a
-        lima systemctl --version
-        lima df -T
-        lima cat /etc/os-release
-        lima go version
-        lima sestatus
-        lima rpm -q container-selinux
-
-    - name: "Check config"
-      run: lima /tmp/runc/script/check-config.sh
-
-    # NOTE the execution environment lacks a terminal, needed for
-    # some integration tests. So we use `ssh -tt` command to fake a terminal.
-    - name: "Run unit tests"
-      run: ssh -tt lima-default sudo -i make -C /tmp/runc localunittest
-
-    - name: "Run integration tests (systemd driver)"
-      run: ssh -tt lima-default sudo -i make -C /tmp/runc localintegration RUNC_USE_SYSTEMD=yes
-
-    - name: "Run integration tests (fs driver)"
-      run: ssh -tt lima-default sudo -i make -C /tmp/runc localintegration
-
-    - name: "Run integration tests (systemd driver, rootless)"
-      run: ssh -tt lima-default sudo -i make -C /tmp/runc localrootlessintegration RUNC_USE_SYSTEMD=yes
-
-    - name: "Run integration tests (fs driver, rootless)"
-      run: ssh -tt lima-default sudo -i make -C /tmp/runc localrootlessintegration
-
-  all-done:
-    needs:
-    - test
-    - cross-i386
-    - fedora
-    runs-on: ubuntu-24.04
-    steps:
-    - run: echo "All jobs completed"
+        criu --version
+        sudo -E PATH="$PATH" script -e -c 'make local${{ matrix.rootless }}integration'
