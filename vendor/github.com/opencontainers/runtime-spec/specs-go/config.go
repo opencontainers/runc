@@ -434,7 +434,7 @@ type LinuxCPU struct {
 // LinuxPids for Linux cgroup 'pids' resource management (Linux 4.3)
 type LinuxPids struct {
 	// Maximum number of PIDs. Default is "no limit".
-	Limit int64 `json:"limit"`
+	Limit *int64 `json:"limit,omitempty"`
 }
 
 // LinuxNetwork identification and priority configuration
@@ -688,6 +688,32 @@ type WindowsHyperV struct {
 	UtilityVMPath string `json:"utilityVMPath,omitempty"`
 }
 
+// IOMems contains information about iomem addresses that should be passed to the VM.
+type IOMems struct {
+	// Guest Frame Number to map the iomem range. If GFN is not specified, the mapping will be done to the same Frame Number as was provided in FirstMFN.
+	FirstGFN *uint64 `json:"firstGFN,omitempty"`
+	// Physical page number of iomem regions.
+	FirstMFN *uint64 `json:"firstMFN"`
+	// Number of pages to be mapped.
+	NrMFNs *uint64 `json:"nrMFNs"`
+}
+
+// Hardware configuration for the VM image
+type HWConfig struct {
+	// Path to the container device-tree file that should be passed to the VM configuration.
+	DeviceTree string `json:"deviceTree,omitempty"`
+	// Number of virtual cpus for the VM.
+	VCPUs *uint32 `json:"vcpus,omitempty"`
+	// Maximum memory in bytes allocated to the VM.
+	Memory *uint64 `json:"memory,omitempty"`
+	// Host device tree nodes to passthrough to the VM.
+	DtDevs []string `json:"dtdevs,omitempty"`
+	// Allow auto-translated domains to access specific hardware I/O memory pages.
+	IOMems []IOMems `json:"iomems,omitempty"`
+	// Allows VM to access specific physical IRQs.
+	Irqs []uint32 `json:"irqs,omitempty"`
+}
+
 // VM contains information for virtual-machine-based containers.
 type VM struct {
 	// Hypervisor specifies hypervisor-related configuration for virtual-machine-based containers.
@@ -696,6 +722,8 @@ type VM struct {
 	Kernel VMKernel `json:"kernel"`
 	// Image specifies guest image related configuration for virtual-machine-based containers.
 	Image VMImage `json:"image,omitempty"`
+	// Hardware configuration that should be passed to the VM.
+	HwConfig *HWConfig `json:"hwconfig,omitempty"`
 }
 
 // VMHypervisor contains information about the hypervisor to use for a virtual machine.
