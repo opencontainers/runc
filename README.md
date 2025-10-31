@@ -352,6 +352,7 @@ WantedBy=multi-user.target
 * [systemd cgroup driver](./docs/systemd.md)
 * [Terminals and standard IO](./docs/terminals.md)
 * [Experimental features](./docs/experimental.md)
+* [Deprecated features](./docs/deprecated.md)
 
 ## License
 
