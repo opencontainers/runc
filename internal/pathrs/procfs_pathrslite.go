@@ -27,13 +27,15 @@ import (
 )
 
 func procOpenReopen(openFn func(subpath string) (*os.File, error), subpath string, flags int) (*os.File, error) {
-	handle, err := openFn(subpath)
+	handle, err := retryEAGAIN(func() (*os.File, error) {
+		return openFn(subpath)
+	})
 	if err != nil {
 		return nil, err
 	}
 	defer handle.Close()
 
-	f, err := pathrs.Reopen(handle, flags)
+	f, err := Reopen(handle, flags)
 	if err != nil {
 		return nil, fmt.Errorf("reopen %s: %w", handle.Name(), err)
 	}
@@ -44,7 +46,7 @@ func procOpenReopen(openFn func(subpath string) (*os.File, error), subpath strin
 // [pathrs.Reopen], to let you one-shot open a procfs file with the given
 // flags.
 func ProcSelfOpen(subpath string, flags int) (*os.File, error) {
-	proc, err := procfs.OpenProcRoot()
+	proc, err := retryEAGAIN(procfs.OpenProcRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +57,7 @@ func ProcSelfOpen(subpath string, flags int) (*os.File, error) {
 // ProcPidOpen is a wrapper around [procfs.Handle.OpenPid] and [pathrs.Reopen],
 // to let you one-shot open a procfs file with the given flags.
 func ProcPidOpen(pid int, subpath string, flags int) (*os.File, error) {
-	proc, err := procfs.OpenProcRoot()
+	proc, err := retryEAGAIN(procfs.OpenProcRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -70,13 +72,15 @@ func ProcPidOpen(pid int, subpath string, flags int) (*os.File, error) {
 // flags. The returned [procfs.ProcThreadSelfCloser] needs the same handling as
 // when using pathrs-lite.
 func ProcThreadSelfOpen(subpath string, flags int) (_ *os.File, _ procfs.ProcThreadSelfCloser, Err error) {
-	proc, err := procfs.OpenProcRoot()
+	proc, err := retryEAGAIN(procfs.OpenProcRoot)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer proc.Close()
 
-	handle, closer, err := proc.OpenThreadSelf(subpath)
+	handle, closer, err := retryEAGAIN2(func() (*os.File, procfs.ProcThreadSelfCloser, error) {
+		return proc.OpenThreadSelf(subpath)
+	})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -89,7 +93,7 @@ func ProcThreadSelfOpen(subpath string, flags int) (_ *os.File, _ procfs.ProcThr
 	}
 	defer handle.Close()
 
-	f, err := pathrs.Reopen(handle, flags)
+	f, err := Reopen(handle, flags)
 	if err != nil {
 		return nil, nil, fmt.Errorf("reopen %s: %w", handle.Name(), err)
 	}
@@ -98,5 +102,7 @@ func ProcThreadSelfOpen(subpath string, flags int) (_ *os.File, _ procfs.ProcThr
 
 // Reopen is a wrapper around pathrs.Reopen.
 func Reopen(file *os.File, flags int) (*os.File, error) {
-	return pathrs.Reopen(file, flags)
+	return retryEAGAIN(func() (*os.File, error) {
+		return pathrs.Reopen(file, flags)
+	})
 }

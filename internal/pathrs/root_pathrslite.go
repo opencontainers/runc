@@ -31,12 +31,15 @@ import (
 // is effectively shorthand for [securejoin.OpenInRoot] followed by
 // [securejoin.Reopen].
 func OpenInRoot(root, subpath string, flags int) (*os.File, error) {
-	handle, err := pathrs.OpenInRoot(root, subpath)
+	handle, err := retryEAGAIN(func() (*os.File, error) {
+		return pathrs.OpenInRoot(root, subpath)
+	})
 	if err != nil {
 		return nil, err
 	}
 	defer handle.Close()
-	return pathrs.Reopen(handle, flags)
+
+	return Reopen(handle, flags)
 }
 
 // CreateInRoot creates a new file inside a root (as well as any missing parent

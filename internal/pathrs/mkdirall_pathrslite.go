@@ -83,7 +83,9 @@ func MkdirAllInRootOpen(root, unsafePath string, mode os.FileMode) (*os.File, er
 	}
 	defer rootDir.Close()
 
-	return pathrs.MkdirAllHandle(rootDir, unsafePath, mode)
+	return retryEAGAIN(func() (*os.File, error) {
+		return pathrs.MkdirAllHandle(rootDir, unsafePath, mode)
+	})
 }
 
 // MkdirAllInRoot is a wrapper around MkdirAllInRootOpen which closes the
