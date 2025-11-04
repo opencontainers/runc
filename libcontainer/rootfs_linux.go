@@ -532,6 +532,17 @@ func (m *mountEntry) createOpenMountpoint(rootfs string) (Err error) {
 			dstIsFile = !fi.IsDir()
 		}
 
+		// In previous runc versions, we would tolerate nonsense paths with
+		// dangling symlinks as path components. pathrs-lite does not support
+		// this, so instead we have to emulate this behaviour by doing
+		// SecureJoin *purely to get a semi-reasonable path to use* and then we
+		// use pathrs-lite to operate on the path safely.
+		newUnsafePath, err := securejoin.SecureJoin(rootfs, unsafePath)
+		if err != nil {
+			return err
+		}
+		unsafePath = utils.StripRoot(rootfs, newUnsafePath)
+
 		if dstIsFile {
 			dstFile, err = pathrs.CreateInRoot(rootfs, unsafePath, unix.O_CREAT|unix.O_EXCL|unix.O_NOFOLLOW, 0o644)
 		} else {
