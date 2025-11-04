@@ -62,7 +62,7 @@ github.com/opencontainers/cgroups/fscommon
 github.com/opencontainers/cgroups/internal/path
 github.com/opencontainers/cgroups/manager
 github.com/opencontainers/cgroups/systemd
-# github.com/opencontainers/runtime-spec v1.2.2-0.20250818071321-383cadbf08c0
+# github.com/opencontainers/runtime-spec v1.3.0
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
 github.com/opencontainers/runtime-spec/specs-go/features
