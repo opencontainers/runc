@@ -35,6 +35,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: "${{ env.GO_VERSION }}"
+          cache: false
       - name: install deps
         run: |
           sudo apt -q update
