@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -20,6 +21,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/cgroups"
+	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer/capabilities"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/system"
@@ -376,12 +378,13 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 	// the UID owner of the console to be the user the process will run as (so
 	// they can actually control their console).
 
-	pty, slavePath, err := console.NewPty()
+	pty, peerPty, err := safeAllocPty()
 	if err != nil {
 		return err
 	}
 	// After we return from here, we don't need the console anymore.
 	defer pty.Close()
+	defer peerPty.Close()
 
 	if config.ConsoleHeight != 0 && config.ConsoleWidth != 0 {
 		err = pty.Resize(console.WinSize{
@@ -395,7 +398,7 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 
 	// Mount the console inside our rootfs.
 	if mount {
-		if err := mountConsole(slavePath); err != nil {
+		if err := mountConsole(peerPty); err != nil {
 			return err
 		}
 	}
@@ -406,7 +409,7 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 	runtime.KeepAlive(pty)
 
 	// Now, dup over all the things.
-	return dupStdio(slavePath)
+	return dupStdio(peerPty)
 }
 
 // syncParentReady sends to the given pipe a JSON payload which indicates that
@@ -468,7 +471,12 @@ func setupUser(config *initConfig) error {
 	// We don't need to use /proc/thread-self here because setgroups is a
 	// per-userns file and thus is global to all threads in a thread-group.
 	// This lets us avoid having to do runtime.LockOSThread.
-	setgroups, err := os.ReadFile("/proc/self/setgroups")
+	var setgroups []byte
+	setgroupsFile, err := pathrs.ProcSelfOpen("setgroups", unix.O_RDONLY)
+	if err == nil {
+		setgroups, err = io.ReadAll(setgroupsFile)
+		_ = setgroupsFile.Close()
+	}
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -504,19 +512,16 @@ func setupUser(config *initConfig) error {
 // The ownership needs to match because it is created outside of the container and needs to be
 // localized.
 func fixStdioPermissions(uid int) error {
-	var null unix.Stat_t
-	if err := unix.Stat("/dev/null", &null); err != nil {
-		return &os.PathError{Op: "stat", Path: "/dev/null", Err: err}
-	}
 	for _, file := range []*os.File{os.Stdin, os.Stdout, os.Stderr} {
 		var s unix.Stat_t
 		if err := unix.Fstat(int(file.Fd()), &s); err != nil {
 			return &os.PathError{Op: "fstat", Path: file.Name(), Err: err}
 		}
 
-		// Skip chown if uid is already the one we want or any of the STDIO descriptors
-		// were redirected to /dev/null.
-		if int(s.Uid) == uid || s.Rdev == null.Rdev {
+		// Skip chown if:
+		// - uid is already the one we want, or
+		// - fd is opened to /dev/null.
+		if int(s.Uid) == uid || isDevNull(&s) {
 			continue
 		}
 
