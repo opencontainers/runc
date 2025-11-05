@@ -569,8 +569,12 @@ func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
 		if isOnTmpfs(m.Destination, mounts) {
 			continue
 		}
-		if _, err := createMountpoint(c.config.Rootfs, mountEntry{Mount: m}); err != nil {
-			return fmt.Errorf("create criu restore mountpoint for %s mount: %w", m.Destination, err)
+		me := mountEntry{Mount: m}
+		if err := me.createOpenMountpoint(c.config.Rootfs); err != nil {
+			return fmt.Errorf("create criu restore mountpoint for %s mount: %w", me.Destination, err)
+		}
+		if me.dstFile != nil {
+			defer me.dstFile.Close()
 		}
 		// If the mount point is a bind mount, we need to mount
 		// it now so that runc can create the necessary mount
@@ -582,12 +586,19 @@ func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
 		// because during initial container creation mounts are
 		// set up in the order they are configured.
 		if m.Device == "bind" {
-			if err := utils.WithProcfd(c.config.Rootfs, m.Destination, func(dstFd string) error {
+			if err := utils.WithProcfdFile(me.dstFile, func(dstFd string) error {
 				return mountViaFds(m.Source, nil, m.Destination, dstFd, "", unix.MS_BIND|unix.MS_REC, "")
 			}); err != nil {
 				return err
 			}
 			umounts = append(umounts, m.Destination)
+		}
+		if me.dstFile != nil {
+			// As this is being done in a loop, the defer earlier will be
+			// delayed until all mountpoints are handled -- for a config with
+			// many mountpoints this could result in a lot of open files. So we
+			// opportunistically close the file as well as deferring it.
+			_ = me.dstFile.Close()
 		}
 	}
 	return nil
@@ -1077,7 +1088,7 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 	logrus.Debugf("notify: %s\n", script)
 	switch script {
 	case "post-dump":
-		f, err := os.Create(filepath.Join(c.stateDir, "checkpoint"))
+		f, err := os.Create(filepath.Join(c.stateDir, "checkpoint")) //nolint:forbidigo // this is a host-side operation in a runc-controlled directory
 		if err != nil {
 			return err
 		}
