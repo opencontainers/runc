@@ -3,6 +3,7 @@ package libcontainer
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 
@@ -266,14 +267,15 @@ func (l *linuxStandardInit) Init() error {
 	// user process. We open it through /proc/self/fd/$fd, because the fd that
 	// was given to us was an O_PATH fd to the fifo itself. Linux allows us to
 	// re-open an O_PATH fd through /proc.
-	fd, err := linux.Open(fifoPath, unix.O_WRONLY|unix.O_CLOEXEC, 0)
-	if err != nil {
+
+	result := fifoOpen(fifoPath, true)
+	if result.err != nil {
 		return err
 	}
-	if _, err := unix.Write(fd, []byte("0")); err != nil {
-		return &os.PathError{Op: "write exec fifo", Path: fifoPath, Err: err}
+	if err := readFromExecFifo(result.file); err != nil {
+		return err
 	}
-
+	result.file.Close()
 	// Close the O_PATH fifofd fd before exec because the kernel resets
 	// dumpable in the wrong order. This has been fixed in newer kernels, but
 	// we keep this to ensure CVE-2016-9962 doesn't re-emerge on older kernels.
@@ -304,4 +306,27 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 	return linux.Exec(name, l.config.Args, l.config.Env)
+}
+
+func fifoOpen(path string, block bool) openResult {
+	flags := os.O_RDONLY
+	if !block {
+		flags |= unix.O_NONBLOCK
+	}
+	f, err := os.OpenFile(path, flags, 0)
+	if err != nil {
+		return openResult{err: fmt.Errorf("exec fifo: %w", err)}
+	}
+	return openResult{file: f}
+}
+
+func readFromExecFifo(execFifo io.Reader) error {
+	data, err := io.ReadAll(execFifo)
+	if err != nil {
+		return err
+	}
+	if len(data) <= 0 {
+		return errors.New("cannot start an already running container")
+	}
+	return nil
 }

@@ -20,6 +20,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/cgroups"
+	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/exeseal"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
@@ -231,74 +232,19 @@ func (c *Container) Exec() error {
 }
 
 func (c *Container) exec() error {
-	path := filepath.Join(c.stateDir, execFifoFilename)
-	pid := c.initProcess.pid()
-	blockingFifoOpenCh := awaitFifoOpen(path)
-	for {
-		select {
-		case result := <-blockingFifoOpenCh:
-			return handleFifoResult(result)
-
-		case <-time.After(time.Millisecond * 100):
-			stat, err := system.Stat(pid)
-			if err != nil || stat.State == system.Zombie {
-				// could be because process started, ran, and completed between our 100ms timeout and our system.Stat() check.
-				// see if the fifo exists and has data (with a non-blocking open, which will succeed if the writing process is complete).
-				if err := handleFifoResult(fifoOpen(path, false)); err != nil {
-					return errors.New("container process is already dead")
-				}
-				return nil
-			}
-		}
-	}
-}
-
-func readFromExecFifo(execFifo io.Reader) error {
-	data, err := io.ReadAll(execFifo)
+	fifoPath := filepath.Join(c.stateDir, execFifoFilename)
+	fd, err := linux.Open(fifoPath, unix.O_WRONLY|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return err
 	}
-	if len(data) <= 0 {
-		return errors.New("cannot start an already running container")
+	defer unix.Close(fd)
+	if _, err := unix.Write(fd, []byte("0")); err != nil {
+		return &os.PathError{Op: "write exec fifo", Path: fifoPath, Err: err}
+	}
+	if err := os.Remove(fifoPath); os.IsNotExist(err) {
+		return err
 	}
 	return nil
-}
-
-func awaitFifoOpen(path string) <-chan openResult {
-	fifoOpened := make(chan openResult)
-	go func() {
-		result := fifoOpen(path, true)
-		fifoOpened <- result
-	}()
-	return fifoOpened
-}
-
-func fifoOpen(path string, block bool) openResult {
-	flags := os.O_RDONLY
-	if !block {
-		flags |= unix.O_NONBLOCK
-	}
-	f, err := os.OpenFile(path, flags, 0)
-	if err != nil {
-		return openResult{err: fmt.Errorf("exec fifo: %w", err)}
-	}
-	return openResult{file: f}
-}
-
-func handleFifoResult(result openResult) error {
-	if result.err != nil {
-		return result.err
-	}
-	f := result.file
-	defer f.Close()
-	if err := readFromExecFifo(f); err != nil {
-		return err
-	}
-	err := os.Remove(f.Name())
-	if err == nil || os.IsNotExist(err) {
-		return nil
-	}
-	return err
 }
 
 type openResult struct {
@@ -450,7 +396,7 @@ func (c *Container) createExecFifo() (retErr error) {
 	}
 
 	fifoName := filepath.Join(c.stateDir, execFifoFilename)
-	if err := unix.Mkfifo(fifoName, 0o622); err != nil {
+	if err := unix.Mkfifo(fifoName, 0o644); err != nil {
 		return &os.PathError{Op: "mkfifo", Path: fifoName, Err: err}
 	}
 	defer func() {
@@ -459,7 +405,7 @@ func (c *Container) createExecFifo() (retErr error) {
 		}
 	}()
 	// Ensure permission bits (can be different because of umask).
-	if err := os.Chmod(fifoName, 0o622); err != nil {
+	if err := os.Chmod(fifoName, 0o644); err != nil {
 		return err
 	}
 	return os.Chown(fifoName, rootuid, rootgid)
