@@ -6,6 +6,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.2.z]
 
+## [1.2.8] - 2025-11-05
+
+> 鳥籠の中に囚われた屈辱を
+
+### Security
+
+This release includes fixes for the following high-severity security issues:
+
+* [CVE-2025-31133][] exploits an issue with how masked paths are implemented in
+  runc. When masking files, runc will bind-mount the container's `/dev/null`
+  inode on top of the file. However, if an attacker can replace `/dev/null`
+  with a symlink to some other procfs file, runc will instead bind-mount the
+  symlink target read-write. This issue affected all known runc versions.
+
+* [CVE-2025-52565][] is very similar in concept and application to
+  [CVE-2025-31133][], except that it exploits a flaw in `/dev/console`
+  bind-mounts. When creating the `/dev/console` bind-mount (to `/dev/pts/$n`),
+  if an attacker replaces `/dev/pts/$n` with a symlink then runc will
+  bind-mount the symlink target over `/dev/console`. This issue affected all
+  versions of runc >= 1.0.0-rc3.
+
+* [CVE-2025-52881][] is a more sophisticated variant of [CVE-2019-19921][],
+  which was a flaw that allowed an attacker to trick runc into writing the LSM
+  process labels for a container process into a dummy tmpfs file and thus not
+  apply the correct LSM labels to the container process. The mitigation we
+  applied for [CVE-2019-19921][] was fairly limited and effectively only caused
+  runc to verify that when we write LSM labels that those labels are actual
+  procfs files. This issue affects all known runc versions.
+
+[CVE-2019-19921]: https://github.com/opencontainers/runc/security/advisories/GHSA-fh74-hm69-rqjw
+[CVE-2025-31133]: https://github.com/opencontainers/runc/security/advisories/GHSA-9493-h29p-rfm2
+[CVE-2025-52565]: https://github.com/opencontainers/runc/security/advisories/GHSA-qw9x-cqr3-wc7r
+[CVE-2025-52881]: https://github.com/opencontainers/runc/security/advisories/GHSA-cgrx-mc8f-2prm
+
 ## [1.2.7] - 2025-09-05
 
 > さんをつけろよデコ助野郎！
@@ -1055,7 +1089,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.1.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.1.0-rc.1
 
 <!-- 1.2.z patch releases -->
-[Unreleased 1.2.z]: https://github.com/opencontainers/runc/compare/v1.2.7...release-1.2
+[Unreleased 1.2.z]: https://github.com/opencontainers/runc/compare/v1.2.8...release-1.2
+[1.2.8]: https://github.com/opencontainers/runc/compare/v1.2.7...v1.2.8
 [1.2.7]: https://github.com/opencontainers/runc/compare/v1.2.6...v1.2.7
 [1.2.6]: https://github.com/opencontainers/runc/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/opencontainers/runc/compare/v1.2.4...v1.2.5
