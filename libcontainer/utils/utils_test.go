@@ -131,9 +131,9 @@ func TestStripRoot(t *testing.T) {
 		{"/foo/bar", "foo/bar/baz/beef", "/baz/beef"},
 		{"foo/bar", "foo/bar/baz/beets", "/baz/beets"},
 	} {
-		got := stripRoot(test.root, test.path)
+		got := StripRoot(test.root, test.path)
 		if got != test.out {
-			t.Errorf("stripRoot(%q, %q) -- got %q, expected %q", test.root, test.path, got, test.out)
+			t.Errorf("StripRoot(%q, %q) -- got %q, expected %q", test.root, test.path, got, test.out)
 		}
 	}
 }

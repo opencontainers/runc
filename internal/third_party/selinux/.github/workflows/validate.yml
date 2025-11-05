@@ -1,0 +1,163 @@
+name: validate
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+  pull_request:
+
+jobs:
+
+  commit:
+    runs-on: ubuntu-24.04
+    # Only check commits on pull requests.
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: get pr commits
+        id: 'get-pr-commits'
+        uses: tim-actions/get-pr-commits@v1.3.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: check subject line length
+        uses: tim-actions/commit-message-checker-with-regex@v0.3.2
+        with:
+          commits: ${{ steps.get-pr-commits.outputs.commits }}
+          pattern: '^.{0,72}(\n.*)*$'
+          error: 'Subject too long (max 72)'
+
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: 1.24.x
+      - uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.0
+
+  codespell:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v5
+    - name: install deps
+      # Version of codespell bundled with Ubuntu is way old, so use pip.
+      run: pip install codespell
+    - name: run codespell
+      run: codespell
+
+  cross:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: cross
+        run: make build-cross
+
+  test-stubs:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: 1.24.x
+      - uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.0
+      - name: test-stubs
+        run: make test
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: [1.19.x, 1.23.x, 1.24.x]
+        race: ["-race", ""]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: install go ${{ matrix.go-version }}
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: build
+        run: make BUILDFLAGS="${{ matrix.race }}" build
+
+      - name: test
+        run: make TESTFLAGS="${{ matrix.race }}" test
+
+  vm:
+    name: "VM"
+    strategy:
+      fail-fast: false
+      matrix:
+        template:
+          - template://almalinux-8
+          - template://centos-stream-9
+          - template://fedora
+          - template://experimental/opensuse-tumbleweed
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: "Install Lima"
+        uses: lima-vm/lima-actions/setup@v1
+        id: lima-actions-setup
+
+      - name: "Cache ~/.cache/lima"
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/lima
+          key: lima-${{ steps.lima-actions-setup.outputs.version }}-${{ matrix.template }}
+
+      - name: "Start VM"
+        # --plain is set to disable file sharing, port forwarding, built-in containerd, etc. for faster start up
+        run: limactl start --plain --name=default ${{ matrix.template }}
+
+      - name: "Initialize VM"
+        run: |
+          set -eux -o pipefail
+          # Sync the current directory to /tmp/selinux in the guest
+          limactl cp -r . default:/tmp/selinux
+          # Install packages
+          if lima command -v dnf >/dev/null; then
+            lima sudo dnf install --setopt=install_weak_deps=false --setopt=tsflags=nodocs -y git-core make golang
+          elif lima command -v zypper >/dev/null; then
+            lima sudo zypper install -y git make go
+          else
+            echo >&2 "Unsupported distribution"
+            exit 1
+          fi
+
+      - name: "make test"
+        continue-on-error: true
+        run: lima make -C /tmp/selinux test
+
+      - name: "32-bit test"
+        continue-on-error: true
+        run: lima make -C /tmp/selinux GOARCH=386 test
+
+      # https://github.com/opencontainers/selinux/issues/222
+      # https://github.com/opencontainers/selinux/issues/225
+      - name: "racy test"
+        continue-on-error: true
+        run: lima bash -c 'cd /tmp/selinux && go test -timeout 10m -count 100000 ./go-selinux'
+
+      - name: "Show AVC denials"
+        run: lima sudo ausearch -m AVC,USER_AVC || true
+
+  all-done:
+    needs:
+      - commit
+      - lint
+      - codespell
+      - cross
+      - test-stubs
+      - test
+      - vm
+    runs-on: ubuntu-24.04
+    steps:
+    - run: echo "All jobs completed"
