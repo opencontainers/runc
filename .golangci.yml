@@ -11,6 +11,7 @@ formatters:
 linters:
   enable:
     - errorlint
+    - forbidigo
     - nolintlint
     - unconvert
     - unparam
@@ -25,6 +26,20 @@ linters:
         - -ST1003 # https://staticcheck.dev/docs/checks/#ST1003 Poorly chosen identifier.
         - -ST1005 # https://staticcheck.dev/docs/checks/#ST1005 Incorrectly formatted error string.
         - -QF1008 # https://staticcheck.dev/docs/checks/#QF1008 Omit embedded fields from selector expression.
+    forbidigo:
+      forbid:
+        # os.Create implies O_TRUNC without O_CREAT|O_EXCL, which can lead to
+        # an even more severe attacks than CVE-2024-45310, where host files
+        # could be wiped. Always use O_EXCL or otherwise ensure we are not
+        # going to be tricked into overwriting host files.
+        - pattern: ^os\.Create$
+          pkg: ^os$
+      analyze-types: true
   exclusions:
+    rules:
+      # forbidigo lints are only relevant for main code.
+      - path: '(.+)_test\.go'
+        linters:
+          - forbidigo
     presets:
       - std-error-handling
