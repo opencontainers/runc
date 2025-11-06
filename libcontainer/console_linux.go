@@ -33,9 +33,10 @@ func checkPtmxHandle(ptmx *os.File) error {
 		if stat.Ino != PTMX_INO {
 			return fmt.Errorf("ptmx handle has wrong inode number: %v", stat.Ino)
 		}
-		if stat.Mode&unix.S_IFMT != unix.S_IFCHR || stat.Rdev != unix.Mkdev(PTMX_MAJOR, PTMX_MINOR) {
+		rdev := uint64(stat.Rdev) //nolint:unconvert // Rdev is uint32 on MIPS.
+		if stat.Mode&unix.S_IFMT != unix.S_IFCHR || rdev != unix.Mkdev(PTMX_MAJOR, PTMX_MINOR) {
 			return fmt.Errorf("ptmx handle is not a real char ptmx device: ftype %#x %d:%d",
-				stat.Mode&unix.S_IFMT, unix.Major(stat.Rdev), unix.Minor(stat.Rdev))
+				stat.Mode&unix.S_IFMT, unix.Major(rdev), unix.Minor(rdev))
 		}
 		return nil
 	})
@@ -79,9 +80,10 @@ func getPtyPeer(pty console.Console, unsafePeerPath string, flags int) (*os.File
 		if statfs.Type != unix.DEVPTS_SUPER_MAGIC {
 			return fmt.Errorf("pty peer handle is not on a real devpts mount: super magic is %#x", statfs.Type)
 		}
-		if stat.Mode&unix.S_IFMT != unix.S_IFCHR || stat.Rdev != wantPeerDev {
+		rdev := uint64(stat.Rdev) //nolint:unconvert // Rdev is uint32 on MIPS.
+		if stat.Mode&unix.S_IFMT != unix.S_IFCHR || rdev != wantPeerDev {
 			return fmt.Errorf("pty peer handle is not the real char device for pty %d: ftype %#x %d:%d",
-				peerNum, stat.Mode&unix.S_IFMT, unix.Major(stat.Rdev), unix.Minor(stat.Rdev))
+				peerNum, stat.Mode&unix.S_IFMT, unix.Major(rdev), unix.Minor(rdev))
 		}
 		return nil
 	}); err != nil {
