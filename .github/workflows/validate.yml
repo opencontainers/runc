@@ -42,6 +42,7 @@ jobs:
       - uses: golangci/golangci-lint-action@v8
         with:
           version: v2.5
+          skip-cache: true
       # Extra linters, only checking new code from a pull request to main.
       - name: lint-extra
         if: github.event_name == 'pull_request' && github.base_ref == 'main'
