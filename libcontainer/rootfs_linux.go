@@ -1047,10 +1047,10 @@ func mknodDevice(destDir *os.File, destName string, node *devices.Device) error 
 				node.Type, node.Path,
 				stat.Mode&unix.S_IFMT, fileMode&unix.S_IFMT)
 		}
-		if stat.Rdev != dev {
+		if rdev := uint64(stat.Rdev); rdev != dev { //nolint:unconvert // Rdev is uint32 on MIPS.
 			return fmt.Errorf("new %c device inode %s has incorrect major:minor: %d:%d doesn't match expected %d:%d",
 				node.Type, node.Path,
-				unix.Major(stat.Rdev), unix.Minor(stat.Rdev),
+				unix.Major(rdev), unix.Minor(rdev),
 				unix.Major(dev), unix.Minor(dev))
 		}
 		return nil
@@ -1321,7 +1321,8 @@ func remountReadonly(m *configs.Mount) error {
 }
 
 func isDevNull(st *unix.Stat_t) bool {
-	return st.Mode&unix.S_IFMT == unix.S_IFCHR && st.Rdev == unix.Mkdev(1, 3)
+	//nolint:unconvert // Rdev is uint32 on MIPS.
+	return st.Mode&unix.S_IFMT == unix.S_IFCHR && uint64(st.Rdev) == unix.Mkdev(1, 3)
 }
 
 func verifyDevNull(f *os.File) error {
