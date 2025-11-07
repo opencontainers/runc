@@ -6,7 +6,7 @@ require (
 	github.com/checkpoint-restore/go-criu/v7 v7.2.0
 	github.com/containerd/console v1.0.5
 	github.com/coreos/go-systemd/v22 v22.6.0
-	github.com/cyphar/filepath-securejoin v0.5.1
+	github.com/cyphar/filepath-securejoin v0.6.0
 	github.com/docker/go-units v0.5.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/moby/sys/capability v0.4.0
@@ -16,7 +16,7 @@ require (
 	github.com/mrunalp/fileutils v0.5.1
 	github.com/opencontainers/cgroups v0.0.5
 	github.com/opencontainers/runtime-spec v1.2.2-0.20250818071321-383cadbf08c0
-	github.com/opencontainers/selinux v1.12.0
+	github.com/opencontainers/selinux v1.13.0
 	github.com/seccomp/libseccomp-golang v0.11.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/urfave/cli v1.22.17
@@ -28,12 +28,8 @@ require (
 )
 
 require (
+	cyphar.com/go-pathrs v0.2.1 // indirect
 	github.com/cilium/ebpf v0.17.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 )
-
-// FIXME: This is only intended as a short-term solution to include a patch for
-// CVE-2025-52881 in go-selinux without pushing the patches upstream. This
-// should be removed as soon as possible after the embargo is lifted.
-replace github.com/opencontainers/selinux => ./internal/third_party/selinux

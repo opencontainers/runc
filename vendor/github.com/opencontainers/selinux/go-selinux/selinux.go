@@ -198,9 +198,7 @@ func SetKeyLabel(label string) error {
 
 // KeyLabel retrieves the current kernel keyring label setting
 func KeyLabel() (string, error) {
-	// Rather than using /proc/thread-self, we want to use /proc/self to
-	// operate on the thread-group leader.
-	return readConSelf("attr/keycreate")
+	return keyLabel()
 }
 
 // Get returns the Context as a string
