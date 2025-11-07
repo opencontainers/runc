@@ -1,3 +1,9 @@
+# cyphar.com/go-pathrs v0.2.1
+## explicit; go 1.18
+cyphar.com/go-pathrs
+cyphar.com/go-pathrs/internal/fdutils
+cyphar.com/go-pathrs/internal/libpathrs
+cyphar.com/go-pathrs/procfs
 # github.com/checkpoint-restore/go-criu/v6 v6.3.0
 ## explicit; go 1.16
 github.com/checkpoint-restore/go-criu/v6
@@ -27,7 +33,7 @@ github.com/coreos/go-systemd/v22/dbus
 # github.com/cpuguy83/go-md2man/v2 v2.0.5
 ## explicit; go 1.11
 github.com/cpuguy83/go-md2man/v2/md2man
-# github.com/cyphar/filepath-securejoin v0.5.1
+# github.com/cyphar/filepath-securejoin v0.6.0
 ## explicit; go 1.18
 github.com/cyphar/filepath-securejoin
 github.com/cyphar/filepath-securejoin/internal/consts
@@ -36,6 +42,7 @@ github.com/cyphar/filepath-securejoin/pathrs-lite/internal
 github.com/cyphar/filepath-securejoin/pathrs-lite/internal/assert
 github.com/cyphar/filepath-securejoin/pathrs-lite/internal/fd
 github.com/cyphar/filepath-securejoin/pathrs-lite/internal/gocompat
+github.com/cyphar/filepath-securejoin/pathrs-lite/internal/gopathrs
 github.com/cyphar/filepath-securejoin/pathrs-lite/internal/kernelversion
 github.com/cyphar/filepath-securejoin/pathrs-lite/internal/linux
 github.com/cyphar/filepath-securejoin/pathrs-lite/internal/procfs
@@ -76,7 +83,7 @@ github.com/opencontainers/cgroups/systemd
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
 github.com/opencontainers/runtime-spec/specs-go/features
-# github.com/opencontainers/selinux v1.12.0 => ./internal/third_party/selinux
+# github.com/opencontainers/selinux v1.13.0
 ## explicit; go 1.19
 github.com/opencontainers/selinux/go-selinux
 github.com/opencontainers/selinux/go-selinux/label
@@ -137,4 +144,3 @@ google.golang.org/protobuf/reflect/protoreflect
 google.golang.org/protobuf/reflect/protoregistry
 google.golang.org/protobuf/runtime/protoiface
 google.golang.org/protobuf/runtime/protoimpl
-# github.com/opencontainers/selinux => ./internal/third_party/selinux
