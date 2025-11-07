@@ -513,6 +513,18 @@ func (m *mountEntry) createOpenMountpoint(rootfs string) (Err error) {
 			_ = dstFile.Close()
 		}
 	}()
+	if err == nil && m.Device == "tmpfs" {
+		// If the original target exists, copy the mode for the tmpfs mount.
+		stat, err := dstFile.Stat()
+		if err != nil {
+			return fmt.Errorf("check tmpfs source mode: %w", err)
+		}
+		dt := fmt.Sprintf("mode=%04o", syscallMode(stat.Mode()))
+		if m.Data != "" {
+			dt = dt + "," + m.Data
+		}
+		m.Data = dt
+	}
 	if err != nil {
 		if !errors.Is(err, unix.ENOENT) {
 			return fmt.Errorf("lookup mountpoint target: %w", err)
@@ -551,19 +563,6 @@ func (m *mountEntry) createOpenMountpoint(rootfs string) (Err error) {
 		if err != nil {
 			return fmt.Errorf("make mountpoint %q: %w", m.Destination, err)
 		}
-	}
-
-	if m.Device == "tmpfs" {
-		// If the original target exists, copy the mode for the tmpfs mount.
-		stat, err := dstFile.Stat()
-		if err != nil {
-			return fmt.Errorf("check tmpfs source mode: %w", err)
-		}
-		dt := fmt.Sprintf("mode=%04o", syscallMode(stat.Mode()))
-		if m.Data != "" {
-			dt = dt + "," + m.Data
-		}
-		m.Data = dt
 	}
 
 	dstFullPath, err := procfs.ProcSelfFdReadlink(dstFile)
