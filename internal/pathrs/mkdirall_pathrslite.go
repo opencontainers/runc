@@ -21,7 +21,6 @@ package pathrs
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/cyphar/filepath-securejoin/pathrs-lite"
 	"github.com/sirupsen/logrus"
@@ -50,18 +49,9 @@ import (
 // needed for a lot of runc callers and fixing this would require reworking a
 // lot of path logic).
 func MkdirAllInRoot(root, unsafePath string, mode os.FileMode) (*os.File, error) {
-	// If the path is already "within" the root, get the path relative to the
-	// root and use that as the unsafe path. This is necessary because a lot of
-	// MkdirAllInRoot callers have already done SecureJoin, and refactoring
-	// all of them to stop using these SecureJoin'd paths would require a fair
-	// amount of work.
-	// TODO(cyphar): Do the refactor to libpathrs once it's ready.
-	if IsLexicallyInRoot(root, unsafePath) {
-		subPath, err := filepath.Rel(root, unsafePath)
-		if err != nil {
-			return nil, err
-		}
-		unsafePath = subPath
+	unsafePath, err := hallucinateUnsafePath(root, unsafePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to construct hallucinated target path: %w", err)
 	}
 
 	// Check for any silly mode bits.
