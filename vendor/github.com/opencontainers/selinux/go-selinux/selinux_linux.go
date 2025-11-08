@@ -273,8 +273,8 @@ func writeConFd(out *os.File, val string) error {
 	return err
 }
 
-// openProcThreadSelf is a small wrapper around [OpenThreadSelf] and
-// [pathrs.Reopen] to make "one-shot opens" slightly more ergonomic. The
+// openProcThreadSelf is a small wrapper around [procfs.Handle.OpenThreadSelf]
+// and [pathrs.Reopen] to make "one-shot opens" slightly more ergonomic. The
 // provided mode must be os.O_* flags to indicate what mode the returned file
 // should be opened with (flags like os.O_CREAT and os.O_EXCL are not
 // supported).
@@ -283,8 +283,6 @@ func writeConFd(out *os.File, val string) error {
 // /proc/thread-self/<subpath> with no tricky mounts or symlinks causing you to
 // operate on an unexpected path (with some caveats on pre-openat2 or
 // pre-fsopen kernels).
-//
-// [OpenThreadSelf]: https://pkg.go.dev/github.com/cyphar/filepath-securejoin/pathrs-lite/procfs#Handle.OpenThreadSelf
 func openProcThreadSelf(subpath string, mode int) (*os.File, procfs.ProcThreadSelfCloser, error) {
 	if subpath == "" {
 		return nil, nil, ErrEmptyPath
@@ -340,17 +338,16 @@ func writeConThreadSelf(fpath, val string) error {
 	return writeConFd(out, val)
 }
 
-// openProcSelf is a small wrapper around [OpenSelf] and [pathrs.Reopen] to
-// make "one-shot opens" slightly more ergonomic. The provided mode must be
-// os.O_* flags to indicate what mode the returned file should be opened with
-// (flags like os.O_CREAT and os.O_EXCL are not supported).
+// openProcSelf is a small wrapper around [procfs.Handle.OpenSelf] and
+// [pathrs.Reopen] to make "one-shot opens" slightly more ergonomic. The
+// provided mode must be os.O_* flags to indicate what mode the returned file
+// should be opened with (flags like os.O_CREAT and os.O_EXCL are not
+// supported).
 //
 // If no error occurred, the returned handle is guaranteed to be exactly
 // /proc/self/<subpath> with no tricky mounts or symlinks causing you to
 // operate on an unexpected path (with some caveats on pre-openat2 or
 // pre-fsopen kernels).
-//
-// [OpenSelf]: https://pkg.go.dev/github.com/cyphar/filepath-securejoin/pathrs-lite/procfs#Handle.OpenSelf
 func openProcSelf(subpath string, mode int) (*os.File, error) {
 	if subpath == "" {
 		return nil, ErrEmptyPath
@@ -403,17 +400,16 @@ func writeConSelf(fpath, val string) error {
 	return writeConFd(out, val)
 }
 
-// openProcPid is a small wrapper around [OpenPid] and [pathrs.Reopen] to make
-// "one-shot opens" slightly more ergonomic. The provided mode must be os.O_*
-// flags to indicate what mode the returned file should be opened with (flags
-// like os.O_CREAT and os.O_EXCL are not supported).
+// openProcPid is a small wrapper around [procfs.Handle.OpenPid] and
+// [pathrs.Reopen] to make "one-shot opens" slightly more ergonomic. The
+// provided mode must be os.O_* flags to indicate what mode the returned file
+// should be opened with (flags like os.O_CREAT and os.O_EXCL are not
+// supported).
 //
 // If no error occurred, the returned handle is guaranteed to be exactly
 // /proc/self/<subpath> with no tricky mounts or symlinks causing you to
 // operate on an unexpected path (with some caveats on pre-openat2 or
 // pre-fsopen kernels).
-//
-// [OpenPid]: https://pkg.go.dev/github.com/cyphar/filepath-securejoin/pathrs-lite/procfs#Handle.OpenPid
 func openProcPid(pid int, subpath string, mode int) (*os.File, error) {
 	if subpath == "" {
 		return nil, ErrEmptyPath

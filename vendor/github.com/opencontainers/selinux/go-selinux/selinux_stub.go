@@ -3,10 +3,6 @@
 
 package selinux
 
-func attrPath(string) string {
-	return ""
-}
-
 func readConThreadSelf(string) (string, error) {
 	return "", nil
 }
