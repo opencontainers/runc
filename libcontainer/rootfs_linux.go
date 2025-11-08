@@ -12,7 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/cyphar/filepath-securejoin/pathrs-lite/procfs"
 	"github.com/moby/sys/mountinfo"
 	"github.com/moby/sys/userns"
@@ -506,8 +505,6 @@ func statfsToMountFlags(st unix.Statfs_t) int {
 	return flags
 }
 
-var errRootfsToFile = errors.New("config tries to change rootfs to file")
-
 func (m *mountEntry) createOpenMountpoint(rootfs string) (Err error) {
 	unsafePath := pathrs.LexicallyStripRoot(rootfs, m.Destination)
 	dstFile, err := pathrs.OpenInRoot(rootfs, unsafePath, unix.O_PATH)
@@ -974,15 +971,7 @@ func createDeviceNode(rootfs string, node *devices.Device, bind bool) error {
 		// The node only exists for cgroup reasons, ignore it here.
 		return nil
 	}
-	destPath, err := securejoin.SecureJoin(rootfs, node.Path)
-	if err != nil {
-		return err
-	}
-	if destPath == rootfs {
-		return fmt.Errorf("%w: mknod over rootfs", errRootfsToFile)
-	}
-	destDirPath, destName := filepath.Split(destPath)
-	destDir, err := pathrs.MkdirAllInRoot(rootfs, destDirPath, 0o755)
+	destDir, destName, err := pathrs.MkdirAllParentInRoot(rootfs, node.Path, 0o755)
 	if err != nil {
 		return fmt.Errorf("mkdir parent of device inode %q: %w", node.Path, err)
 	}
