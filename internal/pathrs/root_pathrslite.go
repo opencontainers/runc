@@ -19,9 +19,7 @@
 package pathrs
 
 import (
-	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/cyphar/filepath-securejoin/pathrs-lite"
 	"golang.org/x/sys/unix"
@@ -50,17 +48,7 @@ func OpenInRoot(root, subpath string, flags int) (*os.File, error) {
 // include it in the passed flags. The fileMode argument uses unix.* mode bits,
 // *not* os.FileMode.
 func CreateInRoot(root, subpath string, flags int, fileMode uint32) (*os.File, error) {
-	subpath, err := hallucinateUnsafePath(root, subpath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to construct hallucinated target path: %w", err)
-	}
-
-	dir, filename := filepath.Split(subpath)
-	if filepath.Join("/", filename) == "/" {
-		return nil, fmt.Errorf("create in root subpath %q has bad trailing component %q", subpath, filename)
-	}
-
-	dirFd, err := MkdirAllInRoot(root, dir, 0o755)
+	dirFd, filename, err := MkdirAllParentInRoot(root, subpath, 0o755)
 	if err != nil {
 		return nil, err
 	}
