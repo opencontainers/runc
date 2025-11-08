@@ -332,7 +332,7 @@ func mountCgroupV1(m mountEntry, c *mountConfig) error {
 			// TODO: Why not just use b.Destination (c.root is the root here)?
 			subsystemPath := filepath.Join(c.root, b.Destination)
 			subsystemName := filepath.Base(b.Destination)
-			subsystemDir, err := pathrs.MkdirAllInRootOpen(c.root, subsystemPath, 0o755)
+			subsystemDir, err := pathrs.MkdirAllInRoot(c.root, subsystemPath, 0o755)
 			if err != nil {
 				return err
 			}
@@ -561,7 +561,7 @@ func (m *mountEntry) createOpenMountpoint(rootfs string) (Err error) {
 		if dstIsFile {
 			dstFile, err = pathrs.CreateInRoot(rootfs, unsafePath, unix.O_CREAT|unix.O_EXCL|unix.O_NOFOLLOW, 0o644)
 		} else {
-			dstFile, err = pathrs.MkdirAllInRootOpen(rootfs, unsafePath, 0o755)
+			dstFile, err = pathrs.MkdirAllInRoot(rootfs, unsafePath, 0o755)
 		}
 		if err != nil {
 			return fmt.Errorf("make mountpoint %q: %w", m.Destination, err)
@@ -623,7 +623,7 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		} else if !fi.IsDir() {
 			return fmt.Errorf("filesystem %q must be mounted on ordinary directory", m.Device)
 		}
-		dstFile, err := pathrs.MkdirAllInRootOpen(rootfs, dest, 0o755)
+		dstFile, err := pathrs.MkdirAllInRoot(rootfs, dest, 0o755)
 		if err != nil {
 			return err
 		}
@@ -994,7 +994,7 @@ func createDeviceNode(rootfs string, node *devices.Device, bind bool) error {
 		return fmt.Errorf("%w: mknod over rootfs", errRootfsToFile)
 	}
 	destDirPath, destName := filepath.Split(destPath)
-	destDir, err := pathrs.MkdirAllInRootOpen(rootfs, destDirPath, 0o755)
+	destDir, err := pathrs.MkdirAllInRoot(rootfs, destDirPath, 0o755)
 	if err != nil {
 		return fmt.Errorf("mkdir parent of device inode %q: %w", node.Path, err)
 	}

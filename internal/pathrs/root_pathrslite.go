@@ -55,7 +55,7 @@ func CreateInRoot(root, subpath string, flags int, fileMode uint32) (*os.File, e
 		return nil, fmt.Errorf("create in root subpath %q has bad trailing component %q", subpath, filename)
 	}
 
-	dirFd, err := MkdirAllInRootOpen(root, dir, 0o755)
+	dirFd, err := MkdirAllInRoot(root, dir, 0o755)
 	if err != nil {
 		return nil, err
 	}

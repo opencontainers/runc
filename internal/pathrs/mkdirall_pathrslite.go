@@ -28,7 +28,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// MkdirAllInRootOpen attempts to make
+// MkdirAllInRoot attempts to make
 //
 //	path, _ := securejoin.SecureJoin(root, unsafePath)
 //	os.MkdirAll(path, mode)
@@ -49,10 +49,10 @@ import (
 // handling if unsafePath has already been scoped within the rootfs (this is
 // needed for a lot of runc callers and fixing this would require reworking a
 // lot of path logic).
-func MkdirAllInRootOpen(root, unsafePath string, mode os.FileMode) (*os.File, error) {
+func MkdirAllInRoot(root, unsafePath string, mode os.FileMode) (*os.File, error) {
 	// If the path is already "within" the root, get the path relative to the
 	// root and use that as the unsafe path. This is necessary because a lot of
-	// MkdirAllInRootOpen callers have already done SecureJoin, and refactoring
+	// MkdirAllInRoot callers have already done SecureJoin, and refactoring
 	// all of them to stop using these SecureJoin'd paths would require a fair
 	// amount of work.
 	// TODO(cyphar): Do the refactor to libpathrs once it's ready.
