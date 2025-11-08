@@ -13,10 +13,11 @@ import (
 	_ "unsafe" // for go:linkname
 
 	securejoin "github.com/cyphar/filepath-securejoin"
-	"github.com/opencontainers/runc/internal/linux"
-	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/internal/linux"
+	"github.com/opencontainers/runc/internal/pathrs"
 )
 
 var (
@@ -153,7 +154,7 @@ func NewSockPair(name string) (parent, child *os.File, err error) {
 // the passed closure (the file handle will be freed once the closure returns).
 func WithProcfd(root, unsafePath string, fn func(procfd string) error) error {
 	// Remove the root then forcefully resolve inside the root.
-	unsafePath = StripRoot(root, unsafePath)
+	unsafePath = pathrs.LexicallyStripRoot(root, unsafePath)
 	fullPath, err := securejoin.SecureJoin(root, unsafePath)
 	if err != nil {
 		return fmt.Errorf("resolving path inside rootfs failed: %w", err)

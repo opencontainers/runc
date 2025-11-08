@@ -91,7 +91,7 @@ func (m mountEntry) srcStatfs() (*unix.Statfs_t, error) {
 // needsSetupDev returns true if /dev needs to be set up.
 func needsSetupDev(config *configs.Config) bool {
 	for _, m := range config.Mounts {
-		if m.Device == "bind" && utils.CleanPath(m.Destination) == "/dev" {
+		if m.Device == "bind" && pathrs.LexicallyCleanPath(m.Destination) == "/dev" {
 			return false
 		}
 	}
@@ -257,7 +257,7 @@ func finalizeRootfs(config *configs.Config) (err error) {
 		if m.Flags&unix.MS_RDONLY != unix.MS_RDONLY {
 			continue
 		}
-		if m.Device == "tmpfs" || utils.CleanPath(m.Destination) == "/dev" {
+		if m.Device == "tmpfs" || pathrs.LexicallyCleanPath(m.Destination) == "/dev" {
 			if err := remountReadonly(m); err != nil {
 				return err
 			}
@@ -506,7 +506,7 @@ func statfsToMountFlags(st unix.Statfs_t) int {
 var errRootfsToFile = errors.New("config tries to change rootfs to file")
 
 func (m *mountEntry) createOpenMountpoint(rootfs string) (Err error) {
-	unsafePath := utils.StripRoot(rootfs, m.Destination)
+	unsafePath := pathrs.LexicallyStripRoot(rootfs, m.Destination)
 	dstFile, err := pathrs.OpenInRoot(rootfs, unsafePath, unix.O_PATH)
 	defer func() {
 		if dstFile != nil && Err != nil {
@@ -553,7 +553,7 @@ func (m *mountEntry) createOpenMountpoint(rootfs string) (Err error) {
 		if err != nil {
 			return err
 		}
-		unsafePath = utils.StripRoot(rootfs, newUnsafePath)
+		unsafePath = pathrs.LexicallyStripRoot(rootfs, newUnsafePath)
 
 		if dstIsFile {
 			dstFile, err = pathrs.CreateInRoot(rootfs, unsafePath, unix.O_CREAT|unix.O_EXCL|unix.O_NOFOLLOW, 0o644)
@@ -952,7 +952,7 @@ func createDevices(config *configs.Config) error {
 	for _, node := range config.Devices {
 
 		// The /dev/ptmx device is setup by setupPtmx()
-		if utils.CleanPath(node.Path) == "/dev/ptmx" {
+		if pathrs.LexicallyCleanPath(node.Path) == "/dev/ptmx" {
 			continue
 		}
 
@@ -1392,7 +1392,7 @@ func reopenAfterMount(rootfs string, f *os.File, flags int) (_ *os.File, Err err
 	if !pathrs.IsLexicallyInRoot(rootfs, fullPath) {
 		return nil, fmt.Errorf("mountpoint %q is outside of rootfs %q", fullPath, rootfs)
 	}
-	unsafePath := utils.StripRoot(rootfs, fullPath)
+	unsafePath := pathrs.LexicallyStripRoot(rootfs, fullPath)
 	reopened, err := pathrs.OpenInRoot(rootfs, unsafePath, flags)
 	if err != nil {
 		return nil, fmt.Errorf("re-open mountpoint %q: %w", unsafePath, err)
@@ -1432,7 +1432,7 @@ func (m *mountEntry) mountPropagate(rootfs string, mountLabel string) error {
 	// operations on it. We need to set up files in "/dev", and other tmpfs
 	// mounts may need to be chmod-ed after mounting. These mounts will be
 	// remounted ro later in finalizeRootfs(), if necessary.
-	if m.Device == "tmpfs" || utils.CleanPath(m.Destination) == "/dev" {
+	if m.Device == "tmpfs" || pathrs.LexicallyCleanPath(m.Destination) == "/dev" {
 		flags &= ^unix.MS_RDONLY
 	}
 
