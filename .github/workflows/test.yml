@@ -28,14 +28,7 @@ jobs:
         go-version: [1.24.x, 1.25.x]
         rootless: ["rootless", ""]
         race: ["-race", ""]
-        criu: ["", "criu-dev"]
         exclude:
-          # Disable most of criu-dev jobs, as they are expensive
-          # (need to compile criu) and don't add much value/coverage.
-          - criu: criu-dev
-            go-version: 1.24.x
-          - criu: criu-dev
-            rootless: rootless
           # Do race detection only on latest Go.
           - race: -race
             go-version: 1.24.x
@@ -74,7 +67,6 @@ jobs:
         sudo apt -y install libseccomp-dev sshfs uidmap
 
     - name: install CRIU
-      if: ${{ matrix.criu == '' }}
       env:
         PREFIX: https://download.opensuse.org/repositories/devel:/tools:/criu/xUbuntu
       run: |
@@ -83,18 +75,6 @@ jobs:
         echo "deb $REPO/ /" | sudo tee /etc/apt/sources.list.d/criu.list
         sudo apt update
         sudo apt -y install criu
-
-    - name: install CRIU (${{ matrix.criu }})
-      if: ${{ matrix.criu != '' }}
-      run: |
-        sudo apt -qy install \
-          libcap-dev libnet1-dev libnl-3-dev uuid-dev \
-          libprotobuf-c-dev libprotobuf-dev protobuf-c-compiler protobuf-compiler
-        git clone --depth 1 --branch ${{ matrix.criu }} --single-branch \
-          https://github.com/checkpoint-restore/criu.git ~/criu
-        (cd ~/criu && sudo make -j $(nproc) install-criu)
-        rm -rf ~/criu
-        criu --version
 
     - name: install go ${{ matrix.go-version }}
       uses: actions/setup-go@v6
