@@ -22,6 +22,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	securejoin "github.com/cyphar/filepath-securejoin"
 )
 
 // IsLexicallyInRoot is shorthand for strings.HasPrefix(path+"/", root+"/"),
@@ -81,4 +83,34 @@ func LexicallyStripRoot(root, path string) string {
 		path = strings.TrimPrefix(path, root+"/")
 	}
 	return LexicallyCleanPath("/" + path)
+}
+
+// hallucinateUnsafePath creates a new unsafePath which has all symlinks
+// (including dangling symlinks) fully resolved and any non-existent components
+// treated as though they are real. This is effectively just a wrapper around
+// [securejoin.SecureJoin] that strips the root. This path *IS NOT* safe to use
+// as-is, you *MUST* operate on the returned path with pathrs-lite.
+//
+// The reason for this methods is that in previous runc versions, we would
+// tolerate nonsense paths with dangling symlinks as path components.
+// pathrs-lite does not support this, so instead we have to emulate this
+// behaviour by doing SecureJoin *purely to get a semi-reasonable path to use*
+// and then we use pathrs-lite to operate on the path safely.
+//
+// It would be quite difficult to emulate this in a race-free way in
+// pathrs-lite, so instead we use [securejoin.SecureJoin] to simply produce a
+// new candidate path for operations like [MkdirAllInRoot] so they can then
+// operate on the new unsafePath as if it was what the user requested.
+//
+// If unsafePath is already lexically inside root, it is stripped before
+// re-resolving it (this is done to ensure compatibility with legacy callers
+// within runc that call SecureJoin before calling into pathrs).
+func hallucinateUnsafePath(root, unsafePath string) (string, error) {
+	unsafePath = LexicallyStripRoot(root, unsafePath)
+	weirdPath, err := securejoin.SecureJoin(root, unsafePath)
+	if err != nil {
+		return "", err
+	}
+	unsafePath = LexicallyStripRoot(root, weirdPath)
+	return unsafePath, nil
 }
