@@ -17,10 +17,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-func i64Ptr(i int64) *int64   { return &i }
-func u64Ptr(i uint64) *uint64 { return &i }
-func u16Ptr(i uint16) *uint16 { return &i }
-func boolPtr(b bool) *bool    { return &b }
+func mkPtr[T any](v T) *T { return &v }
 
 var updateCommand = cli.Command{
 	Name:      "update",
@@ -147,9 +144,9 @@ other options are ignored.
 		}
 
 		r := specs.LinuxResources{
-			// nil and u64Ptr(0) are not interchangeable
+			// nil and mkPtr(0) are not interchangeable
 			Memory: &specs.LinuxMemory{
-				CheckBeforeUpdate: boolPtr(false), // constant
+				CheckBeforeUpdate: mkPtr(false), // constant
 			},
 			CPU:     &specs.LinuxCPU{},
 			BlockIO: &specs.LinuxBlockIO{},
@@ -179,7 +176,7 @@ other options are ignored.
 			}
 		} else {
 			if val := context.Int("blkio-weight"); val != 0 {
-				r.BlockIO.Weight = u16Ptr(uint16(val))
+				r.BlockIO.Weight = mkPtr(uint16(val))
 			}
 			if val := context.String("cpuset-cpus"); val != "" {
 				r.CPU.Cpus = val
@@ -192,7 +189,7 @@ other options are ignored.
 				if err != nil {
 					return fmt.Errorf("invalid value for cpu-idle: %w", err)
 				}
-				r.CPU.Idle = i64Ptr(idle)
+				r.CPU.Idle = mkPtr(idle)
 			}
 
 			for _, pair := range []struct {
@@ -253,18 +250,18 @@ other options are ignored.
 			}
 
 			if context.IsSet("pids-limit") {
-				r.Pids.Limit = i64Ptr(int64(context.Int("pids-limit")))
+				r.Pids.Limit = mkPtr(int64(context.Int("pids-limit")))
 			}
 		}
 
 		// Fix up values
 		if r.Memory.Limit != nil && *r.Memory.Limit == -1 && r.Memory.Swap == nil {
 			// To avoid error "unable to set swap limit without memory limit"
-			r.Memory.Swap = i64Ptr(0)
+			r.Memory.Swap = mkPtr[int64](0)
 		}
 		if r.CPU.Idle != nil && r.CPU.Shares == nil {
 			// To avoid error "failed to write \"4\": write /sys/fs/cgroup/runc-cgroups-integration-test/test-cgroup-7341/cpu.weight: invalid argument"
-			r.CPU.Shares = u64Ptr(0)
+			r.CPU.Shares = mkPtr[uint64](0)
 		}
 
 		if (r.Memory.Kernel != nil) || (r.Memory.KernelTCP != nil) { //nolint:staticcheck // Ignore SA1019. Need to keep deprecated package for compatibility.
