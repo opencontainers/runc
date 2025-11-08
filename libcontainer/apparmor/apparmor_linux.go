@@ -9,7 +9,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/internal/pathrs"
-	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 var (
@@ -29,7 +28,7 @@ func isEnabled() bool {
 }
 
 func setProcAttr(attr, value string) error {
-	attr = utils.CleanPath(attr)
+	attr = pathrs.LexicallyCleanPath(attr)
 	attrSubPath := "attr/apparmor/" + attr
 	if _, err := os.Stat("/proc/self/" + attrSubPath); errors.Is(err, os.ErrNotExist) {
 		// fall back to the old convention
