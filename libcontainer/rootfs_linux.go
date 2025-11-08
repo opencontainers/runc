@@ -329,12 +329,15 @@ func mountCgroupV1(m mountEntry, c *mountConfig) error {
 			// We just created the tmpfs, and so we can just use filepath.Join
 			// here (not to mention we want to make sure we create the path
 			// inside the tmpfs, so we don't want to resolve symlinks).
+			// TODO: Why not just use b.Destination (c.root is the root here)?
 			subsystemPath := filepath.Join(c.root, b.Destination)
 			subsystemName := filepath.Base(b.Destination)
-			if err := pathrs.MkdirAllInRoot(c.root, subsystemPath, 0o755); err != nil {
+			subsystemDir, err := pathrs.MkdirAllInRootOpen(c.root, subsystemPath, 0o755)
+			if err != nil {
 				return err
 			}
-			if err := utils.WithProcfd(c.root, b.Destination, func(dstFd string) error {
+			defer subsystemDir.Close()
+			if err := utils.WithProcfdFile(subsystemDir, func(dstFd string) error {
 				flags := defaultMountFlags
 				if m.Flags&unix.MS_RDONLY != 0 {
 					flags = flags | unix.MS_RDONLY
@@ -1456,9 +1459,7 @@ func (m *mountEntry) mountPropagate(rootfs string, mountLabel string) error {
 	_ = m.dstFile.Close()
 	m.dstFile = newDstFile
 
-	// We have to apply mount propagation flags in a separate WithProcfd() call
-	// because the previous call invalidates the passed procfd -- the mount
-	// target needs to be re-opened.
+	// Apply the propagation flags on the new mount.
 	if err := utils.WithProcfdFile(m.dstFile, func(dstFd string) error {
 		for _, pflag := range m.PropagationFlags {
 			if err := mountViaFds("", nil, m.Destination, dstFd, "", uintptr(pflag), ""); err != nil {

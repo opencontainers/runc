@@ -87,13 +87,3 @@ func MkdirAllInRootOpen(root, unsafePath string, mode os.FileMode) (*os.File, er
 		return pathrs.MkdirAllHandle(rootDir, unsafePath, mode)
 	})
 }
-
-// MkdirAllInRoot is a wrapper around MkdirAllInRootOpen which closes the
-// returned handle, for callers that don't need to use it.
-func MkdirAllInRoot(root, unsafePath string, mode os.FileMode) error {
-	f, err := MkdirAllInRootOpen(root, unsafePath, mode)
-	if err == nil {
-		_ = f.Close()
-	}
-	return err
-}
