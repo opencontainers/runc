@@ -50,6 +50,11 @@ func OpenInRoot(root, subpath string, flags int) (*os.File, error) {
 // include it in the passed flags. The fileMode argument uses unix.* mode bits,
 // *not* os.FileMode.
 func CreateInRoot(root, subpath string, flags int, fileMode uint32) (*os.File, error) {
+	subpath, err := hallucinateUnsafePath(root, subpath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to construct hallucinated target path: %w", err)
+	}
+
 	dir, filename := filepath.Split(subpath)
 	if filepath.Join("/", filename) == "/" {
 		return nil, fmt.Errorf("create in root subpath %q has bad trailing component %q", subpath, filename)
