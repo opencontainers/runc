@@ -1,6 +1,9 @@
 SHELL = /bin/bash
 
 CONTAINER_ENGINE := docker
+CONTAINER_ENGINE_BUILD_FLAGS ?=
+CONTAINER_ENGINE_RUN_FLAGS ?=
+
 GO ?= go
 
 PREFIX ?= /usr/local
@@ -112,7 +115,10 @@ static-bin:
 releaseall: RELEASE_ARGS := "-a 386 -a amd64 -a arm64 -a armel -a armhf -a ppc64le -a riscv64 -a s390x"
 releaseall: release
 
+GO_VERSION ?= 1
+
 .PHONY: release
+release: CONTAINER_ENGINE_BUILD_FLAGS := --build-arg GO_VERSION=$(GO_VERSION)
 release: runcimage
 	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
 		--rm -v $(CURDIR):/go/src/$(PROJECT) \
