@@ -16,7 +16,7 @@ func Dup3(oldfd, newfd, flags int) error {
 }
 
 // Exec wraps [unix.Exec].
-func Exec(cmd string, args []string, env []string) error {
+func Exec(cmd string, args, env []string) error {
 	err := retryOnEINTR(func() error {
 		return unix.Exec(cmd, args, env)
 	})

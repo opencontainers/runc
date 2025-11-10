@@ -17,7 +17,7 @@ const (
 	CriticalPressure
 )
 
-func registerMemoryEvent(cgDir string, evName string, arg string) (<-chan struct{}, error) {
+func registerMemoryEvent(cgDir, evName, arg string) (<-chan struct{}, error) {
 	evFile, err := os.Open(filepath.Join(cgDir, evName))
 	if err != nil {
 		return nil, err
