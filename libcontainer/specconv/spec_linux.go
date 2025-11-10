@@ -42,8 +42,8 @@ var (
 		flag  int
 	}
 	complexFlags map[string]func(*configs.Mount)
-	mpolModeMap  map[string]uint
-	mpolModeFMap map[string]uint
+	mpolModeMap  map[string]int
+	mpolModeFMap map[string]int
 )
 
 func initMaps() {
@@ -152,20 +152,20 @@ func initMaps() {
 			},
 		}
 
-		mpolModeMap = map[string]uint{
-			string(specs.MpolDefault):            configs.MPOL_DEFAULT,
-			string(specs.MpolPreferred):          configs.MPOL_PREFERRED,
-			string(specs.MpolBind):               configs.MPOL_BIND,
-			string(specs.MpolInterleave):         configs.MPOL_INTERLEAVE,
-			string(specs.MpolLocal):              configs.MPOL_LOCAL,
-			string(specs.MpolPreferredMany):      configs.MPOL_PREFERRED_MANY,
-			string(specs.MpolWeightedInterleave): configs.MPOL_WEIGHTED_INTERLEAVE,
+		mpolModeMap = map[string]int{
+			string(specs.MpolDefault):            unix.MPOL_DEFAULT,
+			string(specs.MpolPreferred):          unix.MPOL_PREFERRED,
+			string(specs.MpolBind):               unix.MPOL_BIND,
+			string(specs.MpolInterleave):         unix.MPOL_INTERLEAVE,
+			string(specs.MpolLocal):              unix.MPOL_LOCAL,
+			string(specs.MpolPreferredMany):      unix.MPOL_PREFERRED_MANY,
+			string(specs.MpolWeightedInterleave): unix.MPOL_WEIGHTED_INTERLEAVE,
 		}
 
-		mpolModeFMap = map[string]uint{
-			string(specs.MpolFStaticNodes):   configs.MPOL_F_STATIC_NODES,
-			string(specs.MpolFRelativeNodes): configs.MPOL_F_RELATIVE_NODES,
-			string(specs.MpolFNumaBalancing): configs.MPOL_F_NUMA_BALANCING,
+		mpolModeFMap = map[string]int{
+			string(specs.MpolFStaticNodes):   unix.MPOL_F_STATIC_NODES,
+			string(specs.MpolFRelativeNodes): unix.MPOL_F_RELATIVE_NODES,
+			string(specs.MpolFNumaBalancing): unix.MPOL_F_NUMA_BALANCING,
 		}
 	})
 }
