@@ -23,9 +23,9 @@ const (
 type LinuxMemoryPolicy struct {
 	// Mode specifies memory policy mode without mode flags. See
 	// set_mempolicy() documentation for details.
-	Mode uint `json:"mode,omitempty"`
+	Mode int `json:"mode,omitempty"`
 	// Flags contains mode flags.
-	Flags uint `json:"flags,omitempty"`
+	Flags int `json:"flags,omitempty"`
 	// Nodes contains NUMA nodes to which the mode applies.
 	Nodes *unix.CPUSet `json:"nodes,omitempty"`
 }
