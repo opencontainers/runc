@@ -79,7 +79,7 @@ func (c *Container) checkCriuFeatures(criuOpts *CriuOpts, criuFeat *criurpc.Criu
 	return nil
 }
 
-func compareCriuVersion(criuVersion int, minVersion int) error {
+func compareCriuVersion(criuVersion, minVersion int) error {
 	// simple function to perform the actual version compare
 	if criuVersion < minVersion {
 		return fmt.Errorf("CRIU version %d must be %d or higher", criuVersion, minVersion)

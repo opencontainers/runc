@@ -434,7 +434,7 @@ func TestFreeze(t *testing.T) {
 	}
 }
 
-func testFreeze(t *testing.T, withSystemd bool, useSet bool) {
+func testFreeze(t *testing.T, withSystemd, useSet bool) {
 	if testing.Short() {
 		return
 	}
