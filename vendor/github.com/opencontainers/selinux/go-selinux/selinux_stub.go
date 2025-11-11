@@ -3,23 +3,11 @@
 
 package selinux
 
-func attrPath(string) string {
-	return ""
-}
-
 func readConThreadSelf(string) (string, error) {
 	return "", nil
 }
 
-func readConSelf(string) (string, error) {
-	return "", nil
-}
-
 func writeConThreadSelf(string, string) error {
-	return nil
-}
-
-func writeConSelf(string, string) error {
 	return nil
 }
 
@@ -87,6 +75,10 @@ func peerLabel(uintptr) (string, error) {
 
 func setKeyLabel(string) error {
 	return nil
+}
+
+func keyLabel() (string, error) {
+	return "", nil
 }
 
 func (c Context) get() string {
