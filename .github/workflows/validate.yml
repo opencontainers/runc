@@ -188,8 +188,6 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v5
-      with:
-        fetch-depth: 0
     - name: install deps
       run: |
         sudo apt -qq update
@@ -206,8 +204,6 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v5
-      with:
-        fetch-depth: 0
 
     - name: check CHANGELOG.md
       run: make verify-changelog
@@ -236,8 +232,6 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v5
-      with:
-        fetch-depth: 0
     - name: install bashbrew
       env:
         BASEURL: https://github.com/docker-library/bashbrew/releases/download
