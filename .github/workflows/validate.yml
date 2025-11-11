@@ -175,6 +175,18 @@ jobs:
         make cfmt
         git diff --exit-code
 
+  check-go:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v5
+    - name: check Go version
+      run: |
+        GO_VER=$(awk -F= '/^ARG\s+GO_VERSION=/ {print $2; quit}' Dockerfile)
+        echo "Go version used in Dockerfile: $GO_VER"
+        echo -n "Checking if Go $GO_VER is supported ... "
+        curl -fsSL https://go.dev/dl/?mode=json | jq -e 'any(.[]; .version | startswith("go'$GO_VER'"))'
+        echo -n "Checking if Go $GO_VER is tested against ... "
+        yq -e '.jobs.test.strategy.matrix.go-version | contains(["'$GO_VER'.x"])' .github/workflows/test.yml
 
   release:
     timeout-minutes: 30
@@ -231,6 +243,7 @@ jobs:
 
   all-done:
     needs:
+      - check-go
       - cfmt
       - codespell
       - commit
