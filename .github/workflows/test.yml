@@ -47,7 +47,7 @@ jobs:
 
     steps:
     - name: checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Show host info
       run: |
@@ -156,7 +156,7 @@ jobs:
     steps:
 
     - name: checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: install deps
       run: |
@@ -180,7 +180,7 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - uses: lima-vm/lima-actions/setup@v1
       id: lima-actions-setup
