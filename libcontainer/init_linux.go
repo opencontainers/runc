@@ -175,6 +175,7 @@ func startInitialization() (retErr error) {
 		return fmt.Errorf("unable to convert _LIBCONTAINER_LOGPIPE: %w", err)
 	}
 	logPipe := os.NewFile(uintptr(logFd), "logpipe")
+	defer logPipe.Close()
 
 	logrus.SetOutput(logPipe)
 	logrus.SetFormatter(new(logrus.JSONFormatter))
@@ -190,6 +191,7 @@ func startInitialization() (retErr error) {
 			return fmt.Errorf("unable to convert _LIBCONTAINER_FIFOFD: %w", err)
 		}
 		fifoFile = os.NewFile(uintptr(fifoFd), "initfifo")
+		defer fifoFile.Close()
 	}
 
 	var consoleSocket *os.File
