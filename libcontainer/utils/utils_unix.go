@@ -6,17 +6,16 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"sync"
 	_ "unsafe" // for go:linkname
 
-	securejoin "github.com/cyphar/filepath-securejoin"
-	"github.com/opencontainers/runc/internal/linux"
-	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/internal/linux"
+	"github.com/opencontainers/runc/internal/pathrs"
 )
 
 var (
@@ -145,45 +144,13 @@ func NewSockPair(name string) (parent, child *os.File, err error) {
 	return os.NewFile(uintptr(fds[1]), name+"-p"), os.NewFile(uintptr(fds[0]), name+"-c"), nil
 }
 
-// WithProcfd runs the passed closure with a procfd path (/proc/self/fd/...)
-// corresponding to the unsafePath resolved within the root. Before passing the
-// fd, this path is verified to have been inside the root -- so operating on it
-// through the passed fdpath should be safe. Do not access this path through
-// the original path strings, and do not attempt to use the pathname outside of
-// the passed closure (the file handle will be freed once the closure returns).
-func WithProcfd(root, unsafePath string, fn func(procfd string) error) error {
-	// Remove the root then forcefully resolve inside the root.
-	unsafePath = StripRoot(root, unsafePath)
-	fullPath, err := securejoin.SecureJoin(root, unsafePath)
-	if err != nil {
-		return fmt.Errorf("resolving path inside rootfs failed: %w", err)
-	}
-
-	procSelfFd, closer := ProcThreadSelf("fd/")
-	defer closer()
-
-	// Open the target path.
-	fh, err := os.OpenFile(fullPath, unix.O_PATH|unix.O_CLOEXEC, 0)
-	if err != nil {
-		return fmt.Errorf("open o_path procfd: %w", err)
-	}
-	defer fh.Close()
-
-	procfd := filepath.Join(procSelfFd, strconv.Itoa(int(fh.Fd())))
-	// Double-check the path is the one we expected.
-	if realpath, err := os.Readlink(procfd); err != nil {
-		return fmt.Errorf("procfd verification failed: %w", err)
-	} else if realpath != fullPath {
-		return fmt.Errorf("possibly malicious path detected -- refusing to operate on %s", realpath)
-	}
-
-	return fn(procfd)
-}
-
-// WithProcfdFile is a very minimal wrapper around [ProcThreadSelfFd], intended
-// to make migrating from [WithProcfd] and [WithProcfdPath] usage easier. The
+// WithProcfdFile is a very minimal wrapper around [ProcThreadSelfFd]. The
 // caller is responsible for making sure that the provided file handle is
 // actually safe to operate on.
+//
+// TODO: Migrate the mount logic towards a more move_mount(2)-friendly design
+// where this is kind of /proc/self/... tomfoolery is only done in a fallback
+// path for old kernels.
 func WithProcfdFile(file *os.File, fn func(procfd string) error) error {
 	fdpath, closer := ProcThreadSelfFd(file.Fd())
 	defer closer()
