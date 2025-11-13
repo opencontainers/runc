@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -1694,7 +1695,11 @@ func fdList(t *testing.T) []string {
 	fds, err := fdDir.Readdirnames(-1)
 	ok(t, err)
 
-	return fds
+	// Remove the fdDir fd.
+	extraFd := strconv.Itoa(int(fdDir.Fd()))
+	return slices.DeleteFunc(fds, func(fd string) bool {
+		return fd == extraFd
+	})
 }
 
 func testFdLeaks(t *testing.T, systemd bool) {
@@ -1716,7 +1721,7 @@ func testFdLeaks(t *testing.T, systemd bool) {
 	runContainerOk(t, config, "true")
 	fds1 := fdList(t)
 
-	if reflect.DeepEqual(fds0, fds1) {
+	if slices.Equal(fds0, fds1) {
 		return
 	}
 	// Show the extra opened files.
