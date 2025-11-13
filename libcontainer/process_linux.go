@@ -66,7 +66,7 @@ type processComm struct {
 	logPipeChild  *os.File
 }
 
-func newProcessComm() (*processComm, error) {
+func newProcessComm() (_ *processComm, retErr error) {
 	var (
 		comm processComm
 		err  error
@@ -75,10 +75,24 @@ func newProcessComm() (*processComm, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to create init pipe: %w", err)
 	}
+	defer func() {
+		if retErr != nil {
+			comm.initSockParent.Close()
+			comm.initSockChild.Close()
+		}
+	}()
+
 	comm.syncSockParent, comm.syncSockChild, err = newSyncSockpair("sync")
 	if err != nil {
 		return nil, fmt.Errorf("unable to create sync pipe: %w", err)
 	}
+	defer func() {
+		if retErr != nil {
+			comm.syncSockParent.Close()
+			comm.syncSockChild.Close()
+		}
+	}()
+
 	comm.logPipeParent, comm.logPipeChild, err = os.Pipe()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create log pipe: %w", err)
