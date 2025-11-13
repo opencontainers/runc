@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.4.z]
 
+### Breaking ###
+- The handling of `pids.limit` has been updated to match the newer guidance
+  from the OCI runtime specification. In particular, now a maximum limit value
+  of `0` will be treated as an actual limit (due to limitations with systemd,
+  it will be treated the same as a limit value of `1`). We only expect users
+  that explicitly set `pids.limit` to `0` will see a behaviour change.
+  (opencontainers/cgroups#48, #4949)
+
+### Fixed ###
+- cgroups: provide iocost statistics for cgroupv2. (opencontainers/cgroups#43)
+- cgroups: retry DBus connection when it fails with EAGAIN.
+  (opencontainers/cgroups#45)
+- cgroups: improve `cpuacct.usage_all` resilience when parsing data from
+  patched kernels (such as the Tencent kernels). (opencontainers/cgroups#46,
+  opencontainers/cgroups#50)
+
 ## [1.4.0-rc.3] - 2025-11-05
 
 > その日、人類は思い出した。

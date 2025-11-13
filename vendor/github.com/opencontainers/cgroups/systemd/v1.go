@@ -2,6 +2,7 @@ package systemd
 
 import (
 	"errors"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -97,9 +98,17 @@ func genV1ResourcesProperties(r *cgroups.Resources, cm *dbusConnManager) ([]syst
 			newProp("BlockIOWeight", uint64(r.BlkioWeight)))
 	}
 
-	if r.PidsLimit > 0 || r.PidsLimit == -1 {
+	if r.PidsLimit != nil {
+		var tasksMax uint64
+		if limit := *r.PidsLimit; limit < 0 {
+			tasksMax = math.MaxUint64 // "infinity"
+		} else if limit == 0 {
+			tasksMax = 1 // systemd does not accept "0" for TasksMax
+		} else {
+			tasksMax = uint64(limit)
+		}
 		properties = append(properties,
-			newProp("TasksMax", uint64(r.PidsLimit)))
+			newProp("TasksMax", tasksMax))
 	}
 
 	err = addCpuset(cm, &properties, r.CpusetCpus, r.CpusetMems)
