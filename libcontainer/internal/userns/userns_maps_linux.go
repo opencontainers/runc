@@ -39,7 +39,7 @@ func parseIdmapData(data []byte) (ms []configs.IDMap, err error) {
 // Do something equivalent to nsenter --user=<nsPath> cat <path>, but more
 // efficiently. Returns the contents of the requested file from within the user
 // namespace.
-func spawnUserNamespaceCat(nsPath string, path string) ([]byte, error) {
+func spawnUserNamespaceCat(nsPath, path string) ([]byte, error) {
 	rdr, wtr, err := os.Pipe()
 	if err != nil {
 		return nil, fmt.Errorf("create pipe for userns spawn failed: %w", err)

@@ -35,7 +35,7 @@ func TestGetCMTNumaNodeStats(t *testing.T) {
 	})
 }
 
-func checkCMTStatCorrection(got CMTNumaNodeStats, expected CMTNumaNodeStats, t *testing.T) {
+func checkCMTStatCorrection(got, expected CMTNumaNodeStats, t *testing.T) {
 	if got.LLCOccupancy != expected.LLCOccupancy {
 		t.Fatalf("Wrong value of `llc_occupancy`. Expected: %v but got: %v",
 			expected.LLCOccupancy,

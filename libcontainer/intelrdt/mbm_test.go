@@ -38,7 +38,7 @@ func TestGetMBMNumaNodeStats(t *testing.T) {
 	})
 }
 
-func checkMBMStatCorrection(got MBMNumaNodeStats, expected MBMNumaNodeStats, t *testing.T) {
+func checkMBMStatCorrection(got, expected MBMNumaNodeStats, t *testing.T) {
 	if got.MBMTotalBytes != expected.MBMTotalBytes {
 		t.Fatalf("Wrong value of mbm_total_bytes. Expected: %v but got: %v",
 			expected.MBMTotalBytes,

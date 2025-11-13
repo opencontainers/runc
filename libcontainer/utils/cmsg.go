@@ -114,7 +114,7 @@ func RecvFile(socket *os.File) (_ *os.File, Err error) {
 // SendFile sends a file over the given AF_UNIX socket. file.Name() is also
 // included so that if the other end uses RecvFile, the file will have the same
 // name information.
-func SendFile(socket *os.File, file *os.File) error {
+func SendFile(socket, file *os.File) error {
 	name := file.Name()
 	if len(name) >= MaxNameLen {
 		return fmt.Errorf("sendfd: filename too long: %s", name)

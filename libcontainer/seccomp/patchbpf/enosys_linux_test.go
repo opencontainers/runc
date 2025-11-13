@@ -68,7 +68,7 @@ func mockFilter(t *testing.T, config *configs.Seccomp) (*bpf.VM, []bpf.Instructi
 
 // fakeConfig generates a fake libcontainer seccomp configuration. The syscalls
 // are added with an action distinct from the default action.
-func fakeConfig(defaultAction configs.Action, explicitSyscalls []string, arches []string) *configs.Seccomp {
+func fakeConfig(defaultAction configs.Action, explicitSyscalls, arches []string) *configs.Seccomp {
 	config := configs.Seccomp{
 		DefaultAction: defaultAction,
 		Architectures: arches,

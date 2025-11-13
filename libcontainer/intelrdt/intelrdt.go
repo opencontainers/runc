@@ -156,7 +156,7 @@ type Manager struct {
 // NewManager returns a new instance of Manager, or nil if the Intel RDT
 // functionality is not specified in the config, available from hardware or
 // enabled in the kernel.
-func NewManager(config *configs.Config, id string, path string) *Manager {
+func NewManager(config *configs.Config, id, path string) *Manager {
 	if config.IntelRdt == nil {
 		return nil
 	}
@@ -184,7 +184,7 @@ func NewManager(config *configs.Config, id string, path string) *Manager {
 
 // newManager is the same as NewManager, except it does not check if the feature
 // is actually available. Used by unit tests that mock intelrdt paths.
-func newManager(config *configs.Config, id string, path string) *Manager {
+func newManager(config *configs.Config, id, path string) *Manager {
 	return &Manager{
 		config: config,
 		id:     id,

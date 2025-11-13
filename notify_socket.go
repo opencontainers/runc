@@ -25,7 +25,7 @@ type notifySocket struct {
 	socketPath string
 }
 
-func newNotifySocket(context *cli.Context, notifySocketHost string, id string) *notifySocket {
+func newNotifySocket(context *cli.Context, notifySocketHost, id string) *notifySocket {
 	if notifySocketHost == "" {
 		return nil
 	}
