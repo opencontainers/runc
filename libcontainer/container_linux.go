@@ -338,8 +338,6 @@ func (c *Container) start(process *Process) (retErr error) {
 	// We do not need the cloned binaries once the process is spawned.
 	defer process.closeClonedExes()
 
-	logsDone := parent.forwardChildLogs()
-
 	// Before starting "runc init", mark all non-stdio open files as O_CLOEXEC
 	// to make sure we don't leak any files into "runc init". Any files to be
 	// passed to "runc init" through ExtraFiles will get dup2'd by the Go
@@ -349,19 +347,26 @@ func (c *Container) start(process *Process) (retErr error) {
 	if err := utils.CloseExecFrom(3); err != nil {
 		return fmt.Errorf("unable to mark non-stdio fds as cloexec: %w", err)
 	}
-	if err := parent.start(); err != nil {
-		return fmt.Errorf("unable to start container process: %w", err)
-	}
 
-	if logsDone != nil {
+	if logsDone := parent.forwardChildLogs(); logsDone != nil {
 		defer func() {
 			// Wait for log forwarder to finish. This depends on
 			// runc init closing the _LIBCONTAINER_LOGPIPE log fd.
 			err := <-logsDone
-			if err != nil && retErr == nil {
-				retErr = fmt.Errorf("unable to forward init logs: %w", err)
+			if err != nil {
+				// runc init errors are important; make sure retErr has them.
+				err = fmt.Errorf("runc init error(s): %w", err)
+				if retErr != nil {
+					retErr = fmt.Errorf("%w; %w", retErr, err)
+				} else {
+					retErr = err
+				}
 			}
 		}()
+	}
+
+	if err := parent.start(); err != nil {
+		return fmt.Errorf("unable to start container process: %w", err)
 	}
 
 	if process.Init {
