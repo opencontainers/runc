@@ -185,3 +185,16 @@ function flags_value() {
 	[[ "$output" == *"error running startContainer hook"* ]]
 	[[ "$output" == *"bad system call"* ]]
 }
+
+@test "runc run [seccomp] (verify syscall compatibility after seccomp enforcement)" {
+	update_config '   .process.args = ["true"]
+			| .process.noNewPrivileges = false
+			| .linux.seccomp = {
+				"defaultAction":"SCMP_ACT_ALLOW",
+				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
+				"syscalls":[{"names":["close_range", "fsopen", "fsconfig", "fspick", "openat2", "open_tree", "move_mount", "mount_setattr"], "action":"SCMP_ACT_ERRNO", "errnoRet": 38}]
+			}'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+}
