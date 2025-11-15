@@ -280,3 +280,17 @@ function teardown() {
 	# is deleted during the namespace cleanup.
 	run ! ip link del dummy0
 }
+
+@test "userns with host network: sysfs mount should fall back to bind mount" {
+	# Remove network namespace to use host network.
+	update_config '.linux.namespaces |= map(select(.type != "network"))'
+
+	# We check if /sys/class/net exists to verify that /sys is mounted
+	# correctly after the fallback.
+	update_config '.process.args = ["ls", "/sys/class/net"]'
+
+	runc run test_userns_sysfs_fallback
+	[ "$status" -eq 0 ]
+	# Check for loopback interface, which should always be present on the host.
+	[[ "$output" == *"lo"* ]]
+}
