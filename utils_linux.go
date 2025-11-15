@@ -20,6 +20,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
+	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/system/kernelversion"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
@@ -219,14 +220,16 @@ type runner struct {
 	subCgroupPaths  map[string]string
 }
 
-func (r *runner) run(config *specs.Process) (int, error) {
-	var err error
+func (r *runner) run(config *specs.Process) (_ int, retErr error) {
+	detach := r.detach || (r.action == CT_ACT_CREATE)
 	defer func() {
-		if err != nil {
+		// For a non-detached container, or we get an error, we
+		// should destroy the container.
+		if !detach || retErr != nil {
 			r.destroy()
 		}
 	}()
-	if err = r.checkTerminal(config); err != nil {
+	if err := r.checkTerminal(config); err != nil {
 		return -1, err
 	}
 	process, err := newProcess(config)
@@ -255,11 +258,19 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		}
 		process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), "PreserveFD:"+strconv.Itoa(i)))
 	}
-	detach := r.detach || (r.action == CT_ACT_CREATE)
 	// Setting up IO is a two stage process. We need to modify process to deal
 	// with detaching containers, and then we get a tty after the container has
 	// started.
-	handlerCh := newSignalHandler(r.enableSubreaper, r.notifySocket)
+	if r.enableSubreaper {
+		// set us as the subreaper before registering the signal handler for the container
+		if err := system.SetSubreaper(1); err != nil {
+			logrus.Warn(err)
+		}
+	}
+	var handlerCh chan *signalHandler
+	if !detach {
+		handlerCh = newSignalHandler()
+	}
 	tty, err := setupIO(process, r.container, config.Terminal, detach, r.consoleSocket)
 	if err != nil {
 		return -1, err
@@ -287,29 +298,32 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	if err != nil {
 		return -1, err
 	}
+	defer func() {
+		// We should terminate the process once we got an error.
+		if retErr != nil {
+			r.terminate(process)
+		}
+	}()
 	if err = tty.waitConsole(); err != nil {
-		r.terminate(process)
 		return -1, err
 	}
 	tty.ClosePostStart()
 	if r.pidFile != "" {
 		if err = createPidFile(r.pidFile, process); err != nil {
-			r.terminate(process)
 			return -1, err
 		}
 	}
-	handler := <-handlerCh
-	status, err := handler.forward(process, tty, detach)
-	if err != nil {
-		r.terminate(process)
+	if r.notifySocket != nil {
+		if err = r.notifySocket.forward(process, detach); err != nil {
+			return -1, err
+		}
 	}
 	if detach {
 		return 0, nil
 	}
-	if err == nil {
-		r.destroy()
-	}
-	return status, err
+	// For non-detached container, we should forward signals to the container.
+	handler := <-handlerCh
+	return handler.forward(process, tty)
 }
 
 func (r *runner) destroy() {
