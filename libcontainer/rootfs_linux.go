@@ -622,7 +622,19 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		// "proc" and "sys" mounts need special handling (without resolving the
 		// destination) to avoid attacks.
 		m.dstFile = dstFile
-		return m.mountPropagate(rootfs, "")
+		err = m.mountPropagate(rootfs, "")
+		if err != nil && m.Device == "sysfs" && errors.Is(err, unix.EPERM) {
+			logrus.Debugf("cannot mount sysfs with properties, fallback to bind mount: %v", err)
+			bindM := &configs.Mount{
+				Device:           "bind",
+				Source:           "/sys",
+				Destination:      m.Destination,
+				Flags:            unix.MS_BIND | unix.MS_REC | m.Flags,
+				PropagationFlags: m.PropagationFlags,
+			}
+			return mountToRootfs(c, mountEntry{Mount: bindM})
+		}
+		return err
 	}
 
 	mountLabel := c.label
