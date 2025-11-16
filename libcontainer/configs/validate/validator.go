@@ -142,7 +142,7 @@ func security(config *configs.Config) error {
 
 func namespaces(config *configs.Config) error {
 	if config.Namespaces.Contains(configs.NEWUSER) {
-		if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
+		if _, err := os.Stat("/proc/self/ns/user"); errors.Is(err, os.ErrNotExist) {
 			return errors.New("user namespaces aren't enabled in the kernel")
 		}
 		hasPath := config.Namespaces.PathOf(configs.NEWUSER) != ""
@@ -160,13 +160,13 @@ func namespaces(config *configs.Config) error {
 	}
 
 	if config.Namespaces.Contains(configs.NEWCGROUP) {
-		if _, err := os.Stat("/proc/self/ns/cgroup"); os.IsNotExist(err) {
+		if _, err := os.Stat("/proc/self/ns/cgroup"); errors.Is(err, os.ErrNotExist) {
 			return errors.New("cgroup namespaces aren't enabled in the kernel")
 		}
 	}
 
 	if config.Namespaces.Contains(configs.NEWTIME) {
-		if _, err := os.Stat("/proc/self/timens_offsets"); os.IsNotExist(err) {
+		if _, err := os.Stat("/proc/self/timens_offsets"); errors.Is(err, os.ErrNotExist) {
 			return errors.New("time namespaces aren't enabled in the kernel")
 		}
 		hasPath := config.Namespaces.PathOf(configs.NEWTIME) != ""
