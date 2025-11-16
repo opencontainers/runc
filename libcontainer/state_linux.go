@@ -1,6 +1,7 @@
 package libcontainer
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -213,7 +214,7 @@ func (r *restoredState) transition(s containerState) error {
 
 func (r *restoredState) destroy() error {
 	if _, err := os.Stat(filepath.Join(r.c.stateDir, "checkpoint")); err != nil {
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
 	}

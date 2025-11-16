@@ -314,7 +314,7 @@ func finalizeNamespace(config *initConfig) error {
 		switch {
 		case err == nil:
 			doChdir = false
-		case os.IsPermission(err):
+		case errors.Is(err, os.ErrPermission):
 			// If we hit an EPERM, we should attempt again after setting up user.
 			// This will allow us to successfully chdir if the container user has access
 			// to the directory, but the user running runc does not.
@@ -480,7 +480,7 @@ func setupUser(config *initConfig) error {
 		setgroups, err = io.ReadAll(setgroupsFile)
 		_ = setgroupsFile.Close()
 	}
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 

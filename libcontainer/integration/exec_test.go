@@ -3,6 +3,7 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -1093,7 +1094,7 @@ func TestHook(t *testing.T) {
 
 	for _, hook := range []string{"prestart", "createRuntime", "poststart"} {
 		fi, err := os.Stat(filepath.Join(config.Rootfs, hook))
-		if err == nil || !os.IsNotExist(err) {
+		if err == nil || !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("expected file '%s to not exists, but it does", fi.Name())
 		}
 	}
@@ -1637,7 +1638,7 @@ func TestTmpfsCopyUp(t *testing.T) {
 }
 
 func TestCGROUPPrivate(t *testing.T) {
-	if _, err := os.Stat("/proc/self/ns/cgroup"); os.IsNotExist(err) {
+	if _, err := os.Stat("/proc/self/ns/cgroup"); errors.Is(err, os.ErrNotExist) {
 		t.Skip("Test requires cgroupns.")
 	}
 	if testing.Short() {
@@ -1657,7 +1658,7 @@ func TestCGROUPPrivate(t *testing.T) {
 }
 
 func TestCGROUPHost(t *testing.T) {
-	if _, err := os.Stat("/proc/self/ns/cgroup"); os.IsNotExist(err) {
+	if _, err := os.Stat("/proc/self/ns/cgroup"); errors.Is(err, os.ErrNotExist) {
 		t.Skip("Test requires cgroupns.")
 	}
 	if testing.Short() {

@@ -51,7 +51,7 @@ func registerMemoryEvent(cgDir, evName, arg string) (<-chan struct{}, error) {
 			}
 			// When a cgroup is destroyed, an event is sent to eventfd.
 			// So if the control path is gone, return instead of notifying.
-			if _, err := os.Lstat(eventControlPath); os.IsNotExist(err) {
+			if _, err := os.Lstat(eventControlPath); errors.Is(err, os.ErrNotExist) {
 				return
 			}
 			ch <- struct{}{}
