@@ -460,7 +460,7 @@ func (m *Manager) Apply(pid int) (err error) {
 		}
 	}
 
-	if err := os.Mkdir(path, 0o755); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(path, 0o755); err != nil && !errors.Is(err, os.ErrExist) {
 		return newLastCmdError(err)
 	}
 
@@ -470,7 +470,7 @@ func (m *Manager) Apply(pid int) (err error) {
 
 	// Create MON group
 	if monPath := m.GetMonPath(); monPath != "" {
-		if err := os.Mkdir(monPath, 0o755); err != nil && !os.IsExist(err) {
+		if err := os.Mkdir(monPath, 0o755); err != nil && !errors.Is(err, os.ErrExist) {
 			return newLastCmdError(err)
 		}
 		if err := WriteIntelRdtTasks(monPath, pid); err != nil {
@@ -493,14 +493,14 @@ func (m *Manager) Destroy() error {
 	if m.config.IntelRdt.ClosID == "" {
 		m.mu.Lock()
 		defer m.mu.Unlock()
-		if err := os.Remove(m.GetPath()); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(m.GetPath()); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
 		m.path = ""
 	} else if monPath := m.GetMonPath(); monPath != "" {
 		// If ClosID is not specified the possible monintoring group was
 		// removed with the CLOS above.
-		if err := os.Remove(monPath); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(monPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
 	}

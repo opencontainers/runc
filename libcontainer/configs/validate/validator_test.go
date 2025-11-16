@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -172,7 +173,7 @@ func TestValidateSecurityWithoutNEWNS(t *testing.T) {
 }
 
 func TestValidateUserNamespace(t *testing.T) {
-	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
+	if _, err := os.Stat("/proc/self/ns/user"); errors.Is(err, os.ErrNotExist) {
 		t.Skip("Test requires userns.")
 	}
 	config := &configs.Config{
@@ -206,7 +207,7 @@ func TestValidateUsernsMappingWithoutNamespace(t *testing.T) {
 }
 
 func TestValidateTimeNamespace(t *testing.T) {
-	if _, err := os.Stat("/proc/self/ns/time"); os.IsNotExist(err) {
+	if _, err := os.Stat("/proc/self/ns/time"); errors.Is(err, os.ErrNotExist) {
 		t.Skip("Test requires timens.")
 	}
 	config := &configs.Config{
@@ -225,7 +226,7 @@ func TestValidateTimeNamespace(t *testing.T) {
 }
 
 func TestValidateTimeNamespaceWithBothPathAndTimeOffset(t *testing.T) {
-	if _, err := os.Stat("/proc/self/ns/time"); os.IsNotExist(err) {
+	if _, err := os.Stat("/proc/self/ns/time"); errors.Is(err, os.ErrNotExist) {
 		t.Skip("Test requires timens.")
 	}
 	config := &configs.Config{
@@ -1020,7 +1021,7 @@ func TestValidateNetDevices(t *testing.T) {
 }
 
 func TestValidateUserSysctlWithUserNamespace(t *testing.T) {
-	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
+	if _, err := os.Stat("/proc/self/ns/user"); errors.Is(err, os.ErrNotExist) {
 		t.Skip("Test requires userns.")
 	}
 	config := &configs.Config{

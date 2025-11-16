@@ -364,7 +364,7 @@ func mountCgroupV1(m mountEntry, c *mountConfig) error {
 			// symlink(2) is very dumb, it will just shove the path into
 			// the link and doesn't do any checks or relative path
 			// conversion. Also, don't error out if the cgroup already exists.
-			if err := os.Symlink(mc, filepath.Join(c.root, m.Destination, ss)); err != nil && !os.IsExist(err) {
+			if err := os.Symlink(mc, filepath.Join(c.root, m.Destination, ss)); err != nil && !errors.Is(err, os.ErrExist) {
 				return err
 			}
 		}
@@ -602,7 +602,7 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 			return err
 		}
 		if fi, err := os.Lstat(dest); err != nil {
-			if !os.IsNotExist(err) {
+			if !errors.Is(err, os.ErrNotExist) {
 				return err
 			}
 		} else if !fi.IsDir() {
@@ -899,7 +899,7 @@ func setupDevSymlinks(rootfs string) error {
 			src = link[0]
 			dst = filepath.Join(rootfs, link[1])
 		)
-		if err := os.Symlink(src, dst); err != nil && !os.IsExist(err) {
+		if err := os.Symlink(src, dst); err != nil && !errors.Is(err, os.ErrExist) {
 			return err
 		}
 	}
@@ -1109,7 +1109,7 @@ func setReadonly() error {
 
 func setupPtmx(config *configs.Config) error {
 	ptmx := filepath.Join(config.Rootfs, "dev/ptmx")
-	if err := os.Remove(ptmx); err != nil && !os.IsNotExist(err) {
+	if err := os.Remove(ptmx); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	if err := os.Symlink("pts/ptmx", ptmx); err != nil {
