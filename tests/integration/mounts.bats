@@ -343,3 +343,63 @@ function test_mount_order() {
 @test "runc run [mount order, container idmap source] (userns)" {
 	test_mount_order userns,idmap
 }
+
+@test "runc run [bind mount through a dangling symlink to a file]" {
+	rm -rf rootfs/etc/hosts rootfs/tmp/hosts
+	ln -s ../tmp/hosts rootfs/etc/hosts
+	update_config '	  .mounts += [{
+					source: "./config.json",
+					destination: "/etc/hosts",
+					options: ["bind"]
+				}]
+			| .process.args |= ["ls", "/tmp/hosts"]'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == *'/tmp/hosts'* ]]
+}
+
+@test "runc run [bind mount through a dangling symlink to a dir]" {
+	mkdir -p rootfs/a rootfs/tmp/bind
+	ln -s ../tmp/bind rootfs/a/bind
+	update_config '	  .mounts += [{
+					source: ".",
+					destination: "/a/bind",
+					options: ["bind"]
+				}]
+			| .process.args |= ["ls", "/tmp/bind/config.json"]'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == *'/tmp/bind/config.json'* ]]
+}
+
+@test "runc run [bind mount through a dangling symlink to a dir/file]" {
+	rm -rf rootfs/var/log rootfs/tmp/log
+	ln -s ../tmp/log rootfs/var/log
+	update_config '	  .mounts += [{
+					source: "./config.json",
+					destination: "/var/log/nginx/error.log",
+					options: ["bind"]
+				}]
+			| .process.args |= ["ls", "-alh", "/tmp/log/nginx/error.log"]'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == *'/tmp/log/nginx/error.log'* ]]
+}
+
+@test "runc run [bind mount through a dangling symlink to a dir/subdir]" {
+	mkdir -p rootfs/a rootfs/tmp/bind
+	ln -s ../tmp/bind rootfs/a/bind
+	update_config '	  .mounts += [{
+					source: ".",
+					destination: "/a/bind/subdir",
+					options: ["bind"]
+				}]
+			| .process.args |= ["ls", "/tmp/bind/subdir/config.json"]'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == *'/tmp/bind/subdir/config.json'* ]]
+}
