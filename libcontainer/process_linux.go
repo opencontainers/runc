@@ -1,6 +1,7 @@
 package libcontainer
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/cgroups/fs2"
+	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
@@ -163,33 +165,22 @@ type setnsProcess struct {
 
 // tryResetCPUAffinity tries to reset the CPU affinity of the process
 // identified by pid to include all possible CPUs (notwithstanding cgroup
-// cpuset restrictions and isolated CPUs).
+// cpuset restrictions, isolated CPUs and CPU online status).
 func tryResetCPUAffinity(pid int) {
-	// When resetting the CPU affinity, we want to match the configured cgroup
-	// cpuset (or the default set of all CPUs, if no cpuset is configured)
-	// rather than some more restrictive affinity we were spawned in (such as
-	// one that may have been inherited from systemd). The cpuset cgroup used
-	// to reconfigure the cpumask automatically for joining processes, but
-	// kcommit da019032819a ("sched: Enforce user requested affinity") changed
-	// this behaviour in Linux 6.2.
+	// When resetting the CPU affinity, we want to allow all
+	// possible CPUs in the system, including those not in
+	// cpuset.cpus, online or even present (hot-plugged) at call
+	// time. Using a cpumask any tighter this that may disallow
+	// using those CPUs if they are added to cpuset.cpus later.
 	//
-	// Parsing cpuset.cpus.effective is quite inefficient (and looking at
-	// things like /proc/stat would be wrong for most nested containers), but
-	// luckily sched_setaffinity(2) will implicitly:
-	//
-	//  * Clamp the cpumask so that it matches the current number of CPUs on
-	//    the system.
-	//  * Mask out any CPUs that are not a member of the target task's
-	//    configured cgroup cpuset.
-	//
-	// So we can just pass a very large array of set cpumask bits and the
-	// kernel will silently convert that to the correct value very cheaply.
-	var cpuset unix.CPUSet
-	cpuset.Fill() // set all bits
-	if err := unix.SchedSetaffinity(pid, &cpuset); err != nil {
-		logrus.WithError(
-			os.NewSyscallError("sched_setaffinity", err),
-		).Warnf("resetting the CPU affinity of pid %d failed -- the container process may inherit runc's CPU affinity", pid)
+	// Use similar huge buffer as go 1.25 runtime in getCPUCount()
+	// does for mask. This avoids reading and parsing
+	// /sys/devices/system/cpu/possible.
+	const maxCPUs = 64 * 1024
+	buf := bytes.Repeat([]byte{0xff}, maxCPUs/8)
+	if err := linux.SchedSetaffinity(pid, buf); err != nil {
+		logrus.WithError(err).Warnf("resetting the CPU affinity of pid %d failed -- the container process may inherit runc's CPU affinity", pid)
+		return
 	}
 }
 
