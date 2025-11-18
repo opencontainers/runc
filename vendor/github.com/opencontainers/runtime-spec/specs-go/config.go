@@ -31,6 +31,8 @@ type Spec struct {
 	VM *VM `json:"vm,omitempty" platform:"vm"`
 	// ZOS is platform-specific configuration for z/OS based containers.
 	ZOS *ZOS `json:"zos,omitempty" platform:"zos"`
+	// FreeBSD is platform-specific configuration for FreeBSD based containers.
+	FreeBSD *FreeBSD `json:"freebsd,omitempty" platform:"freebsd"`
 }
 
 // Scheduler represents the scheduling attributes for a process. It is based on
@@ -170,7 +172,7 @@ type Mount struct {
 	// Destination is the absolute path where the mount will be placed in the container.
 	Destination string `json:"destination"`
 	// Type specifies the mount kind.
-	Type string `json:"type,omitempty" platform:"linux,solaris,zos"`
+	Type string `json:"type,omitempty" platform:"linux,solaris,zos,freebsd"`
 	// Source specifies the source path of the mount.
 	Source string `json:"source,omitempty"`
 	// Options are fstab style mount options.
@@ -434,7 +436,7 @@ type LinuxCPU struct {
 // LinuxPids for Linux cgroup 'pids' resource management (Linux 4.3)
 type LinuxPids struct {
 	// Maximum number of PIDs. Default is "no limit".
-	Limit int64 `json:"limit"`
+	Limit *int64 `json:"limit,omitempty"`
 }
 
 // LinuxNetwork identification and priority configuration
@@ -688,6 +690,32 @@ type WindowsHyperV struct {
 	UtilityVMPath string `json:"utilityVMPath,omitempty"`
 }
 
+// IOMems contains information about iomem addresses that should be passed to the VM.
+type IOMems struct {
+	// Guest Frame Number to map the iomem range. If GFN is not specified, the mapping will be done to the same Frame Number as was provided in FirstMFN.
+	FirstGFN *uint64 `json:"firstGFN,omitempty"`
+	// Physical page number of iomem regions.
+	FirstMFN *uint64 `json:"firstMFN"`
+	// Number of pages to be mapped.
+	NrMFNs *uint64 `json:"nrMFNs"`
+}
+
+// Hardware configuration for the VM image
+type HWConfig struct {
+	// Path to the container device-tree file that should be passed to the VM configuration.
+	DeviceTree string `json:"deviceTree,omitempty"`
+	// Number of virtual cpus for the VM.
+	VCPUs *uint32 `json:"vcpus,omitempty"`
+	// Maximum memory in bytes allocated to the VM.
+	Memory *uint64 `json:"memory,omitempty"`
+	// Host device tree nodes to passthrough to the VM.
+	DtDevs []string `json:"dtdevs,omitempty"`
+	// Allow auto-translated domains to access specific hardware I/O memory pages.
+	IOMems []IOMems `json:"iomems,omitempty"`
+	// Allows VM to access specific physical IRQs.
+	Irqs []uint32 `json:"irqs,omitempty"`
+}
+
 // VM contains information for virtual-machine-based containers.
 type VM struct {
 	// Hypervisor specifies hypervisor-related configuration for virtual-machine-based containers.
@@ -696,6 +724,8 @@ type VM struct {
 	Kernel VMKernel `json:"kernel"`
 	// Image specifies guest image related configuration for virtual-machine-based containers.
 	Image VMImage `json:"image,omitempty"`
+	// Hardware configuration that should be passed to the VM.
+	HwConfig *HWConfig `json:"hwconfig,omitempty"`
 }
 
 // VMHypervisor contains information about the hypervisor to use for a virtual machine.
@@ -963,3 +993,75 @@ const (
 	// SchedFlagUtilClampMin represents the utilization clamp maximum scheduling flag
 	SchedFlagUtilClampMax LinuxSchedulerFlag = "SCHED_FLAG_UTIL_CLAMP_MAX"
 )
+
+// FreeBSD contains platform-specific configuration for FreeBSD based containers.
+type FreeBSD struct {
+	// Devices which are accessible in the container
+	Devices []FreeBSDDevice `json:"devices,omitempty"`
+	// Jail definition for this container
+	Jail *FreeBSDJail `json:"jail,omitempty"`
+}
+
+type FreeBSDDevice struct {
+	// Path to the device, relative to /dev.
+	Path string `json:"path"`
+	// FileMode permission bits for the device.
+	Mode *os.FileMode `json:"mode,omitempty"`
+}
+
+// FreeBSDJail describes how to configure the container's jail
+type FreeBSDJail struct {
+	// Parent jail name - this can be used to share a single vnet
+	// across several containers
+	Parent string `json:"parent,omitempty"`
+	// Whether to use parent UTS names or override in the container
+	Host FreeBSDSharing `json:"host,omitempty"`
+	// IPv4 address sharing for the container
+	Ip4 FreeBSDSharing `json:"ip4,omitempty"`
+	// IPv4 addresses for the container
+	Ip4Addr []string `json:"ip4Addr,omitempty"`
+	// IPv6 address sharing for the container
+	Ip6 FreeBSDSharing `json:"ip6,omitempty"`
+	// IPv6 addresses for the container
+	Ip6Addr []string `json:"ip6Addr,omitempty"`
+	// Which network stack to use for the container
+	Vnet FreeBSDSharing `json:"vnet,omitempty"`
+	// If set, Ip4Addr and Ip6Addr addresses will be added to this interface
+	Interface string `json:"interface,omitempty"`
+	// List interfaces to be moved to the container's vnet
+	VnetInterfaces []string `json:"vnetInterfaces,omitempty"`
+	// SystemV IPC message sharing for the container
+	SysVMsg FreeBSDSharing `json:"sysvmsg,omitempty"`
+	// SystemV semaphore message sharing for the container
+	SysVSem FreeBSDSharing `json:"sysvsem,omitempty"`
+	// SystemV memory sharing for the container
+	SysVShm FreeBSDSharing `json:"sysvshm,omitempty"`
+	// Mount visibility (see jail(8) for details)
+	EnforceStatfs *int `json:"enforceStatfs,omitempty"`
+	// Jail capabilities
+	Allow *FreeBSDJailAllow `json:"allow,omitempty"`
+}
+
+// These values are used to control access to features in the container, either
+// disabling the feature, sharing state with the parent or creating new private
+// state in the container.
+type FreeBSDSharing string
+
+const (
+	FreeBSDShareDisable FreeBSDSharing = "disable"
+	FreeBSDShareNew     FreeBSDSharing = "new"
+	FreeBSDShareInherit FreeBSDSharing = "inherit"
+)
+
+// FreeBSDJailAllow describes jail capabilities
+type FreeBSDJailAllow struct {
+	SetHostname   bool     `json:"setHostname,omitempty"`
+	RawSockets    bool     `json:"rawSockets,omitempty"`
+	Chflags       bool     `json:"chflags,omitempty"`
+	Mount         []string `json:"mount,omitempty"`
+	Quotas        bool     `json:"quotas,omitempty"`
+	SocketAf      bool     `json:"socketAf,omitempty"`
+	Mlock         bool     `json:"mlock,omitempty"`
+	ReservedPorts bool     `json:"reservedPorts,omitempty"`
+	Suser         bool     `json:"suser,omitempty"`
+}
