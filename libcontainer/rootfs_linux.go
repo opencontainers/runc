@@ -588,6 +588,12 @@ func (m *mountEntry) createOpenMountpoint(rootfs string) (Err error) {
 
 func mountToRootfs(c *mountConfig, m mountEntry) error {
 	rootfs := c.root
+	defer func() {
+		if m.dstFile != nil {
+			_ = m.dstFile.Close()
+			m.dstFile = nil
+		}
+	}()
 
 	// procfs and sysfs are special because we need to ensure they are actually
 	// mounted on a specific path in a container without any funny business.
@@ -628,12 +634,6 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 	if err := m.createOpenMountpoint(rootfs); err != nil {
 		return fmt.Errorf("create mountpoint for %s mount: %w", m.Destination, err)
 	}
-	defer func() {
-		if m.dstFile != nil {
-			_ = m.dstFile.Close()
-			m.dstFile = nil
-		}
-	}()
 
 	switch m.Device {
 	case "mqueue":
