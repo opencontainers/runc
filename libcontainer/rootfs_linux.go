@@ -997,6 +997,8 @@ func createDeviceNode(rootfs string, node *devices.Device, bind bool) error {
 	if err != nil {
 		return fmt.Errorf("mkdir parent of device inode %q: %w", node.Path, err)
 	}
+	defer destDir.Close()
+
 	if bind {
 		return bindMountDeviceNode(destDir, destName, node)
 	}
