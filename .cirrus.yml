@@ -17,7 +17,6 @@ task:
     # yamllint disable rule:key-duplicates
     matrix:
       DISTRO: almalinux-8
-      DISTRO: almalinux-9
 
   name: ci / $DISTRO
 
@@ -99,6 +98,8 @@ task:
     cat /proc/cpuinfo
   check_config_script: |
     /home/runc/script/check-config.sh
+  integration_fs_rootless_script: |
+    ssh -tt localhost "make -C /home/runc localrootlessintegration"
   unit_tests_script: |
     ssh -tt localhost "make -C /home/runc localunittest"
   integration_systemd_script: |
@@ -113,5 +114,3 @@ task:
       *)
         ssh -tt localhost "make -C /home/runc localrootlessintegration RUNC_USE_SYSTEMD=yes"
     esac
-  integration_fs_rootless_script: |
-    ssh -tt localhost "make -C /home/runc localrootlessintegration"

@@ -168,6 +168,10 @@ features_powerset="$(powerset "${ALL_FEATURES[@]}")"
 IFS=:
 idx=0
 for enabled_features in $features_powerset; do
+	if [ $idx -eq 0 ]; then
+		((++idx))
+		continue
+	fi
 	((++idx))
 	printf "[%.2d] run rootless tests ... (${enabled_features%%+})\n" "$idx"
 
