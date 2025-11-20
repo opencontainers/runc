@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
-//go:build libpathrs
+//go:build linux
 
 // Copyright (C) 2024-2025 Aleksa Sarai <cyphar@cyphar.com>
 // Copyright (C) 2024-2025 SUSE LLC
@@ -14,17 +14,20 @@ package procfs
 
 import (
 	"os"
-	"strconv"
 
-	"cyphar.com/go-pathrs/procfs"
-	"golang.org/x/sys/unix"
+	"github.com/cyphar/filepath-securejoin/pathrs-lite/internal/procfs"
 )
+
+// This package mostly just wraps internal/procfs APIs. This is necessary
+// because we are forced to export some things from internal/procfs in order to
+// avoid some dependency cycle issues, but we don't want users to see or use
+// them.
 
 // ProcThreadSelfCloser is a callback that needs to be called when you are done
 // operating on an [os.File] fetched using [Handle.OpenThreadSelf].
 //
 // [os.File]: https://pkg.go.dev/os#File
-type ProcThreadSelfCloser = procfs.ThreadCloser
+type ProcThreadSelfCloser = procfs.ProcThreadSelfCloser
 
 // Handle is a wrapper around an *os.File handle to "/proc", which can be used
 // to do further procfs-related operations in a safe way.
@@ -51,7 +54,7 @@ func (proc *Handle) Close() error { return proc.inner.Close() }
 // handle, then [OpenUnsafeProcRoot] will be called internally and a temporary
 // unsafe handle will be used.
 func OpenProcRoot() (*Handle, error) {
-	proc, err := procfs.Open()
+	proc, err := procfs.OpenProcRoot()
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +74,7 @@ func OpenProcRoot() (*Handle, error) {
 // should make sure to close the handle as soon as possible to avoid
 // known-fd-number attacks.
 func OpenUnsafeProcRoot() (*Handle, error) {
-	proc, err := procfs.Open(procfs.UnmaskedProcRoot)
+	proc, err := procfs.OpenUnsafeProcRoot()
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +89,7 @@ func OpenUnsafeProcRoot() (*Handle, error) {
 //
 // [runtime.UnlockOSThread]: https://pkg.go.dev/runtime#UnlockOSThread
 func (proc *Handle) OpenThreadSelf(subpath string) (*os.File, ProcThreadSelfCloser, error) {
-	return proc.inner.OpenThreadSelf(subpath, unix.O_PATH|unix.O_NOFOLLOW)
+	return proc.inner.OpenThreadSelf(subpath)
 }
 
 // OpenSelf returns a handle to /proc/self/<subpath>.
@@ -97,7 +100,7 @@ func (proc *Handle) OpenThreadSelf(subpath string) (*os.File, ProcThreadSelfClos
 // which will guarantee that the handle refers to the same thread as the caller
 // is executing on.
 func (proc *Handle) OpenSelf(subpath string) (*os.File, error) {
-	return proc.inner.OpenSelf(subpath, unix.O_PATH|unix.O_NOFOLLOW)
+	return proc.inner.OpenSelf(subpath)
 }
 
 // OpenRoot returns a handle to /proc/<subpath>.
@@ -112,7 +115,7 @@ func (proc *Handle) OpenSelf(subpath string) (*os.File, error) {
 //
 // [CVE-2024-21626]: https://github.com/opencontainers/runc/security/advisories/GHSA-xr7r-f8xq-vfvv
 func (proc *Handle) OpenRoot(subpath string) (*os.File, error) {
-	return proc.inner.OpenRoot(subpath, unix.O_PATH|unix.O_NOFOLLOW)
+	return proc.inner.OpenRoot(subpath)
 }
 
 // OpenPid returns a handle to /proc/$pid/<subpath> (pid can be a pid or tid).
@@ -125,7 +128,7 @@ func (proc *Handle) OpenRoot(subpath string) (*os.File, error) {
 // To refer to the current thread-group, you should use prefer
 // [Handle.OpenSelf] to passing os.Getpid as the pid argument.
 func (proc *Handle) OpenPid(pid int, subpath string) (*os.File, error) {
-	return proc.inner.OpenPid(pid, subpath, unix.O_PATH|unix.O_NOFOLLOW)
+	return proc.inner.OpenPid(pid, subpath)
 }
 
 // ProcSelfFdReadlink gets the real path of the given file by looking at
@@ -150,12 +153,5 @@ func (proc *Handle) OpenPid(pid int, subpath string) (*os.File, error) {
 //
 // [readlink]: https://pkg.go.dev/golang.org/x/sys/unix#Readlinkat
 func ProcSelfFdReadlink(f *os.File) (string, error) {
-	proc, err := procfs.Open()
-	if err != nil {
-		return "", err
-	}
-	defer proc.Close() //nolint:errcheck // close failures aren't critical here
-
-	fdPath := "fd/" + strconv.Itoa(int(f.Fd()))
-	return proc.Readlink(procfs.ProcThreadSelf, fdPath)
+	return procfs.ProcSelfFdReadlink(f)
 }
