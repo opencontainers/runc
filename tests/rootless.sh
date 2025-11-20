@@ -97,32 +97,9 @@ function cleanup() {
 ALL_CGROUPS=($(cut -d: -f2 </proc/self/cgroup | sed -E '{s/^name=//;s/,/\n/;/^$/D}'))
 CGROUP_MOUNT="/sys/fs/cgroup"
 CGROUP_PATH="/runc-cgroups-integration-test"
+CGROUP_PIN_PID=-1
 
 function enable_cgroup() {
-	# Set up cgroups for use in rootless containers.
-	for cg in "${ALL_CGROUPS[@]}"; do
-		mkdir -p "$CGROUP_MOUNT/$cg$CGROUP_PATH"
-		# We only need to allow write access to {cgroup.procs,tasks} and the
-		# directory. Rather than changing the owner entirely, we just change
-		# the group and then allow write access to the group (in order to
-		# further limit the possible DAC permissions that runc could use).
-		chown root:rootless "$CGROUP_MOUNT/$cg$CGROUP_PATH/"{,cgroup.procs,tasks}
-		chmod g+rwx "$CGROUP_MOUNT/$cg$CGROUP_PATH/"{,cgroup.procs,tasks}
-		# Due to cpuset's semantics we need to give extra permissions to allow
-		# for runc to set up the hierarchy. XXX: This really shouldn't be
-		# necessary, and might actually be a bug in our impl of cgroup
-		# handling.
-		[ "$cg" = "cpuset" ] && chown rootless:rootless "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpuset."{cpus,mems}
-		# The following is required by "update rt period and runtime".
-		if [ "$cg" = "cpu" ]; then
-			if [[ -e "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpu.rt_period_us" ]]; then
-				chown rootless:rootless "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpu.rt_period_us"
-			fi
-			if [[ -e "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpu.rt_runtime_us" ]]; then
-				chown rootless:rootless "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpu.rt_runtime_us"
-			fi
-		fi
-	done
 	# cgroup v2
 	if [[ -e "$CGROUP_MOUNT/cgroup.controllers" ]]; then
 		# Enable controllers. Some controller (e.g. memory) may fail on containerized environment.
@@ -137,10 +114,48 @@ function enable_cgroup() {
 		chown root:rootless "$CGROUP_MOUNT/$CGROUP_PATH" "$CGROUP_MOUNT/$CGROUP_PATH/cgroup.subtree_control" "$CGROUP_MOUNT/$CGROUP_PATH/cgroup.procs" "$CGROUP_MOUNT/cgroup.procs"
 		chmod g+rwx "$CGROUP_MOUNT/$CGROUP_PATH"
 		chmod g+rw "$CGROUP_MOUNT/$CGROUP_PATH/cgroup.subtree_control" "$CGROUP_MOUNT/$CGROUP_PATH/cgroup.procs" "$CGROUP_MOUNT/cgroup.procs"
+	else
+		# On some systems (e.g., AlmaLinux 8), systemd automatically removes cgroup paths
+		# when they become empty (i.e., contain no processes). To prevent this, we spawn
+		# a dummy process to pin the cgroup in place.
+		# See: https://github.com/opencontainers/runc/issues/5003
+		sleep inf &
+		CGROUP_PIN_PID=$!
+		# Set up cgroups for use in rootless containers.
+		for cg in "${ALL_CGROUPS[@]}"; do
+			mkdir -p "$CGROUP_MOUNT/$cg$CGROUP_PATH"
+			# TODO: Consider retrying on "No space left on device" errors.
+			echo "$CGROUP_PIN_PID" >"$CGROUP_MOUNT/$cg$CGROUP_PATH/cgroup.procs" || true
+			# We only need to allow write access to {cgroup.procs,tasks} and the
+			# directory. Rather than changing the owner entirely, we just change
+			# the group and then allow write access to the group (in order to
+			# further limit the possible DAC permissions that runc could use).
+			chown root:rootless "$CGROUP_MOUNT/$cg$CGROUP_PATH/"{,cgroup.procs,tasks}
+			chmod g+rwx "$CGROUP_MOUNT/$cg$CGROUP_PATH/"{,cgroup.procs,tasks}
+			# Due to cpuset's semantics we need to give extra permissions to allow
+			# for runc to set up the hierarchy. XXX: This really shouldn't be
+			# necessary, and might actually be a bug in our impl of cgroup
+			# handling.
+			[ "$cg" = "cpuset" ] && chown rootless:rootless "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpuset."{cpus,mems}
+			# The following is required by "update rt period and runtime".
+			if [ "$cg" = "cpu" ]; then
+				if [[ -e "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpu.rt_period_us" ]]; then
+					chown rootless:rootless "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpu.rt_period_us"
+				fi
+				if [[ -e "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpu.rt_runtime_us" ]]; then
+					chown rootless:rootless "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpu.rt_runtime_us"
+				fi
+			fi
+		done
 	fi
 }
 
 function disable_cgroup() {
+	if [ $CGROUP_PIN_PID -ne -1 ]; then
+		kill -9 "$CGROUP_PIN_PID" || true
+		wait "$CGROUP_PIN_PID" 2>/dev/null || true
+		CGROUP_PIN_PID=-1
+	fi
 	# Remove cgroups used in rootless containers.
 	for cg in "${ALL_CGROUPS[@]}"; do
 		[ -d "$CGROUP_MOUNT/$cg$CGROUP_PATH" ] && rmdir "$CGROUP_MOUNT/$cg$CGROUP_PATH"
