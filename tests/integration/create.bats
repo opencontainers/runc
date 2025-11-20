@@ -10,6 +10,70 @@ function teardown() {
 	teardown_bundle
 }
 
+# is_allowed_fdtarget checks whether the target of a file descriptor symlink
+# conforms to the allowed whitelist.
+#
+# This whitelist reflects the set of file descriptors that runc legitimately
+# opens during container lifecycle operations (e.g., exec, create, and run).
+# If runc's internal behavior changes (e.g., new FD types are introduced),
+# this function MUST be updated accordingly to avoid false positives.
+#
+is_allowed_fdtarget() {
+	local target="$1"
+	{
+		# pty devices for stdio
+		grep -Ex "/dev/pts/[0-9]+" <<<"$target" ||
+			# eventfd, eventpoll, signalfd, etc.
+			grep -Ex "anon_inode:\[.+\]" <<<"$target" ||
+			# procfs handle cache (pathrs-lite / libpathrs)
+			grep -Ex "/(proc)?" <<<"$target" ||
+			# anonymous sockets used for IPC
+			grep -Ex "socket:\[[0-9]+\]" <<<"$target" ||
+			# anonymous pipes used for I/O forwarding
+			grep -Ex "pipe:\[[0-9]+\]" <<<"$target" ||
+			# "runc start" synchronisation barrier FIFO
+			grep -Ex ".*/exec\.fifo" <<<"$target" ||
+			# temporary internal fd used in exec.fifo FIFO reopen (pathrs-lite / libpathrs)
+			grep -Ex "(/proc)?/1/task/1/fd" <<<"$target" ||
+			# overlayfs binary reference (CVE-2019-5736)
+			grep -Ex "/runc" <<<"$target" ||
+			# memfd cloned binary (CVE-2019-5736)
+			grep -Fx "/memfd:runc_cloned:/proc/self/exe (deleted)" <<<"$target"
+	} >/dev/null
+	return "$?"
+}
+
+@test "runc create[detect fd leak as comprehensively as possible]" {
+	runc create --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	testcontainer test_busybox created
+
+	pid=$(__runc state test_busybox | jq '.pid')
+	violation_found=0
+
+	while IFS= read -rd '' link; do
+		fd_name=$(basename "$link")
+		# Skip . and ..
+		if [[ "$fd_name" == "." || "$fd_name" == ".." ]]; then
+			continue
+		fi
+
+		# Resolve symlink target (use readlink)
+		target=$(readlink "$link" 2>/dev/null)
+		if [[ -z "$target" ]]; then
+			echo "Warning: Cannot read target of $link"
+			continue
+		fi
+
+		if ! is_allowed_fdtarget "$target"; then
+			echo "Violation: FD $fd_name -> '$target'"
+			violation_found=1
+		fi
+	done < <(find "/proc/$pid/fd" -type l -print0)
+	[ "$violation_found" -eq 0 ]
+}
+
 @test "runc create" {
 	runc create --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
