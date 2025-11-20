@@ -6,7 +6,7 @@ require (
 	github.com/checkpoint-restore/go-criu/v6 v6.3.0
 	github.com/containerd/console v1.0.5
 	github.com/coreos/go-systemd/v22 v22.5.0
-	github.com/cyphar/filepath-securejoin v0.6.0
+	github.com/cyphar/filepath-securejoin v0.5.2
 	github.com/docker/go-units v0.5.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/moby/sys/capability v0.4.0
@@ -27,7 +27,6 @@ require (
 )
 
 require (
-	cyphar.com/go-pathrs v0.2.1 // indirect
 	github.com/cilium/ebpf v0.17.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
