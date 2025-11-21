@@ -17,7 +17,7 @@ jobs:
   keyring:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: check runc.keyring
       run: make validate-keyring
 
@@ -29,7 +29,7 @@ jobs:
       checks: write # to allow the action to annotate code in the PR.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
       - uses: actions/setup-go@v6
@@ -52,7 +52,7 @@ jobs:
   modernize:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
       - uses: actions/setup-go@v6
@@ -77,7 +77,7 @@ jobs:
       # Don't ignore C warnings. Note that the output of "go env CGO_CFLAGS" by default is "-g -O2", so we keep them.
       CGO_CFLAGS: -g -O2 -Werror
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: install go
         uses: actions/setup-go@v6
         with:
@@ -94,7 +94,7 @@ jobs:
   codespell:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: install deps
       # Version of codespell bundled with Ubuntu is way old, so use pip.
       run: pip install --break-system-packages codespell==v2.4.1
@@ -104,14 +104,14 @@ jobs:
   shfmt:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: shfmt
       run: make shfmt
 
   shellcheck:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: install shellcheck
         env:
           VERSION: v0.10.0
@@ -135,14 +135,14 @@ jobs:
   space-at-eol:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: rm -fr vendor
       - run: if git -P grep -I -n '\s$'; then echo "^^^ extra whitespace at EOL, please fix"; exit 1; fi
 
   deps:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: install go
       uses: actions/setup-go@v6
       with:
@@ -187,7 +187,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - name: checkout
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
     - name: install deps
       run: |
         sudo apt -qq update
@@ -200,7 +200,7 @@ jobs:
   check-go:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: check Go version
       run: |
         GO_VER=$(awk -F= '/^ARG\s+GO_VERSION=/ {print $2; quit}' Dockerfile)
@@ -215,7 +215,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - name: checkout
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: check CHANGELOG.md
       run: make verify-changelog
@@ -243,7 +243,7 @@ jobs:
   get-images:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: install bashbrew
       env:
         BASEURL: https://github.com/docker-library/bashbrew/releases/download
