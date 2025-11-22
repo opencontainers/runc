@@ -11,10 +11,10 @@ import (
 
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/cgroups/manager"
+	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
-	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 const (
@@ -211,7 +211,7 @@ func validateID(id string) error {
 
 	}
 
-	if string(os.PathSeparator)+id != utils.CleanPath(string(os.PathSeparator)+id) {
+	if string(os.PathSeparator)+id != pathrs.LexicallyCleanPath(string(os.PathSeparator)+id) {
 		return ErrInvalidID
 	}
 
