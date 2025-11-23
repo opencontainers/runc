@@ -110,7 +110,7 @@ func (l *loopback) detach(n *configs.Network) (err error) {
 // The device name will be kept the same if device.Name is the zero value.
 // This function ensures that the move and rename operations occur atomically.
 // It preserves existing interface attributes, including global IP addresses.
-func devChangeNetNamespace(name string, nsPath string, device configs.LinuxNetDevice) error {
+func devChangeNetNamespace(name, nsPath string, device configs.LinuxNetDevice) error {
 	logrus.Debugf("attaching network device %s with attrs %+v to network namespace %s", name, device, nsPath)
 	link, err := netlink.LinkByName(name)
 	// recover same behavior on vishvananda/netlink@1.2.1 and do not fail when the kernel returns NLM_F_DUMP_INTR.

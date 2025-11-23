@@ -142,7 +142,7 @@ func check(t *testing.T, l *log, txt, notxt string) {
 
 // checkWait is like check, but if the file is empty,
 // it waits until it's not.
-func checkWait(t *testing.T, l *log, txt string, notxt string) {
+func checkWait(t *testing.T, l *log, txt, notxt string) {
 	t.Helper()
 	const (
 		delay = 100 * time.Millisecond

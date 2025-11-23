@@ -1421,7 +1421,7 @@ func reopenAfterMount(rootfs string, f *os.File, flags int) (_ *os.File, Err err
 
 // Do the mount operation followed by additional mounts required to take care
 // of propagation flags. This will always be scoped inside the container rootfs.
-func (m *mountEntry) mountPropagate(rootfs string, mountLabel string) error {
+func (m *mountEntry) mountPropagate(rootfs, mountLabel string) error {
 	var (
 		data  = label.FormatMountLabel(m.Data, mountLabel)
 		flags = m.Flags
