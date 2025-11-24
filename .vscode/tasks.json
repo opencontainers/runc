@@ -1,0 +1,10 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "runc delete",
+            "type": "shell",
+            "command": "${userHome}/Works/runc/runc --root /tmp/runc delete test-debug"
+        }
+    ]
+}
