@@ -9,10 +9,6 @@
 
 version: "2"
 
-run:
-  build-tags:
-    - libpathrs
-
 linters:
   enable:
     - asasalint
