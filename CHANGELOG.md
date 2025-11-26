@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.4.z]
 
+## [1.4.0] - 2025-11-27
+
+> 路漫漫其修远兮，吾将上下而求索！
+
+### Deprecated ###
+- Deprecate cgroup v1. (#4956)
+- Deprecate `CleanPath`, `StripRoot`, `WithProcfd`, and `WithProcfdFile` from
+  `libcontainer/utils`. (#4985)
+
 ### Breaking ###
 - The handling of `pids.limit` has been updated to match the newer guidance
   from the OCI runtime specification. In particular, now a maximum limit value
@@ -21,6 +30,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - cgroups: improve `cpuacct.usage_all` resilience when parsing data from
   patched kernels (such as the Tencent kernels). (opencontainers/cgroups#46,
   opencontainers/cgroups#50)
+- libct: close child fds on `prepareCgroupFD` error. (#4936)
+- libct: fix mips compilation. (#4962, #4967)
+- When configuring a `tmpfs` mount, only set the `mode=` argument if the target
+  path already existed. This fixes a regression introduced in our
+  [CVE-2025-52881][] mitigation patches. (#4971, #4976)
+- Fix various file descriptor leaks and add additional tests to detect them as
+  comprehensively as possible. (#5007, #5021, #5034)
+- The "hallucination" helpers added as part of the [CVE-2025-52881][]
+  mitigation have been made more generic and now apply to all of our `pathrs`
+  helper functions, which should ensure we will not regress dangling symlink
+  users. (#4985)
+
+### Changed
+- libct: switch to `(*CPUSet).Fill`. (#4927)
+- docs/spec-conformance.md: update for spec v1.3.0. (#4948)
+
+[CVE-2025-52881]: https://github.com/opencontainers/runc/security/advisories/GHSA-cgrx-mc8f-2prm
 
 ## [1.4.0-rc.3] - 2025-11-05
 
@@ -1392,7 +1418,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
 
 <!-- 1.4.z patch releases -->
-[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...release-1.4
+[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.0...release-1.4
+[1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
 [1.4.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.2...v1.4.0-rc.3
 [1.4.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.1...v1.4.0-rc.2
 [1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1
