@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.3.z]
 
+## [1.3.4] - 2025-11-27
+
+> Take me to your heart, take me to your soul.
+
+### Fixed
+ * libct: fix mips compilation. (#4962, #4966)
+ * When configuring a `tmpfs` mount, only set the `mode=` argument if the
+   target path already existed. This fixes a regression introduced in our
+   [CVE-2025-52881][] mitigation patches. (#4971, #4976)
+ * Fix various file descriptor leaks and add additional tests to detect them as
+   comprehensively as possible. (#5007, #5021, #5034)
+
+### Changed
+ * Downgrade `github.com/cyphar/filepath-securejoin` dependency to `v0.5.2`,
+   which should make it easier for some downstreams to import `runc` without
+   pulling in too many extra packages. (#5028)
+
+[CVE-2025-52881]: https://github.com/opencontainers/runc/security/advisories/GHSA-cgrx-mc8f-2prm
+
 ## [1.3.3] - 2025-11-05
 
 > 奴らに支配されていた恐怖を
@@ -1217,7 +1236,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.2.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.2.0-rc.1
 
 <!-- 1.3.z patch releases -->
-[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.3...release-1.3
+[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.4...release-1.3
+[1.3.4]: https://github.com/opencontainers/runc/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/opencontainers/runc/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/opencontainers/runc/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.3.1
