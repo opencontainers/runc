@@ -13,10 +13,11 @@ import (
 	_ "unsafe" // for go:linkname
 
 	securejoin "github.com/cyphar/filepath-securejoin"
-	"github.com/opencontainers/runc/internal/linux"
-	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/internal/linux"
+	"github.com/opencontainers/runc/internal/pathrs"
 )
 
 var (
@@ -151,9 +152,12 @@ func NewSockPair(name string) (parent, child *os.File, err error) {
 // through the passed fdpath should be safe. Do not access this path through
 // the original path strings, and do not attempt to use the pathname outside of
 // the passed closure (the file handle will be freed once the closure returns).
+//
+// Deprecated: This function is an internal implementation detail of runc and
+// is no longer used. It will be removed in runc 1.5.
 func WithProcfd(root, unsafePath string, fn func(procfd string) error) error {
 	// Remove the root then forcefully resolve inside the root.
-	unsafePath = StripRoot(root, unsafePath)
+	unsafePath = pathrs.LexicallyStripRoot(root, unsafePath)
 	fullPath, err := securejoin.SecureJoin(root, unsafePath)
 	if err != nil {
 		return fmt.Errorf("resolving path inside rootfs failed: %w", err)
@@ -180,10 +184,15 @@ func WithProcfd(root, unsafePath string, fn func(procfd string) error) error {
 	return fn(procfd)
 }
 
-// WithProcfdFile is a very minimal wrapper around [ProcThreadSelfFd], intended
-// to make migrating from [WithProcfd] and [WithProcfdPath] usage easier. The
+// WithProcfdFile is a very minimal wrapper around [ProcThreadSelfFd]. The
 // caller is responsible for making sure that the provided file handle is
 // actually safe to operate on.
+//
+// NOTE: THIS FUNCTION IS INTERNAL TO RUNC, DO NOT USE IT.
+//
+// TODO: Migrate the mount logic towards a more move_mount(2)-friendly design
+// where this is kind of /proc/self/... tomfoolery is only done in a fallback
+// path for old kernels.
 func WithProcfdFile(file *os.File, fn func(procfd string) error) error {
 	fdpath, closer := ProcThreadSelfFd(file.Fd())
 	defer closer()

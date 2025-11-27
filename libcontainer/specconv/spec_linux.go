@@ -16,17 +16,17 @@ import (
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	dbus "github.com/godbus/dbus/v5"
+	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/cgroups"
 	devices "github.com/opencontainers/cgroups/devices/config"
 	"github.com/opencontainers/runc/internal/linux"
+	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
-	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/sirupsen/logrus"
-
-	"golang.org/x/sys/unix"
 )
 
 var (
@@ -802,7 +802,7 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*cgrou
 		if useSystemdCgroup {
 			myCgroupPath = spec.Linux.CgroupsPath
 		} else {
-			myCgroupPath = libcontainerUtils.CleanPath(spec.Linux.CgroupsPath)
+			myCgroupPath = pathrs.LexicallyCleanPath(spec.Linux.CgroupsPath)
 		}
 	}
 
