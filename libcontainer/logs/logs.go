@@ -2,11 +2,15 @@ package logs
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 
 	"github.com/sirupsen/logrus"
 )
+
+var fatalsSep = []byte("; ")
 
 func ForwardLogs(logPipe io.ReadCloser) chan error {
 	done := make(chan error, 1)
@@ -23,24 +27,33 @@ func ForwardLogs(logPipe io.ReadCloser) chan error {
 	}
 
 	go func() {
+		fatals := []byte{}
 		for s.Scan() {
-			processEntry(s.Bytes(), logger)
+			fatals = processEntry(s.Bytes(), logger, fatals)
+		}
+		if err := s.Err(); err != nil {
+			logrus.Errorf("error reading from log source: %v", err)
 		}
 		if err := logPipe.Close(); err != nil {
 			logrus.Errorf("error closing log source: %v", err)
 		}
-		// The only error we want to return is when reading from
-		// logPipe has failed.
-		done <- s.Err()
+		// The only error we return is fatal messages from runc init.
+		var err error
+		if len(fatals) > 0 {
+			err = errors.New(string(bytes.TrimSuffix(fatals, fatalsSep)))
+		}
+		done <- err
 		close(done)
 	}()
 
 	return done
 }
 
-func processEntry(text []byte, logger *logrus.Logger) {
+// processEntry parses the error and either logs it via the standard logger or,
+// if this is a fatal error, appends its text to fatals.
+func processEntry(text []byte, logger *logrus.Logger, fatals []byte) []byte {
 	if len(text) == 0 {
-		return
+		return fatals
 	}
 
 	var jl struct {
@@ -49,8 +62,14 @@ func processEntry(text []byte, logger *logrus.Logger) {
 	}
 	if err := json.Unmarshal(text, &jl); err != nil {
 		logrus.Errorf("failed to decode %q to json: %v", text, err)
-		return
+		return fatals
 	}
 
-	logger.Log(jl.Level, jl.Msg)
+	if jl.Level == logrus.FatalLevel {
+		fatals = append(fatals, jl.Msg...)
+		fatals = append(fatals, fatalsSep...)
+	} else {
+		logger.Log(jl.Level, jl.Msg)
+	}
+	return fatals
 }
