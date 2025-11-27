@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   patched kernels (such as the Tencent kernels). (opencontainers/cgroups#46,
   opencontainers/cgroups#50)
 
+### Changed ###
+- CI: All PRs now require a corresponding `CHANGELOG.md` change be included,
+  which should increase the quality and accuracy of our changelogs going
+  forward. (#5047)
+
 ## [1.4.0-rc.1] - 2025-09-05
 
 > おめェもボスになったんだろぉ？
