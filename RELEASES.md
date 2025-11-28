@@ -61,13 +61,6 @@ Here is a hypothetical release timeline to see how this works in practice:
 
 ### Support Policy ###
 
-> **NOTE**: The following policy provides much longer support guarantees than
-> we have historically provided for older runc releases. In order to avoid
-> adding new support guarantees for old runc versions we have long-since
-> stopped supporting, the following support policy only applies for runc
-> releases from `1.2.0` onwards. In other words, runc `1.1.0` and `1.0.0` are
-> not guaranteed support by this policy.
-
 In order to ease the transition between minor runc releases, previous minor
 release branches of runc will be maintained for some time after the newest
 minor release is published. In the following text, `latest` refers to the
