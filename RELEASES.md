@@ -18,13 +18,6 @@ formally guarantee that API compatibility will be preserved.
 
 ### Release Cadence ###
 
-> **NOTE**: At time of writing, this proposal is still a draft as we have not
-> yet done several releases using this cadence. If you have feedback on this
-> proposal (such as how well this proposal addresses your needs as a downstream
-> packager of runc), please feel free to [open an issue][new-issue] so we can
-> discuss it further. However, the current plan is for this proposal to be
-> followed for the `1.3.0` and `1.4.0` releases in 2025.
-
 [new-issue]: https://github.com/opencontainers/runc/issues/new/choose
 
 runc follows a 6-month minor version release schedule, with the aim of releases
