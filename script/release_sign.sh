@@ -135,7 +135,7 @@ read -r
 [ -w "$releasedir" ] || sudo chown -R "$(id -u):$(id -g)" "$releasedir"
 
 # Sign everything.
-for bin in "$releasedir/$project".*; do
+for bin in "$releasedir/$project"*; do
 	[[ "$(basename "$bin")" == "$project.$hashcmd" ]] && continue # skip hash
 	gpg "${gpgflags[@]}" --detach-sign --armor "$bin"
 done
