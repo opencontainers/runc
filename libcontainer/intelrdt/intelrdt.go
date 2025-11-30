@@ -147,10 +147,11 @@ import (
  */
 
 type Manager struct {
-	mu     sync.Mutex
-	config *configs.Config
-	id     string
-	path   string
+	mu               sync.Mutex
+	config           *configs.Config
+	id               string
+	path             string
+	directoryCreated bool
 }
 
 // NewManager returns a new instance of Manager, or nil if the Intel RDT
@@ -186,9 +187,10 @@ func NewManager(config *configs.Config, id, path string) *Manager {
 // is actually available. Used by unit tests that mock intelrdt paths.
 func newManager(config *configs.Config, id, path string) *Manager {
 	return &Manager{
-		config: config,
-		id:     id,
-		path:   path,
+		config:           config,
+		id:               id,
+		path:             path,
+		directoryCreated: false,
 	}
 }
 
@@ -460,6 +462,14 @@ func (m *Manager) Apply(pid int) (err error) {
 		}
 	}
 
+	// If the directory doesn't exist we need to create it -> it means we also need
+	// to clean it up afterwards. Make a note to the manager.
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			m.directoryCreated = true
+		}
+	}
+
 	if err := os.Mkdir(path, 0o755); err != nil && !os.IsExist(err) {
 		return newLastCmdError(err)
 	}
@@ -489,8 +499,9 @@ func (m *Manager) Destroy() error {
 	}
 	// Don't remove resctrl group if closid has been explicitly specified. The
 	// group is likely externally managed, i.e. by some other entity than us.
-	// There are probably other containers/tasks sharing the same group.
-	if m.config.IntelRdt.ClosID == "" {
+	// There are probably other containers/tasks sharing the same group. Also
+	// only remove the directory if it was created by us.
+	if m.config.IntelRdt.ClosID == "" && m.directoryCreated {
 		m.mu.Lock()
 		defer m.mu.Unlock()
 		if err := os.Remove(m.GetPath()); err != nil && !os.IsNotExist(err) {
