@@ -107,7 +107,7 @@ jobs:
     - name: Setup Bats and bats libs
       uses: bats-core/bats-action@3.0.0
       with:
-        bats-version: 1.11.1 # Known as BATS_VERSION in other places.
+        bats-version: 1.12.0 # Known as BATS_VERSION in other places.
         support-install: false
         assert-install: false
         detik-install: false
