@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	"golang.org/x/sys/unix"
-
-	"github.com/opencontainers/runc/internal/pathrs"
 )
 
 const (
@@ -67,23 +65,3 @@ func Annotations(labels []string) (bundle string, userAnnotations map[string]str
 	}
 	return bundle, userAnnotations
 }
-
-// CleanPath makes a path safe for use with filepath.Join. This is done by not
-// only cleaning the path, but also (if the path is relative) adding a leading
-// '/' and cleaning it (then removing the leading '/'). This ensures that a
-// path resulting from prepending another path will always resolve to lexically
-// be a subdirectory of the prefixed path. This is all done lexically, so paths
-// that include symlinks won't be safe as a result of using CleanPath.
-//
-// Deprecated: This function has been moved to internal/pathrs and this wrapper
-// will be removed in runc 1.5.
-var CleanPath = pathrs.LexicallyCleanPath
-
-// StripRoot returns the passed path, stripping the root path if it was
-// (lexicially) inside it. Note that both passed paths will always be treated
-// as absolute, and the returned path will also always be absolute. In
-// addition, the paths are cleaned before stripping the root.
-//
-// Deprecated: This function has been moved to internal/pathrs and this wrapper
-// will be removed in runc 1.5.
-var StripRoot = pathrs.LexicallyStripRoot
