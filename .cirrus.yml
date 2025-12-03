@@ -46,9 +46,9 @@ task:
     # Work around dnf mirror failures by retrying a few times.
     for i in $(seq 0 2); do
       sleep $i
-      yum install -y --setopt=install_weak_deps=False --setopt=tsflags=nodocs $RPMS && break
+      dnf install -y --setopt=install_weak_deps=False --setopt=tsflags=nodocs $RPMS && break
     done
-    [ $? -eq 0 ] # fail if yum failed
+    [ $? -eq 0 ] # fail if dnf failed
 
     case $DISTRO in
     *-8)
