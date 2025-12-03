@@ -16,13 +16,17 @@ task:
     RPMS: gcc git-core iptables jq glibc-static libseccomp-devel make criu fuse-sshfs container-selinux
     # yamllint disable rule:key-duplicates
     matrix:
-      DISTRO: almalinux-8
-      DISTRO: almalinux-9
+      - DISTRO: almalinux-8
+        IMAGE_PROJECT: almalinux-cloud
+      - DISTRO: almalinux-9
+        IMAGE_PROJECT: almalinux-cloud
+      - DISTRO: centos-stream-10
+        IMAGE_PROJECT: centos-cloud
 
   name: ci / $DISTRO
 
   compute_engine_instance:
-    image_project: almalinux-cloud
+    image_project: $IMAGE_PROJECT
     image: family/$DISTRO
     platform: linux
     cpu: 4
@@ -33,7 +37,7 @@ task:
     *-8)
       dnf config-manager --set-enabled powertools # for glibc-static
       ;;
-    *-9)
+    *-9|*-10)
       dnf config-manager --set-enabled crb # for glibc-static
       dnf -y install epel-release # for fuse-sshfs
       # Delegate all cgroup v2 controllers to rootless user via --systemd-cgroup.
