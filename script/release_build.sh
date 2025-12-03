@@ -161,8 +161,6 @@ done
 version="${version:-$(<"$root/VERSION")}"
 releasedir="${releasedir:-release/$version}"
 hashcmd="${hashcmd:-sha256sum}"
-# Suffixes of files to checksum/sign.
-suffixes=("${arches[@]}" tar.xz)
 
 log "creating $project release in '$releasedir'"
 log "  version: $version"
@@ -179,11 +177,13 @@ rm -rf "$releasedir" && mkdir -p "$releasedir"
 build_project "$releasedir/$project" "$native_arch" "${arches[@]}"
 
 # Generate new archive.
-git archive --format=tar --prefix="$project-$version/" "$commit" | xz >"$releasedir/$project.tar.xz"
+git archive --format=tar --prefix="$project-$version/" "$commit" | xz >"$releasedir/$project-$version.tar.xz"
 
 # Generate sha256 checksums for binaries and libseccomp tarball.
 (
 	cd "$releasedir"
-	# Add $project. prefix to all suffixes.
-	"$hashcmd" "${suffixes[@]/#/$project.}" >"$project.$hashcmd"
+	# Add hash of all architecture binaries ($project.$arch).
+	"$hashcmd" "${arches[@]/#/$project.}" >>"$project.$hashcmd"
+	# Add hash of tarball ($project-$version.tar.xz).
+	"$hashcmd" "$project-$version.tar.xz" >>"$project.$hashcmd"
 )
