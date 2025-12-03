@@ -175,12 +175,18 @@ func notifyHost(client *net.UnixConn, ready []byte, pid1 int) error {
 var errUnexpectedRead = errors.New("unexpected read from synchronization pipe")
 
 // sdNotifyBarrier performs synchronization with systemd by means of the sd_notify_barrier protocol.
-func sdNotifyBarrier(client *net.UnixConn) error {
+func sdNotifyBarrier(client *net.UnixConn) (retErr error) {
 	// Create a pipe for communicating with systemd daemon.
 	pipeR, pipeW, err := os.Pipe()
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if retErr != nil {
+			pipeW.Close()
+			pipeR.Close()
+		}
+	}()
 
 	// Get the FD for the unix socket file to be able to use sendmsg.
 	clientFd, err := client.File()
