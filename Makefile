@@ -231,6 +231,10 @@ localshfmt:
 vendor:
 	$(GO) mod tidy
 	$(GO) mod vendor
+	rm vendor/github.com/coreos/go-systemd/v22/activation/listeners.go
+	# Verify that no encryption/decryption cryptography is used
+	git add vendor/
+	[ -z $$(git grep -h '"crypto/' | grep -v -e 'crypto/sha1' -e 'crypto/rand') ]
 	$(GO) mod verify
 
 .PHONY: verify-changelog
