@@ -399,17 +399,11 @@ func startContainer(context *cli.Context, action CtAct, criuOpts *libcontainer.C
 		}
 	}
 
-	// Support on-demand socket activation by passing file descriptors into the container init process.
-	listenFDs := []*os.File{}
-	if os.Getenv("LISTEN_FDS") != "" {
-		listenFDs = activation.Files(false)
-	}
-
 	r := &runner{
 		enableSubreaper: !context.Bool("no-subreaper"),
 		shouldDestroy:   !context.Bool("keep"),
 		container:       container,
-		listenFDs:       listenFDs,
+		listenFDs:       activation.Files(), // On-demand socket activation.
 		notifySocket:    notifySocket,
 		consoleSocket:   context.String("console-socket"),
 		pidfdSocket:     context.String("pidfd-socket"),
