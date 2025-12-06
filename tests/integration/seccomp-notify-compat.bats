@@ -29,7 +29,6 @@ function teardown() {
 				"syscalls": [{ "names": [ "mkdir" ], "action": "SCMP_ACT_NOTIFY" }]
 			}'
 
-	runc run test_busybox
-	[ "$status" -ne 0 ]
+	runc ! run test_busybox
 	[[ "$output" == *"seccomp notify unsupported:"* ]]
 }

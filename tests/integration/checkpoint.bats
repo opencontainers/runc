@@ -114,25 +114,21 @@ function runc_restore_with_pipes() {
 
 	testcontainer "$name" running
 
-	runc exec --cwd /bin "$name" echo ok
-	[ "$status" -eq 0 ]
+	runc -0 exec --cwd /bin "$name" echo ok
 	[ "$output" = "ok" ]
 }
 
 function simple_cr() {
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 
 	for _ in $(seq 2); do
-		runc "$@" checkpoint --work-path ./work-dir test_busybox
-		[ "$status" -eq 0 ]
+		runc -0 "$@" checkpoint --work-path ./work-dir test_busybox
 
 		testcontainer test_busybox checkpointed
 
-		runc "$@" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
-		[ "$status" -eq 0 ]
+		runc -0 "$@" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
 
 		testcontainer test_busybox running
 	done
@@ -152,28 +148,23 @@ function simple_cr_with_netdevice() {
 	create_netns
 	update_config '(.. | select(.type? == "network")) .path |= "'"$ns_path"'"'
 	update_config ' .linux.netDevices |= {"dummy0": {} }'
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox_netdevice
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox_netdevice
 
 	testcontainer test_busybox_netdevice running
-	runc exec test_busybox_netdevice ip address show dev dummy0
-	[ "$status" -eq 0 ]
+	runc -0 exec test_busybox_netdevice ip address show dev dummy0
 	[[ "$output" == *" $global_ip "* ]]
 	[[ "$output" == *"ether $mac_address "* ]]
 	[[ "$output" == *"mtu $mtu_value "* ]]
 
 	for _ in $(seq 2); do
-		runc "$@" checkpoint --work-path ./work-dir test_busybox_netdevice
-		[ "$status" -eq 0 ]
+		runc -0 "$@" checkpoint --work-path ./work-dir test_busybox_netdevice
 
 		testcontainer test_busybox_netdevice checkpointed
 
-		runc "$@" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox_netdevice
-		[ "$status" -eq 0 ]
+		runc -0 "$@" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox_netdevice
 
 		testcontainer test_busybox_netdevice running
-		runc exec test_busybox_netdevice ip address show dev dummy0
-		[ "$status" -eq 0 ]
+		runc -0 exec test_busybox_netdevice ip address show dev dummy0
 		[[ "$output" == *" $global_ip "* ]]
 		[[ "$output" == *"ether $mac_address "* ]]
 		[[ "$output" == *"mtu $mtu_value "* ]]
@@ -239,20 +230,17 @@ function simple_cr_with_netdevice() {
 }
 
 @test "checkpoint --pre-dump (bad --parent-path)" {
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 
 	# runc should fail with absolute parent image path.
-	runc checkpoint --parent-path "$(pwd)"/parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
+	runc ! checkpoint --parent-path "$(pwd)"/parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
 	[[ "${output}" == *"--parent-path"* ]]
-	[ "$status" -ne 0 ]
 
 	# runc should fail with invalid parent image path.
-	runc checkpoint --parent-path ./parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
+	runc ! checkpoint --parent-path ./parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
 	[[ "${output}" == *"--parent-path"* ]]
-	[ "$status" -ne 0 ]
 }
 
 @test "checkpoint --pre-dump and restore" {
@@ -264,15 +252,13 @@ function simple_cr_with_netdevice() {
 	runc_run_with_pipes test_busybox
 
 	mkdir parent-dir
-	runc checkpoint --pre-dump --image-path ./parent-dir test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 checkpoint --pre-dump --image-path ./parent-dir test_busybox
 
 	testcontainer test_busybox running
 
 	mkdir image-dir
 	mkdir work-dir
-	runc checkpoint --parent-path ../parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 checkpoint --parent-path ../parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
 
 	# check parent path is valid
 	[ -e ./image-dir/parent ]
@@ -367,22 +353,19 @@ function simple_cr_with_netdevice() {
 	# tell runc which network namespace to use
 	update_config '(.. | select(.type? == "network")) .path |= "'"$ns_path"'"'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 
 	for _ in $(seq 2); do
 		# checkpoint the running container; this automatically tells CRIU to
 		# handle the network namespace defined in config.json as an external
-		runc checkpoint --work-path ./work-dir test_busybox
-		[ "$status" -eq 0 ]
+		runc -0 checkpoint --work-path ./work-dir test_busybox
 
 		testcontainer test_busybox checkpointed
 
 		# restore from checkpoint; this should restore the container into the existing network namespace
-		runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
-		[ "$status" -eq 0 ]
+		runc -0 restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
 
 		testcontainer test_busybox running
 
@@ -416,13 +399,11 @@ function simple_cr_with_netdevice() {
 	# Make sure the RPC defined configuration file overwrites the previous
 	echo "log-file=$tmplog2" >"$tmp"
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 
-	runc checkpoint --work-path ./work-dir test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 checkpoint --work-path ./work-dir test_busybox
 	run ! test -f ./work-dir/"$tmplog1"
 	test -f ./work-dir/"$tmplog2"
 
@@ -430,8 +411,7 @@ function simple_cr_with_netdevice() {
 
 	test -f ./work-dir/"$tmplog2" && unlink ./work-dir/"$tmplog2"
 
-	runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
 	run ! test -f ./work-dir/"$tmplog1"
 	test -f ./work-dir/"$tmplog2"
 
@@ -456,13 +436,11 @@ function simple_cr_with_netdevice() {
 					options: ["rw", "bind"]
 				}]'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 
-	runc checkpoint --work-path ./work-dir test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 checkpoint --work-path ./work-dir test_busybox
 
 	testcontainer test_busybox checkpointed
 
@@ -470,8 +448,7 @@ function simple_cr_with_netdevice() {
 	# the mountpoints should be recreated during restore - that is the actual thing tested here
 	rm -rf "${bind1:?}"/*
 
-	runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 }
@@ -479,8 +456,7 @@ function simple_cr_with_netdevice() {
 @test "checkpoint then restore into a different cgroup (via --manage-cgroups-mode ignore)" {
 	set_resources_limit
 	set_cgroups_path
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	testcontainer test_busybox running
 
 	local orig_path
@@ -488,17 +464,15 @@ function simple_cr_with_netdevice() {
 	# Check that the cgroup exists.
 	test -d "$orig_path"
 
-	runc checkpoint --work-path ./work-dir --manage-cgroups-mode ignore test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 checkpoint --work-path ./work-dir --manage-cgroups-mode ignore test_busybox
 	testcontainer test_busybox checkpointed
 	# Check that the cgroup is gone.
 	run ! test -d "$orig_path"
 
 	# Restore into a different cgroup.
 	set_cgroups_path # Changes the path.
-	runc restore -d --manage-cgroups-mode ignore --pid-file pid \
+	runc -0 restore -d --manage-cgroups-mode ignore --pid-file pid \
 		--work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
 	testcontainer test_busybox running
 
 	# Check that the old cgroup path doesn't exist.
@@ -516,32 +490,27 @@ function simple_cr_with_netdevice() {
 }
 
 @test "checkpoint/restore and exec" {
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 
 	local execed_pid=""
 	for _ in $(seq 2); do
-		runc checkpoint --work-path ./work-dir test_busybox
-		[ "$status" -eq 0 ]
+		runc -0 checkpoint --work-path ./work-dir test_busybox
 
 		testcontainer test_busybox checkpointed
 
-		runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
-		[ "$status" -eq 0 ]
+		runc -0 restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
 
 		testcontainer test_busybox running
 
 		# verify that previously exec'd process is restored.
 		if [ -n "$execed_pid" ]; then
-			runc exec test_busybox ls -ld "/proc/$execed_pid"
-			[ "$status" -eq 0 ]
+			runc -0 exec test_busybox ls -ld "/proc/$execed_pid"
 		fi
 
 		# exec a new background process.
-		runc exec test_busybox sh -c 'sleep 1000 < /dev/null &> /dev/null & echo $!'
-		[ "$status" -eq 0 ]
+		runc -0 exec test_busybox sh -c 'sleep 1000 < /dev/null &> /dev/null & echo $!'
 		execed_pid=$output
 	done
 }
