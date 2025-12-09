@@ -37,6 +37,12 @@ linters:
         # going to be tricked into overwriting host files.
         - pattern: ^os\.Create$
           pkg: ^os$
+        # os.Is* error checking functions predate errors.Is. Therefore, they
+        # only support errors returned by the os package and subtly fail
+        # to deal with other wrapped error types.
+        # New code should use errors.Is(err, error-type) instead.
+        - pattern: ^os\.Is(Exist|NotExist|Permission|Timeout)$
+          pkg: ^os$
       analyze-types: true
   exclusions:
     rules:
