@@ -295,7 +295,7 @@ func handleFifoResult(result openResult) error {
 		return err
 	}
 	err := os.Remove(f.Name())
-	if err == nil || os.IsNotExist(err) {
+	if err == nil || errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
 	return err

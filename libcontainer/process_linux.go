@@ -1103,7 +1103,7 @@ func getPipeFds(pid int) ([]string, error) {
 			// Ignore permission errors, for rootless containers and other
 			// non-dumpable processes. if we can't get the fd for a particular
 			// file, there's not much we can do.
-			if os.IsPermission(err) {
+			if errors.Is(err, os.ErrPermission) {
 				continue
 			}
 			return fds, err

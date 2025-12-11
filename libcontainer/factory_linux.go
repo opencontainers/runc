@@ -51,7 +51,7 @@ func Create(root, id string, config *configs.Config) (*Container, error) {
 	}
 	if _, err := os.Stat(stateDir); err == nil {
 		return nil, ErrExist
-	} else if !os.IsNotExist(err) {
+	} else if !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
 
@@ -154,7 +154,7 @@ func loadState(root string) (*State, error) {
 	}
 	f, err := os.Open(stateFilePath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return nil, ErrNotExist
 		}
 		return nil, err

@@ -125,7 +125,7 @@ func (c *Container) addMaskPaths(req *criurpc.CriuReq) error {
 	for _, path := range c.config.MaskPaths {
 		fi, err := os.Stat(fmt.Sprintf("/proc/%d/root/%s", c.initProcess.pid(), path))
 		if err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, os.ErrNotExist) {
 				continue
 			}
 			return err
@@ -318,7 +318,7 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 
 	// Since a container can be C/R'ed multiple times,
 	// the checkpoint directory may already exist.
-	if err := os.Mkdir(criuOpts.ImagesDirectory, 0o700); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(criuOpts.ImagesDirectory, 0o700); err != nil && !errors.Is(err, os.ErrExist) {
 		return err
 	}
 
@@ -353,7 +353,7 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 
 	// if criuOpts.WorkDirectory is not set, criu default is used.
 	if criuOpts.WorkDirectory != "" {
-		if err := os.Mkdir(criuOpts.WorkDirectory, 0o700); err != nil && !os.IsExist(err) {
+		if err := os.Mkdir(criuOpts.WorkDirectory, 0o700); err != nil && !errors.Is(err, os.ErrExist) {
 			return err
 		}
 		workDir, err := os.Open(criuOpts.WorkDirectory)
@@ -718,7 +718,7 @@ func (c *Container) Restore(process *Process, criuOpts *CriuOpts) error {
 	if criuOpts.WorkDirectory != "" {
 		// Since a container can be C/R'ed multiple times,
 		// the work directory may already exist.
-		if err := os.Mkdir(criuOpts.WorkDirectory, 0o700); err != nil && !os.IsExist(err) {
+		if err := os.Mkdir(criuOpts.WorkDirectory, 0o700); err != nil && !errors.Is(err, os.ErrExist) {
 			return err
 		}
 		workDir, err := os.Open(criuOpts.WorkDirectory)
@@ -1169,7 +1169,7 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 			return err
 		}
 		if err := os.Remove(filepath.Join(c.stateDir, "checkpoint")); err != nil {
-			if !os.IsNotExist(err) {
+			if !errors.Is(err, os.ErrNotExist) {
 				logrus.Error(err)
 			}
 		}

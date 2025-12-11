@@ -91,7 +91,7 @@ created by an unprivileged user.
 			if err == nil {
 				return fmt.Errorf("File %s exists. Remove it first", name)
 			}
-			if !os.IsNotExist(err) {
+			if !errors.Is(err, os.ErrNotExist) {
 				return err
 			}
 			return nil
@@ -117,7 +117,7 @@ created by an unprivileged user.
 func loadSpec(cPath string) (spec *specs.Spec, err error) {
 	cf, err := os.Open(cPath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return nil, fmt.Errorf("JSON specification file %s not found", cPath)
 		}
 		return nil, err

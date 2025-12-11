@@ -1,6 +1,7 @@
 package specconv
 
 import (
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -609,7 +610,7 @@ func TestDupNamespaces(t *testing.T) {
 }
 
 func TestUserNamespaceMappingAndPath(t *testing.T) {
-	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
+	if _, err := os.Stat("/proc/self/ns/user"); errors.Is(err, os.ErrNotExist) {
 		t.Skip("Test requires userns.")
 	}
 
@@ -643,7 +644,7 @@ func TestUserNamespaceMappingAndPath(t *testing.T) {
 }
 
 func TestNonZeroEUIDCompatibleSpecconvValidate(t *testing.T) {
-	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
+	if _, err := os.Stat("/proc/self/ns/user"); errors.Is(err, os.ErrNotExist) {
 		t.Skip("Test requires userns.")
 	}
 
