@@ -1116,17 +1116,15 @@ func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 			"gid_map": gidMap,
 		}).Debugf("config uses path-based userns configuration -- current uid and gid mappings cached")
 	}
-	rootUID, err := config.HostRootUID()
-	if err != nil {
-		return err
-	}
-	rootGID, err := config.HostRootGID()
-	if err != nil {
-		return err
-	}
 	for _, node := range config.Devices {
-		node.Uid = uint32(rootUID)
-		node.Gid = uint32(rootGID)
+		hostUID, err := config.HostUID(int(node.Uid))
+		if err == nil {
+			node.Uid = uint32(hostUID)
+		}
+		hostGID, err := config.HostGID(int(node.Gid))
+		if err == nil {
+			node.Gid = uint32(hostGID)
+		}
 	}
 	return nil
 }

@@ -14,13 +14,13 @@ import (
 
 	"github.com/cyphar/filepath-securejoin/pathrs-lite/procfs"
 	"github.com/moby/sys/mountinfo"
-	"github.com/moby/sys/userns"
 	"github.com/mrunalp/fileutils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/opencontainers/selinux/go-selinux/label"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
+	"github.com/moby/sys/userns"
 	"github.com/opencontainers/cgroups"
 	devices "github.com/opencontainers/cgroups/devices/config"
 	"github.com/opencontainers/cgroups/fs2"
@@ -113,6 +113,9 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		rootlessCgroups: config.RootlessCgroups,
 		cgroupns:        config.Namespaces.Contains(configs.NEWCGROUP),
 	}
+
+	useMknodInInitialUserNS := (userns.RunningInUserNS() || config.Namespaces.Contains(configs.NEWUSER)) && !config.RootlessEUID
+
 	for _, m := range config.Mounts {
 		entry := mountEntry{Mount: m}
 		// Figure out whether we need to request runc to give us an
@@ -120,7 +123,7 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		// necessary. For bind-mounts, this is only necessary if we cannot
 		// resolve the parent mount (this is only hit if you are running in a
 		// userns -- but for rootless the host-side thread can't help).
-		wantSourceFile := m.IsIDMapped()
+		wantSourceFile := m.IsIDMapped() || useMknodInInitialUserNS && pathrs.LexicallyCleanPath(m.Destination) == "/dev"
 		if m.IsBind() && !config.RootlessEUID {
 			if _, err := os.Stat(m.Source); err != nil {
 				wantSourceFile = true
@@ -143,7 +146,7 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 			// that while m.Source might contain symlinks, the (*os.File).Name
 			// is based on the path provided to os.OpenFile, not what it
 			// resolves to. So this should never happen.
-			if sync.File.Name() != m.Source {
+			if sync.File.Name() != m.Source && (!useMknodInInitialUserNS || m.Destination != "/dev") {
 				return fmt.Errorf("returned mountfd for %q doesn't match requested mount configuration: mountfd path is %q", m.Source, sync.File.Name())
 			}
 			// Unmarshal the procMountFd argument (the file is sync.File).
@@ -160,6 +163,9 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 			src.file = sync.File
 			entry.srcFile = src
 		}
+		if useMknodInInitialUserNS && pathrs.LexicallyCleanPath(m.Destination) == "/dev" {
+			continue
+		}
 		if err := mountToRootfs(mountConfig, entry); err != nil {
 			return fmt.Errorf("error mounting %q to rootfs at %q: %w", m.Source, m.Destination, err)
 		}
@@ -167,9 +173,46 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 
 	setupDev := needsSetupDev(config)
 	if setupDev {
-		if err := createDevices(config); err != nil {
-			return fmt.Errorf("error creating device nodes: %w", err)
+		if !useMknodInInitialUserNS {
+			if err := createDevices(config, config.RootlessEUID); err != nil {
+				return fmt.Errorf("error creating device nodes: %w", err)
+			}
+		} else {
+			for _, node := range config.Devices {
+				if pathrs.LexicallyCleanPath(node.Path) == "/dev/ptmx" {
+					continue
+				}
+
+				// We need to bind /dev/null to restore masked pathes.
+				if pathrs.LexicallyCleanPath(node.Path) == "/dev/null" {
+					if err := createDeviceNode(config.Rootfs, node, true); err != nil {
+						return fmt.Errorf("error creating device nodes: %w", err)
+					}
+				}
+
+				m := &configs.Mount{
+					Source:      node.Path,
+					Destination: node.Path,
+					Device:      "usernsMknod",
+				}
+
+				// Request a source file from the host.
+				if err := writeSyncArg(pipe, procMountPlease, m); err != nil {
+					return fmt.Errorf("failed to request mountfd for %q: %w", m.Source, err)
+				}
+
+				sync, err := readSyncFull(pipe, procMountFd)
+				if err != nil {
+					return fmt.Errorf("mountfd request for %q failed: %w", m.Source, err)
+				}
+
+				if sync.File == nil {
+					return fmt.Errorf("mountfd request for %q: response missing attached fd", m.Source)
+				}
+				defer sync.File.Close()
+			}
 		}
+
 		if err := setupPtmx(config); err != nil {
 			return fmt.Errorf("error setting up ptmx: %w", err)
 		}
@@ -935,8 +978,7 @@ func reOpenDevNull() error {
 }
 
 // Create the device nodes in the container.
-func createDevices(config *configs.Config) error {
-	useBindMount := userns.RunningInUserNS() || config.Namespaces.Contains(configs.NEWUSER)
+func createDevices(config *configs.Config, useBindMount bool) error {
 	for _, node := range config.Devices {
 
 		// The /dev/ptmx device is setup by setupPtmx()

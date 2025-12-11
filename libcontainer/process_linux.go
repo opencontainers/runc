@@ -18,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
@@ -25,6 +26,7 @@ import (
 
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/cgroups/fs2"
+	"github.com/opencontainers/runc/internal/sys"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
@@ -729,7 +731,45 @@ func (p *initProcess) goCreateMountSources(ctx context.Context) (mountSourceRequ
 				if !ok {
 					break loop
 				}
-				src, err := mountFd(nsHandles, m)
+				var src *mountSource
+				var err error
+				if m.Device == "usernsMknod" {
+					// Create device in initial user ns
+					for _, device := range p.config.Config.Devices {
+						if device.Path == m.Source {
+							src, err = usernsMknod(p.config.Config.Rootfs, device)
+							break
+						}
+					}
+					if src == nil && err == nil {
+						err = fmt.Errorf("can not find device node")
+					}
+				} else if m.Device != "tmpfs" {
+					src, err = mountFd(nsHandles, m)
+				} else {
+					// Mount tmpfs in initial user ns and chown it
+					entry := mountEntry{Mount: m}
+					mountConfig := &mountConfig{
+						root:            p.config.Config.Rootfs,
+						label:           p.config.Config.MountLabel,
+						rootlessCgroups: p.config.Config.RootlessCgroups,
+						cgroupns:        p.config.Config.Namespaces.Contains(configs.NEWCGROUP),
+					}
+					err := mountToRootfs(mountConfig, entry)
+					if err == nil {
+						destPath, _ := securejoin.SecureJoin(mountConfig.root, m.Destination)
+						mountFile, err := os.OpenFile(destPath, unix.O_PATH|unix.O_CLOEXEC, 0)
+						uid, _ := p.config.Config.HostRootUID()
+						gid, _ := p.config.Config.HostRootGID()
+						err = sys.FchownFile(mountFile, uid, gid)
+						if err == nil {
+							src = &mountSource{
+								file: mountFile,
+								Type: mountSourcePlain,
+							}
+						}
+					}
+				}
 				logrus.Debugf("mount source thread: handling request for %q: %v %v", m.Source, src, err)
 				responseCh <- response{
 					src: src,
