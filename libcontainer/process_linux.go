@@ -366,6 +366,45 @@ func (p *setnsProcess) prepareCgroupFD() (*os.File, error) {
 	return fd, nil
 }
 
+// Recreate the second Cmd object based on the first Cmd object and Process.
+func copyCmdObject(cmd *exec.Cmd, p *Process) *exec.Cmd {
+	var (
+		exePath string
+		safeExe *os.File
+	)
+
+	if len(p.clonedExes) > 0 {
+		safeExe = p.clonedExes[0]
+		exePath = "/proc/self/fd/" + strconv.Itoa(int(safeExe.Fd()))
+	} else {
+		exePath = "/proc/self/exe"
+	}
+
+	newCmd := exec.Command(exePath, "init")
+	newCmd.Args[0] = cmd.Args[0]
+	newCmd.Stdin = cmd.Stdin
+	newCmd.Stdout = cmd.Stdout
+	newCmd.Stderr = cmd.Stderr
+	newCmd.Dir = cmd.Dir
+	newCmd.Path = cmd.Path
+
+	newCmd.Env = make([]string, len(cmd.Env))
+	copy(newCmd.Env, cmd.Env)
+
+	newCmd.ExtraFiles = make([]*os.File, len(cmd.ExtraFiles))
+	copy(newCmd.ExtraFiles, cmd.ExtraFiles)
+
+	if newCmd.SysProcAttr == nil {
+		newCmd.SysProcAttr = &unix.SysProcAttr{}
+	}
+
+	newCmd.SysProcAttr.Pdeathsig = cmd.SysProcAttr.Pdeathsig
+	newCmd.SysProcAttr.UseCgroupFD = cmd.SysProcAttr.UseCgroupFD
+	newCmd.SysProcAttr.CgroupFD = cmd.SysProcAttr.CgroupFD
+
+	return newCmd
+}
+
 // startWithCgroupFD starts a process via clone3 with CLONE_INTO_CGROUP,
 // with a fallback if it fails (e.g. not available).
 func (p *setnsProcess) startWithCgroupFD() error {
@@ -380,15 +419,30 @@ func (p *setnsProcess) startWithCgroupFD() error {
 		defer fd.Close()
 	}
 
-	err = p.startWithCPUAffinity()
-	if err != nil && p.cmd.SysProcAttr.UseCgroupFD {
-		logrus.Debugf("exec with CLONE_INTO_CGROUP failed: %v; retrying without", err)
-		// SysProcAttr.CgroupFD is never used when UseCgroupFD is unset.
-		p.cmd.SysProcAttr.UseCgroupFD = false
-		err = p.startWithCPUAffinity()
+	if !p.cmd.SysProcAttr.UseCgroupFD {
+		return p.startWithCPUAffinity()
 	}
 
-	return err
+	// Currently there is an golang issue https://github.com/golang/go/issues/76746 .
+	// If the cmd.Start is called twice (the first call was unsuccessful) then
+	// Cmd.Wait can return an error (because goroutines' pipes will be closed in the first try).
+	// However, the second cmd.Start can return nil.
+	// After https://go-review.googlesource.com/c/go/+/728642 is merged, then
+	// the second call will return an error. So we need to recreate the Cmd object.
+	// We can not simply copy it
+	// https://go-review.googlesource.com/c/go/+/728642/comments/a837fe92_a5fc5f06 .
+
+	copiedCmd := copyCmdObject(p.cmd, p.process)
+	err = p.startWithCPUAffinity()
+	if err == nil {
+		return nil
+	}
+
+	p.cmd = copiedCmd
+	logrus.Debugf("exec with CLONE_INTO_CGROUP failed: %v; retrying without", err)
+	// SysProcAttr.CgroupFD is never used when UseCgroupFD is unset.
+	p.cmd.SysProcAttr.UseCgroupFD = false
+	return p.startWithCPUAffinity()
 }
 
 func (p *setnsProcess) start() (retErr error) {
