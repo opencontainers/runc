@@ -68,7 +68,7 @@ jobs:
           git diff --exit-code
       - name: run modernize
         run: |
-          go run golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest -fix -test ./...
+          go run golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest -fix ./...
           git diff --exit-code
 
   compile-buildtags:
