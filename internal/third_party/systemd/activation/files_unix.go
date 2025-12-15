@@ -15,6 +15,10 @@
 //go:build !windows
 
 // Package activation implements primitives for systemd socket activation.
+//
+// It is a partial copy of https://github.com/coreos/go-systemd/v22/activation
+// (https://github.com/coreos/go-systemd/blob/ce60782c0aabb616faa8e60f91e639d91f631e99/activation/files_unix.go),
+// to avoid bringing in crypto/tls dependency.
 package activation
 
 import (
@@ -29,29 +33,18 @@ const (
 	listenFdsStart = 3
 )
 
-// Files returns a slice containing a `os.File` object for each
+// Files returns a slice containing a os.File object for each
 // file descriptor passed to this process via systemd fd-passing protocol.
 //
 // The order of the file descriptors is preserved in the returned slice.
-// `unsetEnv` is typically set to `true` in order to avoid clashes in
-// fd usage and to avoid leaking environment flags to child processes.
-func Files(unsetEnv bool) []*os.File {
-	if unsetEnv {
-		defer func() {
-			// Unsetenv implementation for unix never returns an error.
-			_ = os.Unsetenv("LISTEN_PID")
-			_ = os.Unsetenv("LISTEN_FDS")
-			_ = os.Unsetenv("LISTEN_FDNAMES")
-		}()
-	}
-
+func Files() []*os.File {
 	pid, err := strconv.Atoi(os.Getenv("LISTEN_PID"))
 	if err != nil || pid != os.Getpid() {
 		return nil
 	}
 
 	nfds, err := strconv.Atoi(os.Getenv("LISTEN_FDS"))
-	if err != nil || nfds == 0 {
+	if err != nil || nfds <= 0 {
 		return nil
 	}
 
