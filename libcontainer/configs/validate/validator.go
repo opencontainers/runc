@@ -490,16 +490,16 @@ func memoryPolicy(config *configs.Config) error {
 		return nil
 	}
 	switch mpol.Mode {
-	case configs.MPOL_DEFAULT, configs.MPOL_LOCAL:
+	case unix.MPOL_DEFAULT, unix.MPOL_LOCAL:
 		if mpol.Nodes != nil && mpol.Nodes.Count() != 0 {
 			return fmt.Errorf("memory policy mode requires 0 nodes but got %d", mpol.Nodes.Count())
 		}
-	case configs.MPOL_BIND, configs.MPOL_INTERLEAVE,
-		configs.MPOL_PREFERRED_MANY, configs.MPOL_WEIGHTED_INTERLEAVE:
+	case unix.MPOL_BIND, unix.MPOL_INTERLEAVE,
+		unix.MPOL_PREFERRED_MANY, unix.MPOL_WEIGHTED_INTERLEAVE:
 		if mpol.Nodes == nil || mpol.Nodes.Count() == 0 {
 			return fmt.Errorf("memory policy mode requires at least one node but got 0")
 		}
-	case configs.MPOL_PREFERRED:
+	case unix.MPOL_PREFERRED:
 		// Zero or more nodes are allowed by the kernel.
 	default:
 		return fmt.Errorf("invalid memory policy mode: %d", mpol.Mode)
