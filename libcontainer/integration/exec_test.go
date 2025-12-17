@@ -1068,15 +1068,16 @@ func TestHook(t *testing.T) {
 	ok(t, err)
 
 	// e.g: 'ls /prestart ...'
-	cmd := "ls "
+	var cmd strings.Builder
+	cmd.WriteString("ls ")
 	for _, hook := range hookFiles {
-		cmd += "/" + hook + " "
+		cmd.WriteString("/" + hook + " ")
 	}
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
 		Cwd:    "/",
-		Args:   []string{"sh", "-c", cmd},
+		Args:   []string{"sh", "-c", cmd.String()},
 		Env:    standardEnvironment,
 		Stdin:  nil,
 		Stdout: &stdout,
