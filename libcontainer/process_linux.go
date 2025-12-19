@@ -407,10 +407,6 @@ func (p *setnsProcess) start() (retErr error) {
 				// Someone in this cgroup was killed, this _might_ be us.
 				retErr = fmt.Errorf("%w (possibly OOM-killed)", retErr)
 			}
-			err := ignoreTerminateErrors(p.terminate())
-			if err != nil {
-				logrus.WithError(err).Warn("unable to terminate setnsProcess")
-			}
 		}
 	}()
 
@@ -755,16 +751,6 @@ func (p *initProcess) start() (retErr error) {
 				} else {
 					retErr = errors.New(oomError)
 				}
-			}
-
-			// Terminate the process to ensure we can remove cgroups.
-			if err := ignoreTerminateErrors(p.terminate()); err != nil {
-				logrus.WithError(err).Warn("unable to terminate initProcess")
-			}
-
-			_ = p.manager.Destroy()
-			if p.intelRdtManager != nil {
-				_ = p.intelRdtManager.Destroy()
 			}
 		}
 	}()
