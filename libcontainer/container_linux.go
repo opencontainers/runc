@@ -946,13 +946,15 @@ func (c *Container) currentState() *State {
 			state.NamespacePaths[ns.Type] = ns.GetPath(pid)
 		}
 		for _, nsType := range configs.NamespaceTypes() {
+			if _, ok := state.NamespacePaths[nsType]; ok {
+				continue
+			}
 			if !configs.IsNamespaceSupported(nsType) {
 				continue
 			}
-			if _, ok := state.NamespacePaths[nsType]; !ok {
-				ns := configs.Namespace{Type: nsType}
-				state.NamespacePaths[ns.Type] = ns.GetPath(pid)
-			}
+			ns := configs.Namespace{Type: nsType}
+			state.NamespacePaths[ns.Type] = ns.GetPath(pid)
+
 		}
 	}
 	return state
