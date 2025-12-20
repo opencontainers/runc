@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 
 	"github.com/opencontainers/cgroups"
-	"github.com/sirupsen/logrus"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
