@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/opencontainers/cgroups"
+	"github.com/sirupsen/logrus"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
@@ -61,9 +62,34 @@ func destroy(c *Container) error {
 		return fmt.Errorf("unable to remove container state dir: %w", err)
 	}
 	c.initProcess = nil
+
+	if !c.config.Namespaces.IsPrivate(configs.NEWNS) {
+		unmountMounts(c)
+	}
+
 	err := runPoststopHooks(c)
 	c.state = &stoppedState{c: c}
 	return err
+}
+
+func unmountMounts(c *Container) {
+	// Unmount recursive
+	if err := unix.Unmount(c.config.Rootfs, unix.MNT_DETACH); err == nil {
+		return
+	}
+
+	// If recursive unmount fails, try best-effort unmount
+	// We iterate in reverse to unmount children before parents
+	for i := len(c.config.Mounts) - 1; i >= 0; i-- {
+		m := c.config.Mounts[i]
+		mountpoint := filepath.Join(c.config.Rootfs, m.Destination)
+		if err := unmount(mountpoint, unix.MNT_DETACH); err != nil {
+			logrus.Warn(err)
+		}
+	}
+	if err := unmount(c.config.Rootfs, unix.MNT_DETACH); err != nil {
+		logrus.Warn(err)
+	}
 }
 
 func runPoststopHooks(c *Container) error {
