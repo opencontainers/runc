@@ -49,7 +49,7 @@ github.com/cyphar/filepath-securejoin/pathrs-lite/procfs
 # github.com/docker/go-units v0.5.0
 ## explicit
 github.com/docker/go-units
-# github.com/godbus/dbus/v5 v5.2.0
+# github.com/godbus/dbus/v5 v5.2.1
 ## explicit; go 1.20
 github.com/godbus/dbus/v5
 # github.com/moby/sys/capability v0.4.0
