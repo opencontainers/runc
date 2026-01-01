@@ -15,7 +15,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -357,12 +356,6 @@ func (p *setnsProcess) prepareCgroupFD() (*os.File, error) {
 	}
 
 	logrus.Debugf("using CLONE_INTO_CGROUP %q", cgroup)
-	if p.cmd.SysProcAttr == nil {
-		p.cmd.SysProcAttr = &syscall.SysProcAttr{}
-	}
-	p.cmd.SysProcAttr.UseCgroupFD = true
-	p.cmd.SysProcAttr.CgroupFD = int(fd.Fd())
-
 	return fd, nil
 }
 
@@ -380,11 +373,12 @@ func (p *setnsProcess) startWithCgroupFD() error {
 		defer fd.Close()
 	}
 
+	p.cmd = p.containerProcess.container.createCmdObject(p.process, p.comm, fd)
 	err = p.startWithCPUAffinity()
 	if err != nil && p.cmd.SysProcAttr.UseCgroupFD {
+		// We need to recreate the exec.Cmd object
 		logrus.Debugf("exec with CLONE_INTO_CGROUP failed: %v; retrying without", err)
-		// SysProcAttr.CgroupFD is never used when UseCgroupFD is unset.
-		p.cmd.SysProcAttr.UseCgroupFD = false
+		p.cmd = p.containerProcess.container.createCmdObject(p.process, p.comm, nil)
 		err = p.startWithCPUAffinity()
 	}
 
