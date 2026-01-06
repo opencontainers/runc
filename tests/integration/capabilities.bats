@@ -31,6 +31,9 @@ function teardown() {
 }
 
 @test "runc run with new privileges" {
+	if [ $(awk '$1 == "NoNewPrivs:" { print $2; exit }' /proc/self/status) -ne 0 ]; then
+		skip "requires unset NoNewPrivs"
+	fi
 	update_config '.process.noNewPrivileges = false'
 	runc run test_new_privileges
 	[ "$status" -eq 0 ]
