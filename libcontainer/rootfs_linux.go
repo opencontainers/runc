@@ -1080,7 +1080,18 @@ func prepareRoot(config *configs.Config) error {
 	flag := unix.MS_SLAVE | unix.MS_REC
 	if config.RootPropagation != 0 {
 		flag = config.RootPropagation
+	} else {
+		for _, m := range config.Mounts {
+			if m.Flags&unix.MS_SHARED != 0 {
+				// if a mount is using shared, then we don't lock down access with
+				// slave, instead we just use private so that the submounts can be
+				// configured shared correctly.
+				flag = unix.MS_PRIVATE
+				break
+			}
+		}
 	}
+
 	if err := mount("", "/", "", uintptr(flag), ""); err != nil {
 		return err
 	}
