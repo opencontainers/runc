@@ -199,32 +199,15 @@ func TestGetContainerState(t *testing.T) {
 		if path == "" {
 			t.Fatalf("expected non nil namespace path for %s", ns.Type)
 		}
+
+		var expected string
 		if ns.Type == configs.NEWNET {
-			if path != expectedNetworkPath {
-				t.Fatalf("expected path %q but received %q", expectedNetworkPath, path)
-			}
+			expected = expectedNetworkPath
 		} else {
-			file := ""
-			switch ns.Type {
-			case configs.NEWNET:
-				file = "net"
-			case configs.NEWNS:
-				file = "mnt"
-			case configs.NEWPID:
-				file = "pid"
-			case configs.NEWIPC:
-				file = "ipc"
-			case configs.NEWUSER:
-				file = "user"
-			case configs.NEWUTS:
-				file = "uts"
-			case configs.NEWCGROUP:
-				file = "cgroup"
-			}
-			expected := fmt.Sprintf("/proc/%d/ns/%s", pid, file)
-			if expected != path {
-				t.Fatalf("expected path %q but received %q", expected, path)
-			}
+			expected = ns.GetPath(pid)
+		}
+		if expected != path {
+			t.Fatalf("expected path %q but received %q", expected, path)
 		}
 	}
 }
