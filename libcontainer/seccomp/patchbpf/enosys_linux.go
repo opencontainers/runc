@@ -51,6 +51,11 @@ const uintptr_t C_FILTER_FLAG_SPEC_ALLOW = SECCOMP_FILTER_FLAG_SPEC_ALLOW;
 #endif
 const uintptr_t C_FILTER_FLAG_NEW_LISTENER = SECCOMP_FILTER_FLAG_NEW_LISTENER;
 
+#ifndef SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV
+#	define SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV (1UL << 5)
+#endif
+const uintptr_t C_FILTER_FLAG_WAIT_KILLABLE_RECV = SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV;
+
 #ifndef AUDIT_ARCH_RISCV64
 #ifndef EM_RISCV
 #define EM_RISCV		243
@@ -667,6 +672,11 @@ func filterFlags(config *configs.Seccomp, filter *libseccomp.ScmpFilter) (flags 
 			flags |= uint(C.C_FILTER_FLAG_SPEC_ALLOW)
 		}
 	}
+	// TODO: Check if the version is the right API level for SECCOMP_FILTER_FLAG_TSYNC
+	// Unfortunately, there is no way to check API levels above 7 in libseccomp-golang.
+	// if apiLevel >= 7 {
+	// }
+
 	// XXX: add newly supported filter flags above this line.
 
 	for _, call := range config.Syscalls {
