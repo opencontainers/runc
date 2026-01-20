@@ -26,7 +26,7 @@ type LinuxPersonality struct {
 
 // HostUID gets the translated uid for the process on host which could be
 // different when user namespaces are enabled.
-func (c Config) HostUID(containerID int) (int, error) {
+func (c *Config) HostUID(containerID int) (int, error) {
 	if c.Namespaces.Contains(NEWUSER) {
 		if len(c.UIDMappings) == 0 {
 			return -1, errNoUIDMap
@@ -50,13 +50,13 @@ func (c Config) HostUID(containerID int) (int, error) {
 
 // HostRootUID gets the root uid for the process on host which could be non-zero
 // when user namespaces are enabled.
-func (c Config) HostRootUID() (int, error) {
+func (c *Config) HostRootUID() (int, error) {
 	return c.HostUID(0)
 }
 
 // HostGID gets the translated gid for the process on host which could be
 // different when user namespaces are enabled.
-func (c Config) HostGID(containerID int) (int, error) {
+func (c *Config) HostGID(containerID int) (int, error) {
 	if c.Namespaces.Contains(NEWUSER) {
 		if len(c.GIDMappings) == 0 {
 			return -1, errNoGIDMap
@@ -80,13 +80,13 @@ func (c Config) HostGID(containerID int) (int, error) {
 
 // HostRootGID gets the root gid for the process on host which could be non-zero
 // when user namespaces are enabled.
-func (c Config) HostRootGID() (int, error) {
+func (c *Config) HostRootGID() (int, error) {
 	return c.HostGID(0)
 }
 
 // Utility function that gets a host ID for a container ID from user namespace map
 // if that ID is present in the map.
-func (c Config) hostIDFromMapping(containerID int64, uMap []IDMap) (int64, bool) {
+func (c *Config) hostIDFromMapping(containerID int64, uMap []IDMap) (int64, bool) {
 	for _, m := range uMap {
 		if (containerID >= m.ContainerID) && (containerID <= (m.ContainerID + m.Size - 1)) {
 			hostID := m.HostID + (containerID - m.ContainerID)
