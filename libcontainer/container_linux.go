@@ -479,7 +479,7 @@ func (c *Container) deleteExecFifo() {
 // container cannot access the statedir (and the FIFO itself remains
 // un-opened). It then adds the FifoFd to the given exec.Cmd as an inherited
 // fd, with _LIBCONTAINER_FIFOFD set to its fd number.
-func (c *Container) includeExecFifo(cmd *exec.Cmd) error {
+func (c *Container) includeExecFifo() error {
 	fifoName := filepath.Join(c.stateDir, execFifoFilename)
 	fifo, err := os.OpenFile(fifoName, unix.O_PATH|unix.O_CLOEXEC, 0)
 	if err != nil {
@@ -636,15 +636,15 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 		// for container rootfs escape (and not doing it in `runc exec` avoided
 		// that problem), but we no longer do that. However, there's no need to do
 		// this for `runc exec` so we just keep it this way to be safe.
-		if err := c.includeExecFifo(nil); err != nil {
+		if err := c.includeExecFifo(); err != nil {
 			return nil, fmt.Errorf("unable to setup exec fifo: %w", err)
 		}
-		return c.newInitProcess(p, nil, comm)
+		return c.newInitProcess(p, comm)
 	}
-	return c.newSetnsProcess(p, nil, comm)
+	return c.newSetnsProcess(p, comm)
 }
 
-func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, comm *processComm) (*initProcess, error) {
+func (c *Container) newInitProcess(p *Process, comm *processComm) (*initProcess, error) {
 	nsMaps := make(map[configs.NamespaceType]string)
 	for _, ns := range c.config.Namespaces {
 		if ns.Path != "" {
@@ -672,7 +672,7 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, comm *processComm)
 	return init, nil
 }
 
-func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, comm *processComm) (*setnsProcess, error) {
+func (c *Container) newSetnsProcess(p *Process, comm *processComm) (*setnsProcess, error) {
 	state := c.currentState()
 	// for setns process, we don't have to set cloneflags as the process namespaces
 	// will only be set via setns syscall
