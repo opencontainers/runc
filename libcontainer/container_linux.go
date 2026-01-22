@@ -487,44 +487,26 @@ func (c *Container) includeExecFifo(cmd *exec.Cmd) error {
 	}
 	c.fifo = fifo
 
-	cmd.ExtraFiles = append(cmd.ExtraFiles, fifo)
-	cmd.Env = append(cmd.Env,
-		"_LIBCONTAINER_FIFOFD="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1))
 	return nil
 }
 
-func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
-	comm, err := newProcessComm()
-	if err != nil {
-		return nil, err
-	}
-
-	// Make sure we use a new safe copy of /proc/self/exe binary each time, this
-	// is called to make sure that if a container manages to overwrite the file,
-	// it cannot affect other containers on the system. For runc, this code will
-	// only ever be called once, but libcontainer users might call this more than
-	// once.
-	p.closeClonedExes()
+// After https://go-review.googlesource.com/c/go/+/728642 is merged, we need to recreate
+// cmd Object to retry it.
+// This logic can be replaced if https://github.com/golang/go/issues/77075 will be solved.
+func (c *Container) createCmdObject(p *Process, comm *processComm, cgroupFD *os.File) *exec.Cmd {
 	var (
 		exePath string
 		safeExe *os.File
 	)
-	if exeseal.IsSelfExeCloned() {
-		// /proc/self/exe is already a cloned binary -- no need to do anything
-		logrus.Debug("skipping binary cloning -- /proc/self/exe is already cloned!")
+
+	if len(p.clonedExes) > 0 {
+		safeExe = p.clonedExes[0]
+		exePath = "/proc/self/fd/" + strconv.Itoa(int(safeExe.Fd()))
+	} else {
 		// We don't need to use /proc/thread-self here because the exe mm of a
 		// thread-group is guaranteed to be the same for all threads by
 		// definition. This lets us avoid having to do runtime.LockOSThread.
 		exePath = "/proc/self/exe"
-	} else {
-		var err error
-		safeExe, err = exeseal.CloneSelfExe(c.stateDir)
-		if err != nil {
-			return nil, fmt.Errorf("unable to create safe /proc/self/exe clone for runc init: %w", err)
-		}
-		exePath = "/proc/self/fd/" + strconv.Itoa(int(safeExe.Fd()))
-		p.clonedExes = append(p.clonedExes, safeExe)
-		logrus.Debug("runc exeseal: using /proc/self/exe clone") // used for tests
 	}
 
 	cmd := exec.Command(exePath, "init")
@@ -602,22 +584,67 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 		cmd.SysProcAttr.Pdeathsig = unix.Signal(c.config.ParentDeathSignal)
 	}
 
+	if c.fifo != nil {
+		cmd.ExtraFiles = append(cmd.ExtraFiles, c.fifo)
+		cmd.Env = append(cmd.Env,
+				"_LIBCONTAINER_FIFOFD="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1))
+	}
+
+	if p.Init {
+		cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initStandard))
+	} else {
+		cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initSetns))
+	}
+
+	if cgroupFD != nil {
+		cmd.SysProcAttr.UseCgroupFD = true
+		cmd.SysProcAttr.CgroupFD = int(cgroupFD.Fd())
+	}
+
+	return cmd
+}
+
+func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
+	comm, err := newProcessComm()
+	if err != nil {
+		return nil, err
+	}
+
+	// Make sure we use a new safe copy of /proc/self/exe binary each time, this
+	// is called to make sure that if a container manages to overwrite the file,
+	// it cannot affect other containers on the system. For runc, this code will
+	// only ever be called once, but libcontainer users might call this more than
+	// once.
+	p.closeClonedExes()
+	var safeExe *os.File
+	if exeseal.IsSelfExeCloned() {
+		// /proc/self/exe is already a cloned binary -- no need to do anything
+		logrus.Debug("skipping binary cloning -- /proc/self/exe is already cloned!")
+	} else {
+		var err error
+		safeExe, err = exeseal.CloneSelfExe(c.stateDir)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create safe /proc/self/exe clone for runc init: %w", err)
+		}
+		p.clonedExes = append(p.clonedExes, safeExe)
+		logrus.Debug("runc exeseal: using /proc/self/exe clone") // used for tests
+	}
+
 	if p.Init {
 		// We only set up fifoFd if we're not doing a `runc exec`. The historic
 		// reason for this is that previously we would pass a dirfd that allowed
 		// for container rootfs escape (and not doing it in `runc exec` avoided
 		// that problem), but we no longer do that. However, there's no need to do
 		// this for `runc exec` so we just keep it this way to be safe.
-		if err := c.includeExecFifo(cmd); err != nil {
+		if err := c.includeExecFifo(nil); err != nil {
 			return nil, fmt.Errorf("unable to setup exec fifo: %w", err)
 		}
-		return c.newInitProcess(p, cmd, comm)
+		return c.newInitProcess(p, nil, comm)
 	}
-	return c.newSetnsProcess(p, cmd, comm)
+	return c.newSetnsProcess(p, nil, comm)
 }
 
 func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, comm *processComm) (*initProcess, error) {
-	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initStandard))
 	nsMaps := make(map[configs.NamespaceType]string)
 	for _, ns := range c.config.Namespaces {
 		if ns.Path != "" {
@@ -631,7 +658,7 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, comm *processComm)
 
 	init := &initProcess{
 		containerProcess: containerProcess{
-			cmd:           cmd,
+			cmd:           c.createCmdObject(p, comm, nil),
 			comm:          comm,
 			manager:       c.cgroupManager,
 			config:        c.newInitConfig(p),
@@ -646,7 +673,6 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, comm *processComm)
 }
 
 func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, comm *processComm) (*setnsProcess, error) {
-	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initSetns))
 	state := c.currentState()
 	// for setns process, we don't have to set cloneflags as the process namespaces
 	// will only be set via setns syscall
@@ -656,7 +682,6 @@ func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, comm *processComm
 	}
 	proc := &setnsProcess{
 		containerProcess: containerProcess{
-			cmd:           cmd,
 			comm:          comm,
 			manager:       c.cgroupManager,
 			config:        c.newInitConfig(p),
