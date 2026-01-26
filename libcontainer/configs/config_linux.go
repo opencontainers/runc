@@ -26,26 +26,26 @@ type LinuxPersonality struct {
 
 // HostUID gets the translated uid for the process on host which could be
 // different when user namespaces are enabled.
-func (c Config) HostUID(containerId int) (int, error) {
+func (c Config) HostUID(containerID int) (int, error) {
 	if c.Namespaces.Contains(NEWUSER) {
 		if len(c.UIDMappings) == 0 {
 			return -1, errNoUIDMap
 		}
-		id, found := c.hostIDFromMapping(int64(containerId), c.UIDMappings)
+		id, found := c.hostIDFromMapping(int64(containerID), c.UIDMappings)
 		if !found {
-			return -1, fmt.Errorf("user namespaces enabled, but no mapping found for uid %d", containerId)
+			return -1, fmt.Errorf("user namespaces enabled, but no mapping found for uid %d", containerID)
 		}
 		// If we are a 32-bit binary running on a 64-bit system, it's possible
 		// the mapped user is too large to store in an int, which means we
 		// cannot do the mapping. We can't just return an int64, because
 		// os.Setuid() takes an int.
 		if id > math.MaxInt {
-			return -1, fmt.Errorf("mapping for uid %d (host id %d) is larger than native integer size (%d)", containerId, id, math.MaxInt)
+			return -1, fmt.Errorf("mapping for uid %d (host id %d) is larger than native integer size (%d)", containerID, id, math.MaxInt)
 		}
 		return int(id), nil
 	}
 	// Return unchanged id.
-	return containerId, nil
+	return containerID, nil
 }
 
 // HostRootUID gets the root uid for the process on host which could be non-zero
@@ -56,26 +56,26 @@ func (c Config) HostRootUID() (int, error) {
 
 // HostGID gets the translated gid for the process on host which could be
 // different when user namespaces are enabled.
-func (c Config) HostGID(containerId int) (int, error) {
+func (c Config) HostGID(containerID int) (int, error) {
 	if c.Namespaces.Contains(NEWUSER) {
 		if len(c.GIDMappings) == 0 {
 			return -1, errNoGIDMap
 		}
-		id, found := c.hostIDFromMapping(int64(containerId), c.GIDMappings)
+		id, found := c.hostIDFromMapping(int64(containerID), c.GIDMappings)
 		if !found {
-			return -1, fmt.Errorf("user namespaces enabled, but no mapping found for gid %d", containerId)
+			return -1, fmt.Errorf("user namespaces enabled, but no mapping found for gid %d", containerID)
 		}
 		// If we are a 32-bit binary running on a 64-bit system, it's possible
 		// the mapped user is too large to store in an int, which means we
 		// cannot do the mapping. We can't just return an int64, because
 		// os.Setgid() takes an int.
 		if id > math.MaxInt {
-			return -1, fmt.Errorf("mapping for gid %d (host id %d) is larger than native integer size (%d)", containerId, id, math.MaxInt)
+			return -1, fmt.Errorf("mapping for gid %d (host id %d) is larger than native integer size (%d)", containerID, id, math.MaxInt)
 		}
 		return int(id), nil
 	}
 	// Return unchanged id.
-	return containerId, nil
+	return containerID, nil
 }
 
 // HostRootGID gets the root gid for the process on host which could be non-zero
