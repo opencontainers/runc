@@ -25,7 +25,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, ubuntu-24.04-arm]
-        go-version: [1.24.x, 1.25.x]
+        go-version: [1.24.x, 1.25.x, 1.26.x]
         rootless: ["rootless", ""]
         race: ["-race", ""]
         criu: ["", "criu-dev"]
@@ -35,10 +35,14 @@ jobs:
           - criu: criu-dev
             go-version: 1.24.x
           - criu: criu-dev
+            go-version: 1.25.x
+          - criu: criu-dev
             rootless: rootless
-          # Do race detection only on latest Go.
+          # Do race detection only with latest stable Go version.
           - race: -race
             go-version: 1.24.x
+          - race: -race
+            go-version: 1.25.x
 
     runs-on: ${{ matrix.os }}
 
