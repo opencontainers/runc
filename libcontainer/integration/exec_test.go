@@ -14,7 +14,9 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/cgroups/systemd"
 	"github.com/opencontainers/runc/internal/linux"
@@ -22,6 +24,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
+	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"golang.org/x/sys/unix"
@@ -229,6 +232,124 @@ func TestEnter(t *testing.T) {
 	if pidns != pidns2 {
 		t.Fatal("The second process isn't in the required pid namespace", pidns, pidns2)
 	}
+}
+
+const stateFilename = "state.json"
+
+// We need to dump changed state into state file.
+func saveState(stateDir string, s *libcontainer.State) (retErr error) {
+	tmpFile, err := os.CreateTemp(stateDir, "state-")
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if retErr != nil {
+			tmpFile.Close()
+			os.Remove(tmpFile.Name())
+		}
+	}()
+
+	err = utils.WriteJSON(tmpFile, s)
+	if err != nil {
+		return err
+	}
+	err = tmpFile.Close()
+	if err != nil {
+		return err
+	}
+
+	stateFilePath := filepath.Join(stateDir, stateFilename)
+	return os.Rename(tmpFile.Name(), stateFilePath)
+}
+
+func TestCmdRetry(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	if !cgroups.IsCgroup2UnifiedMode() {
+		t.Skip("CLONE_INTO_CGROUP works only with cgroup v2")
+	}
+
+	// Create dir to "pseudo" cgroup path
+	pseudoPath := t.TempDir()
+
+	config := newTemplateConfig(t, nil)
+
+	name := strings.ReplaceAll(t.Name(), "/", "_") + strconv.FormatInt(-int64(time.Now().Nanosecond()), 35)
+	root := t.TempDir()
+
+	// Container State Dir
+	stateDir, err := securejoin.SecureJoin(root, name)
+	ok(t, err)
+
+	// Create Container
+	container, err := libcontainer.Create(root, name, config)
+
+	ok(t, err)
+	defer destroyContainer(container)
+
+	// Execute a first process in the container
+	stdinR, stdinW, err := os.Pipe()
+	ok(t, err)
+
+	var stdout, stdout2 bytes.Buffer
+
+	pconfig := libcontainer.Process{
+		Cwd:    "/",
+		Args:   []string{"sh", "-c", "cat"},
+		Env:    standardEnvironment,
+		Stdin:  stdinR,
+		Stdout: &stdout,
+		Init:   true,
+	}
+
+	err = container.Run(&pconfig)
+	_ = stdinR.Close()
+	defer stdinW.Close()
+	ok(t, err)
+
+	state, err := container.State()
+	ok(t, err)
+
+	// Dump our "pseudo" cgroup path as dirPath
+	state.CgroupPaths[""] = pseudoPath
+	err = saveState(stateDir, state)
+	ok(t, err)
+
+	// Load container from dumped state
+	container2, err := libcontainer.Load(root, name)
+	ok(t, err)
+
+	// Execute another process in the container
+	stdinR2, stdinW2, err := os.Pipe()
+	ok(t, err)
+	pconfig2 := libcontainer.Process{
+		Cwd: "/",
+		Env: standardEnvironment,
+	}
+	pconfig2.Args = []string{"sh", "-c", "cat"}
+	pconfig2.Stdin = stdinR2
+	pconfig2.Stdout = &stdout2
+
+	// Turn on TestMode in cgroups library to not check path mode and create all necessary files.
+	cgroups.TestMode = true
+	defer func() {
+		cgroups.TestMode = false
+	}()
+
+	err = container2.Run(&pconfig2)
+	_ = stdinR2.Close()
+	defer stdinW2.Close()
+	ok(t, err)
+
+	// Wait processes
+	_ = stdinW2.Close()
+	waitProcess(&pconfig2, t)
+
+	_ = stdinW.Close()
+	waitProcess(&pconfig, t)
 }
 
 func TestProcessEnv(t *testing.T) {
