@@ -528,6 +528,12 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 	}
 
 	cmd := exec.Command(exePath, "init")
+	// Theoretically, exec.Command can set cmd.Err. Practically, this
+	// should never happen (Linux, Go <= 1.26, exePath is absolute),
+	// but in the unlikely case it just did, let's fail early.
+	if cmd.Err != nil {
+		return nil, fmt.Errorf("exec.Command: %w", cmd.Err)
+	}
 	cmd.Args[0] = os.Args[0]
 	cmd.Stdin = p.Stdin
 	cmd.Stdout = p.Stdout
