@@ -2,9 +2,9 @@ ARG GO_VERSION=1.25
 ARG BATS_VERSION=v1.12.0
 ARG LIBSECCOMP_VERSION=2.6.0
 
-FROM golang:${GO_VERSION}-bookworm
+FROM golang:${GO_VERSION}-trixie
 ARG DEBIAN_FRONTEND=noninteractive
-ARG CRIU_REPO=https://download.opensuse.org/repositories/devel:/tools:/criu/Debian_12
+ARG CRIU_REPO=https://download.opensuse.org/repositories/devel:/tools:/criu/Debian_13
 
 RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
     wget -nv $CRIU_REPO/Release.key -O- | gpg --dearmor > "$KEYFILE" \
