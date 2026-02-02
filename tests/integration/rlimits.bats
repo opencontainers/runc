@@ -86,3 +86,16 @@ function exec_check_nofile() {
 	hard=$soft
 	exec_check_nofile "$soft" "$hard"
 }
+
+@test "runc run with low RLIMIT_NOFILE should error (gh-5082)" {
+	# Set a very low limit (10) which triggers the crash in the issue.
+	# We assert it fails with our nice error message.
+	update_config '.process.rlimits = [{"type": "RLIMIT_NOFILE", "soft": 10, "hard": 10}]'
+	
+	runc run test_rlimit
+	
+	# Expect failure
+	[ "$status" -ne 0 ]
+	# Expect our error message
+	[[ "$output" == *"RLIMIT_NOFILE soft limit 10 is too low"* ]]
+}
