@@ -40,14 +40,14 @@ function build_project() {
 	shift
 	local arches=("$@")
 
-	# Assume that if /opt/libseccomp exists, then we are run
-	# via Dockerfile, and seccomp is already built.
-	local seccompdir=/opt/libseccomp temp_dir
-	if [ ! -d "$seccompdir" ]; then
-		temp_dir="$(mktemp -d)"
-		seccompdir="$temp_dir"
+	# Assume that if /opt/runc-dylibs exists, then we are running via
+	# Dockerfile, and thus seccomp is already built. Otherwise, build it now.
+	local dylibdir=/opt/runc-dylibs
+	if ! [ -d "$dylibdir" ]; then
+		trap 'rm -rf "$dylibdir"' EXIT
+		dylibdir="$(mktemp -d)"
 		# Download and build libseccomp.
-		"$root/script/seccomp.sh" "$LIBSECCOMP_VERSION" "$seccompdir" "${arches[@]}"
+		"$root/script/seccomp.sh" "$LIBSECCOMP_VERSION" "$dylibdir" "${arches[@]}"
 	fi
 
 	# For reproducible builds, add these to EXTRA_LDFLAGS:
@@ -70,7 +70,7 @@ function build_project() {
 		CFLAGS="$original_cflags"
 		set_cross_vars "$arch"
 		make -C "$root" \
-			PKG_CONFIG_PATH="$seccompdir/$arch/lib/pkgconfig" \
+			PKG_CONFIG_PATH="$dylibdir/$arch/lib/pkgconfig" \
 			"${make_args[@]}"
 		"$STRIP" "$root/$project"
 		mv "$root/$project" "$builddir/$project.$arch"
@@ -85,12 +85,7 @@ function build_project() {
 	fi
 
 	# Copy libseccomp source tarball.
-	cp "$seccompdir"/src/* "$builddir"
-
-	# Clean up.
-	if [ -n "$tempdir" ]; then
-		rm -rf "$tempdir"
-	fi
+	cp "$dylibdir"/src/* "$builddir"
 }
 
 # End of the easy-to-configure portion.

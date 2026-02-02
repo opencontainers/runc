@@ -54,14 +54,16 @@ RUN cd /tmp \
     && ./install.sh /usr/local \
     && rm -rf /tmp/bats-core
 
+ENV DYLIB_DIR=/opt/runc-dylibs
+
 # install libseccomp
 ARG LIBSECCOMP_VERSION
 COPY script/seccomp.sh script/lib.sh /tmp/script/
-RUN mkdir -p /opt/libseccomp \
-    && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" /opt/libseccomp 386 amd64 arm64 armel armhf ppc64le riscv64 s390x
+RUN mkdir -p $DYLIB_DIR \
+    && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" $DYLIB_DIR 386 amd64 arm64 armel armhf ppc64le riscv64 s390x
 ENV LIBSECCOMP_VERSION=$LIBSECCOMP_VERSION
-ENV LD_LIBRARY_PATH=/opt/libseccomp/lib
-ENV PKG_CONFIG_PATH=/opt/libseccomp/lib/pkgconfig
+ENV LD_LIBRARY_PATH=$DYLIB_DIR/lib
+ENV PKG_CONFIG_PATH=$DYLIB_DIR/lib/pkgconfig
 
 # Prevent the "fatal: detected dubious ownership in repository" git complain during build.
 RUN git config --global --add safe.directory /go/src/github.com/opencontainers/runc
