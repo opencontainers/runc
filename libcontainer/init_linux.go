@@ -613,6 +613,16 @@ func maybeClearRlimitNofileCache(limits []configs.Rlimit) {
 
 func setupRlimits(limits []configs.Rlimit, pid int) error {
 	for _, rlimit := range limits {
+		// Enforce a minimum RLIMIT_NOFILE to prevent the Go runtime from crashing
+		// due to lack of file descriptors (e.g. for the network poller).
+		// See https://github.com/opencontainers/runc/issues/5082.
+		if rlimit.Type == unix.RLIMIT_NOFILE {
+			// 32 is a safe "minimum" (Go runtime + runc standard FDs).
+			// The issue report indicates <14 crashes.
+			if rlimit.Soft < 32 {
+				return fmt.Errorf("RLIMIT_NOFILE soft limit %d is too low, must be at least 32", rlimit.Soft)
+			}
+		}
 		if err := unix.Prlimit(pid, rlimit.Type, &unix.Rlimit{Max: rlimit.Hard, Cur: rlimit.Soft}, nil); err != nil {
 			return fmt.Errorf("error setting rlimit type %v: %w", rlimit.Type, err)
 		}
