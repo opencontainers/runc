@@ -79,8 +79,8 @@ arm64)
 
 ppc64le)
 	# https://github.com/docker-library/busybox/tree/dist-ppc64le
-	# https://github.com/docker-library/busybox/tree/ddb1ced9350261eb7aa6d117052d04a5ad8dd1b7/latest/glibc/ppc64le
-	url="https://github.com/docker-library/busybox/raw/ddb1ced9350261eb7aa6d117052d04a5ad8dd1b7/latest/glibc/ppc64le/rootfs.tar.gz"
+	# https://github.com/docker-library/busybox/raw/403811e3da78b5ad4d8356f99d78e9b4e1997a60/latest/glibc/ppc64le/
+	url="https://github.com/docker-library/busybox/raw/403811e3da78b5ad4d8356f99d78e9b4e1997a60/latest/glibc/ppc64le/rootfs.tar.gz"
 	;;
 
 riscv64)
