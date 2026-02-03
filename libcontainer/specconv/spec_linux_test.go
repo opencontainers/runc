@@ -1017,3 +1017,37 @@ func TestCreateNetDevices(t *testing.T) {
 		})
 	}
 }
+
+func TestParseMountOptionsRecursiveAtime(t *testing.T) {
+	// These options correspond to clears in recAttrFlags, triggering the 'clear' path.
+	// We expect recAttrClr to contain the full MOUNT_ATTR__ATIME mask.
+	const mountAttrAtime = unix.MOUNT_ATTR__ATIME
+
+	testCases := []struct {
+		opt  string
+		mask uint64
+	}{
+		{"ratime", mountAttrAtime},
+		{"rnostrictatime", mountAttrAtime},
+		{"rnorelatime", mountAttrAtime},
+	}
+
+	for _, tc := range testCases {
+		m := parseMountOptions([]string{tc.opt})
+		if m.RecAttr == nil {
+			t.Errorf("option %s: expected RecAttr to be set", tc.opt)
+			continue
+		}
+
+		// Check if the attr_clr has the full mask set
+		if m.RecAttr.Attr_clr&tc.mask != tc.mask {
+			t.Errorf("option %s: expected attr_clr (0x%x) to contain full ATIME mask (0x%x)",
+				tc.opt, m.RecAttr.Attr_clr, tc.mask)
+		}
+
+		// Sanity check: Attr_set should be 0 for these clear-only options
+		if m.RecAttr.Attr_set != 0 {
+			t.Errorf("option %s: expected attr_set to be 0, got 0x%x", tc.opt, m.RecAttr.Attr_set)
+		}
+	}
+}
