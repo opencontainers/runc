@@ -47,7 +47,7 @@ function build_project() {
 		trap 'rm -rf "$dylibdir"' EXIT
 		dylibdir="$(mktemp -d)"
 		# Download and build libseccomp.
-		"$root/script/seccomp.sh" "$LIBSECCOMP_VERSION" "$dylibdir" "${arches[@]}"
+		"$root/script/build-seccomp.sh" "$LIBSECCOMP_VERSION" "$dylibdir" "${arches[@]}"
 	fi
 
 	# For reproducible builds, add these to EXTRA_LDFLAGS:
