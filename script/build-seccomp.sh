@@ -60,7 +60,7 @@ function build_libseccomp() {
 
 	# Place the source tarball to $dest/src.
 	popd || return
-	mkdir "$dest"/src
+	mkdir -p "$dest"/src
 	mv "$tar"{,.asc} "$dest"/src
 }
 
