@@ -1,41 +1,53 @@
 #!/bin/bash
 
+# get_platform computes the platform section of target triples on this OS.
+function get_platform() {
+	# Fedora doesn't have ID_LIKE and only has ID=fedora, so we need to
+	# construct a fake ID_LIKE to treat AlmaLinux and Fedora the same way.
+	local ID_LIKE
+	# shellcheck source=/etc/os-release
+	ID_LIKE="$(source /etc/os-release; echo "${ID:-} ${ID_LIKE:-}")"
+
+	local PLATFORM
+	case "$ID_LIKE" in
+		*suse*)
+			PLATFORM=suse-linux
+			;;
+		*rhel*|*fedora*|*centos*)
+			PLATFORM=redhat-linux
+			;;
+		*)
+			PLATFORM=linux-gnu
+			;;
+	esac
+	echo "$PLATFORM"
+}
+
 # set_cross_vars sets a few environment variables used for cross-compiling,
 # based on the architecture specified in $1.
 function set_cross_vars() {
 	GOARCH="$1" # default, may be overridden below
 	unset GOARM
 
-	PLATFORM=linux-gnu
-	# openSUSE has a custom PLATFORM
-	if grep -iq "ID_LIKE=.*suse" /etc/os-release; then
-		PLATFORM=suse-linux
-		is_suse=1
-	fi
+	PLATFORM="$(get_platform)"
+	[[ "$PLATFORM" == *suse* ]] && is_suse=1
 
-	case $1 in
+	case "$1" in
 	386)
 		# Always use the 64-bit compiler to build the 386 binary, which works
 		# for the more common cross-build method for x86 (namely, the
 		# equivalent of dpkg --add-architecture).
 		local cpu_type
 		if [ -v is_suse ]; then
-			# There is no x86_64-suse-linux-gcc, so use the native one.
-			HOST=
 			cpu_type=i586
 		else
-			HOST=x86_64-${PLATFORM}
 			cpu_type=i686
 		fi
+		HOST=x86_64-${PLATFORM}
 		CFLAGS="-m32 -march=$cpu_type ${CFLAGS[*]}"
 		;;
 	amd64)
-		if [ -n "${is_suse:-}" ]; then
-			# There is no x86_64-suse-linux-gcc, so use the native one.
-			HOST=
-		else
-			HOST=x86_64-${PLATFORM}
-		fi
+		HOST=x86_64-${PLATFORM}
 		;;
 	arm64)
 		HOST=aarch64-${PLATFORM}

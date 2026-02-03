@@ -20,6 +20,7 @@ set -e
 # Project-specific options and functions. In *theory* you shouldn't need to
 # touch anything else in this script in order to use this elsewhere.
 : "${LIBSECCOMP_VERSION:=2.6.0}"
+: "${LIBPATHRS_VERSION:=0.2.3}"
 project="runc"
 root="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
 
@@ -48,6 +49,8 @@ function build_project() {
 		dylibdir="$(mktemp -d)"
 		# Download and build libseccomp.
 		"$root/script/build-seccomp.sh" "$LIBSECCOMP_VERSION" "$dylibdir" "${arches[@]}"
+		# Download and build libpathrs.
+		"$root/script/build-libpathrs.sh" "$LIBPATHRS_VERSION" "$dylibdir" "${arches[@]}"
 	fi
 
 	# For reproducible builds, add these to EXTRA_LDFLAGS:
