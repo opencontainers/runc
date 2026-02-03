@@ -1161,6 +1161,16 @@ func parseMountOptions(options []string) *configs.Mount {
 			if f.clear {
 				recAttrClr |= f.flag
 				recAttrSet &= ^f.flag
+				// The kernel's mount_setattr(2) requires that if any bit of the
+				// MOUNT_ATTR__ATIME mask is changed, the full mask must be present in
+				// attr_clr. Partial masks result in EINVAL.
+				//
+				// We intentionally use unix.MOUNT_ATTR__ATIME (which should be 0x70)
+				// instead of constructing it from flags, because strict adherence
+				// to the kernel's definition of the mask is required.
+				if f.flag&unix.MOUNT_ATTR__ATIME == f.flag {
+					recAttrClr |= unix.MOUNT_ATTR__ATIME
+				}
 			} else {
 				recAttrSet |= f.flag
 				recAttrClr &= ^f.flag
