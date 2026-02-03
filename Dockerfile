@@ -54,14 +54,16 @@ RUN cd /tmp \
     && ./install.sh /usr/local \
     && rm -rf /tmp/bats-core
 
+ARG RELEASE_ARCHES="386 amd64 arm64 armel armhf ppc64le riscv64 s390x"
 ENV DYLIB_DIR=/opt/runc-dylibs
 
 # install libseccomp
 ARG LIBSECCOMP_VERSION
-COPY script/seccomp.sh script/lib.sh /tmp/script/
+COPY script/build-seccomp.sh script/lib.sh /tmp/script/
 RUN mkdir -p $DYLIB_DIR \
-    && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" $DYLIB_DIR 386 amd64 arm64 armel armhf ppc64le riscv64 s390x
+    && /tmp/script/build-seccomp.sh "$LIBSECCOMP_VERSION" $DYLIB_DIR $RELEASE_ARCHES
 ENV LIBSECCOMP_VERSION=$LIBSECCOMP_VERSION
+
 ENV LD_LIBRARY_PATH=$DYLIB_DIR/lib
 ENV PKG_CONFIG_PATH=$DYLIB_DIR/lib/pkgconfig
 
