@@ -112,7 +112,7 @@ make EXTRA_BUILDTAGS="runc_nocriu"
 | Build Tag     | Feature                               | Enabled by Default | Dependencies        |
 |---------------|---------------------------------------|--------------------|---------------------|
 | `seccomp`     | Syscall filtering using `libseccomp`. | yes                | `libseccomp`        |
-| `libpathrs`   | Use [`libpathrs`][] for path safety.  | no                 | [`libpathrs`][]     |
+| `libpathrs`   | Use [`libpathrs`][] for path safety.  | yes                | [`libpathrs`][]     |
 | `runc_nocriu` | **Disables** runc checkpoint/restore. | no                 | `criu`              |
 
 The following build tags were used earlier, but are now obsoleted:
