@@ -12,7 +12,7 @@ GIT_BRANCH_CLEAN := $(shell echo $(GIT_BRANCH) | sed -e "s/[^[:alnum:]]/-/g")
 RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
 PROJECT := github.com/opencontainers/runc
 EXTRA_BUILDTAGS :=
-BUILDTAGS := seccomp urfave_cli_no_docs
+BUILDTAGS := seccomp urfave_cli_no_docs libpathrs
 BUILDTAGS += $(EXTRA_BUILDTAGS)
 
 COMMIT := $(shell git describe --dirty --long --always)
