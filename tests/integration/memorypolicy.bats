@@ -17,8 +17,7 @@ function teardown() {
 		"mode": "MPOL_INTERLEAVE",
 		"nodes": "0"
 	}'
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "${lines[0]}" == "interleave:0" ]]
 }
 
@@ -30,8 +29,7 @@ function teardown() {
 		"nodes": "0",
 		"flags": ["MPOL_F_STATIC_NODES"]
 	}'
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "${lines[0]}" == "bind"*"static"*"0" ]]
 }
 
@@ -42,11 +40,9 @@ function teardown() {
 		"nodes": "0",
 		"flags": ["MPOL_F_RELATIVE_NODES"]
 	}'
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
-	runc exec test_busybox /bin/sh -c "head -n 1 /proc/self/numa_maps | cut -d \" \" -f 2"
-	[ "$status" -eq 0 ]
+	runc -0 exec test_busybox /bin/sh -c "head -n 1 /proc/self/numa_maps | cut -d \" \" -f 2"
 	[[ "${lines[0]}" == "prefer"*"relative"*"0" ]]
 }
 
@@ -55,8 +51,7 @@ function teardown() {
 	.process.args = ["/bin/sh", "-c", "head -n 1 /proc/self/numa_maps | cut -d \" \" -f 2"]
 	| .linux.memoryPolicy = {
 	}'
-	runc run test_busybox
-	[ "$status" -eq 1 ]
+	runc -1 run test_busybox
 	[[ "${lines[0]}" == *"invalid memory policy"* ]]
 }
 
@@ -67,8 +62,7 @@ function teardown() {
 		"mode": "INTERLEAVE",
 		"nodes": "0"
 	}'
-	runc run test_busybox
-	[ "$status" -eq 1 ]
+	runc -1 run test_busybox
 	[[ "${lines[0]}" == *"invalid memory policy"* ]]
 }
 
@@ -80,8 +74,7 @@ function teardown() {
 		"nodes": "0",
 		"flags": ["MPOL_F_RELATIVE_NODES", "badflag"]
 	}'
-	runc run test_busybox
-	[ "$status" -eq 1 ]
+	runc -1 run test_busybox
 	[[ "${lines[0]}" == *"invalid memory policy flag"* ]]
 }
 
@@ -91,8 +84,7 @@ function teardown() {
 	| .linux.memoryPolicy = {
 		"mode": "MPOL_DEFAULT"
 	}'
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ "${lines[0]}" == *"default"* ]]
 }
 
@@ -102,8 +94,7 @@ function teardown() {
 	| .linux.memoryPolicy = {
 		"nodes": "0-7"
 	}'
-	runc run test_busybox
-	[ "$status" -eq 1 ]
+	runc -1 run test_busybox
 	[[ "${lines[0]}" == *"invalid memory policy mode"* ]]
 }
 
@@ -114,8 +105,7 @@ function teardown() {
 		"mode": "MPOL_DEFAULT",
 		"nodes": "0-7",
 	}'
-	runc run test_busybox
-	[ "$status" -eq 1 ]
+	runc -1 run test_busybox
 	[[ "${lines[*]}" == *"mode requires 0 nodes but got 8"* ]]
 }
 
@@ -127,7 +117,6 @@ function teardown() {
 		"nodes": "0-9876543210",
 		"flags": []
 	}'
-	runc run test_busybox
-	[ "$status" -eq 1 ]
+	runc -1 run test_busybox
 	[[ "${lines[0]}" == *"invalid memory policy node"* ]]
 }
