@@ -19,9 +19,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/cgroups/fs2"
@@ -274,24 +275,46 @@ func (p *setnsProcess) addIntoCgroupV1() error {
 	return nil
 }
 
+// initProcessCgroupPath returns container init's cgroup path,
+// as read from /proc/PID/cgroup. Only works for cgroup v2.
+// Returns empty string if the path can not be obtained.
+//
+// This is used by runc exec in these cases:
+//
+//  1. On cgroup v2 + nesting + domain controllers, adding to initial cgroup
+//     may fail with EBUSY (https://github.com/opencontainers/runc/issues/2356);
+//
+//  2. A container init process with no cgroupns and /sys/fs/cgroup rw access
+//     may move itself to any other cgroup, and the original cgroup will disappear.
+func (p *setnsProcess) initProcessCgroupPath() string {
+	if p.initProcessPid == 0 || !cgroups.IsCgroup2UnifiedMode() {
+		return ""
+	}
+
+	cg, err := cgroups.ParseCgroupFile("/proc/" + strconv.Itoa(p.initProcessPid) + "/cgroup")
+	if err != nil {
+		return ""
+	}
+	cgroup, ok := cg[""]
+	if !ok {
+		return ""
+	}
+
+	return fs2.UnifiedMountpoint + cgroup
+}
+
 func (p *setnsProcess) addIntoCgroupV2() error {
 	sub := p.process.SubCgroupPaths[""]
 	err := p.manager.AddPid(sub, p.pid())
 	if err != nil && !p.rootlessCgroups {
-		// On cgroup v2 + nesting + domain controllers, adding to initial cgroup may fail with EBUSY.
-		// https://github.com/opencontainers/runc/issues/2356#issuecomment-621277643
-		// Try to join the cgroup of InitProcessPid, unless sub-cgroup is explicitly set.
-		if p.initProcessPid != 0 && sub == "" {
-			initProcCgroupFile := fmt.Sprintf("/proc/%d/cgroup", p.initProcessPid)
-			initCg, initCgErr := cgroups.ParseCgroupFile(initProcCgroupFile)
-			if initCgErr == nil {
-				if initCgPath, ok := initCg[""]; ok {
-					initCgDirpath := filepath.Join(fs2.UnifiedMountpoint, initCgPath)
-					logrus.Debugf("adding pid %d to cgroup failed (%v), attempting to join %s",
-						p.pid(), err, initCgDirpath)
-					// NOTE: initCgDirPath is not guaranteed to exist because we didn't pause the container.
-					err = cgroups.WriteCgroupProc(initCgDirpath, p.pid())
-				}
+		// Failed to join the configured cgroup, fall back to container init's cgroup
+		// unless sub-cgroup is explicitly requested.
+		if sub == "" {
+			if path := p.initProcessCgroupPath(); path != "" {
+				logrus.Debugf("adding pid %d to configured cgroup failed (%v), will join container init cgroup %q",
+					p.pid(), err, path)
+				// NOTE: path is not guaranteed to exist because we didn't pause the container.
+				err = cgroups.WriteCgroupProc(path, p.pid())
 			}
 		}
 		if err != nil {
