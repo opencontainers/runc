@@ -354,6 +354,8 @@ func (p *setnsProcess) addIntoCgroup() error {
 // to join cgroup early, in p.cmd.Start. Returns an *os.File which
 // must be closed by the caller after p.Cmd.Start return.
 func (p *setnsProcess) prepareCgroupFD() (*os.File, error) {
+	const openFlags = unix.O_PATH | unix.O_DIRECTORY | unix.O_CLOEXEC
+
 	if !cgroups.IsCgroup2UnifiedMode() {
 		return nil, nil
 	}
@@ -371,12 +373,25 @@ func (p *setnsProcess) prepareCgroupFD() (*os.File, error) {
 		return nil, fmt.Errorf("bad sub cgroup path: %s", sub)
 	}
 
-	fd, err := cgroups.OpenFile(base, sub, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC)
+	fd, err := cgroups.OpenFile(base, sub, openFlags)
 	if err != nil {
 		if p.rootlessCgroups {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("can't open cgroup: %w", err)
+		// Failed to open the configured cgroup, fall back to container init's cgroup,
+		// unless sub-cgroup is explicitly requested.
+		if sub == "" {
+			if initCg := p.initProcessCgroupPath(); initCg != "" {
+				logrus.Debugf("failed to open configured cgroup %q: %v, try using container init's cgroup %q",
+					cgroup, err, initCg)
+				// We do not freeze the container so cgroup is not guaranteed to exist.
+				fd, err = cgroups.OpenFile(initCg, "", openFlags)
+				cgroup = initCg
+			}
+		}
+		if err != nil {
+			return nil, fmt.Errorf("can't open cgroup: %w", err)
+		}
 	}
 
 	logrus.Debugf("using CLONE_INTO_CGROUP %q", cgroup)
