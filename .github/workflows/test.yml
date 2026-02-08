@@ -15,6 +15,7 @@ permissions:
   contents: read
 
 env:
+  LIBPATHRS_VERSION: "0.2.4"
   # Don't ignore C warnings. Note that the output of "go env CGO_CFLAGS" by default is "-g -O2", so we keep them.
   CGO_CFLAGS: -g -O2 -Werror
 
@@ -75,7 +76,11 @@ jobs:
     - name: install deps
       run: |
         sudo apt update
-        sudo apt -y install libseccomp-dev sshfs uidmap
+        sudo apt -y install libseccomp-dev sshfs uidmap lld
+
+    - name: install libpathrs ${{ env.LIBPATHRS_VERSION }}
+      run: |
+        sudo -E PATH="$PATH" ./script/build-libpathrs.sh "$LIBPATHRS_VERSION" /usr
 
     - name: install CRIU
       if: ${{ matrix.criu == '' }}
@@ -170,7 +175,23 @@ jobs:
         sudo add-apt-repository -y ppa:criu/ppa || sudo add-apt-repository -y ppa:criu/ppa
         # apt-add-repository runs apt update so we don't have to.
 
-        sudo apt -qy install libseccomp-dev libseccomp-dev:i386 gcc-multilib libgcc-s1:i386 criu
+        GCC_VERSION="$(gcc -dumpversion)"
+        sudo apt -qy install \
+          lld criu \
+          libseccomp-dev libseccomp-dev:i386 \
+          libc-dev:i386 libgcc-s1:i386 libgcc-${GCC_VERSION}-dev:i386 gcc-i686-linux-gnu
+
+        # When cross-compiling, GCC 13 and earlier will look for a linker that
+        # is marked for cross-compilation, which the Ubuntu lld package doesn't
+        # provide. The solution is to create a symlink ourselves. GCC 14 fixed
+        # this, see <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=111605>.
+        ln -sv "$(which ld.lld)" /usr/local/bin/i686-linux-gnu-ld.lld
+    - run: rustup target add i686-unknown-linux-gnu
+
+    - name: install libpathrs ${{ env.LIBPATHRS_VERSION }}
+      run: |
+        sudo -E PATH="$PATH" ./script/build-libpathrs.sh "$LIBPATHRS_VERSION" /usr 386
+        sudo ldconfig /usr/386/lib
 
     - name: install go
       uses: actions/setup-go@v6
@@ -179,6 +200,9 @@ jobs:
         check-latest: true
 
     - name: unit test
+      env:
+        CC: i686-linux-gnu-gcc
+        PKG_CONFIG_PATH: /usr/386/lib/pkgconfig
       run: sudo -E PATH="$PATH" -- make GOARCH=386 localunittest
 
   fedora:
