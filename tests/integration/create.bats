@@ -69,6 +69,8 @@ is_allowed_fdtarget() {
 		if ! is_allowed_fdtarget "$target"; then
 			echo "Violation: FD $fd_name -> '$target'"
 			violation_found=1
+		else
+			echo "Permitted: FD $fd_name -> '$target'"
 		fi
 	done < <(find "/proc/$pid/fd" -type l -print0)
 	[ "$violation_found" -eq 0 ]
