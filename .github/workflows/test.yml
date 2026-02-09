@@ -110,7 +110,7 @@ jobs:
       run: sudo -E PATH="$PATH" make EXTRA_FLAGS="${{ matrix.race }}" all
 
     - name: Setup Bats and bats libs
-      uses: bats-core/bats-action@3.0.1
+      uses: bats-core/bats-action@4.0.0
       with:
         bats-version: 1.12.0 # Known as BATS_VERSION in other places.
         support-install: false
