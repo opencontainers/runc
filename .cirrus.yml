@@ -11,7 +11,7 @@ task:
   env:
     HOME: /root
     CIRRUS_WORKING_DIR: /home/runc
-    GO_VERSION: "1.23"
+    GO_VERSION: "1.25"
     BATS_VERSION: "v1.9.0"
     RPMS: gcc git-core iptables jq glibc-static libseccomp-devel make criu fuse-sshfs container-selinux
     # yamllint disable rule:key-duplicates
