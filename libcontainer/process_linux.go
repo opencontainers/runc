@@ -319,23 +319,35 @@ func (p *setnsProcess) initProcessCgroupPath() string {
 func (p *setnsProcess) addIntoCgroupV2() error {
 	sub := p.process.SubCgroupPaths[""]
 	err := p.manager.AddPid(sub, p.pid())
-	if err != nil && !p.rootlessCgroups {
-		// Failed to join the configured cgroup, fall back to container init's cgroup
-		// unless sub-cgroup is explicitly requested.
-		if sub == "" {
-			if path := p.initProcessCgroupPath(); path != "" {
-				logrus.Debugf("adding pid %d to configured cgroup failed (%v), will join container init cgroup %q",
-					p.pid(), err, path)
-				// NOTE: path is not guaranteed to exist because we didn't pause the container.
-				err = cgroups.WriteCgroupProc(path, p.pid())
-			}
-		}
-		if err != nil {
-			return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
-		}
+	if err == nil {
+		return nil
 	}
 
+	// Failed to join the configured cgroup. Fall back to container init's cgroup
+	// unless sub-cgroup is explicitly requested.
+	var path string
+	if sub != "" {
+		goto fail
+	}
+	path = p.initProcessCgroupPath()
+	if path == "" {
+		goto fail
+	}
+	logrus.Debugf("adding pid %d to configured cgroup failed (%v), will join container init cgroup %q", p.pid(), err, path)
+	// NOTE: path is not guaranteed to exist because we didn't pause the container.
+	err = cgroups.WriteCgroupProc(path, p.pid())
+	if err != nil {
+		goto fail
+	}
 	return nil
+
+fail:
+	if p.rootlessCgroups {
+		// Ignore cgroup join errors when rootless.
+		return nil
+	}
+
+	return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
 }
 
 func (p *setnsProcess) addIntoCgroup() error {
