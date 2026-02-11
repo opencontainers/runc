@@ -199,7 +199,7 @@ func convertMemoryEntry(c cgroups.MemoryData) types.MemoryEntry {
 }
 
 func convertBlkioEntry(c []cgroups.BlkioStatEntry) []types.BlkioEntry {
-	var out []types.BlkioEntry
+	out := make([]types.BlkioEntry, 0, len(c))
 	for _, e := range c {
 		out = append(out, types.BlkioEntry(e))
 	}

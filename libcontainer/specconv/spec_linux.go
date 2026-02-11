@@ -174,7 +174,7 @@ func initMaps() {
 // Used by `runc features`.
 func KnownNamespaces() []string {
 	initMaps()
-	var res []string
+	var res []string //nolint:prealloc
 	for k := range namespaceMapping {
 		res = append(res, string(k))
 	}
@@ -186,7 +186,7 @@ func KnownNamespaces() []string {
 // Used by `runc features`.
 func KnownMountOptions() []string {
 	initMaps()
-	var res []string
+	var res []string //nolint:prealloc
 	for k := range mountFlags {
 		res = append(res, k)
 	}

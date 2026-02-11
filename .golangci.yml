@@ -16,6 +16,7 @@ linters:
     - errorlint
     - forbidigo
     - nolintlint
+    - prealloc
     - unconvert
     - unparam
   settings:
@@ -46,9 +47,10 @@ linters:
       analyze-types: true
   exclusions:
     rules:
-      # forbidigo lints are only relevant for main code.
+      # forbidigo and prealloc lints are only relevant for main code.
       - path: '(.+)_test\.go'
         linters:
           - forbidigo
+          - prealloc
     presets:
       - std-error-handling
