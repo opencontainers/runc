@@ -25,7 +25,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, ubuntu-24.04-arm]
-        go-version: [1.23.x, 1.24.x]
+        go-version: [1.23.x, 1.25.x]
         rootless: ["rootless", ""]
         race: ["-race", ""]
         criu: ["", "criu-dev"]
@@ -93,6 +93,7 @@ jobs:
         git clone https://github.com/checkpoint-restore/criu.git ~/criu
         (cd ~/criu && git checkout ${{ matrix.criu }} && sudo make install-criu)
         rm -rf ~/criu
+        criu --version
 
     - name: install go ${{ matrix.go-version }}
       uses: actions/setup-go@v5
@@ -106,7 +107,7 @@ jobs:
     - name: Setup Bats and bats libs
       uses: bats-core/bats-action@3.0.0
       with:
-        bats-version: 1.9.0
+        bats-version: 1.12.0 # Known as BATS_VERSION in other places.
         support-install: false
         assert-install: false
         detik-install: false

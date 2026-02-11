@@ -9,7 +9,7 @@ on:
   pull_request:
   workflow_dispatch:
 env:
-  GO_VERSION: 1.24
+  GO_VERSION: 1.25
 permissions:
   contents: read
 
@@ -110,9 +110,9 @@ jobs:
       - uses: actions/checkout@v5
       - name: install shellcheck
         env:
-          VERSION: v0.10.0
+          VERSION: v0.11.0
           BASEURL: https://github.com/koalaman/shellcheck/releases/download
-          SHA256: f35ae15a4677945428bdfe61ccc297490d89dd1e544cc06317102637638c6deb
+          SHA256: 4da528ddb3a4d1b7b24a59d4e16eb2f5fd960f4bd9a3708a15baddbdf1d5a55b
         run: |
           mkdir ~/bin
           curl -sSfL --retry 5 $BASEURL/$VERSION/shellcheck-$VERSION.linux.x86_64.tar.xz |
