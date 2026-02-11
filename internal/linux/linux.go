@@ -2,7 +2,6 @@ package linux
 
 import (
 	"os"
-	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
@@ -16,7 +15,7 @@ func Dup3(oldfd, newfd, flags int) error {
 }
 
 // Exec wraps [unix.Exec].
-func Exec(cmd string, args []string, env []string) error {
+func Exec(cmd string, args, env []string) error {
 	err := retryOnEINTR(func() error {
 		return unix.Exec(cmd, args, env)
 	})
@@ -75,13 +74,9 @@ func Sendmsg(fd int, p, oob []byte, to unix.Sockaddr, flags int) error {
 }
 
 // SetMempolicy wraps set_mempolicy.
-func SetMempolicy(mode uint, mask *unix.CPUSet) error {
+func SetMempolicy(mode int, mask *unix.CPUSet) error {
 	err := retryOnEINTR(func() error {
-		_, _, errno := unix.Syscall(unix.SYS_SET_MEMPOLICY, uintptr(mode), uintptr(unsafe.Pointer(mask)), unsafe.Sizeof(*mask)*8)
-		if errno != 0 {
-			return errno
-		}
-		return nil
+		return unix.SetMemPolicy(mode, mask)
 	})
 	return os.NewSyscallError("set_mempolicy", err)
 }

@@ -68,7 +68,7 @@ func mockFilter(t *testing.T, config *configs.Seccomp) (*bpf.VM, []bpf.Instructi
 
 // fakeConfig generates a fake libcontainer seccomp configuration. The syscalls
 // are added with an action distinct from the default action.
-func fakeConfig(defaultAction configs.Action, explicitSyscalls []string, arches []string) *configs.Seccomp {
+func fakeConfig(defaultAction configs.Action, explicitSyscalls, arches []string) *configs.Seccomp {
 	config := configs.Seccomp{
 		DefaultAction: defaultAction,
 		Architectures: arches,
@@ -299,8 +299,8 @@ func TestEnosysStub_SingleArch(t *testing.T) {
 }
 
 func TestEnosysStub_MultiArch(t *testing.T) {
-	for end := 0; end < len(testArches); end++ {
-		for start := 0; start < end; start++ {
+	for end := range len(testArches) {
+		for start := range end {
 			var arches []string
 			for _, arch := range testArches[start:end] {
 				// "native" indicates a blank architecture field for seccomp, to test

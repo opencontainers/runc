@@ -187,7 +187,7 @@ func init() {
 	}
 }
 
-func newPipe(t *testing.T) (parent *os.File, child *os.File) {
+func newPipe(t *testing.T) (parent, child *os.File) {
 	t.Helper()
 	fds, err := unix.Socketpair(unix.AF_LOCAL, unix.SOCK_STREAM|unix.SOCK_CLOEXEC, 0)
 	if err != nil {
