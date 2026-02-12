@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, ubuntu-24.04-arm]
-        go-version: [1.22.x, 1.23.x, 1.24.x]
+        go-version: [1.22.x, 1.25.x, 1.26.x]
         rootless: ["rootless", ""]
         race: ["-race", ""]
         criu: ["", "criu-dev"]
@@ -34,14 +34,14 @@ jobs:
           - criu: criu-dev
             go-version: 1.22.x
           - criu: criu-dev
-            go-version: 1.23.x
+            go-version: 1.25.x
           - criu: criu-dev
             rootless: rootless
           # Do race detection only on latest Go.
           - race: -race
             go-version: 1.22.x
           - race: -race
-            go-version: 1.23.x
+            go-version: 1.25.x
 
     runs-on: ${{ matrix.os }}
 
@@ -107,7 +107,7 @@ jobs:
       run: sudo -E PATH="$PATH" make EXTRA_FLAGS="${{ matrix.race }}" all
 
     - name: Setup Bats and bats libs
-      uses: bats-core/bats-action@3.0.0
+      uses: bats-core/bats-action@4.0.0
       with:
         bats-version: 1.9.0
         support-install: false
