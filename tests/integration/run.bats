@@ -12,26 +12,21 @@ function teardown() {
 }
 
 @test "runc run" {
-	runc run test_hello
-	[ "$status" -eq 0 ]
+	runc -0 run test_hello
 
-	runc state test_hello
-	[ "$status" -ne 0 ]
+	runc ! state test_hello
 }
 
 @test "runc run --keep" {
-	runc run --keep test_run_keep
-	[ "$status" -eq 0 ]
+	runc -0 run --keep test_run_keep
 
 	testcontainer test_run_keep stopped
 
-	runc state test_run_keep
-	[ "$status" -eq 0 ]
+	runc -0 state test_run_keep
 
-	runc delete test_run_keep
+	runc -0 delete test_run_keep
 
-	runc state test_run_keep
-	[ "$status" -ne 0 ]
+	runc ! state test_run_keep
 }
 
 @test "runc run --keep (check cgroup exists)" {
@@ -41,21 +36,18 @@ function teardown() {
 
 	set_cgroups_path
 
-	runc run --keep test_run_keep
-	[ "$status" -eq 0 ]
+	runc -0 run --keep test_run_keep
 
 	testcontainer test_run_keep stopped
 
-	runc state test_run_keep
-	[ "$status" -eq 0 ]
+	runc -0 state test_run_keep
 
 	# check that cgroup exists
 	check_cgroup_value "pids.max" "max"
 
-	runc delete test_run_keep
+	runc -0 delete test_run_keep
 
-	runc state test_run_keep
-	[ "$status" -ne 0 ]
+	runc ! state test_run_keep
 }
 
 @test "runc run [hostname domainname]" {
@@ -63,17 +55,14 @@ function teardown() {
 			| .hostname = "myhostname"
 			| .domainname= "mydomainname"'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_utc
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_utc
 
 	# test hostname
-	runc exec test_utc hostname
-	[ "$status" -eq 0 ]
+	runc -0 exec test_utc hostname
 	[[ "${lines[0]}" == *'myhostname'* ]]
 
 	# test domainname
-	runc exec test_utc cat /proc/sys/kernel/domainname
-	[ "$status" -eq 0 ]
+	runc -0 exec test_utc cat /proc/sys/kernel/domainname
 	[[ "${lines[0]}" == *'mydomainname'* ]]
 }
 
@@ -87,8 +76,7 @@ function teardown() {
 	update_config '.process.args = ["sh", "-c", "stat -c %A /tmp"]'
 	update_config '.mounts += [{"destination": "/tmp", "type": "tmpfs", "source": "tmpfs", "options":["noexec","nosuid","nodev","rprivate"]}]'
 
-	runc run test_tmpfs
-	[ "$status" -eq 0 ]
+	runc -0 run test_tmpfs
 	[ "${lines[0]}" = "$mode" ]
 }
 
@@ -97,35 +85,30 @@ function teardown() {
 	update_config '.mounts += [{"destination": "/tmp/test", "type": "tmpfs", "source": "tmpfs", "options": ["mode=0444"]}]'
 
 	# Directory is to be created by runc.
-	runc run test_tmpfs
-	[ "$status" -eq 0 ]
+	runc -0 run test_tmpfs
 	[ "${lines[0]}" = "444" ]
 
 	# Run a 2nd time with the pre-existing directory.
 	# Ref: https://github.com/opencontainers/runc/issues/3911
-	runc run test_tmpfs
-	[ "$status" -eq 0 ]
+	runc -0 run test_tmpfs
 	[ "${lines[0]}" = "444" ]
 
 	# Existing directory, custom perms, no mode on the mount,
 	# so it should use the directory's perms.
 	update_config '.mounts[-1].options = []'
 	chmod 0710 rootfs/tmp/test
-	runc run test_tmpfs
-	[ "$status" -eq 0 ]
+	runc -0 run test_tmpfs
 	[ "${lines[0]}" = "710" ]
 
 	# Add back the mode on the mount, and it should use that instead.
 	# Just for fun, use different perms than was used earlier.
 	update_config '.mounts[-1].options = ["mode=0410"]'
-	runc run test_tmpfs
-	[ "$status" -eq 0 ]
+	runc -0 run test_tmpfs
 	[ "${lines[0]}" = "410" ]
 }
 
 @test "runc run [/proc/self/exe clone]" {
-	runc --debug run test_hello
-	[ "$status" -eq 0 ]
+	runc -0 --debug run test_hello
 	[[ "$output" = *"Hello World"* ]]
 	[[ "$output" = *"runc exeseal: using /proc/self/exe clone"* ]]
 	# runc will use fsopen("overlay") if it can.
@@ -153,8 +136,7 @@ function teardown() {
 		}'
 	update_config '.process.args = ["sleep", "infinity"]'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" target_ctr
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" target_ctr
 
 	# Modify our container's configuration such that it is just going to
 	# inherit all of the namespaces of the target container.
@@ -173,25 +155,21 @@ function teardown() {
 	# Remove the userns and timens configuration (they cannot be changed).
 	update_config '.linux |= (del(.uidMappings) | del(.gidMappings) | del(.timeOffsets))'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" attached_ctr
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" attached_ctr
 
 	# Make sure there are two sleep processes in our container.
-	runc exec attached_ctr ps aux
-	[ "$status" -eq 0 ]
+	runc -0 exec attached_ctr ps aux
 	run -0 grep "sleep infinity" <<<"$output"
 	[ "${#lines[@]}" -eq 2 ]
 
 	# ... that the userns mappings are the same...
-	runc exec attached_ctr cat /proc/self/uid_map
-	[ "$status" -eq 0 ]
+	runc -0 exec attached_ctr cat /proc/self/uid_map
 	if [ $EUID -eq 0 ]; then
 		grep -E '^\s+0\s+100000\s+100$' <<<"$output"
 	else
 		grep -E '^\s+0\s+'$EUID'\s+1$' <<<"$output"
 	fi
-	runc exec attached_ctr cat /proc/self/gid_map
-	[ "$status" -eq 0 ]
+	runc -0 exec attached_ctr cat /proc/self/gid_map
 	if [ $EUID -eq 0 ]; then
 		grep -E '^\s+0\s+200000\s+200$' <<<"$output"
 	else
@@ -199,7 +177,7 @@ function teardown() {
 	fi
 
 	# ... as well as the timens offsets.
-	runc exec attached_ctr cat /proc/self/timens_offsets
+	runc -0 exec attached_ctr cat /proc/self/timens_offsets
 	grep -E '^monotonic\s+7881\s+2718281$' <<<"$output"
 	grep -E '^boottime\s+1337\s+3141519$' <<<"$output"
 }
@@ -211,8 +189,7 @@ sh
 EOF
 	chmod +x rootfs/run.sh
 	update_config '.process.args = [ "/run.sh" ]'
-	runc run test_hello
-	[ "$status" -ne 0 ]
+	runc ! run test_hello
 
 	# After the sync socket closed, we should not send error to parent
 	# process, or else we will get a unnecessary error log(#4171).
@@ -231,7 +208,6 @@ EOF
 			| .process.user.uid = 2000
 			| .process.args |= ["sh", "-c", "echo $HOME"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[ "${lines[0]}" = "/home/tempuser" ]
 }

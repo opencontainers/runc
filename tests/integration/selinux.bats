@@ -40,8 +40,7 @@ function run_check_label() {
 	LABEL="system_u:system_r:container_t:s0:c4,c5"
 	update_config '	  .process.selinuxLabel |= "'"$LABEL"'"
 			| .process.args = ["/bin/'"$HELPER"'"]'
-	runc run tst
-	[ "$status" -eq 0 ]
+	runc -0 run tst
 	# Key name is _ses.$CONTAINER_NAME.
 	KEY=_ses.tst
 	[ "$output" == "$KEY $LABEL" ]
@@ -56,11 +55,9 @@ function exec_check_label() {
 	LABEL="system_u:system_r:container_t:s0:c4,c5"
 	update_config '	  .process.selinuxLabel |= "'"$LABEL"'"
 			| .process.args = ["/bin/sh"]'
-	runc run -d --console-socket "$CONSOLE_SOCKET" tst
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" tst
 
-	runc exec tst "/bin/$HELPER"
-	[ "$status" -eq 0 ]
+	runc -0 exec tst "/bin/$HELPER"
 	# Key name is _ses.$CONTAINER_NAME.
 	KEY=_ses.tst
 	[ "$output" == "$KEY $LABEL" ]
@@ -76,15 +73,13 @@ function enable_userns() {
 # Baseline test, to check that runc works with selinux enabled.
 @test "runc run (no selinux label)" {
 	update_config '	  .process.args = ["/bin/true"]'
-	runc run tst
-	[ "$status" -eq 0 ]
+	runc -0 run tst
 }
 
 @test "runc run (custom selinux label)" {
 	update_config '	  .process.selinuxLabel |= "system_u:system_r:container_t:s0:c4,c5"
 			| .process.args = ["/bin/true"]'
-	runc run tst
-	[ "$status" -eq 0 ]
+	runc -0 run tst
 }
 
 @test "runc run (session keyring security label)" {

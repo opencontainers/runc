@@ -23,9 +23,8 @@ function teardown() {
 			| .linux.namespaces -= [{"type": "mount"}]
 			| .linux.maskedPaths = []
 			| .linux.readonlyPaths = []'
-	runc run test_host_mntns
-	[ "$status" -eq 0 ]
-	runc delete -f test_host_mntns
+	runc -0 run test_host_mntns
+	runc -0 delete -f test_host_mntns
 
 	# There should be one such file.
 	run -0 ls createRuntimeHook.*

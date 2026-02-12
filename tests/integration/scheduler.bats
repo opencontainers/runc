@@ -18,18 +18,15 @@ function teardown() {
 		"nice": 19
 	}'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_scheduler
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_scheduler
 
 	# Check init settings.
-	runc exec test_scheduler chrt -p 1
-	[ "$status" -eq 0 ]
+	runc -0 exec test_scheduler chrt -p 1
 	[[ "${lines[0]}" == *"scheduling policy: SCHED_BATCH" ]]
 	[[ "${lines[1]}" == *"priority: 0" ]]
 
 	# Check exec settings derived from config.json.
-	runc exec test_scheduler sh -c 'chrt -p $$'
-	[ "$status" -eq 0 ]
+	runc -0 exec test_scheduler sh -c 'chrt -p $$'
 	[[ "${lines[0]}" == *"scheduling policy: SCHED_BATCH" ]]
 	[[ "${lines[1]}" == *"priority: 0" ]]
 
@@ -71,7 +68,6 @@ function teardown() {
 	update_config ' .linux.resources.cpu.cpus = "0"
 		| .process.scheduler = {"policy": "SCHED_DEADLINE", "nice": 19, "runtime": 42000, "deadline": 1000000, "period": 1000000, }'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_scheduler
-	[ "$status" -eq 1 ]
+	runc -1 run -d --console-socket "$CONSOLE_SOCKET" test_scheduler
 	[[ "$output" == *"process scheduler can't be used together with AllowedCPUs"* ]]
 }

@@ -14,8 +14,7 @@ function teardown() {
 	# stty size fails without a tty
 	update_config '(.. | select(.[]? == "sh")) += ["-c", "stty size"]'
 	# note that stdout/stderr are already redirected by bats' run
-	runc run test_busybox </dev/null
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox </dev/null
 }
 
 @test "runc run [tty ptsname]" {
@@ -23,8 +22,7 @@ function teardown() {
 	# shellcheck disable=SC2016
 	update_config '(.. | select(.[]? == "sh")) += ["-c", "for file in /proc/self/fd/[012]; do readlink $file; done"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ ${lines[0]} =~ /dev/pts/+ ]]
 	[[ ${lines[1]} =~ /dev/pts/+ ]]
 	[[ ${lines[2]} =~ /dev/pts/+ ]]
@@ -39,8 +37,7 @@ function teardown() {
 	# shellcheck disable=SC2016
 	update_config '(.. | select(.[]? == "sh")) += ["-c", "stat -c %u:%g $(tty) | tr : \\\\n"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ ${lines[0]} =~ 0 ]]
 	# This is set by the default config.json (it corresponds to the standard tty group).
 	[[ ${lines[1]} =~ 5 ]]
@@ -58,33 +55,28 @@ function teardown() {
 			| (.. | select(.gid? == 0)) .gid |= 100
 			| (.. | select(.[]? == "sh")) += ["-c", "stat -c %u:%g $(tty) | tr : \\\\n"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 	[[ ${lines[0]} =~ 1000 ]]
 	# This is set by the default config.json (it corresponds to the standard tty group).
 	[[ ${lines[1]} =~ 5 ]]
 }
 
 @test "runc exec [stdin not a tty]" {
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 
 	# note that stdout/stderr are already redirected by bats' run
-	runc exec -t test_busybox sh -c "stty size" </dev/null
-	[ "$status" -eq 0 ]
+	runc -0 exec -t test_busybox sh -c "stty size" </dev/null
 }
 
 @test "runc exec [tty ptsname]" {
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 
 	# shellcheck disable=SC2016
-	runc exec -t test_busybox sh -c 'for file in /proc/self/fd/[012]; do readlink $file; done'
-	[ "$status" -eq 0 ]
+	runc -0 exec -t test_busybox sh -c 'for file in /proc/self/fd/[012]; do readlink $file; done'
 	[[ ${lines[0]} =~ /dev/pts/+ ]]
 	[[ ${lines[1]} =~ /dev/pts/+ ]]
 	[[ ${lines[2]} =~ /dev/pts/+ ]]
@@ -95,14 +87,12 @@ function teardown() {
 	# TODO: this can be made as a change to the gid test.
 	[ $EUID -ne 0 ] && requires rootless_idmap
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 
 	# shellcheck disable=SC2016
-	runc exec -t test_busybox sh -c 'stat -c %u:%g $(tty) | tr : \\n'
-	[ "$status" -eq 0 ]
+	runc -0 exec -t test_busybox sh -c 'stat -c %u:%g $(tty) | tr : \\n'
 	[[ ${lines[0]} =~ 0 ]]
 	[[ ${lines[1]} =~ 5 ]]
 }
@@ -116,14 +106,12 @@ function teardown() {
 	update_config ' (.. | select(.uid? == 0)) .uid |= 1000
 			| (.. | select(.gid? == 0)) .gid |= 100'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 
 	# shellcheck disable=SC2016
-	runc exec -t test_busybox sh -c 'stat -c %u:%g $(tty) | tr : \\n'
-	[ "$status" -eq 0 ]
+	runc -0 exec -t test_busybox sh -c 'stat -c %u:%g $(tty) | tr : \\n'
 	[[ ${lines[0]} =~ 1000 ]]
 	[[ ${lines[1]} =~ 5 ]]
 }
@@ -132,8 +120,7 @@ function teardown() {
 	# allow writing to filesystem
 	update_config '(.. | select(.readonly? != null)) .readonly |= false'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 
@@ -153,8 +140,7 @@ function teardown() {
 }'
 
 	# Run the detached exec.
-	runc exec -t --pid-file pid.txt -d --console-socket "$CONSOLE_SOCKET" -p <(echo "$tty_info_with_consize_size") test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 exec -t --pid-file pid.txt -d --console-socket "$CONSOLE_SOCKET" -p <(echo "$tty_info_with_consize_size") test_busybox
 	[ -e pid.txt ]
 
 	# Wait for the exec to finish.
@@ -169,8 +155,7 @@ function teardown() {
     "cwd": "/"
 }'
 
-	runc exec -t -p <(echo "$tty_info") test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 exec -t -p <(echo "$tty_info") test_busybox
 
 	# test tty width and height against original process.json
 	[[ ${lines[0]} =~ "rows 10; columns 110" ]]
@@ -186,13 +171,11 @@ function teardown() {
 	# Make sure that the handling of detached IO is done properly. See #1354.
 	__runc create test_busybox
 
-	runc start test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 start test_busybox
 
 	testcontainer test_busybox running
 
-	runc kill test_busybox KILL
-	[ "$status" -eq 0 ]
+	runc -0 kill test_busybox KILL
 }
 
 @test "runc run [terminal=false]" {
@@ -210,8 +193,7 @@ function teardown() {
 	wait_for_container 15 1 test_busybox running
 	testcontainer test_busybox running
 
-	runc kill test_busybox KILL
-	[ "$status" -eq 0 ]
+	runc -0 kill test_busybox KILL
 }
 
 @test "runc run -d [terminal=false]" {
@@ -226,6 +208,5 @@ function teardown() {
 
 	testcontainer test_busybox running
 
-	runc kill test_busybox KILL
-	[ "$status" -eq 0 ]
+	runc -0 kill test_busybox KILL
 }

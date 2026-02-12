@@ -40,8 +40,7 @@ function test_runc_delete_host_pidns() {
 				  ) // .)'
 	fi
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	cgpath=$(get_cgroup_path "pids")
 	init_pid=$(cat "$cgpath"/cgroup.procs)
 
@@ -65,11 +64,10 @@ function test_runc_delete_host_pidns() {
 	done
 
 	# Must kill those processes and remove container.
-	runc delete "$@" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 delete "$@" test_busybox
 
-	runc state test_busybox
-	[ "$status" -ne 0 ] # "Container does not exist"
+	runc ! state test_busybox
+	[[ "$output" == *"container does not exist"* ]]
 
 	# Wait and check that all the processes are gone.
 	wait_pids_gone 10 0.2 "${pids[@]}"
@@ -90,8 +88,7 @@ function test_runc_delete_host_pidns() {
 	[ $EUID -ne 0 ] && requires systemd
 	set_resources_limit
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" testbusyboxdelete
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" testbusyboxdelete
 
 	testcontainer testbusyboxdelete running
 	# Ensure the find statement used later is correct.
@@ -100,35 +97,29 @@ function test_runc_delete_host_pidns() {
 		fail "expected cgroup not found"
 	fi
 
-	runc kill testbusyboxdelete KILL
-	[ "$status" -eq 0 ]
+	runc -0 kill testbusyboxdelete KILL
 	wait_for_container 10 1 testbusyboxdelete stopped
 
-	runc delete testbusyboxdelete
-	[ "$status" -eq 0 ]
+	runc -0 delete testbusyboxdelete
 
-	runc state testbusyboxdelete
-	[ "$status" -ne 0 ]
+	runc ! state testbusyboxdelete
 
 	output=$(find /sys/fs/cgroup -name testbusyboxdelete -o -name \*-testbusyboxdelete.scope 2>/dev/null || true)
 	[ "$output" = "" ] || fail "cgroup not cleaned up correctly: $output"
 }
 
 @test "runc delete --force" {
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 
-	runc delete --force test_busybox
+	runc -0 delete --force test_busybox
 
-	runc state test_busybox
-	[ "$status" -ne 0 ]
+	runc ! state test_busybox
 }
 
 @test "runc delete --force ignore not exist" {
-	runc delete --force notexists
-	[ "$status" -eq 0 ]
+	runc -0 delete --force notexists
 }
 
 # Issue 4047, case "runc delete".
@@ -149,14 +140,11 @@ function test_runc_delete_host_pidns() {
 		set_cgroups_path
 	fi
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" ct1
 	testcontainer ct1 running
 
-	runc pause ct1
-	[ "$status" -eq 0 ]
-	runc delete --force ct1
-	[ "$status" -eq 0 ]
+	runc -0 pause ct1
+	runc -0 delete --force ct1
 }
 
 @test "runc delete --force in cgroupv1 with subcgroups" {
@@ -168,8 +156,7 @@ function test_runc_delete_host_pidns() {
 
 	local subsystems="memory freezer"
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 
@@ -180,7 +167,7 @@ function test_runc_delete_host_pidns() {
 	[[ ${pid} =~ [0-9]+ ]]
 
 	# create a sub-cgroup
-	cat <<EOF | runc exec test_busybox sh
+	cat <<EOF | runc -0 exec test_busybox sh
 set -e -u -x
 for s in ${subsystems}; do
   cd /sys/fs/cgroup/\$s
@@ -190,7 +177,6 @@ for s in ${subsystems}; do
   cat tasks
 done
 EOF
-	[ "$status" -eq 0 ]
 	[[ "$output" =~ [0-9]+ ]]
 
 	for s in ${subsystems}; do
@@ -200,10 +186,9 @@ EOF
 		[ -d "${path}" ] || fail "test failed to create memory sub-cgroup ($path not found)"
 	done
 
-	runc delete --force test_busybox
+	runc -0 delete --force test_busybox
 
-	runc state test_busybox
-	[ "$status" -ne 0 ]
+	runc ! state test_busybox
 
 	output=$(find /sys/fs/cgroup -wholename '*testbusyboxdelete*' -type d 2>/dev/null || true)
 	[ "$output" = "" ] || fail "cgroup not cleaned up correctly: $output"
@@ -214,8 +199,7 @@ EOF
 	set_cgroups_path
 	set_cgroup_mount_writable
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox running
 
@@ -237,18 +221,16 @@ EOF
   echo ${pid} > cgroup.threads
   cat cgroup.threads
 EOF
-	runc exec test_busybox sh <nest.sh
-	[ "$status" -eq 0 ]
+	runc -0 exec test_busybox sh <nest.sh
 	[[ "$output" =~ [0-9]+ ]]
 
 	# check create subcgroups success
 	[ -d "$CGROUP_V2_PATH"/foo ]
 
 	# force delete test_busybox
-	runc delete --force test_busybox
+	runc -0 delete --force test_busybox
 
-	runc state test_busybox
-	[ "$status" -ne 0 ]
+	runc ! state test_busybox
 
 	# check delete subcgroups success
 	[ ! -d "$CGROUP_V2_PATH"/foo ]
@@ -264,8 +246,7 @@ EOF
 			   }
 			| .process.args |= ["/bin/sleep", "10"]'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test-failed-unit
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test-failed-unit
 
 	wait_for_container 10 1 test-failed-unit stopped
 
@@ -275,7 +256,7 @@ EOF
 	# Expect "unit is not active" exit code.
 	run -3 systemctl status $user "$SD_UNIT_NAME"
 
-	runc delete test-failed-unit
+	runc -0 delete test-failed-unit
 	# Expect "no such unit" exit code.
 	run -4 systemctl status $user "$SD_UNIT_NAME"
 }

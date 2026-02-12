@@ -12,8 +12,7 @@ function teardown() {
 }
 
 @test "runc run" {
-	runc run test_hello
-	[ "$status" -eq 0 ]
+	runc -0 run test_hello
 	[[ "${output}" == *"Hello"* ]]
 }
 
@@ -26,8 +25,7 @@ function teardown() {
 	update_config ' (.. | select(.uid? == 0)) .uid |= 1000
 		| (.. | select(.gid? == 0)) .gid |= 100'
 
-	runc run test_hello
-	[ "$status" -eq 0 ]
+	runc -0 run test_hello
 	[[ "${output}" == *"Hello"* ]]
 }
 
@@ -46,8 +44,7 @@ function teardown() {
 			| (.. | select(.gid? == 0)) .gid |= 100'
 
 	# Sanity check: make sure we can't run the container w/o CAP_DAC_OVERRIDE.
-	runc run test_busybox
-	[ "$status" -ne 0 ]
+	runc ! run test_busybox
 
 	# Enable CAP_DAC_OVERRIDE.
 	update_config '	  .process.capabilities.bounding += ["CAP_DAC_OVERRIDE"]
@@ -56,8 +53,7 @@ function teardown() {
 			| .process.capabilities.ambient += ["CAP_DAC_OVERRIDE"]
 			| .process.capabilities.permitted += ["CAP_DAC_OVERRIDE"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	runc -0 run test_busybox
 }
 
 @test "runc run with rootfs set to ." {
@@ -66,14 +62,12 @@ function teardown() {
 	cd rootfs
 	update_config '(.. | select(. == "rootfs")) |= "."'
 
-	runc run test_hello
-	[ "$status" -eq 0 ]
+	runc -0 run test_hello
 	[[ "${output}" == *"Hello"* ]]
 }
 
 @test "runc run --pid-file" {
-	runc run --pid-file pid.txt test_hello
-	[ "$status" -eq 0 ]
+	runc -0 run --pid-file pid.txt test_hello
 	[[ "${output}" == *"Hello"* ]]
 
 	[ -e pid.txt ]
@@ -93,8 +87,7 @@ function teardown() {
 				| .options = ["rbind", "nosuid", "nodev", "noexec"]
 			  ) // .)'
 
-	runc run test_hello
-	[ "$status" -eq 0 ]
+	runc -0 run test_hello
 }
 
 @test "runc run [redundant seccomp rules]" {
@@ -105,6 +98,5 @@ function teardown() {
 					"action": "SCMP_ACT_ALLOW",
 				}]
 			    }'
-	runc run test_hello
-	[ "$status" -eq 0 ]
+	runc -0 run test_hello
 }
