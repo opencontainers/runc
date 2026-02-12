@@ -425,11 +425,14 @@ func (p *setnsProcess) startWithCgroupFD() error {
 		defer fd.Close()
 	}
 
+	cmdCopy := cloneCmd(p.cmd)
 	err = p.startWithCPUAffinity()
 	if err != nil && p.cmd.SysProcAttr.UseCgroupFD {
 		logrus.Debugf("exec with CLONE_INTO_CGROUP failed: %v; retrying without", err)
 		// SysProcAttr.CgroupFD is never used when UseCgroupFD is unset.
-		p.cmd.SysProcAttr.UseCgroupFD = false
+		cmdCopy.SysProcAttr.UseCgroupFD = false
+		// Must not reuse exec.Cmd.
+		p.cmd = cmdCopy
 		err = p.startWithCPUAffinity()
 	}
 
