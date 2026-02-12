@@ -19,9 +19,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/cgroups/fs2"
@@ -274,32 +275,66 @@ func (p *setnsProcess) addIntoCgroupV1() error {
 	return nil
 }
 
+// initProcessCgroupPath returns container init's cgroup path,
+// as read from /proc/PID/cgroup. Only works for cgroup v2.
+// Returns empty string if the path can not be obtained.
+//
+// This is used by runc exec in these cases:
+//
+//  1. On cgroup v2 + nesting + domain controllers, adding to initial cgroup
+//     may fail with EBUSY (https://github.com/opencontainers/runc/issues/2356);
+//
+//  2. A container init process with no cgroupns and /sys/fs/cgroup rw access
+//     may move itself to any other cgroup, and the original cgroup will disappear.
+func (p *setnsProcess) initProcessCgroupPath() string {
+	if p.initProcessPid == 0 || !cgroups.IsCgroup2UnifiedMode() {
+		return ""
+	}
+
+	cg, err := cgroups.ParseCgroupFile("/proc/" + strconv.Itoa(p.initProcessPid) + "/cgroup")
+	if err != nil {
+		return ""
+	}
+	cgroup, ok := cg[""]
+	if !ok {
+		return ""
+	}
+
+	return fs2.UnifiedMountpoint + cgroup
+}
+
 func (p *setnsProcess) addIntoCgroupV2() error {
 	sub := p.process.SubCgroupPaths[""]
 	err := p.manager.AddPid(sub, p.pid())
-	if err != nil && !p.rootlessCgroups {
-		// On cgroup v2 + nesting + domain controllers, adding to initial cgroup may fail with EBUSY.
-		// https://github.com/opencontainers/runc/issues/2356#issuecomment-621277643
-		// Try to join the cgroup of InitProcessPid, unless sub-cgroup is explicitly set.
-		if p.initProcessPid != 0 && sub == "" {
-			initProcCgroupFile := fmt.Sprintf("/proc/%d/cgroup", p.initProcessPid)
-			initCg, initCgErr := cgroups.ParseCgroupFile(initProcCgroupFile)
-			if initCgErr == nil {
-				if initCgPath, ok := initCg[""]; ok {
-					initCgDirpath := filepath.Join(fs2.UnifiedMountpoint, initCgPath)
-					logrus.Debugf("adding pid %d to cgroup failed (%v), attempting to join %s",
-						p.pid(), err, initCgDirpath)
-					// NOTE: initCgDirPath is not guaranteed to exist because we didn't pause the container.
-					err = cgroups.WriteCgroupProc(initCgDirpath, p.pid())
-				}
-			}
-		}
-		if err != nil {
-			return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
-		}
+	if err == nil {
+		return nil
 	}
 
+	// Failed to join the configured cgroup. Fall back to container init's cgroup
+	// unless sub-cgroup is explicitly requested.
+	var path string
+	if sub != "" {
+		goto fail
+	}
+	path = p.initProcessCgroupPath()
+	if path == "" {
+		goto fail
+	}
+	logrus.Debugf("adding pid %d to configured cgroup failed (%v), will join container init cgroup %q", p.pid(), err, path)
+	// NOTE: path is not guaranteed to exist because we didn't pause the container.
+	err = cgroups.WriteCgroupProc(path, p.pid())
+	if err != nil {
+		goto fail
+	}
 	return nil
+
+fail:
+	if p.rootlessCgroups {
+		// Ignore cgroup join errors when rootless.
+		return nil
+	}
+
+	return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
 }
 
 func (p *setnsProcess) addIntoCgroup() error {
@@ -318,6 +353,8 @@ func (p *setnsProcess) addIntoCgroup() error {
 // to join cgroup early, in p.cmd.Start. Returns an *os.File which
 // must be closed by the caller after p.Cmd.Start return.
 func (p *setnsProcess) prepareCgroupFD() (*os.File, error) {
+	const openFlags = unix.O_PATH | unix.O_DIRECTORY | unix.O_CLOEXEC
+
 	if !cgroups.IsCgroup2UnifiedMode() {
 		return nil, nil
 	}
@@ -335,14 +372,28 @@ func (p *setnsProcess) prepareCgroupFD() (*os.File, error) {
 		return nil, fmt.Errorf("bad sub cgroup path: %s", sub)
 	}
 
-	fd, err := cgroups.OpenFile(base, sub, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC)
+	fd, err := cgroups.OpenFile(base, sub, openFlags)
+	if err == nil {
+		goto success
+	}
+	// Failed to open the configured cgroup. Fall back to container init's cgroup
+	// unless sub-cgroup is explicitly requested. The fallback logic should be
+	// the same as in addIntoCgroupV2.
+	if sub != "" {
+		goto fail
+	}
+	cgroup = p.initProcessCgroupPath()
+	if cgroup == "" {
+		goto fail
+	}
+	logrus.Debugf("failed to open configured cgroup (%v), will open container init cgroup %q", err, cgroup)
+	// NOTE: path is not guaranteed to exist because we didn't pause the container.
+	fd, err = cgroups.OpenFile(cgroup, "", openFlags)
 	if err != nil {
-		if p.rootlessCgroups {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("can't open cgroup: %w", err)
+		goto fail
 	}
 
+success:
 	logrus.Debugf("using CLONE_INTO_CGROUP %q", cgroup)
 	if p.cmd.SysProcAttr == nil {
 		p.cmd.SysProcAttr = &syscall.SysProcAttr{}
@@ -351,6 +402,13 @@ func (p *setnsProcess) prepareCgroupFD() (*os.File, error) {
 	p.cmd.SysProcAttr.CgroupFD = int(fd.Fd())
 
 	return fd, nil
+
+fail:
+	// Ignore cgroup join error for rootless.
+	if p.rootlessCgroups {
+		return nil, nil
+	}
+	return nil, fmt.Errorf("can't open cgroup: %w", err)
 }
 
 // startWithCgroupFD starts a process via clone3 with CLONE_INTO_CGROUP,
