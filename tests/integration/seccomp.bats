@@ -75,6 +75,7 @@ function flags_value() {
 		['"SECCOMP_FILTER_FLAG_TSYNC"']=0 # Supported but ignored by runc, thus 0.
 		['"SECCOMP_FILTER_FLAG_LOG"']=2
 		['"SECCOMP_FILTER_FLAG_SPEC_ALLOW"']=4
+		['"SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV"']=7
 		# XXX: add new values above this line.
 	)
 	# Split the flags.
