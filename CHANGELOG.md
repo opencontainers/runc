@@ -46,6 +46,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   particularly useful and was completely obsoleted by the changes to
   `/proc/self/exe` sealing we introduced in runc [1.2.0][]. (#5141)
 
+### Changed ###
+- Previously we made an attempt to make our `runc.armhf` release binaries work
+  with ARMv6 (which would allow runc to work on the original Raspberry Pi).
+  Unfortunately, this has effectively always been broken (because we
+  cross-compile `libseccomp` within a Debian container and statically link to
+  it) and so we are now officially matching [the Debian definition of `armhf`][debian-armhf]
+  (that is, ARMv7). (#5103)
+
+[debian-armhf]: https://wiki.debian.org/ArmHardFloatPort
+
 ## [1.4.0] - 2025-11-27
 
 > 路漫漫其修远兮，吾将上下而求索！
