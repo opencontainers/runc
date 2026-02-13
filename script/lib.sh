@@ -48,16 +48,7 @@ function set_cross_vars() {
 	armhf)
 		HOST=arm-${PLATFORM}eabihf
 		GOARCH=arm
-		# "armhf" means ARMv7 for Debian, ARMv6 for Raspbian.
-		# ARMv6 is chosen here for compatibility.
-		#
-		# https://wiki.debian.org/RaspberryPi
-		#
-		# > Raspberry Pi OS builds a single image for all of the Raspberry families,
-		# > so you will get an armhf 32-bit, hard floating-point system, but built
-		# > for the ARMv6 ISA (with VFP2), unlike Debian's ARMv7 ISA (with VFP3)
-		# > port.
-		GOARM=6
+		GOARM=7
 		;;
 	ppc64le)
 		HOST=powerpc64le-${PLATFORM}
