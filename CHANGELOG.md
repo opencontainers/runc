@@ -230,6 +230,11 @@ This release includes fixes for the following high-severity security issues:
  * seccompagent: fix fd close loop to prevent closing stdio in the error path.
    (#4913, #4923)
 
+### Changed ###
+- CI: All PRs now require a corresponding `CHANGELOG.md` change be included,
+  which should increase the quality and accuracy of our changelogs going
+  forward. (#5047)
+
 ## [1.4.0-rc.1] - 2025-09-05
 
 > おめェもボスになったんだろぉ？

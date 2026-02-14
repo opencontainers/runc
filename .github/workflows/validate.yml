@@ -183,6 +183,34 @@ jobs:
         if: github.event_name != 'pull_request'
         run: echo "Nothing to check here."
 
+  changelog:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+      if: github.event_name == 'pull_request'
+      with:
+        fetch-depth: 0
+    - name: git fetch ${{ github.ref }}
+      if: github.event_name == 'pull_request'
+      run: |-
+        git fetch origin ${{ github.ref }}
+        git tag GITHUB_REF FETCH_HEAD
+    - name: git fetch ${{ github.base_ref }}
+      if: github.event_name == 'pull_request'
+      run: |-
+        git fetch origin ${{ github.base_ref }}
+        git tag GITHUB_BASE_REF FETCH_HEAD
+    - name: check that CHANGELOG.md has an entry
+      if: github.event_name == 'pull_request'
+      run: >-
+        git diff --name-only GITHUB_BASE_REF...GITHUB_REF         \
+          | grep CHANGELOG.md                                     \
+          || { echo "Every PR must have a CHANGELOG.md change."; exit 1; }
+
+    - name: succeed (not a PR) # Allow all-done to succeed for non-PRs.
+      if: github.event_name != 'pull_request'
+      run: echo "Nothing to check here."
+
   cfmt:
     runs-on: ubuntu-24.04
     steps:
@@ -267,6 +295,7 @@ jobs:
     needs:
       - check-go
       - cfmt
+      - changelog
       - codespell
       - commit
       - compile-buildtags
