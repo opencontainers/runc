@@ -13,7 +13,8 @@ task:
     CIRRUS_WORKING_DIR: /home/runc
     GO_VER_PREFIX: "1.25."
     BATS_VERSION: "v1.12.0"
-    RPMS: gcc git-core iptables jq glibc-static libseccomp-devel make criu fuse-sshfs container-selinux
+    LIBPATHRS_VERSION: "0.2.3"
+    RPMS: gcc git-core iptables jq glibc-static libseccomp-devel make criu fuse-sshfs container-selinux cargo lld
     # yamllint disable rule:key-duplicates
     matrix:
       - DISTRO: almalinux-8
@@ -62,6 +63,9 @@ task:
       dnf -y copr enable adrian/criu-el8
       dnf -y install criu
     esac
+
+    # Install libpathrs.
+    /home/runc/script/build-libpathrs.sh "$LIBPATHRS_VERSION" /usr
 
     # Install Go.
     URL_PREFIX="https://go.dev/dl/"

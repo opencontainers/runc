@@ -65,7 +65,7 @@ function build_libseccomp() {
 }
 
 if [ $# -lt 2 ]; then
-	echo "Usage: seccomp.sh <version> <dest-dir> [<extra-arch> ...]" >&2
+	echo "Usage: $0 <version> <dest-dir> [<extra-arch> ...]" >&2
 	exit 1
 fi
 

@@ -85,7 +85,12 @@ jobs:
       - name: install deps
         run: |
           sudo apt update
-          sudo apt -y install libseccomp-dev
+          sudo apt -y install libseccomp-dev lld
+      - name: install libpathrs
+        env:
+          LIBPATHRS_VERSION: "0.2.3"
+        run: |
+          sudo -E PATH="$PATH" ./script/build-libpathrs.sh "$LIBPATHRS_VERSION" /usr
       - name: compile with no build tags
         run: make BUILDTAGS=""
       - name: compile with runc_nocriu build tag

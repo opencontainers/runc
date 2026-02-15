@@ -26,6 +26,7 @@ jobs:
       matrix:
         os: [ubuntu-24.04, ubuntu-24.04-arm]
         go-version: [1.24.x, 1.25.x, 1.26.x]
+        libpathrs-version: [&LIBPATHRS_VERSION "0.2.3"]
         rootless: ["rootless", ""]
         race: ["-race", ""]
         criu: ["", "criu-dev"]
@@ -75,7 +76,13 @@ jobs:
     - name: install deps
       run: |
         sudo apt update
-        sudo apt -y install libseccomp-dev sshfs uidmap
+        sudo apt -y install libseccomp-dev sshfs uidmap lld
+
+    - name: install libpathrs v${{ matrix.libpathrs-version }}
+      env:
+        LIBPATHRS_VERSION: (${{ matrix.libpathrs-version }})
+      run: |
+        sudo -E PATH="$PATH" ./script/build-libpathrs.sh "$LIBPATHRS_VERSION" /usr
 
     - name: install CRIU
       if: ${{ matrix.criu == '' }}
@@ -170,7 +177,24 @@ jobs:
         sudo add-apt-repository -y ppa:criu/ppa || sudo add-apt-repository -y ppa:criu/ppa
         # apt-add-repository runs apt update so we don't have to.
 
-        sudo apt -qy install libseccomp-dev libseccomp-dev:i386 gcc-multilib libgcc-s1:i386 criu
+        GCC_VERSION="$(gcc -dumpversion)"
+        sudo apt -qy install \
+          lld criu \
+          libseccomp-dev libseccomp-dev:i386 \
+          libc-dev:i386 libgcc-s1:i386 libgcc-${GCC_VERSION}-dev:i386 gcc-i686-linux-gnu
+
+        # When cross-compiling, GCC will look for a linker that is marked for
+        # cross-compilation, which the Ubuntu lld package doesn't provide. The
+        # solution is to create a symlink ourselves.
+        # See <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=111605>.
+        ln -sv "$(which ld.lld)" /usr/local/bin/i686-linux-gnu-ld.lld
+    - run: rustup target add i686-unknown-linux-gnu
+
+    - name: install libpathrs
+      env:
+        LIBPATHRS_VERSION: *LIBPATHRS_VERSION
+      run: |
+        sudo -E PATH="$PATH" ./script/build-libpathrs.sh "$LIBPATHRS_VERSION" /usr 386
 
     - name: install go
       uses: actions/setup-go@v6
@@ -179,6 +203,8 @@ jobs:
         check-latest: true
 
     - name: unit test
+      env:
+        PKG_CONFIG_PATH: /usr/386/lib/pkgconfig
       run: sudo -E PATH="$PATH" -- make GOARCH=386 localunittest
 
   fedora:
