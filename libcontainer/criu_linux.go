@@ -435,8 +435,8 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 			if err != nil {
 				return fmt.Errorf("invalid --status-fd argument %d: %w", fd, err)
 			}
-			// and writable
-			if flags&unix.O_WRONLY == 0 {
+			// and writable (O_WRONLY or O_RDWR, but not O_RDONLY)
+			if flags&unix.O_ACCMODE == unix.O_RDONLY {
 				return fmt.Errorf("invalid --status-fd argument %d: not writable", fd)
 			}
 
@@ -1125,7 +1125,7 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 		if c.config.HasHook(configs.Prestart, configs.CreateRuntime) {
 			s, err := c.currentOCIState()
 			if err != nil {
-				return nil
+				return err
 			}
 			s.Pid = int(notify.GetPid())
 
