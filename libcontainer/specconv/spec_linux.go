@@ -722,19 +722,35 @@ func convertSecToUSec(value dbus.Variant) (dbus.Variant, error) {
 	case "y":
 		sec = uint64(vi.(byte)) * M
 	case "n":
-		sec = uint64(vi.(int16)) * M
+		v := vi.(int16)
+		if v < 0 {
+			return value, errors.New("negative value")
+		}
+		sec = uint64(v) * M
 	case "q":
 		sec = uint64(vi.(uint16)) * M
 	case "i":
-		sec = uint64(vi.(int32)) * M
+		v := vi.(int32)
+		if v < 0 {
+			return value, errors.New("negative value")
+		}
+		sec = uint64(v) * M
 	case "u":
 		sec = uint64(vi.(uint32)) * M
 	case "x":
-		sec = uint64(vi.(int64)) * M
+		v := vi.(int64)
+		if v < 0 {
+			return value, errors.New("negative value")
+		}
+		sec = uint64(v) * M
 	case "t":
 		sec = vi.(uint64) * M
 	case "d":
-		sec = uint64(vi.(float64) * M)
+		v := vi.(float64)
+		if v < 0 {
+			return value, errors.New("negative value")
+		}
+		sec = uint64(v * M)
 	default:
 		return value, errors.New("not a number")
 	}
@@ -758,7 +774,7 @@ func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
 			return nil, fmt.Errorf("annotation %s=%s value parse error: %w", k, v, err)
 		}
 		// Check for Sec suffix.
-		if trimName := strings.TrimSuffix(name, "Sec"); len(trimName) < len(name) {
+		if trimName := strings.TrimSuffix(name, "Sec"); len(trimName) > 0 && len(trimName) < len(name) {
 			// Check for a lowercase ascii a-z just before Sec.
 			if ch := trimName[len(trimName)-1]; ch >= 'a' && ch <= 'z' {
 				// Convert from Sec to USec.
