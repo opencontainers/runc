@@ -1263,7 +1263,7 @@ func readonlyPath(path string) error {
 	if err := unix.Statfs(path, &s); err != nil {
 		return &os.PathError{Op: "statfs", Path: path, Err: err}
 	}
-	flags := uintptr(s.Flags) & (unix.MS_NOSUID | unix.MS_NODEV | unix.MS_NOEXEC)
+	flags := uintptr(statfsToMountFlags(s)) & (unix.MS_NOSUID | unix.MS_NODEV | unix.MS_NOEXEC | mntAtimeFlags)
 
 	if err := mount(path, path, "", flags|unix.MS_BIND|unix.MS_REMOUNT|unix.MS_RDONLY, ""); err != nil {
 		return err
