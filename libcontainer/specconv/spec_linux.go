@@ -758,7 +758,7 @@ func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
 			return nil, fmt.Errorf("annotation %s=%s value parse error: %w", k, v, err)
 		}
 		// Check for Sec suffix.
-		if trimName := strings.TrimSuffix(name, "Sec"); len(trimName) < len(name) {
+		if trimName, ok := strings.CutSuffix(name, "Sec"); ok && len(trimName) > 0 {
 			// Check for a lowercase ascii a-z just before Sec.
 			if ch := trimName[len(trimName)-1]; ch >= 'a' && ch <= 'z' {
 				// Convert from Sec to USec.

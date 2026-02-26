@@ -750,6 +750,11 @@ func TestInitSystemdProps(t *testing.T) {
 			exp:  expT{false, "FOOSec", 123},
 		},
 		{
+			desc: "convert USec to Sec (short name)",
+			in:   inT{"org.systemd.property.Sec", "123"},
+			exp:  expT{false, "Sec", 123},
+		},
+		{
 			desc: "CollectMode",
 			in:   inT{"org.systemd.property.CollectMode", "'inactive-or-failed'"},
 			exp:  expT{false, "CollectMode", "inactive-or-failed"},
