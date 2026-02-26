@@ -676,7 +676,8 @@ func createLibcontainerMount(cwd string, m specs.Mount) (*configs.Mount, error) 
 	// to block this as early as possible.
 	if strings.IndexByte(mnt.Source, 0) >= 0 ||
 		strings.IndexByte(mnt.Destination, 0) >= 0 ||
-		strings.IndexByte(mnt.Device, 0) >= 0 {
+		strings.IndexByte(mnt.Device, 0) >= 0 ||
+		strings.IndexByte(mnt.Data, 0) >= 0 {
 		return nil, errors.New("mount field contains null byte")
 	}
 
