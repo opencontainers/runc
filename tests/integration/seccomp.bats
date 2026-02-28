@@ -155,6 +155,7 @@ function flags_value() {
 @test "runc run [seccomp] (SCMP_ACT_KILL)" {
 	update_config '  .process.args = ["/bin/sh", "-c", "mkdir /dev/shm/foo"]
 			| .process.noNewPrivileges = false
+			| .process.rlimits = [{"type": "RLIMIT_CORE", "soft": 0, "hard": 0}]
 			| .linux.seccomp = {
 				"defaultAction":"SCMP_ACT_ALLOW",
 				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
@@ -173,6 +174,7 @@ function flags_value() {
 				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
 				"syscalls":[{"names":["mkdir","mkdirat"], "action":"SCMP_ACT_KILL"}]
 			}
+			| .process.rlimits = [{"type": "RLIMIT_CORE", "soft": 0, "hard": 0}]
 			| .hooks = {
 				"startContainer": [ {
 						"path": "/bin/sh",
