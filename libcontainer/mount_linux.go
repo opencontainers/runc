@@ -8,9 +8,11 @@ import (
 	"strconv"
 	"strings"
 
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
+	devices "github.com/opencontainers/cgroups/devices/config"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
 	"github.com/opencontainers/runc/libcontainer/utils"
@@ -337,6 +339,32 @@ func mountFd(nsHandles *userns.Handles, m *configs.Mount) (_ *mountSource, retEr
 		}
 		sourceType = mountSourcePlain
 	}
+	return &mountSource{
+		Type: sourceType,
+		file: mountFile,
+	}, nil
+}
+
+// Use mknod to create devices in the initial user namespace to pass devices with 0660 permissions
+func usernsMknod(rootfs string, node *devices.Device) (*mountSource, error) {
+	var err error
+
+	destPath, err := securejoin.SecureJoin(rootfs, node.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	err = createDeviceNode(rootfs, node, false)
+	if err != nil {
+		return nil, err
+	}
+
+	mountFile, err := os.OpenFile(destPath, unix.O_PATH|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	sourceType := mountSourcePlain
 	return &mountSource{
 		Type: sourceType,
 		file: mountFile,

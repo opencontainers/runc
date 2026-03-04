@@ -280,3 +280,69 @@ function teardown() {
 	# is deleted during the namespace cleanup.
 	run ! ip link del dummy0
 }
+
+@test "checkpoint userns with the new device" {
+	requires criu root
+
+	update_config ' .linux.devices += [{"path": "/dev/another", "type": "c", "major": 1, "minor": 9, "fileMode": 432}]'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	testcontainer test_busybox running
+
+	runc exec test_busybox head -n 1 /dev/another
+	[ "$status" -eq 0 ]
+
+	for _ in $(seq 2); do
+		runc checkpoint --work-path ./work-dir test_busybox
+		[ "$status" -eq 0 ]
+
+		testcontainer test_busybox checkpointed
+
+		# we need to chown images because child process can try to read them.
+		chown -R 100000:200000 ./checkpoint
+
+		runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+		[ "$status" -eq 0 ]
+
+		testcontainer test_busybox running
+
+		runc exec test_busybox head -n  1 /dev/another
+		[ "$status" -eq 0 ]
+	done
+}
+
+@test "checkpoint userns with the new device and non-root user" {
+	requires criu root
+
+	update_config ' .process.user.uid = 42
+		| .process.user.gid = 42
+		| .linux.devices += [{"path": "/dev/another", "type": "c", "major": 1, "minor": 9, "fileMode": 432, "uid": 42, "gid": 42}]'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	testcontainer test_busybox running
+
+	runc exec test_busybox head -n 1 /dev/another
+	[ "$status" -eq 0 ]
+
+	for _ in $(seq 2); do
+		runc checkpoint --work-path ./work-dir test_busybox
+		[ "$status" -eq 0 ]
+
+		testcontainer test_busybox checkpointed
+
+		# we need to chown images because child process can try to read them.
+		chown -R 100000:200000 ./checkpoint
+
+		runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+		[ "$status" -eq 0 ]
+
+		testcontainer test_busybox running
+
+		runc exec test_busybox head -n  1 /dev/another
+		[ "$status" -eq 0 ]
+	done
+}
