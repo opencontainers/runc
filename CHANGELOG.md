@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### libcontainer API ###
+- The following deprecated Go APIs have been removed:
+  - `CleanPath`, `StripRoot`, and `WithProcfd` from `libcontainer/utils`. Note
+    that `WithProcfdFile` has not been removed (due to import cycle issues) but
+    is instead marked as internal in its godoc comment. (#5051)
+
 ## [1.4.0] - 2025-11-27
 
 > 路漫漫其修远兮，吾将上下而求索！
