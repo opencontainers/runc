@@ -466,17 +466,6 @@ type Capabilities struct {
 	Ambient []string `json:"Ambient,omitempty"`
 }
 
-// Deprecated: use [Hooks.Run] instead.
-func (hooks HookList) RunHooks(state *specs.State) error {
-	for i, h := range hooks {
-		if err := h.Run(state); err != nil {
-			return fmt.Errorf("error running hook #%d: %w", i, err)
-		}
-	}
-
-	return nil
-}
-
 func (hooks *Hooks) UnmarshalJSON(b []byte) error {
 	var state map[HookName][]CommandHook
 
