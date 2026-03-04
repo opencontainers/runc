@@ -29,6 +29,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `libcontainer/configs.NewThrottleDevice`
   - `libcontainer/configs.HookList.RunHooks`. (#5141)
   - `libcontainer/configs.MPOL_*` (#5414)
+  - All of the types in `libcontainer/devices` which are now maintained in
+    `github.com/opencontainers/cgroups/devices/config` (#5141):
+    - `libcontainer/devices.Wildcard`
+    - `libcontainer/devices.WildcardDevice`
+    - `libcontainer/devices.BlockDevice`
+    - `libcontainer/devices.CharDevice`
+    - `libcontainer/devices.FifoDevice`
+    - `libcontainer/devices.Device`
+    - `libcontainer/devices.Permissions`
+    - `libcontainer/devices.Type`
+    - `libcontainer/devices.Rule`
 
 ## [1.4.0] - 2025-11-27
 
