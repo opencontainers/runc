@@ -6,6 +6,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### libcontainer API ###
+- The following deprecated Go APIs have been removed:
+  - `CleanPath`, `StripRoot`, and `WithProcfd` from `libcontainer/utils`. Note
+    that `WithProcfdFile` has not been removed (due to import cycle issues) but
+    is instead marked as internal in its godoc comment. (#5051)
+  - All of the cgroup-related types and functions from `libcontainer/configs`
+    which are now maintained in `github.com/opencontainers/cgroups` (#5141):
+    - `libcontainer/configs.Cgroup`
+    - `libcontainer/configs.Resources`
+    - `libcontainer/configs.FreezerState`
+    - `libcontainer/configs.LinuxRdma`
+    - `libcontainer/configs.BlockIODevice`
+    - `libcontainer/configs.WeightDevice`
+    - `libcontainer/configs.ThrottleDevice`
+    - `libcontainer/configs.HugepageLimit`
+    - `libcontainer/configs.IfPrioMap`
+    - `libcontainer/configs.Undefined`
+    - `libcontainer/configs.Frozen`
+    - `libcontainer/configs.Thawed`
+    - `libcontainer/configs.NewWeightDevice`
+    - `libcontainer/configs.NewThrottleDevice`
+  - `libcontainer/configs.HookList.RunHooks`. (#5141)
+  - `libcontainer/configs.MPOL_*` (#5414)
+  - All of the types in `libcontainer/devices` which are now maintained in
+    `github.com/opencontainers/cgroups/devices/config` (#5141):
+    - `libcontainer/devices.Wildcard`
+    - `libcontainer/devices.WildcardDevice`
+    - `libcontainer/devices.BlockDevice`
+    - `libcontainer/devices.CharDevice`
+    - `libcontainer/devices.FifoDevice`
+    - `libcontainer/devices.Device`
+    - `libcontainer/devices.Permissions`
+    - `libcontainer/devices.Type`
+    - `libcontainer/devices.Rule`
+
+### Removed ###
+- The `memfd-bind` helper binary has been removed, as it has never been
+  particularly useful and was completely obsoleted by the changes to
+  `/proc/self/exe` sealing we introduced in runc [1.2.0][]. (#5141)
+
 ## [1.4.0] - 2025-11-27
 
 > 路漫漫其修远兮，吾将上下而求索！

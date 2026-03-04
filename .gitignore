@@ -1,7 +1,6 @@
 vendor/pkg
 /runc
 /runc-*
-/contrib/cmd/memfd-bind/memfd-bind
 /tests/cmd/_bin
 man/man8
 release
