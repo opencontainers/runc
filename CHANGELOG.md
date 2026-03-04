@@ -41,6 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `libcontainer/devices.Type`
     - `libcontainer/devices.Rule`
 
+### Removed ###
+- The `memfd-bind` helper binary has been removed, as it has never been
+  particularly useful and was completely obsoleted by the changes to
+  `/proc/self/exe` sealing we introduced in runc [1.2.0][]. (#5141)
+
 ## [1.4.0] - 2025-11-27
 
 > 路漫漫其修远兮，吾将上下而求索！

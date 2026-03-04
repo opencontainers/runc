@@ -77,11 +77,7 @@ runc-bin:
 	$(GO_BUILD) -o runc .
 
 .PHONY: all
-all: runc memfd-bind
-
-.PHONY: memfd-bind
-memfd-bind:
-	$(GO_BUILD) -o contrib/cmd/$@/$@ ./contrib/cmd/$@
+all: runc
 
 TESTBINDIR := tests/cmd/_bin
 $(TESTBINDIR):
@@ -96,7 +92,6 @@ $(TESTBINS): $(TESTBINDIR)
 .PHONY: clean
 clean:
 	rm -f runc runc-*
-	rm -f contrib/cmd/memfd-bind/memfd-bind
 	rm -fr $(TESTBINDIR)
 	sudo rm -rf release
 	rm -rf man/man8
