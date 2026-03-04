@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `CleanPath`, `StripRoot`, and `WithProcfd` from `libcontainer/utils`. Note
     that `WithProcfdFile` has not been removed (due to import cycle issues) but
     is instead marked as internal in its godoc comment. (#5051)
+  - All of the cgroup-related types and functions from `libcontainer/configs`
+    which are now maintained in `github.com/opencontainers/cgroups` (#5141):
+    - `libcontainer/configs.Cgroup`
+    - `libcontainer/configs.Resources`
+    - `libcontainer/configs.FreezerState`
+    - `libcontainer/configs.LinuxRdma`
+    - `libcontainer/configs.BlockIODevice`
+    - `libcontainer/configs.WeightDevice`
+    - `libcontainer/configs.ThrottleDevice`
+    - `libcontainer/configs.HugepageLimit`
+    - `libcontainer/configs.IfPrioMap`
+    - `libcontainer/configs.Undefined`
+    - `libcontainer/configs.Frozen`
+    - `libcontainer/configs.Thawed`
+    - `libcontainer/configs.NewWeightDevice`
+    - `libcontainer/configs.NewThrottleDevice`
 
 ## [1.4.0] - 2025-11-27
 
