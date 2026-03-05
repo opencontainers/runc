@@ -9,7 +9,6 @@ Spec version | Feature                                        | PR
 -------------|------------------------------------------------|----------------------------------------------------------
 v1.1.0       | `SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV`       | [#3862](https://github.com/opencontainers/runc/pull/3862)
 v1.3.0       | Clarified interpretation of `linux.intelRdt`   | [#3832](https://github.com/opencontainers/runc/pull/3832)
-v1.3.0       | Fail on a failure of a poststart hook.         | [#4348](https://github.com/opencontainers/runc/pull/4348)
 
 ## Architectures
 
