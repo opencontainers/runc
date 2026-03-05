@@ -56,7 +56,7 @@ GO_BUILD_STATIC := $(GO) build $(TRIMPATH) $(GO_BUILDMODE_STATIC) \
 	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
 	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS_STATIC) $(EXTRA_LDFLAGS)"
 
-GPG_KEYID ?= asarai@suse.de
+GPG_KEYID ?= cyphar@cyphar.com
 
 # Some targets need cgo, which is disabled by default when cross compiling.
 # Enable cgo explicitly for those.
