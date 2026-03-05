@@ -43,8 +43,10 @@ type Mount struct {
 	// Mount data applied to the mount.
 	Data string `json:"data,omitempty"`
 
-	// Relabel source if set, "z" indicates shared, "Z" indicates unshared.
-	Relabel string `json:"relabel,omitempty"`
+	// Relabel field is ignored.
+	//
+	// Deprecated: do not use. This field will be removed in runc 1.7.
+	Relabel string
 
 	// RecAttr represents mount properties to be applied recursively (AT_RECURSIVE), see mount_setattr(2).
 	RecAttr *unix.MountAttr `json:"rec_attr,omitempty"`

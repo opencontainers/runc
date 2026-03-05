@@ -747,16 +747,6 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 				return fmt.Errorf("failed to set user-requested vfs flags on bind-mount: %w", err)
 			}
 		}
-
-		if m.Relabel != "" {
-			if err := label.Validate(m.Relabel); err != nil {
-				return err
-			}
-			shared := label.IsShared(m.Relabel)
-			if err := label.Relabel(m.Source, mountLabel, shared); err != nil {
-				return err
-			}
-		}
 		return setRecAttr(m)
 	case "cgroup":
 		if cgroups.IsCgroup2UnifiedMode() {
