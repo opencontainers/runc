@@ -27,6 +27,7 @@ jobs:
       matrix:
         os: [ubuntu-24.04, ubuntu-24.04-arm]
         go-version: [1.24.x, 1.25.x, 1.26.x]
+        libpathrs: ["libpathrs", ""]
         rootless: ["rootless", ""]
         race: ["-race", ""]
         criu: ["", "criu-dev"]
@@ -79,8 +80,16 @@ jobs:
         sudo apt -y install libseccomp-dev sshfs uidmap lld
 
     - name: install libpathrs ${{ env.LIBPATHRS_VERSION }}
+      if: ${{ matrix.libpathrs != '' }}
       run: |
         sudo -E PATH="$PATH" ./script/build-libpathrs.sh "$LIBPATHRS_VERSION" /usr
+
+    - name: configure custom BUILDTAGS
+      if: ${{ matrix.libpathrs == '' }}
+      run: |-
+        # Strip out libpathrs from the default buildtags.
+        CUSTOM_BUILDTAGS="$(make -pn | sed -En '/^BUILDTAGS :?=/ { s/.*=// ; s/\blibpathrs\b//p }')"
+        echo "CUSTOM_BUILDTAGS=$CUSTOM_BUILDTAGS" >>"$GITHUB_ENV"
 
     - name: install CRIU
       if: ${{ matrix.criu == '' }}
@@ -112,7 +121,11 @@ jobs:
         check-latest: true
 
     - name: build
-      run: sudo -E PATH="$PATH" make EXTRA_FLAGS="${{ matrix.race }}" all
+      run: |
+        sudo -E PATH="$PATH" make \
+            ${CUSTOM_BUILDTAGS:+BUILDTAGS="$CUSTOM_BUILDTAGS"} \
+            EXTRA_FLAGS="${{ matrix.race }}" \
+            all
 
     - name: Setup Bats and bats libs
       uses: bats-core/bats-action@4.0.0
@@ -131,7 +144,7 @@ jobs:
 
     - name: unit test
       if: matrix.rootless != 'rootless'
-      run: sudo -E PATH="$PATH" -- make TESTFLAGS="${{ matrix.race }}" localunittest
+      run: sudo -E PATH="$PATH" -- make ${CUSTOM_BUILDTAGS:+BUILDTAGS="$CUSTOM_BUILDTAGS"} TESTFLAGS="${{ matrix.race }}" localunittest
 
     - name: add rootless user
       if: matrix.rootless == 'rootless'
@@ -141,7 +154,7 @@ jobs:
 
     - name: integration test (fs driver)
       continue-on-error: ${{ matrix.criu != '' }} # Don't let criu-dev errors fail CI.
-      run: sudo -E PATH="$PATH" script -e -c 'make local${{ matrix.rootless }}integration'
+      run: sudo -E PATH="$PATH" script -e -c 'make ${CUSTOM_BUILDTAGS:+BUILDTAGS="$CUSTOM_BUILDTAGS"} local${{ matrix.rootless }}integration'
 
     - name: integration test (systemd driver)
       continue-on-error: ${{ matrix.criu != '' }} # Don't let criu-dev errors fail CI.
@@ -152,7 +165,7 @@ jobs:
         printf "[Service]\nDelegate=yes\n" | sudo tee /etc/systemd/system/user@.service.d/delegate.conf
         sudo systemctl daemon-reload
         # Run the tests.
-        sudo -E PATH="$PATH" script -e -c 'make RUNC_USE_SYSTEMD=yes local${{ matrix.rootless }}integration'
+        sudo -E PATH="$PATH" script -e -c 'make RUNC_USE_SYSTEMD=yes ${CUSTOM_BUILDTAGS:+BUILDTAGS="$CUSTOM_BUILDTAGS"} local${{ matrix.rootless }}integration'
 
   # We need to continue support for 32-bit ARM.
   # However, we do not have 32-bit ARM CI, so we use i386 for testing 32bit stuff.
