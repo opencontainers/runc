@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0-rc.1] - 2026-03-10
+
+> 不易流行
+
 ### libcontainer API ###
 - The following deprecated Go APIs have been removed:
   - `CleanPath`, `StripRoot`, and `WithProcfd` from `libcontainer/utils`. Note
@@ -28,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `libcontainer/configs.NewWeightDevice`
     - `libcontainer/configs.NewThrottleDevice`
   - `libcontainer/configs.HookList.RunHooks`. (#5141)
-  - `libcontainer/configs.MPOL_*` (#5414)
+  - `libcontainer/configs.MPOL_*` (#5141)
   - All of the types in `libcontainer/devices` which are now maintained in
     `github.com/opencontainers/cgroups/devices/config` (#5141):
     - `libcontainer/devices.Wildcard`
@@ -40,11 +44,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `libcontainer/devices.Permissions`
     - `libcontainer/devices.Type`
     - `libcontainer/devices.Rule`
+- `libcontainer.Process` methods (`Wait`, `Pid`, `Signal`) and
+  `libcontainer/configs.Config` methods (`HostUID`, `HostRootUID`, `HostGID`,
+  `HostRootGID`) now use pointer receivers. (#5088)
+- The example code for `libcontainer` has been moved out of a `README` and into
+  a proper `Example*` test file that will be compile-tested by our CI. As
+  mentioned elsewhere, we still *do not* recommend users make use of the
+  `libcontainer` API directly. (#5127)
+
+### Deprecated ###
+- The `libcontainer/configs.Mount.Relabel` configuration field (used to relabel
+  mounts with the `z` and `Z` "pseudo" mount options) was never accessible
+  outside of the libcontainer API, and in practice the relabel logic has always
+  lived in higher level runtimes. It has been made into a no-op and the field
+  will be removed entirely in runc 1.7. (#5152)
 
 ### Removed ###
 - The `memfd-bind` helper binary has been removed, as it has never been
   particularly useful and was completely obsoleted by the changes to
   `/proc/self/exe` sealing we introduced in runc [1.2.0][]. (#5141)
+
+### Added ###
+- User-namespaced containers can now configure `user.*` sysctls. (#4889)
+- Preliminary `loong64` support. (#4938)
+- Intel RDT: the RDT subdirectory is now only removed if runc created it,
+  matching the updated runtime-spec guidance. (#3832, #5155)
+
+### Fixed ###
+- libct: fix panic in `initSystemdProps` when processing certain systemd
+  properties in the OCI spec. (#5133)
+- libct: fix several file descriptor leaks on error paths. (#5009)
+- Remove unnecessary `crypto/tls` dependency by open-coding the systemd socket
+  activation logic, allowing us to more easily avoid false positive CVE
+  warnings. (#5057)
+- Remove legacy `os.Is*` error usage, improving error type detection to make
+  our error fallback paths more robust. (#5061)
+- Go 1.26 has started enforcing a restriction of `os/exec.Cmd` which caused
+  issues with our usage of `CLONE_INTO_CGROUP` (on newer kernels). This has now
+  been resolved. (#5091)
+- Recursive `atime`-related mount flags (`rrelatime` et al.) are now applied
+  properly. (#5098)
+- Fix a regression in `runc exec` due to `CLONE_INTO_CGROUP` in the
+  (inadvisable) scenario where a container is configured without cgroup
+  namespaces and with `/sys/fs/cgroup` mounted `rw`. (#5101)
+- On machines with more than 1024 CPU cores, our logic for resetting the CPU
+  affinity will now correctly reset the affinity onto _all_ available cores
+  (not just the first 1024). (#5025)
+- #4757 caused a regression that resulted in spurious `cannot start a container
+  that has stopped` errors when running `runc create` and has thus been
+  reverted. (#5153, #5151, #4645, #4757)
+
+### Changed ###
+- `runc exec` will now request systemd to move the `exec` process into the
+  container cgroup, making the procedure more rootless-friendly. (#4822)
+- seccomp: minor documentation updates. (#4902)
+- Errors from `runc init` have historically being quite painful to understand and
+  debug, we have made several improvements to make them more comprehensive and
+  thus useful when debugging issues. (#4951, #4928)
+- Update spec conformance documentation for OCI runtime-spec v1.3.0. (#4948)
+- Our release archives now have the name `runc-$version.tar.xz` to make distro
+  packaging a little easier by matching the filename to the top-level directory
+  name in the archive. (#5052)
+- Minor signing keyring updates. (#5139, #5144, #5148)
 
 ## [1.4.0] - 2025-11-27
 
@@ -1594,3 +1655,7 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.4.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.2...v1.4.0-rc.3
 [1.4.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.1...v1.4.0-rc.2
 [1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1
+
+<!-- 1.5.z patch releases -->
+[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...release-1.5
+[1.5.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.5.0-rc.1
