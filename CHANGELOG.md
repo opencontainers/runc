@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0-rc.1] - 2026-03-12
+
+> 憎しみを束ねてもそれは脆い！
+
+> [!NOTE]
+> runc v1.5.0-rc.1 includes all of the patches backported to runc v1.4.1.
+
 ### libcontainer API ###
 - The following deprecated Go APIs have been removed:
   - `CleanPath`, `StripRoot`, and `WithProcfd` from `libcontainer/utils`. Note
@@ -28,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `libcontainer/configs.NewWeightDevice`
     - `libcontainer/configs.NewThrottleDevice`
   - `libcontainer/configs.HookList.RunHooks`. (#5141)
-  - `libcontainer/configs.MPOL_*` (#5414)
+  - `libcontainer/configs.MPOL_*` (#5141)
   - All of the types in `libcontainer/devices` which are now maintained in
     `github.com/opencontainers/cgroups/devices/config` (#5141):
     - `libcontainer/devices.Wildcard`
@@ -40,19 +47,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `libcontainer/devices.Permissions`
     - `libcontainer/devices.Type`
     - `libcontainer/devices.Rule`
+- `libcontainer.Process` methods (`Wait`, `Pid`, `Signal`) and
+  `libcontainer/configs.Config` methods (`HostUID`, `HostRootUID`, `HostGID`,
+  `HostRootGID`) now use pointer receivers. (#5088)
+- The example code for `libcontainer` has been moved out of a `README` and into
+  a proper `Example*` test file that will be compile-tested by our CI. As
+  mentioned elsewhere, we still *do not* recommend users make use of the
+  `libcontainer` API directly. (#5127)
+
+### Deprecated ###
+- The `libcontainer/configs.Mount.Relabel` configuration field (used to relabel
+  mounts with the `z` and `Z` "pseudo" mount options) was never accessible
+  outside of the libcontainer API, and in practice the relabel logic has always
+  lived in higher level runtimes. It has been made into a no-op and the field
+  will be removed entirely in runc 1.7. (#5152, #5160)
 
 ### Removed ###
 - The `memfd-bind` helper binary has been removed, as it has never been
   particularly useful and was completely obsoleted by the changes to
   `/proc/self/exe` sealing we introduced in runc [1.2.0][]. (#5141)
 
+### Added ###
+- User-namespaced containers can now configure `user.*` sysctls. (#4889)
+- Intel RDT: the RDT subdirectory is now only removed if runc created it,
+  matching the updated runtime-spec guidance. (#3832, #5155)
+
 ### Changed ###
 - Our release binaries and default build configuration now use [libpathrs][] by
-  default, providiung better hardening against certain kinds of attacks. Users
-  of runc should not see any changes as a result of this, but pacakgers will
+  default, providing better hardening against certain kinds of attacks. Users
+  of runc should not see any changes as a result of this, but packagers will
   need to adjust their packaging accordingly. runc can still be built without
   libpathrs (by building without the `libpathrs` build tag), but we currently
   plan to make runc 1.6 *require* libpathrs. (#5103)
+- `runc exec` will now request systemd to move the `exec` process into the
+  container cgroup, making the procedure more rootless-friendly. (#4822)
+- seccomp: minor documentation updates. (#4902)
+- Errors from `runc init` have historically been quite painful to understand
+  and debug, we have made several improvements to make them more comprehensive
+  and thus useful when debugging issues. (#4951, #4928)
+- Update spec conformance documentation for OCI runtime-spec v1.3.0. (#4948,
+  #5150)
+- Our release archives now have the name `runc-$version.tar.xz` to make distro
+  packaging a little easier by matching the filename to the top-level directory
+  name in the archive. (#5052)
 
 [libpathrs]: https://github.com/cyphar/libpathrs
 
@@ -1651,3 +1688,7 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.4.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.2...v1.4.0-rc.3
 [1.4.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.1...v1.4.0-rc.2
 [1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1
+
+<!-- 1.5.z patch releases -->
+[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...release-1.5
+[1.5.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.5.0-rc.1
