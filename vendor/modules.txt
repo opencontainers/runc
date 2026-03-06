@@ -55,6 +55,9 @@ github.com/godbus/dbus/v5
 # github.com/moby/sys/capability v0.4.0
 ## explicit; go 1.21
 github.com/moby/sys/capability
+# github.com/moby/sys/devices v0.0.0 => github.com/cyphar/moby-sys/devices v0.0.0-20260305112844-1b36f7959ecc
+## explicit; go 1.24
+github.com/moby/sys/devices
 # github.com/moby/sys/mountinfo v0.7.2
 ## explicit; go 1.17
 github.com/moby/sys/mountinfo
