@@ -91,9 +91,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - libct: fix mips compilation. (#4962, #4967)
 - When configuring a `tmpfs` mount, only set the `mode=` argument if the target
   path already existed. This fixes a regression introduced in our
-  [CVE-2025-52881][] mitigation patches. (#4971, #4976)
+  [CVE-2025-52881][] mitigation patches. (#4971, #4973, #4976)
 - Fix various file descriptor leaks and add additional tests to detect them as
-  comprehensively as possible. (#5007, #5021, #5034)
+  comprehensively as possible. (#5007, #5021, #5026, #5034)
 - The "hallucination" helpers added as part of the [CVE-2025-52881][]
   mitigation have been made more generic and now apply to all of our `pathrs`
   helper functions, which should ensure we will not regress dangling symlink
@@ -113,9 +113,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * libct: fix mips compilation. (#4962, #4966)
  * When configuring a `tmpfs` mount, only set the `mode=` argument if the
    target path already existed. This fixes a regression introduced in our
-   [CVE-2025-52881][] mitigation patches. (#4971, #4976)
+   [CVE-2025-52881][] mitigation patches. (#4971, #4973, #4976)
  * Fix various file descriptor leaks and add additional tests to detect them as
-   comprehensively as possible. (#5007, #5021, #5034)
+   comprehensively as possible. (#5007, #5021, #5026, #5034)
 
 ### Changed
  * Downgrade `github.com/cyphar/filepath-securejoin` dependency to `v0.5.2`,
@@ -134,7 +134,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    target path already existed. This fixes a regression introduced in our
    [CVE-2025-52881][] mitigation patches. (#4971, #4974)
  * Fix various file descriptor leaks and add additional tests to detect them as
-   comprehensively as possible. (#5007, #5021, #5027)
+   comprehensively as possible. (#5007, #5021, #5026, #5027)
 
 ### Changed
  * Downgrade `github.com/cyphar/filepath-securejoin` dependency to `v0.5.2`,
