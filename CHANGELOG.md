@@ -136,6 +136,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [debian-armhf]: https://wiki.debian.org/ArmHardFloatPort
 
+### Added ###
+- Support for specs.LinuxSeccompFlagWaitKillableRecv. (#5172)
+
 ## [1.4.0] - 2025-11-27
 
 > 路漫漫其修远兮，吾将上下而求索！

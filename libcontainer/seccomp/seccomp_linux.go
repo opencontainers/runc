@@ -159,6 +159,11 @@ func setFlag(filter *libseccomp.ScmpFilter, flag specs.LinuxSeccompFlag) error {
 			return fmt.Errorf("error adding SSB flag to seccomp filter: %w", err)
 		}
 		return nil
+	case specs.LinuxSeccompFlagWaitKillableRecv:
+		if err := filter.SetWaitKill(true); err != nil {
+			return fmt.Errorf("error adding WaitKill flag to seccomp filter: %w", err)
+		}
+		return nil
 	}
 	// NOTE when adding more flags above, do not forget to also:
 	// - add new flags to `flags` slice in config.go;
