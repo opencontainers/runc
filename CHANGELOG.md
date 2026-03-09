@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added ###
+- Support for specs.LinuxSeccompFlagWaitKillableRecv. (#5183, #5172)
+
 ## [1.5.0-rc.1] - 2026-03-12
 
 > 憎しみを束ねてもそれは脆い！
