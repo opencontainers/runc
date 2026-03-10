@@ -46,7 +46,7 @@ type Mount struct {
 	// Relabel field is ignored.
 	//
 	// Deprecated: do not use. This field will be removed in runc 1.7.
-	Relabel string
+	Relabel string `json:"-"`
 
 	// RecAttr represents mount properties to be applied recursively (AT_RECURSIVE), see mount_setattr(2).
 	RecAttr *unix.MountAttr `json:"rec_attr,omitempty"`
