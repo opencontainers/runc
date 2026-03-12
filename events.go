@@ -53,16 +53,14 @@ information is displayed once every 5 seconds.`,
 			events = make(chan *types.Event, 1024)
 			group  = &sync.WaitGroup{}
 		)
-		group.Add(1)
-		go func() {
-			defer group.Done()
+		group.Go(func() {
 			enc := json.NewEncoder(os.Stdout)
 			for e := range events {
 				if err := enc.Encode(e); err != nil {
 					logrus.Error(err)
 				}
 			}
-		}()
+		})
 		if context.Bool("stats") {
 			s, err := container.Stats()
 			if err != nil {
