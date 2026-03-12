@@ -11,9 +11,11 @@ GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 GIT_BRANCH_CLEAN := $(shell echo $(GIT_BRANCH) | sed -e "s/[^[:alnum:]]/-/g")
 RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
 PROJECT := github.com/opencontainers/runc
-EXTRA_BUILDTAGS :=
 BUILDTAGS := seccomp urfave_cli_no_docs libpathrs
-BUILDTAGS += $(EXTRA_BUILDTAGS)
+# Tags prefixed with - in RUNC_BUILDTAGS are removed from BUILDTAGS; others are added.
+BUILDTAGS_REMOVE := $(patsubst -%,%,$(filter -%,$(RUNC_BUILDTAGS)))
+BUILDTAGS_ADD    := $(filter-out -%,$(RUNC_BUILDTAGS))
+BUILDTAGS := $(filter-out $(BUILDTAGS_REMOVE),$(BUILDTAGS)) $(BUILDTAGS_ADD)
 
 COMMIT := $(shell git describe --dirty --long --always)
 EXTRA_VERSION :=

@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking ###
+
+- Support for `EXTRA_BUILDTAGS` has been removed from the Makefile in favor of
+  `RUNC_BUILDTAGS`, see [README.md][README.md] for details. (#5171)
+
 ### libcontainer API ###
 - The following deprecated Go APIs have been removed:
   - `CleanPath`, `StripRoot`, and `WithProcfd` from `libcontainer/utils`. Note
