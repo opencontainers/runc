@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added ###
+
+- When building runc, `RUNC_BUILDTAGS` make or shell environment variable can
+  be used to add build tags and/or remove existing build tags (when a tag is
+  prefixed with `-`). (#5171)
+
+### Deprecated ###
+- `EXTRA_BUILDTAGS` make variable is deprecated in favor of `RUNC_BUILDTAGS`
+  and will be removed in runc 1.6. (#5171)
+
 ## [1.5.0-rc.1] - 2026-03-12
 
 > 憎しみを束ねてもそれは脆い！

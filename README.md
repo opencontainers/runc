@@ -93,35 +93,32 @@ Bear in mind to include some separator for readability.
 #### Build Tags
 
 `runc` supports optional build tags for compiling support of various features,
-with some of them enabled by default (see `BUILDTAGS` in top-level `Makefile`).
+with some of them enabled by default in the top-level Makefile.
 
-To change build tags from the default, set the `BUILDTAGS` variable for make,
-e.g. to disable seccomp:
+The following build tags are currently recognized:
+
+| Build Tag     | Feature                               | Set by Default | Dependencies        |
+|---------------|---------------------------------------|----------------|---------------------|
+| `seccomp`     | Syscall filtering using `libseccomp`. | yes            | `libseccomp`        |
+| `libpathrs`   | Use [`libpathrs`][] for path safety.  | yes            | [`libpathrs`][]     |
+| `runc_nocriu` | **Disables** runc checkpoint/restore. | no             | `criu`              |
+
+[`libpathrs`]: https://github.com/cyphar/libpathrs
+
+To add or remove build tags from the default set, use the `RUNC_BUILDTAGS`
+make or shell variable. Tags prefixed with `-` are removed from the default set;
+others are added. For example:
 
 ```bash
-make BUILDTAGS=""
+# Add runc_nocriu and remove seccomp tag.
+make RUNC_BUILDTAGS="runc_nocriu -seccomp"
 ```
-
-To add some more build tags to the default set, use the `EXTRA_BUILDTAGS`
-make variable, e.g. to disable checkpoint/restore:
-
-```bash
-make EXTRA_BUILDTAGS="runc_nocriu"
-```
-
-| Build Tag     | Feature                               | Enabled by Default | Dependencies        |
-|---------------|---------------------------------------|--------------------|---------------------|
-| `seccomp`     | Syscall filtering using `libseccomp`. | yes                | `libseccomp`        |
-| `libpathrs`   | Use [`libpathrs`][] for path safety.  | yes                | [`libpathrs`][]     |
-| `runc_nocriu` | **Disables** runc checkpoint/restore. | no                 | `criu`              |
 
 The following build tags were used earlier, but are now obsoleted:
  - **runc_nodmz** (since runc v1.2.1 runc dmz binary is dropped)
  - **nokmem** (since runc v1.0.0-rc94 kernel memory settings are ignored)
  - **apparmor** (since runc v1.0.0-rc93 the feature is always enabled)
  - **selinux**  (since runc v1.0.0-rc93 the feature is always enabled)
-
-[`libpathrs`]: https://github.com/cyphar/libpathrs
 
 ### Running the test suite
 

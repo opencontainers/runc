@@ -95,7 +95,7 @@ jobs:
       - name: compile with no build tags
         run: make BUILDTAGS=""
       - name: compile with runc_nocriu build tag
-        run: make EXTRA_BUILDTAGS="runc_nocriu"
+        run: make RUNC_BUILDTAGS="runc_nocriu"
 
   codespell:
     runs-on: ubuntu-24.04
