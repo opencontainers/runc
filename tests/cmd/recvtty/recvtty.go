@@ -117,17 +117,13 @@ func handleSingle(path string, noStdin bool) error {
 		wg            sync.WaitGroup
 		inErr, outErr error
 	)
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		_, outErr = io.Copy(os.Stdout, c)
-		wg.Done()
-	}()
+	})
 	if !noStdin {
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			_, inErr = io.Copy(c, os.Stdin)
-			wg.Done()
-		}()
+		})
 	}
 
 	// Only close the master fd once we've stopped copying.
