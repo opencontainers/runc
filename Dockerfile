@@ -2,9 +2,9 @@ ARG GO_VERSION=1.25
 ARG BATS_VERSION=v1.12.0
 ARG LIBSECCOMP_VERSION=2.6.0
 
-FROM golang:${GO_VERSION}-bookworm
+FROM golang:${GO_VERSION}-trixie
 ARG DEBIAN_FRONTEND=noninteractive
-ARG CRIU_REPO=https://download.opensuse.org/repositories/devel:/tools:/criu/Debian_12
+ARG CRIU_REPO=https://download.opensuse.org/repositories/devel:/tools:/criu/Debian_13
 
 RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
     wget -nv $CRIU_REPO/Release.key -O- | gpg --dearmor > "$KEYFILE" \
@@ -54,14 +54,18 @@ RUN cd /tmp \
     && ./install.sh /usr/local \
     && rm -rf /tmp/bats-core
 
+ARG RELEASE_ARCHES="386 amd64 arm64 armel armhf ppc64le riscv64 s390x"
+ENV DYLIB_DIR=/opt/runc-dylibs
+
 # install libseccomp
 ARG LIBSECCOMP_VERSION
-COPY script/seccomp.sh script/lib.sh /tmp/script/
-RUN mkdir -p /opt/libseccomp \
-    && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" /opt/libseccomp 386 amd64 arm64 armel armhf ppc64le riscv64 s390x
+COPY script/build-seccomp.sh script/lib.sh /tmp/script/
+RUN mkdir -p $DYLIB_DIR \
+    && /tmp/script/build-seccomp.sh "$LIBSECCOMP_VERSION" $DYLIB_DIR $RELEASE_ARCHES
 ENV LIBSECCOMP_VERSION=$LIBSECCOMP_VERSION
-ENV LD_LIBRARY_PATH=/opt/libseccomp/lib
-ENV PKG_CONFIG_PATH=/opt/libseccomp/lib/pkgconfig
+
+ENV LD_LIBRARY_PATH=$DYLIB_DIR/lib
+ENV PKG_CONFIG_PATH=$DYLIB_DIR/lib/pkgconfig
 
 # Prevent the "fatal: detected dubious ownership in repository" git complain during build.
 RUN git config --global --add safe.directory /go/src/github.com/opencontainers/runc
