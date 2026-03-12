@@ -250,7 +250,7 @@ func syscallMode(i fs.FileMode) (o uint32) {
 // process will need to do an old-fashioned mount(2) themselves.
 //
 // This helper is only intended to be used by goCreateMountSources.
-func mountFd(nsHandles *userns.Handles, m *configs.Mount) (*mountSource, error) {
+func mountFd(nsHandles *userns.Handles, m *configs.Mount) (_ *mountSource, retErr error) {
 	if !m.IsBind() {
 		return nil, errors.New("new mount api: only bind-mounts are supported")
 	}
@@ -261,6 +261,11 @@ func mountFd(nsHandles *userns.Handles, m *configs.Mount) (*mountSource, error) 
 
 	var mountFile *os.File
 	var sourceType mountSourceType
+	defer func() {
+		if retErr != nil && mountFile != nil {
+			mountFile.Close()
+		}
+	}()
 
 	// Ideally, we would use OPEN_TREE_CLONE for everything, because we can
 	// be sure that the file descriptor cannot be used to escape outside of
