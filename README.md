@@ -112,6 +112,7 @@ make EXTRA_BUILDTAGS="runc_nocriu"
 | Build Tag     | Feature                               | Enabled by Default | Dependencies        |
 |---------------|---------------------------------------|--------------------|---------------------|
 | `seccomp`     | Syscall filtering using `libseccomp`. | yes                | `libseccomp`        |
+| `libpathrs`   | Use [`libpathrs`][] for path safety.  | yes                | [`libpathrs`][]     |
 | `runc_nocriu` | **Disables** runc checkpoint/restore. | no                 | `criu`              |
 
 The following build tags were used earlier, but are now obsoleted:
@@ -119,6 +120,8 @@ The following build tags were used earlier, but are now obsoleted:
  - **nokmem** (since runc v1.0.0-rc94 kernel memory settings are ignored)
  - **apparmor** (since runc v1.0.0-rc93 the feature is always enabled)
  - **selinux**  (since runc v1.0.0-rc93 the feature is always enabled)
+
+[`libpathrs`]: https://github.com/cyphar/libpathrs
 
 ### Running the test suite
 
