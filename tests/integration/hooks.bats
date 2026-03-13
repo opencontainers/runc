@@ -13,8 +13,7 @@ function teardown() {
 @test "runc create [second createRuntime hook fails]" {
 	update_config '.hooks |= {"createRuntime": [{"path": "/bin/true"}, {"path": "/bin/false"}]}'
 
-	runc create --console-socket "$CONSOLE_SOCKET" test_hooks
-	[ "$status" -ne 0 ]
+	runc ! create --console-socket "$CONSOLE_SOCKET" test_hooks
 	[[ "$output" == *"error running createRuntime hook #1:"* ]]
 }
 
@@ -22,8 +21,7 @@ function teardown() {
 	for hook in prestart createRuntime createContainer; do
 		echo "testing hook $hook"
 		update_config '.hooks |= {"'$hook'": [{"path": "/bin/true"}, {"path": "/bin/false"}]}'
-		runc create --console-socket "$CONSOLE_SOCKET" test_hooks
-		[ "$status" -ne 0 ]
+		runc ! create --console-socket "$CONSOLE_SOCKET" test_hooks
 		[[ "$output" == *"error running $hook hook #1:"* ]]
 	done
 }
@@ -34,9 +32,8 @@ function teardown() {
 	for hook in prestart createRuntime createContainer startContainer poststart; do
 		echo "testing hook $hook"
 		update_config '.hooks |= {"'$hook'": [{"path": "/bin/true"}, {"path": "/bin/false"}]}'
-		runc run "test_hook-$hook"
+		runc ! run "test_hook-$hook"
 		[[ "$output" != "Hello World" ]]
-		[ "$status" -ne 0 ]
 		[[ "$output" == *"error running $hook hook #1:"* ]]
 	done
 }
@@ -58,8 +55,7 @@ function teardown() {
 	update_config '	  .process.args = ["/bin/true"]
 			| .process.env = ["ONE=two", "FOO=bar"]
 			| .hooks |= {"startContainer": [{"path": "/check-env.sh"}]}'
-	runc run ct1
-	[ "$status" -eq 0 ]
+	runc -0 run ct1
 }
 
 # https://github.com/opencontainers/runc/issues/1663
@@ -67,14 +63,12 @@ function teardown() {
 	# Check that argv[0] and argv[1] passed to the hook's binary
 	# exactly as set in config.json.
 	update_config '.hooks |= {"startContainer": [{"path": "/bin/busybox", "args": ["cat", "/nosuchfile"]}]}'
-	runc run ct1
-	[ "$status" -ne 0 ]
+	runc ! run ct1
 	[[ "$output" == *"cat: can't open"*"/nosuchfile"* ]]
 
 	# Busybox also accepts commands where argv[0] is "busybox",
 	# and argv[1] is applet name. Test this as well.
 	update_config '.hooks |= {"startContainer": [{"path": "/bin/busybox", "args": ["busybox", "cat", "/nosuchfile"]}]}'
-	runc run ct1
-	[ "$status" -ne 0 ]
+	runc ! run ct1
 	[[ "$output" == *"cat: can't open"*"/nosuchfile"* ]]
 }
