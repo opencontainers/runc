@@ -53,14 +53,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   need to adjust their packaging accordingly. runc can still be built without
   libpathrs (by building without the `libpathrs` build tag), but we currently
   plan to make runc 1.6 *require* libpathrs. (#5103)
+
+[libpathrs]: https://github.com/cyphar/libpathrs
+
+## [1.4.1] - 2026-03-12
+
+> La guerre n'est pas une aventure. La guerre est une maladie. Comme le typhus.
+
+### Deprecated ###
+- `libcontainer/configs.MPOL_*` constants added in runc [1.4.0][]. (#5110,
+  #5055)
+
+### Added ###
+- Preliminary `loong64` support. (#5062, #4938)
+
+### Fixed ###
+- libct: fix panic in `initSystemdProps` when processing certain systemd
+  properties in the OCI spec. (#5161, #5133)
+- libct: fix several file descriptor leaks on error paths. (#5168, #5009)
+- Remove unnecessary `crypto/tls` dependency by open-coding the systemd socket
+  activation logic, allowing us to more easily avoid false positive CVE
+  warnings. (#5093, #5057)
+- Remove legacy `os.Is*` error usage, improving error type detection to make
+  our error fallback paths more robust. (#5162, #5061)
+- Go 1.26 has started enforcing a restriction of `os/exec.Cmd` which caused
+  issues with our usage of `CLONE_INTO_CGROUP` (on newer kernels). This has now
+  been resolved. (#5116, #5091)
+- Recursive `atime`-related mount flags (`rrelatime` et al.) are now applied
+  properly. (#5114, #5098)
+- Fix a regression in `runc exec` due to `CLONE_INTO_CGROUP` in the
+  (inadvisable) scenario where a container is configured without cgroup
+  namespaces and with `/sys/fs/cgroup` mounted `rw`. (#5117, #5101)
+- On machines with more than 1024 CPU cores, our logic for resetting the CPU
+  affinity will now correctly reset the affinity onto _all_ available cores
+  (not just the first 1024). (#5149, #5025)
+- PR #4757 caused a regression that resulted in spurious `cannot start a
+  container that has stopped` errors when running `runc create` and has thus
+  been reverted. (#5157, #5153, #5151, #4645, #4757)
+
+### Changed ###
 - Previously we made an attempt to make our `runc.armhf` release binaries work
   with ARMv6 (which would allow runc to work on the original Raspberry Pi).
   Unfortunately, this has effectively always been broken (because we
   cross-compile `libseccomp` within a Debian container and statically link to
   it) and so we are now officially matching [the Debian definition of `armhf`][debian-armhf]
-  (that is, ARMv7). (#5103)
+  (that is, ARMv7). (#5167, #5103)
+- Minor signing keyring updates. (#5147, #5139, #5144, #5148)
 
-[libpathrs]: https://github.com/cyphar/libpathrs
 [debian-armhf]: https://wiki.debian.org/ArmHardFloatPort
 
 ## [1.4.0] - 2025-11-27
@@ -1606,7 +1645,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
 
 <!-- 1.4.z patch releases -->
-[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.0...release-1.4
+[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.1...release-1.4
+[1.4.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
 [1.4.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.2...v1.4.0-rc.3
 [1.4.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.1...v1.4.0-rc.2
