@@ -282,6 +282,6 @@ jobs:
     - test
     - cross-i386
     - fedora
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-slim
     steps:
     - run: echo "All jobs completed"
