@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.3.z]
 
+## [1.3.5] - 2026-03-17
+
+> Lo viejo funciona!
+
+### Fixed
+ * Recursive atime-related mount flags (rrelatime et al.) are now applied
+   properly. (#5115, #5098)
+ * PR #4757 caused a regression that resulted in spurious
+   `cannot start a container that has stopped` errors when
+   running `runc create` and has thus been reverted. (#5158,
+   #5153, #5151, #4645, #4757)
+
+### Changed
+ * Updated builds to Go 1.25, libseccomp v2.6.0. (#5111, #5053)
+ * Minor signing keyring updates. (#5146, #5139, #5144, #5148)
+
 ## [1.3.4] - 2025-11-27
 
 > Take me to your heart, take me to your soul.
@@ -1236,7 +1252,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.2.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.2.0-rc.1
 
 <!-- 1.3.z patch releases -->
-[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.4...release-1.3
+[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.5...release-1.3
+[1.3.5]: https://github.com/opencontainers/runc/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/opencontainers/runc/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/opencontainers/runc/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/opencontainers/runc/compare/v1.3.1...v1.3.2
