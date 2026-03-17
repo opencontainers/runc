@@ -90,6 +90,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - libct: switch to `(*CPUSet).Fill`. (#4927)
 - docs/spec-conformance.md: update for spec v1.3.0. (#4948)
+- Errors from `runc init` have historically been quite painful to understand
+  and debug, we have made several improvements to make them more comprehensive
+  and thus useful when debugging issues. (#5040, #4951, #4928)
 
 [CVE-2025-52881]: https://github.com/opencontainers/runc/security/advisories/GHSA-cgrx-mc8f-2prm
 
