@@ -25,6 +25,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -34,7 +35,7 @@ import (
 	"sync"
 
 	"github.com/containerd/console"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 
 	"github.com/opencontainers/runc/internal/cmsg"
 )
@@ -175,7 +176,7 @@ func handleNull(path string) error {
 }
 
 func main() {
-	app := cli.NewApp()
+	app := &cli.Command{}
 	app.Name = "recvtty"
 	app.Usage = usage
 
@@ -191,30 +192,30 @@ func main() {
 
 	// Set the flags.
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "mode, m",
 			Value: "single",
 			Usage: "Mode of operation (single or null)",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "pid-file",
 			Value: "",
 			Usage: "Path to write daemon process ID to",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "no-stdin",
 			Usage: "Disable stdin handling (no-op for null mode)",
 		},
 	}
 
-	app.Action = func(ctx *cli.Context) error {
-		args := ctx.Args()
+	app.Action = func(_ context.Context, cmd *cli.Command) error {
+		args := cmd.Args().Slice()
 		if len(args) != 1 {
 			return errors.New("need to specify a single socket path")
 		}
-		path := ctx.Args()[0]
+		path := args[0]
 
-		pidPath := ctx.String("pid-file")
+		pidPath := cmd.String("pid-file")
 		if pidPath != "" {
 			pid := fmt.Sprintf("%d\n", os.Getpid())
 			if err := os.WriteFile(pidPath, []byte(pid), 0o644); err != nil {
@@ -222,8 +223,8 @@ func main() {
 			}
 		}
 
-		noStdin := ctx.Bool("no-stdin")
-		switch ctx.String("mode") {
+		noStdin := cmd.Bool("no-stdin")
+		switch cmd.String("mode") {
 		case "single":
 			if err := handleSingle(path, noStdin); err != nil {
 				return err
@@ -233,11 +234,11 @@ func main() {
 				return err
 			}
 		default:
-			return fmt.Errorf("need to select a valid mode: %s", ctx.String("mode"))
+			return fmt.Errorf("need to select a valid mode: %s", cmd.String("mode"))
 		}
 		return nil
 	}
-	if err := app.Run(os.Args); err != nil {
+	if err := app.Run(context.Background(), os.Args); err != nil {
 		bail(err)
 	}
 }

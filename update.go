@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,19 +15,20 @@ import (
 	"github.com/docker/go-units"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 func mkPtr[T any](v T) *T { return &v }
 
-var updateCommand = cli.Command{
+var updateCommand = &cli.Command{
 	Name:      "update",
 	Usage:     "update container resource constraints",
 	ArgsUsage: `<container-id>`,
 	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "resources, r",
-			Value: "",
+		&cli.StringFlag{
+			Name:    "resources",
+			Aliases: []string{"r"},
+			Value:   "",
 			Usage: `path to the file containing the resources to update or '-' to read from the standard input
 
 The accepted format is as follow (unchanged values can be omitted):
@@ -59,86 +61,86 @@ other options are ignored.
 `,
 		},
 
-		cli.IntFlag{
+		&cli.IntFlag{
 			Name:  "blkio-weight",
 			Usage: "Specifies per cgroup weight, range is from 10 to 1000",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpu-period",
 			Usage: "CPU CFS period to be used for hardcapping (in usecs). 0 to use system default",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpu-quota",
 			Usage: "CPU CFS hardcap limit (in usecs). Allowed cpu time in a given period",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpu-burst",
 			Usage: "CPU CFS hardcap burst limit (in usecs). Allowed accumulated cpu time additionally for burst a given period",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpu-share",
 			Usage: "CPU shares (relative weight vs. other containers)",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpu-rt-period",
 			Usage: "CPU realtime period to be used for hardcapping (in usecs). 0 to use system default",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpu-rt-runtime",
 			Usage: "CPU realtime hardcap limit (in usecs). Allowed cpu time in a given period",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpuset-cpus",
 			Usage: "CPU(s) to use",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpuset-mems",
 			Usage: "Memory node(s) to use",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:   "kernel-memory",
 			Usage:  "(obsoleted; do not use)",
 			Hidden: true,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:   "kernel-memory-tcp",
 			Usage:  "(obsoleted; do not use)",
 			Hidden: true,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "memory",
 			Usage: "Memory limit (in bytes)",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cpu-idle",
 			Usage: "set cgroup SCHED_IDLE or not, 0: default behavior, 1: SCHED_IDLE",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "memory-reservation",
 			Usage: "Memory reservation or soft_limit (in bytes)",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "memory-swap",
 			Usage: "Total memory usage (memory + swap); set '-1' to enable unlimited swap",
 		},
-		cli.IntFlag{
+		&cli.IntFlag{
 			Name:  "pids-limit",
 			Usage: "Maximum number of pids allowed in the container",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "l3-cache-schema",
 			Usage: "The string of Intel RDT/CAT L3 cache schema",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "mem-bw-schema",
 			Usage: "The string of Intel RDT/MBA memory bandwidth schema",
 		},
 	},
-	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+	Action: func(_ context.Context, cmd *cli.Command) error {
+		if err := checkArgs(cmd, 1, exactArgs); err != nil {
 			return err
 		}
-		container, err := getContainer(context)
+		container, err := getContainer(cmd)
 		if err != nil {
 			return err
 		}
@@ -155,7 +157,7 @@ other options are ignored.
 
 		config := container.Config()
 
-		if in := context.String("resources"); in != "" {
+		if in := cmd.String("resources"); in != "" {
 			var (
 				f   *os.File
 				err error
@@ -175,16 +177,16 @@ other options are ignored.
 				return err
 			}
 		} else {
-			if val := context.Int("blkio-weight"); val != 0 {
+			if val := cmd.Int("blkio-weight"); val != 0 {
 				r.BlockIO.Weight = mkPtr(uint16(val))
 			}
-			if val := context.String("cpuset-cpus"); val != "" {
+			if val := cmd.String("cpuset-cpus"); val != "" {
 				r.CPU.Cpus = val
 			}
-			if val := context.String("cpuset-mems"); val != "" {
+			if val := cmd.String("cpuset-mems"); val != "" {
 				r.CPU.Mems = val
 			}
-			if val := context.String("cpu-idle"); val != "" {
+			if val := cmd.String("cpu-idle"); val != "" {
 				idle, err := strconv.ParseInt(val, 10, 64)
 				if err != nil {
 					return fmt.Errorf("invalid value for cpu-idle: %w", err)
@@ -201,7 +203,7 @@ other options are ignored.
 				{"cpu-rt-period", &r.CPU.RealtimePeriod},
 				{"cpu-share", &r.CPU.Shares},
 			} {
-				if val := context.String(pair.opt); val != "" {
+				if val := cmd.String(pair.opt); val != "" {
 					v, err := strconv.ParseUint(val, 10, 64)
 					if err != nil {
 						return fmt.Errorf("invalid value for %s: %w", pair.opt, err)
@@ -216,7 +218,7 @@ other options are ignored.
 				{"cpu-quota", &r.CPU.Quota},
 				{"cpu-rt-runtime", &r.CPU.RealtimeRuntime},
 			} {
-				if val := context.String(pair.opt); val != "" {
+				if val := cmd.String(pair.opt); val != "" {
 					v, err := strconv.ParseInt(val, 10, 64)
 					if err != nil {
 						return fmt.Errorf("invalid value for %s: %w", pair.opt, err)
@@ -234,7 +236,7 @@ other options are ignored.
 				{"kernel-memory-tcp", &r.Memory.KernelTCP},
 				{"memory-reservation", &r.Memory.Reservation},
 			} {
-				if val := context.String(pair.opt); val != "" {
+				if val := cmd.String(pair.opt); val != "" {
 					var v int64
 
 					if val != "-1" {
@@ -249,8 +251,8 @@ other options are ignored.
 				}
 			}
 
-			if context.IsSet("pids-limit") {
-				r.Pids.Limit = mkPtr(int64(context.Int("pids-limit")))
+			if cmd.IsSet("pids-limit") {
+				r.Pids.Limit = mkPtr(int64(cmd.Int("pids-limit")))
 			}
 		}
 
@@ -359,8 +361,8 @@ other options are ignored.
 		config.Cgroups.Resources.Unified = r.Unified
 
 		// Update Intel RDT
-		l3CacheSchema := context.String("l3-cache-schema")
-		memBwSchema := context.String("mem-bw-schema")
+		l3CacheSchema := cmd.String("l3-cache-schema")
+		memBwSchema := cmd.String("mem-bw-schema")
 		if l3CacheSchema != "" && !intelrdt.IsCATEnabled() {
 			return errors.New("Intel RDT/CAT: l3 cache schema is not enabled")
 		}
