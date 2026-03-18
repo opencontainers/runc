@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,26 +11,32 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
-var psCommand = cli.Command{
+var psCommand = &cli.Command{
 	Name:      "ps",
 	Usage:     "ps displays the processes running inside a container",
 	ArgsUsage: `<container-id> [ps options]`,
+	// Stop parsing flags after the first positional argument (the container ID).
+	// This allows passing flags like -aux to the underlying ps command.
+	StopOnNthArg: intPtr(1),
+	// Disable comma as separator for slice flags.
+	DisableSliceFlagSeparator: true,
 	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "format, f",
-			Value: "table",
-			Usage: `select one of: ` + formatOptions,
+		&cli.StringFlag{
+			Name:    "format",
+			Aliases: []string{"f"},
+			Value:   "table",
+			Usage:   `select one of: ` + formatOptions,
 		},
 	},
-	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, minArgs); err != nil {
+	Action: func(_ context.Context, cmd *cli.Command) error {
+		if err := checkArgs(cmd, 1, minArgs); err != nil {
 			return err
 		}
 
-		container, err := getContainer(context)
+		container, err := getContainer(cmd)
 		if err != nil {
 			return err
 		}
@@ -40,7 +47,7 @@ var psCommand = cli.Command{
 			return err
 		}
 
-		switch context.String("format") {
+		switch cmd.String("format") {
 		case "table":
 		case "json":
 			return json.NewEncoder(os.Stdout).Encode(pids)
@@ -49,16 +56,16 @@ var psCommand = cli.Command{
 		}
 
 		// [1:] is to remove command name, ex:
-		// context.Args(): [container_id ps_arg1 ps_arg2 ...]
+		// cmd.Args(): [container_id ps_arg1 ps_arg2 ...]
 		// psArgs:         [ps_arg1 ps_arg2 ...]
 		//
-		psArgs := context.Args()[1:]
+		psArgs := cmd.Args().Slice()[1:]
 		if len(psArgs) == 0 {
 			psArgs = []string{"-ef"}
 		}
 
-		cmd := exec.Command("ps", psArgs...)
-		output, err := cmd.CombinedOutput()
+		cmdExec := exec.Command("ps", psArgs...)
+		output, err := cmdExec.CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("%w: %s", err, output)
 		}
@@ -86,7 +93,6 @@ var psCommand = cli.Command{
 		}
 		return nil
 	},
-	SkipArgReorder: true,
 }
 
 func getPidIndex(title string) (int, error) {

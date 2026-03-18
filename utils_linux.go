@@ -12,7 +12,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	selinux "github.com/opencontainers/selinux/go-selinux"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/internal/pathrs"
@@ -28,12 +28,12 @@ var errEmptyID = errors.New("container id cannot be empty")
 
 // getContainer returns the specified container instance by loading it from
 // a state directory (root).
-func getContainer(context *cli.Context) (*libcontainer.Container, error) {
-	id := context.Args().First()
+func getContainer(cmd *cli.Command) (*libcontainer.Container, error) {
+	id := cmd.Args().First()
 	if id == "" {
 		return nil, errEmptyID
 	}
-	root := context.GlobalString("root")
+	root := cmd.String("root")
 	return libcontainer.Load(root, id)
 }
 
@@ -180,16 +180,16 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	return os.Rename(tmpName, path)
 }
 
-func createContainer(context *cli.Context, id string, spec *specs.Spec) (*libcontainer.Container, error) {
-	rootlessCg, err := shouldUseRootlessCgroupManager(context)
+func createContainer(cmd *cli.Command, id string, spec *specs.Spec) (*libcontainer.Container, error) {
+	rootlessCg, err := shouldUseRootlessCgroupManager(cmd)
 	if err != nil {
 		return nil, err
 	}
 	config, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
 		CgroupName:       id,
-		UseSystemdCgroup: context.GlobalBool("systemd-cgroup"),
-		NoPivotRoot:      context.Bool("no-pivot"),
-		NoNewKeyring:     context.Bool("no-new-keyring"),
+		UseSystemdCgroup: cmd.Bool("systemd-cgroup"),
+		NoPivotRoot:      cmd.Bool("no-pivot"),
+		NoNewKeyring:     cmd.Bool("no-new-keyring"),
 		Spec:             spec,
 		RootlessEUID:     os.Geteuid() != 0,
 		RootlessCgroups:  rootlessCg,
@@ -198,7 +198,7 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (*libcon
 		return nil, err
 	}
 
-	root := context.GlobalString("root")
+	root := cmd.String("root")
 	return libcontainer.Create(root, id, config)
 }
 
@@ -364,26 +364,26 @@ const (
 	CT_ACT_RESTORE
 )
 
-func startContainer(context *cli.Context, action CtAct, criuOpts *libcontainer.CriuOpts) (int, error) {
-	if err := revisePidFile(context); err != nil {
+func startContainer(cmd *cli.Command, action CtAct, criuOpts *libcontainer.CriuOpts) (int, error) {
+	if err := revisePidFile(cmd); err != nil {
 		return -1, err
 	}
-	spec, err := setupSpec(context)
+	spec, err := setupSpec(cmd)
 	if err != nil {
 		return -1, err
 	}
 
-	id := context.Args().First()
+	id := cmd.Args().First()
 	if id == "" {
 		return -1, errEmptyID
 	}
 
-	notifySocket := newNotifySocket(context, os.Getenv("NOTIFY_SOCKET"), id)
+	notifySocket := newNotifySocket(cmd, os.Getenv("NOTIFY_SOCKET"), id)
 	if notifySocket != nil {
 		notifySocket.setupSpec(spec)
 	}
 
-	container, err := createContainer(context, id, spec)
+	container, err := createContainer(cmd, id, spec)
 	if err != nil {
 		return -1, err
 	}
@@ -400,16 +400,16 @@ func startContainer(context *cli.Context, action CtAct, criuOpts *libcontainer.C
 	}
 
 	r := &runner{
-		enableSubreaper: !context.Bool("no-subreaper"),
-		shouldDestroy:   !context.Bool("keep"),
+		enableSubreaper: !cmd.Bool("no-subreaper"),
+		shouldDestroy:   !cmd.Bool("keep"),
 		container:       container,
 		listenFDs:       activation.Files(), // On-demand socket activation.
 		notifySocket:    notifySocket,
-		consoleSocket:   context.String("console-socket"),
-		pidfdSocket:     context.String("pidfd-socket"),
-		detach:          context.Bool("detach"),
-		pidFile:         context.String("pid-file"),
-		preserveFDs:     context.Int("preserve-fds"),
+		consoleSocket:   cmd.String("console-socket"),
+		pidfdSocket:     cmd.String("pidfd-socket"),
+		detach:          cmd.Bool("detach"),
+		pidFile:         cmd.String("pid-file"),
+		preserveFDs:     cmd.Int("preserve-fds"),
 		action:          action,
 		criuOpts:        criuOpts,
 		init:            true,
