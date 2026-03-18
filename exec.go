@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,10 +12,10 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
-var execCommand = cli.Command{
+var execCommand = &cli.Command{
 	Name:  "exec",
 	Usage: "execute new process inside the container",
 	ArgsUsage: `<container-id> <command> [command options]  || -p process.json <container-id>
@@ -28,93 +29,105 @@ For example, if the container is configured to run the linux ps command the
 following will output a list of processes running in the container:
 
        # runc exec <container-id> ps`,
+	// Stop parsing flags after the first positional argument (command)
+	// This allows passing flags like -c to the command being executed
+	StopOnNthArg: intPtr(1),
+	// Disable comma as separator for slice flags
+	// This allows cgroup controller lists like "cpu,cpuacct:subcpu".
+	DisableSliceFlagSeparator: true,
 	Flags: []cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "console-socket",
 			Usage: "path to an AF_UNIX socket which will receive a file descriptor referencing the master end of the console's pseudoterminal",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "pidfd-socket",
 			Usage: "path to an AF_UNIX socket which will receive a file descriptor referencing the exec process",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cwd",
 			Usage: "current working directory in the container",
 		},
-		cli.StringSliceFlag{
-			Name:  "env, e",
-			Usage: "set environment variables",
+		&cli.StringSliceFlag{
+			Name:    "env",
+			Aliases: []string{"e"},
+			Usage:   "set environment variables",
 		},
-		cli.BoolFlag{
-			Name:  "tty, t",
-			Usage: "allocate a pseudo-TTY",
+		&cli.BoolFlag{
+			Name:    "tty",
+			Aliases: []string{"t"},
+			Usage:   "allocate a pseudo-TTY",
 		},
-		cli.StringFlag{
-			Name:  "user, u",
-			Usage: "UID (format: <uid>[:<gid>])",
+		&cli.StringFlag{
+			Name:    "user",
+			Aliases: []string{"u"},
+			Usage:   "UID (format: <uid>[:<gid>])",
 		},
-		cli.Int64SliceFlag{
-			Name:  "additional-gids, g",
-			Usage: "additional gids",
+		&cli.Int64SliceFlag{
+			Name:    "additional-gids",
+			Aliases: []string{"g"},
+			Usage:   "additional gids",
 		},
-		cli.StringFlag{
-			Name:  "process, p",
-			Usage: "path to the process.json",
+		&cli.StringFlag{
+			Name:    "process",
+			Aliases: []string{"p"},
+			Usage:   "path to the process.json",
 		},
-		cli.BoolFlag{
-			Name:  "detach,d",
-			Usage: "detach from the container's process",
+		&cli.BoolFlag{
+			Name:    "detach",
+			Aliases: []string{"d"},
+			Usage:   "detach from the container's process",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "pid-file",
 			Value: "",
 			Usage: "specify the file to write the process id to",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "process-label",
 			Usage: "set the asm process label for the process commonly used with selinux",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "apparmor",
 			Usage: "set the apparmor profile for the process",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "no-new-privs",
 			Usage: "set the no new privileges value for the process",
 		},
-		cli.StringSliceFlag{
-			Name:  "cap, c",
-			Value: &cli.StringSlice{},
-			Usage: "add a capability to the bounding set for the process",
+		&cli.StringSliceFlag{
+			Name:    "cap",
+			Aliases: []string{"c"},
+			Value:   []string{},
+			Usage:   "add a capability to the bounding set for the process",
 		},
-		cli.IntFlag{
+		&cli.IntFlag{
 			Name:  "preserve-fds",
 			Usage: "Pass N additional file descriptors to the container (stdio + $LISTEN_FDS + N in total)",
 		},
-		cli.StringSliceFlag{
+		&cli.StringSliceFlag{
 			Name:  "cgroup",
 			Usage: "run the process in an (existing) sub-cgroup(s). Format is [<controller>:]<cgroup>.",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "ignore-paused",
 			Usage: "allow exec in a paused container",
 		},
 	},
-	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, minArgs); err != nil {
+	Action: func(_ context.Context, cmd *cli.Command) error {
+		if err := checkArgs(cmd, 1, minArgs); err != nil {
 			return err
 		}
-		if err := revisePidFile(context); err != nil {
+		if err := revisePidFile(cmd); err != nil {
 			return err
 		}
-		status, err := execProcess(context)
+		status, err := execProcess(cmd)
 		if err == nil {
 			os.Exit(status)
 		}
 		fatalWithCode(fmt.Errorf("exec failed: %w", err), 255)
 		return nil // to satisfy the linter
 	},
-	SkipArgReorder: true,
 }
 
 // getSubCgroupPaths parses --cgroup arguments, which can either be
@@ -152,8 +165,8 @@ func getSubCgroupPaths(args []string) (map[string]string, error) {
 	return paths, nil
 }
 
-func execProcess(context *cli.Context) (int, error) {
-	container, err := getContainer(context)
+func execProcess(cmd *cli.Command) (int, error) {
+	container, err := getContainer(cmd)
 	if err != nil {
 		return -1, err
 	}
@@ -164,15 +177,15 @@ func execProcess(context *cli.Context) (int, error) {
 	if status == libcontainer.Stopped {
 		return -1, errors.New("cannot exec in a stopped container")
 	}
-	if status == libcontainer.Paused && !context.Bool("ignore-paused") {
+	if status == libcontainer.Paused && !cmd.Bool("ignore-paused") {
 		return -1, errors.New("cannot exec in a paused container (use --ignore-paused to override)")
 	}
-	p, err := getProcess(context, container)
+	p, err := getProcess(cmd, container)
 	if err != nil {
 		return -1, err
 	}
 
-	cgPaths, err := getSubCgroupPaths(context.StringSlice("cgroup"))
+	cgPaths, err := getSubCgroupPaths(cmd.StringSlice("cgroup"))
 	if err != nil {
 		return -1, err
 	}
@@ -181,20 +194,20 @@ func execProcess(context *cli.Context) (int, error) {
 		enableSubreaper: false,
 		shouldDestroy:   false,
 		container:       container,
-		consoleSocket:   context.String("console-socket"),
-		pidfdSocket:     context.String("pidfd-socket"),
-		detach:          context.Bool("detach"),
-		pidFile:         context.String("pid-file"),
+		consoleSocket:   cmd.String("console-socket"),
+		pidfdSocket:     cmd.String("pidfd-socket"),
+		detach:          cmd.Bool("detach"),
+		pidFile:         cmd.String("pid-file"),
 		action:          CT_ACT_RUN,
 		init:            false,
-		preserveFDs:     context.Int("preserve-fds"),
+		preserveFDs:     cmd.Int("preserve-fds"),
 		subCgroupPaths:  cgPaths,
 	}
 	return r.run(p)
 }
 
-func getProcess(context *cli.Context, c *libcontainer.Container) (*specs.Process, error) {
-	if path := context.String("process"); path != "" {
+func getProcess(cmd *cli.Command, c *libcontainer.Container) (*specs.Process, error) {
+	if path := cmd.String("process"); path != "" {
 		f, err := os.Open(path)
 		if err != nil {
 			return nil, err
@@ -219,22 +232,22 @@ func getProcess(context *cli.Context, c *libcontainer.Container) (*specs.Process
 		return nil, err
 	}
 	p := spec.Process
-	args := context.Args()
+	args := cmd.Args().Slice()
 	if len(args) < 2 {
 		return nil, errors.New("exec args cannot be empty")
 	}
 	p.Args = args[1:]
 	// Override the cwd, if passed.
-	if cwd := context.String("cwd"); cwd != "" {
+	if cwd := cmd.String("cwd"); cwd != "" {
 		p.Cwd = cwd
 	}
-	if ap := context.String("apparmor"); ap != "" {
+	if ap := cmd.String("apparmor"); ap != "" {
 		p.ApparmorProfile = ap
 	}
-	if l := context.String("process-label"); l != "" {
+	if l := cmd.String("process-label"); l != "" {
 		p.SelinuxLabel = l
 	}
-	if caps := context.StringSlice("cap"); len(caps) > 0 {
+	if caps := cmd.StringSlice("cap"); len(caps) > 0 {
 		for _, c := range caps {
 			p.Capabilities.Bounding = append(p.Capabilities.Bounding, c)
 			p.Capabilities.Effective = append(p.Capabilities.Effective, c)
@@ -248,15 +261,15 @@ func getProcess(context *cli.Context, c *libcontainer.Container) (*specs.Process
 		}
 	}
 	// append the passed env variables
-	p.Env = append(p.Env, context.StringSlice("env")...)
+	p.Env = append(p.Env, cmd.StringSlice("env")...)
 
 	// Always set tty to false, unless explicitly enabled from CLI.
-	p.Terminal = context.Bool("tty")
-	if context.IsSet("no-new-privs") {
-		p.NoNewPrivileges = context.Bool("no-new-privs")
+	p.Terminal = cmd.Bool("tty")
+	if cmd.IsSet("no-new-privs") {
+		p.NoNewPrivileges = cmd.Bool("no-new-privs")
 	}
 	// Override the user, if passed.
-	if user := context.String("user"); user != "" {
+	if user := cmd.String("user"); user != "" {
 		uids, gids, ok := strings.Cut(user, ":")
 		if ok {
 			gid, err := strconv.Atoi(gids)
@@ -271,7 +284,7 @@ func getProcess(context *cli.Context, c *libcontainer.Container) (*specs.Process
 		}
 		p.User.UID = uint32(uid)
 	}
-	for _, gid := range context.Int64Slice("additional-gids") {
+	for _, gid := range cmd.Int64Slice("additional-gids") {
 		if gid < 0 {
 			return nil, fmt.Errorf("additional-gids must be a positive number %d", gid)
 		}

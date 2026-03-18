@@ -1,10 +1,12 @@
 package main
 
 import (
-	"github.com/urfave/cli"
+	"context"
+
+	"github.com/urfave/cli/v3"
 )
 
-var pauseCommand = cli.Command{
+var pauseCommand = &cli.Command{
 	Name:  "pause",
 	Usage: "pause suspends all processes inside the container",
 	ArgsUsage: `<container-id>
@@ -14,11 +16,13 @@ paused. `,
 	Description: `The pause command suspends all processes in the instance of the container.
 
 Use runc list to identify instances of containers and their current status.`,
-	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+	// Disable comma as separator for slice flags.
+	DisableSliceFlagSeparator: true,
+	Action: func(_ context.Context, cmd *cli.Command) error {
+		if err := checkArgs(cmd, 1, exactArgs); err != nil {
 			return err
 		}
-		container, err := getContainer(context)
+		container, err := getContainer(cmd)
 		if err != nil {
 			return err
 		}
@@ -31,7 +35,7 @@ Use runc list to identify instances of containers and their current status.`,
 	},
 }
 
-var resumeCommand = cli.Command{
+var resumeCommand = &cli.Command{
 	Name:  "resume",
 	Usage: "resumes all processes that have been previously paused",
 	ArgsUsage: `<container-id>
@@ -41,11 +45,13 @@ resumed.`,
 	Description: `The resume command resumes all processes in the instance of the container.
 
 Use runc list to identify instances of containers and their current status.`,
-	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+	// Disable comma as separator for slice flags.
+	DisableSliceFlagSeparator: true,
+	Action: func(_ context.Context, cmd *cli.Command) error {
+		if err := checkArgs(cmd, 1, exactArgs); err != nil {
 			return err
 		}
-		container, err := getContainer(context)
+		container, err := getContainer(cmd)
 		if err != nil {
 			return err
 		}
