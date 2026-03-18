@@ -11,7 +11,7 @@ GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 GIT_BRANCH_CLEAN := $(shell echo $(GIT_BRANCH) | sed -e "s/[^[:alnum:]]/-/g")
 RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
 PROJECT := github.com/opencontainers/runc
-BUILDTAGS := seccomp urfave_cli_no_docs libpathrs
+BUILDTAGS := seccomp libpathrs
 # Tags prefixed with - in RUNC_BUILDTAGS are removed from BUILDTAGS; others are added.
 RUNC_BUILDTAGS ?=
 BUILDTAGS_REMOVE := $(patsubst -%,%,$(filter -%,$(RUNC_BUILDTAGS)))
