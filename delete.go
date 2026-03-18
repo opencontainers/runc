@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -8,7 +9,7 @@ import (
 	"time"
 
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 
 	"golang.org/x/sys/unix"
 )
@@ -24,7 +25,7 @@ func killContainer(container *libcontainer.Container) error {
 	return errors.New("container init still running")
 }
 
-var deleteCommand = cli.Command{
+var deleteCommand = &cli.Command{
 	Name:  "delete",
 	Usage: "delete any resources held by the container often used with detached container",
 	ArgsUsage: `<container-id>
@@ -37,25 +38,28 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 "ubuntu01" removing "ubuntu01" from the runc list of containers:
 
        # runc delete ubuntu01`,
+	// Disable comma as separator for slice flags.
+	DisableSliceFlagSeparator: true,
 	Flags: []cli.Flag{
-		cli.BoolFlag{
-			Name:  "force, f",
-			Usage: "Forcibly deletes the container if it is still running (uses SIGKILL)",
+		&cli.BoolFlag{
+			Name:    "force",
+			Aliases: []string{"f"},
+			Usage:   "Forcibly deletes the container if it is still running (uses SIGKILL)",
 		},
 	},
-	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+	Action: func(_ context.Context, cmd *cli.Command) error {
+		if err := checkArgs(cmd, 1, exactArgs); err != nil {
 			return err
 		}
 
-		id := context.Args().First()
-		force := context.Bool("force")
-		container, err := getContainer(context)
+		id := cmd.Args().First()
+		force := cmd.Bool("force")
+		container, err := getContainer(cmd)
 		if err != nil {
 			if errors.Is(err, libcontainer.ErrNotExist) {
 				// if there was an aborted start or something of the sort then the container's directory could exist but
 				// libcontainer does not see it because the state.json file inside that directory was never created.
-				path := filepath.Join(context.GlobalString("root"), id)
+				path := filepath.Join(cmd.String("root"), id)
 				if e := os.RemoveAll(path); e != nil {
 					fmt.Fprintf(os.Stderr, "remove %s: %v\n", path, e)
 				}

@@ -1,15 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
-var stateCommand = cli.Command{
+var stateCommand = &cli.Command{
 	Name:  "state",
 	Usage: "output the state of a container",
 	ArgsUsage: `<container-id>
@@ -17,11 +18,13 @@ var stateCommand = cli.Command{
 Where "<container-id>" is your name for the instance of the container.`,
 	Description: `The state command outputs current state information for the
 instance of a container.`,
-	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+	// Disable comma as separator for slice flags.
+	DisableSliceFlagSeparator: true,
+	Action: func(_ context.Context, cmd *cli.Command) error {
+		if err := checkArgs(cmd, 1, exactArgs); err != nil {
 			return err
 		}
-		container, err := getContainer(context)
+		container, err := getContainer(cmd)
 		if err != nil {
 			return err
 		}

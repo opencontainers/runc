@@ -6,6 +6,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,7 +14,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -102,12 +103,12 @@ func remapRootfs(root string, uidMap, gidMap []specs.LinuxIDMapping) error {
 }
 
 func main() {
-	app := cli.NewApp()
+	app := &cli.Command{}
 	app.Name = "remap-rootfs"
 	app.Usage = usage
 
-	app.Action = func(ctx *cli.Context) error {
-		args := ctx.Args()
+	app.Action = func(_ context.Context, cmd *cli.Command) error {
+		args := cmd.Args().Slice()
 		if len(args) != 1 {
 			return errors.New("exactly one bundle argument must be provided")
 		}
@@ -141,7 +142,7 @@ func main() {
 
 		return remapRootfs(rootfs, uidMap, gidMap)
 	}
-	if err := app.Run(os.Args); err != nil {
+	if err := app.Run(context.Background(), os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
