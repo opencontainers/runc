@@ -3,12 +3,6 @@
 This branch of runc implements the [OCI Runtime Spec v1.3.0](https://github.com/opencontainers/runtime-spec/tree/v1.3.0)
 for the `linux` platform.
 
-The following features are not implemented yet:
-
-Spec version | Feature                                        | PR
--------------|------------------------------------------------|----------------------------------------------------------
-v1.1.0       | `SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV`       | [#3862](https://github.com/opencontainers/runc/pull/3862)
-
 ## Architectures
 
 The following architectures are supported:

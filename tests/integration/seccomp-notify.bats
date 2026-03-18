@@ -58,6 +58,27 @@ function scmp_act_notify_template() {
 	[ "$status" -eq 0 ]
 }
 
+@test "runc run [seccomp] (SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV)" {
+	scmp_act_notify_template "mkdir /dev/shm/foo && stat /dev/shm/foo-bar" false '"mkdir"'
+	update_config '.linux.seccomp.flags = [ "SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV" ]'
+
+	runc --debug run test_busybox
+	if [ "$status" -ne 0 ]; then
+		# Older libseccomp or kernel?
+		if [[ "$output" == *"error adding WaitKill flag to seccomp filter: SetWaitKill requires "* ]]; then
+			skip "$(sed -e 's/^.*SetWaitKill //' -e 's/" func=.*$//' <<<"$output")"
+		fi
+		# Otherwise, fail.
+		[ "$status" -eq 0 ]
+	fi
+	# Check the numeric flags value, as printed in the debug log, is as expected.
+	# 32: SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV
+	#  8: SECCOMP_FILTER_FLAG_NEW_LISTENER
+	exp='"seccomp filter flags: 40"'
+	echo "expecting $exp"
+	[[ "$output" == *"$exp"* ]]
+}
+
 # Test actions not-handled by the agent work fine. noNewPrivileges FALSE.
 @test "runc exec [seccomp] (SCMP_ACT_NOTIFY noNewPrivileges false)" {
 	requires root
