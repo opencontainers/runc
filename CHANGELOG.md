@@ -7,10 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added ###
-
 - When building runc, `RUNC_BUILDTAGS` make or shell environment variable can
   be used to add build tags and/or remove existing build tags (when a tag is
   prefixed with `-`). (#5171)
+- Support for specs.LinuxSeccompFlagWaitKillableRecv. (#5172)
 
 ### Deprecated ###
 - `EXTRA_BUILDTAGS` make variable is deprecated in favor of `RUNC_BUILDTAGS`
@@ -145,9 +145,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Minor signing keyring updates. (#5147, #5139, #5144, #5148)
 
 [debian-armhf]: https://wiki.debian.org/ArmHardFloatPort
-
-### Added ###
-- Support for specs.LinuxSeccompFlagWaitKillableRecv. (#5172)
 
 ## [1.4.0] - 2025-11-27
 
