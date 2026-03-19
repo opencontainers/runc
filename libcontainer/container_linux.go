@@ -232,7 +232,10 @@ func (c *Container) Exec() error {
 
 func (c *Container) exec() error {
 	path := filepath.Join(c.stateDir, execFifoFilename)
-	pid := c.initProcess.pid()
+	return handleFifo(path, c.initProcess.pid())
+}
+
+func handleFifo(path string, pid int) error {
 	blockingFifoOpenCh := awaitFifoOpen(path)
 	for {
 		select {
