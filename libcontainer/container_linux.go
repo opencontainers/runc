@@ -232,7 +232,10 @@ func (c *Container) Exec() error {
 
 func (c *Container) exec() error {
 	path := filepath.Join(c.stateDir, execFifoFilename)
-	return handleFifo(path, c.initProcess.pid())
+	if err := handleFifo(path, c.initProcess.pid()); err != nil {
+		return err
+	}
+	return c.postStart()
 }
 
 func handleFifo(path string, pid int) error {
@@ -254,6 +257,26 @@ func handleFifo(path string, pid int) error {
 			}
 		}
 	}
+}
+
+func (c *Container) postStart() error {
+	if !c.config.HasHook(configs.Poststart) {
+		return nil
+	}
+
+	s, err := c.currentOCIState()
+	if err != nil {
+		return err
+	}
+	if err = c.config.Hooks.Run(configs.Poststart, s); err != nil {
+		// A poststart hook failed; kill the container.
+		if err := c.signal(unix.SIGKILL); err != nil && !errors.Is(err, ErrNotRunning) {
+			logrus.Warnf("kill after failed poststop: %s", err)
+		}
+		return err
+	}
+
+	return nil
 }
 
 func readFromExecFifo(execFifo io.Reader) error {
@@ -374,19 +397,6 @@ func (c *Container) start(process *Process) (retErr error) {
 
 	if process.Init {
 		c.fifo.Close()
-		if c.config.HasHook(configs.Poststart) {
-			s, err := c.currentOCIState()
-			if err != nil {
-				return err
-			}
-
-			if err := c.config.Hooks.Run(configs.Poststart, s); err != nil {
-				if err := ignoreTerminateErrors(parent.terminate()); err != nil {
-					logrus.Warn(fmt.Errorf("error running poststart hook: %w", err))
-				}
-				return err
-			}
-		}
 	}
 	return nil
 }
