@@ -328,10 +328,8 @@ func mountCgroupV1(m mountEntry, c *mountConfig) error {
 			// We just created the tmpfs, and so we can just use filepath.Join
 			// here (not to mention we want to make sure we create the path
 			// inside the tmpfs, so we don't want to resolve symlinks).
-			// TODO: Why not just use b.Destination (c.root is the root here)?
-			subsystemPath := filepath.Join(c.root, b.Destination)
 			subsystemName := filepath.Base(b.Destination)
-			subsystemDir, err := pathrs.MkdirAllInRoot(c.root, subsystemPath, 0o755)
+			subsystemDir, err := pathrs.MkdirAllInRoot(c.root, b.Destination, 0o755)
 			if err != nil {
 				return err
 			}
