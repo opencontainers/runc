@@ -31,12 +31,12 @@ import (
 // Callers need to be very careful operating on the trailing path, as trivial
 // mistakes like following symlinks can cause security bugs. Most people
 // should probably just use [MkdirAllInRoot] or [CreateInRoot].
-func MkdirAllParentInRoot(root, unsafePath string, mode os.FileMode) (*os.File, string, error) {
+func MkdirAllParentInRoot(root *os.File, unsafePath string, mode os.FileMode) (*os.File, string, error) {
 	// MkdirAllInRoot also does hallucinateUnsafePath, but we need to do it
 	// here first because when we split unsafePath into (dir, file) components
 	// we want to be doing so with the hallucinated path (so that trailing
 	// dangling symlinks are treated correctly).
-	unsafePath, err := hallucinateUnsafePath(root, unsafePath)
+	unsafePath, err := hallucinateUnsafePath(root.Name(), unsafePath)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to construct hallucinated target path: %w", err)
 	}
