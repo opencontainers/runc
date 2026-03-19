@@ -396,7 +396,10 @@ func (c *Container) start(process *Process) (retErr error) {
 func (c *Container) Signal(s os.Signal) error {
 	c.m.Lock()
 	defer c.m.Unlock()
+	return c.signal(s)
+}
 
+func (c *Container) signal(s os.Signal) error {
 	// When a container has its own PID namespace, inside it the init PID
 	// is 1, and thus it is handled specially by the kernel. In particular,
 	// killing init with SIGKILL from an ancestor namespace will also kill
@@ -410,7 +413,7 @@ func (c *Container) Signal(s os.Signal) error {
 				logrus.WithError(err).Warn("failed to kill all processes, possibly due to lack of cgroup (Hint: enable cgroup v2 delegation)")
 				// Some processes may leak when cgroup is not delegated
 				// https://github.com/opencontainers/runc/pull/4395#pullrequestreview-2291179652
-				return c.signal(s)
+				return c.signalInit(s)
 			}
 			// For not rootless container, if there is no init process and no cgroup,
 			// it means that the container is not running.
@@ -422,10 +425,10 @@ func (c *Container) Signal(s os.Signal) error {
 		return nil
 	}
 
-	return c.signal(s)
+	return c.signalInit(s)
 }
 
-func (c *Container) signal(s os.Signal) error {
+func (c *Container) signalInit(s os.Signal) error {
 	// To avoid a PID reuse attack, don't kill non-running container.
 	if !c.hasInit() {
 		return ErrNotRunning
