@@ -252,6 +252,50 @@ jobs:
         ./bootstrap-get-images.sh > get-images.sh
         git diff --exit-code
 
+  conmon:
+    runs-on: ubuntu-24.04
+    steps:
+    - name: checkout
+      uses: actions/checkout@v6
+
+    - name: install runc and conmon deps
+      # XXX maybe switch to conmon/hack/github-actions-setup if the burden
+      # to maintain the list of needed packages here is too much to handle.
+      run: |
+        sudo apt update
+        sudo apt -y install libseccomp-dev libglib2.0-dev libsystemd-dev socat
+
+    - name: install Go
+      uses: actions/setup-go@v6
+      with:
+        go-version: "${{ env.GO_VERSION }}"
+
+    - name: build runc
+      run: make
+
+    - name: setup bats
+      uses: bats-core/bats-action@4.0.0
+      with:
+        bats-version: 1.13.0 # As required by conmon in hack/github-actions-setup.
+        support-install: false
+        assert-install: false
+        detik-install: false
+        file-install: false
+
+    - name: checkout conmon
+      uses: actions/checkout@v6
+      with:
+        repository: containers/conmon
+        path: conmon
+        ref: v2.2.1
+
+    - name: build conmon
+      run: cd conmon && make
+
+    - name: run conmon tests
+      run: |
+        RUNTIME_BINARY=$(pwd)/runc ./conmon/test/run-tests.sh -j $(nproc)
+
   all-done:
     needs:
       - check-go
@@ -259,6 +303,7 @@ jobs:
       - codespell
       - commit
       - compile-buildtags
+      - conmon
       - deps
       - get-images
       - go-fix
