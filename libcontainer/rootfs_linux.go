@@ -582,7 +582,6 @@ func (m *mountEntry) createOpenMountpoint(rootfs string) (Err error) {
 }
 
 func mountToRootfs(c *mountConfig, m mountEntry) error {
-	rootfs := c.root
 	defer func() {
 		if m.dstFile != nil {
 			_ = m.dstFile.Close()
@@ -599,6 +598,7 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		// has been a "fun" attack scenario in the past.
 		// TODO: This won't be necessary once we switch to libpathrs and we can
 		//       stop all of these symlink-exchange attacks.
+		rootfs := c.root
 		dest := filepath.Clean(m.Destination)
 		if !pathrs.IsLexicallyInRoot(rootfs, dest) {
 			// Do not use securejoin as it resolves symlinks.
@@ -614,7 +614,7 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		} else if !fi.IsDir() {
 			return fmt.Errorf("filesystem %q must be mounted on ordinary directory", m.Device)
 		}
-		dstFile, err := pathrs.MkdirAllInRoot(rootfs, dest, 0o755)
+		dstFile, err := pathrs.MkdirAllInRoot(c.root, dest, 0o755)
 		if err != nil {
 			return err
 		}
@@ -622,17 +622,17 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		// "proc" and "sys" mounts need special handling (without resolving the
 		// destination) to avoid attacks.
 		m.dstFile = dstFile
-		return m.mountPropagate(rootfs, "")
+		return m.mountPropagate(c.root, "")
 	}
 
 	mountLabel := c.label
-	if err := m.createOpenMountpoint(rootfs); err != nil {
+	if err := m.createOpenMountpoint(c.root); err != nil {
 		return fmt.Errorf("create mountpoint for %s mount: %w", m.Destination, err)
 	}
 
 	switch m.Device {
 	case "mqueue":
-		if err := m.mountPropagate(rootfs, ""); err != nil {
+		if err := m.mountPropagate(c.root, ""); err != nil {
 			return err
 		}
 		return utils.WithProcfdFile(m.dstFile, func(dstFd string) error {
@@ -643,12 +643,12 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		if m.Extensions&configs.EXT_COPYUP == configs.EXT_COPYUP {
 			err = doTmpfsCopyUp(m, mountLabel)
 		} else {
-			err = m.mountPropagate(rootfs, mountLabel)
+			err = m.mountPropagate(c.root, mountLabel)
 		}
 		return err
 	case "bind":
 		// open_tree()-related shenanigans are all handled in mountViaFds.
-		if err := m.mountPropagate(rootfs, mountLabel); err != nil {
+		if err := m.mountPropagate(c.root, mountLabel); err != nil {
 			return err
 		}
 
@@ -760,7 +760,7 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		}
 		return mountCgroupV1(m, c)
 	default:
-		return m.mountPropagate(rootfs, mountLabel)
+		return m.mountPropagate(c.root, mountLabel)
 	}
 }
 
