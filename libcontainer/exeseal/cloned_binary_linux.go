@@ -54,8 +54,7 @@ func sealMemfd(f **os.File) error {
 	// 05d351102dbe and <https://github.com/opencontainers/runc/pull/4640>).
 
 	// F_SEAL_EXEC -- Linux 6.3
-	const F_SEAL_EXEC = 0x20 //nolint:revive // this matches the unix.* name
-	_, _ = unix.FcntlInt(fd, unix.F_ADD_SEALS, F_SEAL_EXEC)
+	_, _ = unix.FcntlInt(fd, unix.F_ADD_SEALS, unix.F_SEAL_EXEC)
 
 	// Apply all original memfd seals.
 	_, err := unix.FcntlInt(fd, unix.F_ADD_SEALS, baseMemfdSeals)
