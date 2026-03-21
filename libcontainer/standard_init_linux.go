@@ -280,6 +280,10 @@ func (l *linuxStandardInit) Init() error {
 	_ = fifoFile.Close()
 	_ = l.fifoFile.Close()
 
+	// Translate termination signals to conventional shell-style exit codes
+	// while PID 1 is still the Go-based runc init helper.
+	setupPreExecSignalExit()
+
 	if s := l.config.SpecState; s != nil {
 		s.Pid = unix.Getpid()
 		s.Status = specs.StateCreated
