@@ -267,6 +267,11 @@ func (l *linuxStandardInit) Init() error {
 		return fmt.Errorf("reopen exec fifo: %w", err)
 	}
 	defer fifoFile.Close()
+
+	// Translate termination signals to conventional shell-style exit codes
+	// while PID 1 is still the Go-based runc init helper.
+	setupPreExecSignalExit()
+
 	if _, err := fifoFile.Write([]byte("0")); err != nil {
 		return &os.PathError{Op: "write exec fifo", Path: fifoFile.Name(), Err: err}
 	}

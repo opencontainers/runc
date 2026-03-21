@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
@@ -39,6 +40,25 @@ const (
 type pid struct {
 	Pid           int `json:"stage2_pid"`
 	PidFirstChild int `json:"stage1_pid"`
+}
+
+func setupPreExecSignalExit() {
+	if unix.Getpid() != 1 {
+		return
+	}
+
+	// The Go runtime assumes the kernel will finish terminating _SigKill
+	// signals by calling dieFromSignal:
+	// https://github.com/golang/go/blob/c60392da8b6f18b2aa92db5d22c4963ec25ae0ad/src/runtime/signal_unix.go#L993
+	// But Linux suppresses the default action for PID 1. While this helper is
+	// still the container's PID 1, translate the affected signals to 128+signo
+	// instead of leaking Go's fallback exit status 2.
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, unix.SIGTERM, unix.SIGINT, unix.SIGHUP)
+	go func() {
+		sig := <-signals
+		os.Exit(128 + int(sig.(unix.Signal)))
+	}()
 }
 
 // network is an internal struct used to setup container networks.
