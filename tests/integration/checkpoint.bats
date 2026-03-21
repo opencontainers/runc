@@ -147,6 +147,7 @@ function simple_cr_with_netdevice() {
 	ip link set mtu "$mtu_value" dev dummy0
 	ip link set address "$mac_address" dev dummy0
 	ip address add "$global_ip" dev dummy0
+	ip link show dev dummy0
 
 	# Tell runc which network namespace to use.
 	create_netns
