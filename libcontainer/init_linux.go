@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
@@ -39,6 +40,36 @@ const (
 type pid struct {
 	Pid           int `json:"stage2_pid"`
 	PidFirstChild int `json:"stage1_pid"`
+}
+
+func setupPreExecSignalExit() (chan bool, func()) {
+	if unix.Getpid() != 1 {
+		return nil, nil
+	}
+
+	// The Go runtime assumes the kernel will finish terminating _SigKill
+	// signals by calling dieFromSignal:
+	// https://github.com/golang/go/blob/c60392da8b6f18b2aa92db5d22c4963ec25ae0ad/src/runtime/signal_unix.go#L993
+	// But Linux suppresses the default action for PID 1. While this helper is
+	// still the container's PID 1, translate the affected signals to 128+signo
+	// instead of leaking Go's fallback exit status 2.
+	setupDone := make(chan bool, 1)
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, unix.SIGTERM, unix.SIGINT, unix.SIGHUP)
+	go func() {
+		setupDone <- true
+		sig, ok := <-signals
+		if !ok {
+			return
+		}
+		if s, ok := sig.(unix.Signal); ok {
+			os.Exit(128 + int(s))
+		}
+	}()
+	return setupDone, func() {
+		signal.Stop(signals)
+		close(signals)
+	}
 }
 
 // network is an internal struct used to setup container networks.
@@ -103,6 +134,28 @@ type initConfig struct {
 
 // Init is part of "runc init" implementation.
 func Init() {
+	// Translate termination signals to conventional shell-style exit codes
+	// while PID 1 is still the Go-based runc init helper.
+	// NOTE: This setup must occur BEFORE `syncParentHooks`. Once the parent receives the
+	// sync notification, it may immediately enforce a strict cgroup PID limit (e.g., <5).
+	// If the signal handler isn't ready by then, any subsequent OS thread creation
+	// (even by the Go runtime) could exceed the limit and cause the kernel to kill PID 1.
+	preExecSignalSetupDone, preExecSignalCloser := setupPreExecSignalExit()
+	if preExecSignalCloser != nil {
+		// This defer is technically unnecessary today, since any error leads to os.Exit(255)
+		// and the process terminates immediately. However, we retain it as a safeguard:
+		// if the error handling is later refactored to return instead of calling os.Exit,
+		// resource cleanup won’t be accidentally omitted.
+		defer preExecSignalCloser()
+	}
+
+	// Wait for the signal handler goroutine to finish initialization. Without this,
+	// there's a race: `syncParentHooks` could notify the parent before the handler is
+	// ready, triggering PID enforcement while the runtime is still setting up threads.
+	if preExecSignalSetupDone != nil {
+		<-preExecSignalSetupDone
+	}
+
 	runtime.GOMAXPROCS(1)
 	runtime.LockOSThread()
 
