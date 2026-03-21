@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -11,7 +12,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 const (
@@ -20,27 +21,27 @@ const (
 	maxArgs
 )
 
-func checkArgs(context *cli.Context, expected, checkType int) error {
+func checkArgs(cmd *cli.Command, expected, checkType int) error {
 	var err error
-	cmdName := context.Command.Name
+	cmdName := cmd.Name
 	switch checkType {
 	case exactArgs:
-		if context.NArg() != expected {
+		if cmd.NArg() != expected {
 			err = fmt.Errorf("%s: %q requires exactly %d argument(s)", os.Args[0], cmdName, expected)
 		}
 	case minArgs:
-		if context.NArg() < expected {
+		if cmd.NArg() < expected {
 			err = fmt.Errorf("%s: %q requires a minimum of %d argument(s)", os.Args[0], cmdName, expected)
 		}
 	case maxArgs:
-		if context.NArg() > expected {
+		if cmd.NArg() > expected {
 			err = fmt.Errorf("%s: %q requires a maximum of %d argument(s)", os.Args[0], cmdName, expected)
 		}
 	}
 
 	if err != nil {
 		fmt.Printf("Incorrect Usage.\n\n")
-		_ = cli.ShowCommandHelp(context, cmdName)
+		_ = cli.ShowCommandHelp(context.Background(), cmd, cmdName)
 		return err
 	}
 	return nil
@@ -68,8 +69,8 @@ func fatalWithCode(err error, ret int) {
 }
 
 // setupSpec performs initial setup based on the cli.Context for the container
-func setupSpec(context *cli.Context) (*specs.Spec, error) {
-	bundle := context.String("bundle")
+func setupSpec(cmd *cli.Command) (*specs.Spec, error) {
+	bundle := cmd.String("bundle")
 	if bundle != "" {
 		if err := os.Chdir(bundle); err != nil {
 			return nil, err
@@ -82,8 +83,8 @@ func setupSpec(context *cli.Context) (*specs.Spec, error) {
 	return spec, nil
 }
 
-func revisePidFile(context *cli.Context) error {
-	pidFile := context.String("pid-file")
+func revisePidFile(cmd *cli.Command) error {
+	pidFile := cmd.String("pid-file")
 	if pidFile == "" {
 		return nil
 	}
@@ -94,17 +95,17 @@ func revisePidFile(context *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	return context.Set("pid-file", pidFile)
+	return cmd.Set("pid-file", pidFile)
 }
 
 // reviseRootDir ensures that the --root option argument,
 // if specified, is converted to an absolute and cleaned path,
 // and that this path is sane.
-func reviseRootDir(context *cli.Context) error {
-	if !context.IsSet("root") {
+func reviseRootDir(cmd *cli.Command) error {
+	if !cmd.IsSet("root") {
 		return nil
 	}
-	root, err := filepath.Abs(context.GlobalString("root"))
+	root, err := filepath.Abs(cmd.String("root"))
 	if err != nil {
 		return err
 	}
@@ -117,7 +118,7 @@ func reviseRootDir(context *cli.Context) error {
 		return errors.New("Option --root argument should not be set to /")
 	}
 
-	return context.GlobalSet("root", root)
+	return cmd.Set("root", root)
 }
 
 // parseBoolOrAuto returns (nil, nil) if s is empty or "auto"
@@ -127,4 +128,9 @@ func parseBoolOrAuto(s string) (*bool, error) {
 	}
 	b, err := strconv.ParseBool(s)
 	return &b, err
+}
+
+// intPtr is a helper function to create int pointer.
+func intPtr(i int) *int {
+	return &i
 }
