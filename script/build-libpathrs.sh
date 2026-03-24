@@ -99,7 +99,7 @@ function build_libpathrs() {
 	# /proc/self/maps and parse out the parent directory of the libc.so being
 	# used.
 	local native_libdir libdir=
-	native_libdir="$(awk '$NF ~ /\/libc\>.*\.so/ { print $NF; }' /proc/self/maps |
+	native_libdir="$(awk '$NF ~ /\/libc([.-].*)?\.so/ { print $NF }' /proc/self/maps |
 		sort -u | head -n1 | xargs dirname)"
 	if [[ "$native_libdir" == "$dest/"* ]]; then
 		libdir="$native_libdir"
