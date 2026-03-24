@@ -54,7 +54,56 @@ apk --update add bash make gcc libseccomp-dev musl-dev linux-headers git
 
 The following dependencies are optional:
 
-* `libseccomp` - only required if you enable seccomp support; to disable, see [Build Tags](#build-tags)
+* `libseccomp` - only required if you enable seccomp support; to disable, see [Build Tags](#build-tags).
+* `libpathrs` - only required if you enable libpathrs support; to disable, see [Build Tags](#build-tags).
+   For notes on installing libpathrs, see [the next section](#libpathrs).
+
+##### libpathrs
+
+[libpathrs][] is a Rust library runc can optionally use for path safety. As
+mentioned in [the build tag section](#build-tags), its use is controlled with
+the `libpathrs` build tag. runc currently requires at least libpathrs 0.2.4 in
+order to function properly.
+
+At time of writing, very few distributions have libpathrs packages and so it is
+usually necessary to build and install it locally. For detailed installation
+instructions, see [the upstream documentation][libpathrs-install-md], but for
+development builds the following instructions should be sufficient:
+
+libpathrs requires Rust 1.63+ (which is available on almost any distribution,
+including Debian oldstable and enterprise distributions like RHEL or SLES).
+Assuming you already have `cargo` installed (as well as other libpathrs
+dependencies like `clang` and `lld`), the following steps are all that are
+really necessary to install libpathrs:
+
+```sh
+LIBPATHRS_VERSION=0.2.4
+curl -o - -sSL https://github.com/cyphar/libpathrs/releases/download/v${LIBPATHRS_VERSION}/libpathrs-${LIBPATHRS_VERSION}.tar.xz | tar xvfJ -
+cd libpathrs-${LIBPATHRS_VERSION}/
+make release
+sudo ./install.sh --prefix=/usr/local
+sudo ldconfig
+```
+
+As part of our CI, we make use of a custom [installation script for
+libpathrs][libpathrs-install-script] which may be useful as a reference for
+folks with more complicated needs. With `script/build-libpathrs.sh` the
+installation of libpathrs becomes as simple as:
+
+```sh
+sudo ./script/build-libpathrs.sh "$LIBPATHRS_VERSION" /usr/local
+sudo ldconfig
+```
+
+However, please note that this installation script is **completely
+unsupported** and is not really intended for general use (it includes some
+workarounds for issues in our CI which will no longer be necessary once
+libpathrs has distribution packages we can use).
+
+[libpathrs]: https://github.com/cyphar/libpathrs
+[libpathrs-install-md]: https://github.com/cyphar/libpathrs/blob/main/INSTALL.md
+[libpathrs-install-script]: ./script/build-libpathrs.sh
+[gha-test-yml]: ./.github/workflows/test.yml
 
 ### Build
 
