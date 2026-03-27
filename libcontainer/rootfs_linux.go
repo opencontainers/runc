@@ -212,7 +212,7 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 	// container. It's just cleaner to do this here (at the expense of the
 	// operation not being perfectly split).
 
-	if err := unix.Chdir(config.Rootfs); err != nil {
+	if err := unix.Fchdir(int(rootFd.Fd())); err != nil {
 		return &os.PathError{Op: "chdir", Path: config.Rootfs, Err: err}
 	}
 
@@ -227,7 +227,7 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 	if config.NoPivotRoot {
 		err = msMoveRoot(config.Rootfs)
 	} else if config.Namespaces.Contains(configs.NEWNS) {
-		err = pivotRoot(config.Rootfs)
+		err = pivotRoot(rootFd)
 	} else {
 		err = chroot()
 	}
@@ -1134,28 +1134,22 @@ func setupPtmx(config *configs.Config) error {
 
 // pivotRoot will call pivot_root such that rootfs becomes the new root
 // filesystem, and everything else is cleaned up.
-func pivotRoot(rootfs string) error {
+func pivotRoot(root *os.File) error {
 	// While the documentation may claim otherwise, pivot_root(".", ".") is
 	// actually valid. What this results in is / being the new root but
 	// /proc/self/cwd being the old root. Since we can play around with the cwd
 	// with pivot_root this allows us to pivot without creating directories in
 	// the rootfs. Shout-outs to the LXC developers for giving us this idea.
 
-	oldroot, err := linux.Open("/", unix.O_DIRECTORY|unix.O_RDONLY, 0)
+	oldroot, err := linux.Open("/", unix.O_DIRECTORY|unix.O_RDONLY|unix.O_PATH, 0)
 	if err != nil {
 		return err
 	}
 	defer unix.Close(oldroot)
 
-	newroot, err := linux.Open(rootfs, unix.O_DIRECTORY|unix.O_RDONLY, 0)
-	if err != nil {
-		return err
-	}
-	defer unix.Close(newroot)
-
 	// Change to the new root so that the pivot_root actually acts on it.
-	if err := unix.Fchdir(newroot); err != nil {
-		return &os.PathError{Op: "fchdir", Path: "fd " + strconv.Itoa(newroot), Err: err}
+	if err := unix.Fchdir(int(root.Fd())); err != nil {
+		return &os.PathError{Op: "chdir", Path: root.Name(), Err: err}
 	}
 
 	if err := unix.PivotRoot(".", "."); err != nil {
