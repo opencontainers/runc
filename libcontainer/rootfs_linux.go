@@ -97,6 +97,60 @@ func needsSetupDev(config *configs.Config) bool {
 	return true
 }
 
+// setupAndMountToRootfs sets up the mount for a single mount point and mounts it to the rootfs.
+func setupAndMountToRootfs(pipe *syncSocket, config *configs.Config, mountConfig *mountConfig, m *configs.Mount) error {
+	entry := mountEntry{Mount: m}
+	// Figure out whether we need to request runc to give us an
+	// open_tree(2)-style mountfd. For idmapped mounts, this is always
+	// necessary. For bind-mounts, this is only necessary if we cannot
+	// resolve the parent mount (this is only hit if you are running in a
+	// userns -- but for rootless the host-side thread can't help).
+	wantSourceFile := m.IsIDMapped()
+	if m.IsBind() && !config.RootlessEUID {
+		if _, err := os.Stat(m.Source); err != nil {
+			wantSourceFile = true
+		}
+	}
+	if wantSourceFile {
+		// Request a source file from the host.
+		if err := writeSyncArg(pipe, procMountPlease, m); err != nil {
+			return fmt.Errorf("failed to request mountfd for %q: %w", m.Source, err)
+		}
+		sync, err := readSyncFull(pipe, procMountFd)
+		if err != nil {
+			return fmt.Errorf("mountfd request for %q failed: %w", m.Source, err)
+		}
+		if sync.File == nil {
+			return fmt.Errorf("mountfd request for %q: response missing attached fd", m.Source)
+		}
+		defer sync.File.Close()
+		// Sanity-check to make sure we didn't get the wrong fd back. Note
+		// that while m.Source might contain symlinks, the (*os.File).Name
+		// is based on the path provided to os.OpenFile, not what it
+		// resolves to. So this should never happen.
+		if sync.File.Name() != m.Source {
+			return fmt.Errorf("returned mountfd for %q doesn't match requested mount configuration: mountfd path is %q", m.Source, sync.File.Name())
+		}
+		// Unmarshal the procMountFd argument (the file is sync.File).
+		var src *mountSource
+		if sync.Arg == nil {
+			return fmt.Errorf("sync %q is missing an argument", sync.Type)
+		}
+		if err := json.Unmarshal(*sync.Arg, &src); err != nil {
+			return fmt.Errorf("invalid mount fd response argument %q: %w", string(*sync.Arg), err)
+		}
+		if src == nil {
+			return fmt.Errorf("mountfd request for %q: no mount source info received", m.Source)
+		}
+		src.file = sync.File
+		entry.srcFile = src
+	}
+	if err := mountToRootfs(mountConfig, entry); err != nil {
+		return fmt.Errorf("error mounting %q to rootfs at %q: %w", m.Source, m.Destination, err)
+	}
+	return nil
+}
+
 // prepareRootfs sets up the devices, mount points, and filesystems for use
 // inside a new mount namespace. It doesn't set anything as ro. You must call
 // finalizeRootfs after this function to finish setting up the rootfs.
@@ -114,54 +168,8 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		cgroupns:        config.Namespaces.Contains(configs.NEWCGROUP),
 	}
 	for _, m := range config.Mounts {
-		entry := mountEntry{Mount: m}
-		// Figure out whether we need to request runc to give us an
-		// open_tree(2)-style mountfd. For idmapped mounts, this is always
-		// necessary. For bind-mounts, this is only necessary if we cannot
-		// resolve the parent mount (this is only hit if you are running in a
-		// userns -- but for rootless the host-side thread can't help).
-		wantSourceFile := m.IsIDMapped()
-		if m.IsBind() && !config.RootlessEUID {
-			if _, err := os.Stat(m.Source); err != nil {
-				wantSourceFile = true
-			}
-		}
-		if wantSourceFile {
-			// Request a source file from the host.
-			if err := writeSyncArg(pipe, procMountPlease, m); err != nil {
-				return fmt.Errorf("failed to request mountfd for %q: %w", m.Source, err)
-			}
-			sync, err := readSyncFull(pipe, procMountFd)
-			if err != nil {
-				return fmt.Errorf("mountfd request for %q failed: %w", m.Source, err)
-			}
-			if sync.File == nil {
-				return fmt.Errorf("mountfd request for %q: response missing attached fd", m.Source)
-			}
-			defer sync.File.Close()
-			// Sanity-check to make sure we didn't get the wrong fd back. Note
-			// that while m.Source might contain symlinks, the (*os.File).Name
-			// is based on the path provided to os.OpenFile, not what it
-			// resolves to. So this should never happen.
-			if sync.File.Name() != m.Source {
-				return fmt.Errorf("returned mountfd for %q doesn't match requested mount configuration: mountfd path is %q", m.Source, sync.File.Name())
-			}
-			// Unmarshal the procMountFd argument (the file is sync.File).
-			var src *mountSource
-			if sync.Arg == nil {
-				return fmt.Errorf("sync %q is missing an argument", sync.Type)
-			}
-			if err := json.Unmarshal(*sync.Arg, &src); err != nil {
-				return fmt.Errorf("invalid mount fd response argument %q: %w", string(*sync.Arg), err)
-			}
-			if src == nil {
-				return fmt.Errorf("mountfd request for %q: no mount source info received", m.Source)
-			}
-			src.file = sync.File
-			entry.srcFile = src
-		}
-		if err := mountToRootfs(mountConfig, entry); err != nil {
-			return fmt.Errorf("error mounting %q to rootfs at %q: %w", m.Source, m.Destination, err)
+		if err := setupAndMountToRootfs(pipe, config, mountConfig, m); err != nil {
+			return err
 		}
 	}
 
