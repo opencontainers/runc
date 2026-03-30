@@ -12,8 +12,7 @@ function teardown() {
 }
 
 @test "runc run no capability" {
-	runc run test_no_caps
-	[ "$status" -eq 0 ]
+	runc -0 run test_no_caps
 
 	[[ "${output}" == *"CapInh:	0000000000000000"* ]]
 	[[ "${output}" == *"CapAmb:	0000000000000000"* ]]
@@ -22,8 +21,7 @@ function teardown() {
 
 @test "runc run with unknown capability" {
 	update_config '.process.capabilities.bounding = ["CAP_UNKNOWN", "UNKNOWN_CAP"]'
-	runc run test_unknown_caps
-	[ "$status" -eq 0 ]
+	runc -0 run test_unknown_caps
 
 	[[ "${output}" == *"CapInh:	0000000000000000"* ]]
 	[[ "${output}" == *"CapAmb:	0000000000000000"* ]]
@@ -35,8 +33,7 @@ function teardown() {
 		skip "requires unset NoNewPrivs"
 	fi
 	update_config '.process.noNewPrivileges = false'
-	runc run test_new_privileges
-	[ "$status" -eq 0 ]
+	runc -0 run test_new_privileges
 
 	[[ "${output}" == *"CapInh:	0000000000000000"* ]]
 	[[ "${output}" == *"CapAmb:	0000000000000000"* ]]
@@ -47,8 +44,7 @@ function teardown() {
 	update_config '.process.user = {"uid":0}'
 	update_config '.process.capabilities.bounding = ["CAP_SYS_ADMIN"]'
 	update_config '.process.capabilities.permitted = ["CAP_SYS_ADMIN", "CAP_AUDIT_WRITE", "CAP_KILL", "CAP_NET_BIND_SERVICE"]'
-	runc run test_some_caps
-	[ "$status" -eq 0 ]
+	runc -0 run test_some_caps
 
 	[[ "${output}" == *"CapInh:	0000000000000000"* ]]
 	[[ "${output}" == *"CapBnd:	0000000000200000"* ]]
@@ -60,11 +56,9 @@ function teardown() {
 @test "runc exec --cap" {
 	update_config '	  .process.args = ["/bin/sh"]
 			| .process.capabilities = {}'
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_exec_cap
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_exec_cap
 
-	runc exec test_exec_cap cat /proc/self/status
-	[ "$status" -eq 0 ]
+	runc -0 exec test_exec_cap cat /proc/self/status
 	# Check no capabilities are set.
 	[[ "${output}" == *"CapInh:	0000000000000000"* ]]
 	[[ "${output}" == *"CapPrm:	0000000000000000"* ]]
@@ -72,8 +66,7 @@ function teardown() {
 	[[ "${output}" == *"CapBnd:	0000000000000000"* ]]
 	[[ "${output}" == *"CapAmb:	0000000000000000"* ]]
 
-	runc exec --cap CAP_KILL --cap CAP_AUDIT_WRITE test_exec_cap cat /proc/self/status
-	[ "$status" -eq 0 ]
+	runc -0 exec --cap CAP_KILL --cap CAP_AUDIT_WRITE test_exec_cap cat /proc/self/status
 	# Check capabilities are added into bounding/effective/permitted only,
 	# but not to inheritable or ambient.
 	#
@@ -93,11 +86,9 @@ function teardown() {
 			| .process.capabilities.effective = ["CAP_KILL"]
 			| .process.capabilities.bounding = ["CAP_KILL", "CAP_CHOWN", "CAP_SYSLOG"]
 			| .process.capabilities.ambient = ["CAP_CHOWN"]'
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_some_caps
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_some_caps
 
-	runc exec test_some_caps cat /proc/self/status
-	[ "$status" -eq 0 ]
+	runc -0 exec test_some_caps cat /proc/self/status
 	# Check that capabilities are as set in spec.
 	#
 	# CAP_CHOWN is 0, the bit mask is 0x1 (1 << 0)
@@ -111,8 +102,7 @@ function teardown() {
 
 	# Check that if config.json has an inheritable capability set,
 	# runc exec --cap adds ambient capabilities.
-	runc exec --cap CAP_SYSLOG test_some_caps cat /proc/self/status
-	[ "$status" -eq 0 ]
+	runc -0 exec --cap CAP_SYSLOG test_some_caps cat /proc/self/status
 	[[ "${output}" == *"CapInh:	0000000400000001"* ]]
 	[[ "${output}" == *"CapPrm:	0000000400000021"* ]]
 	[[ "${output}" == *"CapEff:	0000000400000021"* ]]
@@ -123,8 +113,7 @@ function teardown() {
 @test "runc run [ambient caps not set in inheritable result in a warning]" {
 	update_config '   .process.capabilities.inheritable = ["CAP_KILL"]
                        | .process.capabilities.ambient = ["CAP_KILL", "CAP_CHOWN"]'
-	runc run test_amb
-	[ "$status" -eq 0 ]
+	runc -0 run test_amb
 	# This should result in CAP_KILL set in ambient,
 	# and a warning about inability to set CAP_CHOWN.
 	#

@@ -22,8 +22,7 @@ function run_check_nofile() {
 	update_config ".process.rlimits = [{\"type\": \"RLIMIT_NOFILE\", \"soft\": ${soft}, \"hard\": ${hard}}]"
 	update_config '.process.args = ["/bin/sh", "-c", "ulimit -n; ulimit -H -n"]'
 
-	runc run test_rlimit
-	[ "$status" -eq 0 ]
+	runc -0 run test_rlimit
 	[[ "${lines[0]}" == "${soft}" ]]
 	[[ "${lines[1]}" == "${hard}" ]]
 }
@@ -36,11 +35,9 @@ function exec_check_nofile() {
 	hard="$2"
 	update_config ".process.rlimits = [{\"type\": \"RLIMIT_NOFILE\", \"soft\": ${soft}, \"hard\": ${hard}}]"
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_rlimit
-	[ "$status" -eq 0 ]
+	runc -0 run -d --console-socket "$CONSOLE_SOCKET" test_rlimit
 
-	runc exec test_rlimit /bin/sh -c "ulimit -n; ulimit -H -n"
-	[ "$status" -eq 0 ]
+	runc -0 exec test_rlimit /bin/sh -c "ulimit -n; ulimit -H -n"
 	[[ "${lines[0]}" == "${soft}" ]]
 	[[ "${lines[1]}" == "${hard}" ]]
 }
