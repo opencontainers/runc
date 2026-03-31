@@ -25,6 +25,7 @@ func Validate(config *configs.Config) error {
 		network,
 		netdevices,
 		uts,
+		hooks,
 		security,
 		namespaces,
 		sysctl,
@@ -133,6 +134,16 @@ func security(config *configs.Config) error {
 		!config.Namespaces.Contains(configs.NEWNS) {
 		return errors.New("unable to restrict sys entries without a private MNT namespace")
 	}
+	for _, p := range config.MaskPaths {
+		if !filepath.IsAbs(p) {
+			return fmt.Errorf("invalid maskedPath %q: must be an absolute path", p)
+		}
+	}
+	for _, p := range config.ReadonlyPaths {
+		if !filepath.IsAbs(p) {
+			return fmt.Errorf("invalid readonlyPath %q: must be an absolute path", p)
+		}
+	}
 	if config.ProcessLabel != "" && !selinux.GetEnabled() {
 		return errors.New("selinux label is specified in config, but selinux is disabled or not supported")
 	}
@@ -140,7 +151,32 @@ func security(config *configs.Config) error {
 	return nil
 }
 
+func hooks(config *configs.Config) error {
+	for name, list := range config.Hooks {
+		for i, hook := range list {
+			chook, ok := hook.(configs.CommandHook)
+			if !ok {
+				// Non-command hooks are internal and are not OCI hooks.
+				continue
+			}
+			if chook.Command == nil {
+				return fmt.Errorf("invalid %s hook #%d: command must not be nil", name, i)
+			}
+			if !filepath.IsAbs(chook.Path) {
+				return fmt.Errorf("invalid %s hook #%d path %q: must be an absolute path", name, i, chook.Path)
+			}
+		}
+	}
+	return nil
+}
+
 func namespaces(config *configs.Config) error {
+	for _, ns := range config.Namespaces {
+		if ns.Path != "" && !filepath.IsAbs(ns.Path) {
+			return fmt.Errorf("invalid namespace %s path %q: must be an absolute path", ns.Type, ns.Path)
+		}
+	}
+
 	if config.Namespaces.Contains(configs.NEWUSER) {
 		if _, err := os.Stat("/proc/self/ns/user"); errors.Is(err, os.ErrNotExist) {
 			return errors.New("user namespaces aren't enabled in the kernel")
