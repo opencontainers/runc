@@ -82,6 +82,25 @@ func (h *signalHandler) forward(process *libcontainer.Process, tty *tty, detach 
 	// Perform the initial tty resize. Always ignore errors resizing because
 	// stdout might have disappeared (due to races with when SIGHUP is sent).
 	_ = tty.resize()
+	// If the process exited before signal.Notify was registered (which
+	// runs in a goroutine), SIGCHLD may have been silently discarded.
+	// Do an initial reap to catch this case, otherwise forward() would
+	// block forever waiting for a signal that will never arrive.
+	exits, err := h.reap()
+	if err != nil {
+		logrus.Error(err)
+	}
+	for _, e := range exits {
+		logrus.WithFields(logrus.Fields{
+			"pid":    e.pid,
+			"status": e.status,
+		}).Debug("process exited")
+		if e.pid == pid1 {
+			_, _ = process.Wait()
+			return e.status, nil
+		}
+	}
+
 	// Handle and forward signals.
 	for s := range h.signals {
 		switch s {

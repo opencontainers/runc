@@ -374,6 +374,21 @@ EOF
 	[[ ${lines[0]} = *"exec /run.sh: no such file or directory"* ]]
 }
 
+# Regression test for a race condition where signal.Notify registration
+# could complete after the exec process started. If the process exited
+# quickly, SIGCHLD would be missed and runc exec would hang forever.
+@test "runc exec [fast-exiting process does not hang]" {
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	for _ in $(seq 20); do
+	  # Inside timeout, `runc` can't be resolved. Using RUNC_CMDLINE instead.
+		setup_runc_cmdline
+		timeout --foreground 10 "${RUNC_CMDLINE[@]}" exec test_busybox true
+		[ "$status" -eq 0 ]
+	done
+}
+
 # https://github.com/opencontainers/runc/issues/4688
 @test "runc exec check default home" {
 	# --user can't work in rootless containers that don't have idmap.
