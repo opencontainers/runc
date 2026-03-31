@@ -205,20 +205,31 @@ func (c *Container) Set(config configs.Config) error {
 func (c *Container) Start(process *Process) error {
 	c.m.Lock()
 	defer c.m.Unlock()
-	return c.start(process)
+
+	if err := c.start(process); err != nil {
+		c.terminate(process)
+		return err
+	}
+	return nil
 }
 
 // Run immediately starts the process inside the container. Returns an error if
 // the process fails to start. It does not block waiting for the exec fifo
 // after start returns but opens the fifo after start returns.
-func (c *Container) Run(process *Process) error {
+func (c *Container) Run(process *Process) (retErr error) {
 	c.m.Lock()
 	defer c.m.Unlock()
+
 	if err := c.start(process); err != nil {
+		c.terminate(process)
 		return err
 	}
-	if process.Init {
-		return c.exec()
+	if !process.Init {
+		return nil
+	}
+	if err := c.exec(); err != nil {
+		c.terminate(process)
+		return err
 	}
 	return nil
 }
@@ -228,6 +239,34 @@ func (c *Container) Exec() error {
 	c.m.Lock()
 	defer c.m.Unlock()
 	return c.exec()
+}
+
+// terminate is to kill the container's init/exec process when got failure.
+func (c *Container) terminate(process *Process) {
+	if process.ops == nil {
+		return
+	}
+	if process.Init {
+		if err := ignoreTerminateErrors(process.ops.terminate()); err != nil {
+			logrus.WithError(err).Warn("unable to terminate initProcess")
+		}
+		// If we haven't saved container's state yet, we need to destroy the
+		// cgroup & intelRdt manager manually.
+		if _, err := os.Stat(filepath.Join(c.stateDir, stateFilename)); os.IsNotExist(err) {
+			if err := c.cgroupManager.Destroy(); err != nil {
+				logrus.WithError(err).Warn("unable to destroy cgroupManager")
+			}
+			if c.intelRdtManager != nil {
+				if err := c.intelRdtManager.Destroy(); err != nil {
+					logrus.WithError(err).Warn("unable to destroy intelRdtManager")
+				}
+			}
+		}
+		return
+	}
+	if err := ignoreTerminateErrors(process.ops.terminate()); err != nil {
+		logrus.WithError(err).Warn("unable to terminate setnsProcess")
+	}
 }
 
 func (c *Container) exec() error {
@@ -377,12 +416,7 @@ func (c *Container) start(process *Process) (retErr error) {
 				return err
 			}
 
-			if err := c.config.Hooks.Run(configs.Poststart, s); err != nil {
-				if err := ignoreTerminateErrors(parent.terminate()); err != nil {
-					logrus.Warn(fmt.Errorf("error running poststart hook: %w", err))
-				}
-				return err
-			}
+			return c.config.Hooks.Run(configs.Poststart, s)
 		}
 	}
 	return nil
