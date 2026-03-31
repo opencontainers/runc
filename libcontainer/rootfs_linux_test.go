@@ -208,3 +208,56 @@ func TestNeedsSetupDevStrangeSourceDest(t *testing.T) {
 		t.Fatal("expected needsSetupDev to be true, got false")
 	}
 }
+
+func TestRootfsParentMountPropagationFlags(t *testing.T) {
+	tests := []struct {
+		name            string
+		rootPropagation int
+		want            uintptr
+	}{
+		{
+			name:            "unset",
+			rootPropagation: 0,
+			want:            unix.MS_PRIVATE,
+		},
+		{
+			name:            "private",
+			rootPropagation: unix.MS_PRIVATE,
+			want:            unix.MS_PRIVATE,
+		},
+		{
+			name:            "rprivate",
+			rootPropagation: unix.MS_PRIVATE | unix.MS_REC,
+			want:            unix.MS_PRIVATE,
+		},
+		{
+			name:            "slave",
+			rootPropagation: unix.MS_SLAVE,
+			want:            unix.MS_SLAVE,
+		},
+		{
+			name:            "rslave",
+			rootPropagation: unix.MS_SLAVE | unix.MS_REC,
+			want:            unix.MS_SLAVE,
+		},
+		{
+			name:            "shared",
+			rootPropagation: unix.MS_SHARED,
+			want:            unix.MS_PRIVATE,
+		},
+		{
+			name:            "rshared",
+			rootPropagation: unix.MS_SHARED | unix.MS_REC,
+			want:            unix.MS_PRIVATE,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := rootfsParentMountPropagationFlags(tt.rootPropagation)
+			if got != tt.want {
+				t.Fatalf("rootfsParentMountPropagationFlags(%#x) = %#x, want %#x", tt.rootPropagation, got, tt.want)
+			}
+		})
+	}
+}
