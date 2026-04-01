@@ -15,6 +15,8 @@ task:
     BATS_VERSION: "v1.12.0"
     LIBPATHRS_VERSION: "0.2.4"
     RPMS: gcc git-core iptables jq glibc-static libseccomp-devel make criu fuse-sshfs container-selinux policycoreutils cargo lld wget
+    # Allow potentially unsafe tests.
+    RUNC_ALLOW_UNSAFE_TESTS: yes
     # yamllint disable rule:key-duplicates
     matrix:
       - DISTRO: almalinux-8

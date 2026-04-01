@@ -397,6 +397,8 @@ function simple_cr_with_netdevice() {
 }
 
 @test "checkpoint and restore with container specific CRIU config" {
+	requires unsafe # Modifies /etc/criu/default.conf.
+
 	tmp=$(mktemp /tmp/runc-criu-XXXXXX.conf)
 	# This is the file we write to /etc/criu/default.conf
 	tmplog1=$(mktemp /tmp/runc-criu-log-XXXXXX.log)

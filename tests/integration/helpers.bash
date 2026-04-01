@@ -674,6 +674,12 @@ function requires() {
 				skip_me=1
 			fi
 			;;
+		unsafe)
+			# Skip the test unless a specific variable is set.
+			if [ ! -v RUNC_ALLOW_UNSAFE_TESTS ]; then
+				skip_me=1
+			fi
+			;;
 		*)
 			fail "BUG: Invalid requires $var."
 			;;
