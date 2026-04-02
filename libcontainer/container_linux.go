@@ -232,7 +232,14 @@ func (c *Container) Exec() error {
 
 func (c *Container) exec() error {
 	path := filepath.Join(c.stateDir, execFifoFilename)
-	pid := c.initProcess.pid()
+	if err := handleFifo(path, c.initProcess.pid()); err != nil {
+		return err
+	}
+
+	return c.postStart()
+}
+
+func handleFifo(path string, pid int) error {
 	blockingFifoOpenCh := awaitFifoOpen(path)
 	for {
 		select {
@@ -251,6 +258,29 @@ func (c *Container) exec() error {
 			}
 		}
 	}
+}
+
+func (c *Container) postStart() (retErr error) {
+	if !c.config.HasHook(configs.Poststart) {
+		return nil
+	}
+
+	defer func() {
+		if retErr != nil {
+			// A poststart hook failed; kill the container.
+			if err := c.signal(unix.SIGKILL); err != nil && !errors.Is(err, ErrNotRunning) {
+				logrus.WithError(err).Warn("kill after failed poststart")
+			}
+			// We're still init's parent so wait is required.
+			_, _ = c.initProcess.wait()
+		}
+	}()
+
+	s, err := c.currentOCIState()
+	if err != nil {
+		return err
+	}
+	return c.config.Hooks.Run(configs.Poststart, s)
 }
 
 func readFromExecFifo(execFifo io.Reader) error {
@@ -371,19 +401,6 @@ func (c *Container) start(process *Process) (retErr error) {
 
 	if process.Init {
 		c.fifo.Close()
-		if c.config.HasHook(configs.Poststart) {
-			s, err := c.currentOCIState()
-			if err != nil {
-				return err
-			}
-
-			if err := c.config.Hooks.Run(configs.Poststart, s); err != nil {
-				if err := ignoreTerminateErrors(parent.terminate()); err != nil {
-					logrus.Warn(fmt.Errorf("error running poststart hook: %w", err))
-				}
-				return err
-			}
-		}
 	}
 	return nil
 }
@@ -396,7 +413,10 @@ func (c *Container) start(process *Process) (retErr error) {
 func (c *Container) Signal(s os.Signal) error {
 	c.m.Lock()
 	defer c.m.Unlock()
+	return c.signal(s)
+}
 
+func (c *Container) signal(s os.Signal) error {
 	// When a container has its own PID namespace, inside it the init PID
 	// is 1, and thus it is handled specially by the kernel. In particular,
 	// killing init with SIGKILL from an ancestor namespace will also kill
@@ -410,7 +430,7 @@ func (c *Container) Signal(s os.Signal) error {
 				logrus.WithError(err).Warn("failed to kill all processes, possibly due to lack of cgroup (Hint: enable cgroup v2 delegation)")
 				// Some processes may leak when cgroup is not delegated
 				// https://github.com/opencontainers/runc/pull/4395#pullrequestreview-2291179652
-				return c.signal(s)
+				return c.signalInit(s)
 			}
 			// For not rootless container, if there is no init process and no cgroup,
 			// it means that the container is not running.
@@ -422,10 +442,10 @@ func (c *Container) Signal(s os.Signal) error {
 		return nil
 	}
 
-	return c.signal(s)
+	return c.signalInit(s)
 }
 
-func (c *Container) signal(s os.Signal) error {
+func (c *Container) signalInit(s os.Signal) error {
 	// To avoid a PID reuse attack, don't kill non-running container.
 	if !c.hasInit() {
 		return ErrNotRunning
