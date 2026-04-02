@@ -1,7 +1,4 @@
 // Package devices provides some helper functions for constructing device
 // configurations for runc. These are exclusively used by higher-level runtimes
 // that need to configure runc's device list based on existing devices.
-//
-// Deprecated: This package will be removed in runc 1.7, please migrate to
-// github.com/moby/sys/devices.
 package devices

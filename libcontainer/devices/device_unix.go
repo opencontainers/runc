@@ -3,111 +3,39 @@
 package devices
 
 import (
-	"errors"
-	"os"
-	"path/filepath"
-
+	"github.com/moby/sys/devices"
 	"github.com/opencontainers/cgroups/devices/config"
-	"golang.org/x/sys/unix"
 )
 
 // ErrNotADevice denotes that a file is not a valid linux device.
-var ErrNotADevice = errors.New("not a device node")
-
-// Testing dependencies
-var (
-	unixLstat = unix.Lstat
-	osReadDir = os.ReadDir
-)
+//
+// Deprecated: This package will be removed in runc 1.7, use
+// [devices.ErrNotADevice] instead.
+var ErrNotADevice = devices.ErrNotADevice
 
 // DeviceFromPath takes the path to a device and its cgroup_permissions (which
 // cannot be easily queried) to look up the information about a linux device
 // and returns that information as a Device struct.
+//
+// Deprecated: This package will be removed in runc 1.7, use
+// [devices.DeviceFromPath] instead.
 func DeviceFromPath(path, permissions string) (*config.Device, error) {
-	var stat unix.Stat_t
-	err := unixLstat(path, &stat)
-	if err != nil {
-		return nil, err
-	}
-
-	var (
-		devType   config.Type
-		mode      = stat.Mode
-		devNumber = uint64(stat.Rdev) //nolint:unconvert // Rdev is uint32 on e.g. MIPS.
-		major     = unix.Major(devNumber)
-		minor     = unix.Minor(devNumber)
-	)
-	switch mode & unix.S_IFMT {
-	case unix.S_IFBLK:
-		devType = config.BlockDevice
-	case unix.S_IFCHR:
-		devType = config.CharDevice
-	case unix.S_IFIFO:
-		devType = config.FifoDevice
-	default:
-		return nil, ErrNotADevice
-	}
-	return &config.Device{
-		Rule: config.Rule{
-			Type:        devType,
-			Major:       int64(major),
-			Minor:       int64(minor),
-			Permissions: config.Permissions(permissions),
-		},
-		Path:     path,
-		FileMode: os.FileMode(mode &^ unix.S_IFMT),
-		Uid:      stat.Uid,
-		Gid:      stat.Gid,
-	}, nil
+	return devices.DeviceFromPath(path, permissions)
 }
 
 // HostDevices returns all devices that can be found under /dev directory.
+//
+// Deprecated: This package will be removed in runc 1.7, use
+// [devices.HostDevices] instead.
 func HostDevices() ([]*config.Device, error) {
-	return GetDevices("/dev")
+	return devices.HostDevices()
 }
 
 // GetDevices recursively traverses a directory specified by path
 // and returns all devices found there.
+//
+// Deprecated: This package will be removed in runc 1.7, use
+// [devices.GetDevices] instead.
 func GetDevices(path string) ([]*config.Device, error) {
-	files, err := osReadDir(path)
-	if err != nil {
-		return nil, err
-	}
-	var out []*config.Device
-	for _, f := range files {
-		switch {
-		case f.IsDir():
-			switch f.Name() {
-			// ".lxc" & ".lxd-mounts" added to address https://github.com/lxc/lxd/issues/2825
-			// ".udev" added to address https://github.com/opencontainers/runc/issues/2093
-			case "pts", "shm", "fd", "mqueue", ".lxc", ".lxd-mounts", ".udev":
-				continue
-			default:
-				sub, err := GetDevices(filepath.Join(path, f.Name()))
-				if err != nil {
-					return nil, err
-				}
-
-				out = append(out, sub...)
-				continue
-			}
-		case f.Name() == "console":
-			continue
-		}
-		device, err := DeviceFromPath(filepath.Join(path, f.Name()), "rwm")
-		if err != nil {
-			if errors.Is(err, ErrNotADevice) {
-				continue
-			}
-			if errors.Is(err, os.ErrNotExist) {
-				continue
-			}
-			return nil, err
-		}
-		if device.Type == config.FifoDevice {
-			continue
-		}
-		out = append(out, device)
-	}
-	return out, nil
+	return devices.GetDevices(path)
 }
