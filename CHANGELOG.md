@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Deprecated ###
 - `EXTRA_BUILDTAGS` make variable is deprecated in favor of `RUNC_BUILDTAGS`
   and will be removed in runc 1.6. (#5171, #5198)
+- `libcontainer/devices` has been deprecated in favour of
+  `github.com/moby/sys/devices` (which is a carbon copy of the package). It
+  will be removed in runc 1.6.
 
 ## [1.5.0-rc.1] - 2026-03-12
 
