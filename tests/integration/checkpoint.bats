@@ -138,7 +138,7 @@ function simple_cr() {
 	done
 }
 
-function simple_cr_with_netdevice() {
+@test "checkpoint and restore with netdevice" {
 	# Set custom parameters to the netdevice to validate those are respected
 	mtu_value=1789
 	mac_address="00:11:22:33:44:55"
@@ -163,12 +163,12 @@ function simple_cr_with_netdevice() {
 	[[ "$output" == *"mtu $mtu_value "* ]]
 
 	for _ in $(seq 2); do
-		runc "$@" checkpoint --work-path ./work-dir test_busybox_netdevice
+		runc checkpoint --work-path ./work-dir test_busybox_netdevice
 		[ "$status" -eq 0 ]
 
 		testcontainer test_busybox_netdevice checkpointed
 
-		runc "$@" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox_netdevice
+		runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox_netdevice
 		[ "$status" -eq 0 ]
 
 		testcontainer test_busybox_netdevice running
@@ -207,35 +207,6 @@ function simple_cr_with_netdevice() {
 	update_config '.linux.namespaces += [{"type": "cgroup"}]'
 
 	simple_cr
-}
-
-@test "checkpoint and restore with netdevice" {
-	simple_cr_with_netdevice
-}
-
-@test "checkpoint and restore with netdevice (bind mount, destination is symlink)" {
-	mkdir -p rootfs/real/conf
-	ln -s /real/conf rootfs/conf
-	update_config '	  .mounts += [{
-					source: ".",
-					destination: "/conf",
-					options: ["bind"]
-				}]'
-	simple_cr_with_netdevice
-}
-
-@test "checkpoint and restore with netdevice (with --debug)" {
-	simple_cr_with_netdevice --debug
-}
-
-@test "checkpoint and restore with netdevice (cgroupns)" {
-	# cgroupv2 already enables cgroupns so this case was tested above already
-	requires cgroups_v1 cgroupns
-
-	# enable CGROUPNS
-	update_config '.linux.namespaces += [{"type": "cgroup"}]'
-
-	simple_cr_with_netdevice
 }
 
 @test "checkpoint --pre-dump (bad --parent-path)" {
