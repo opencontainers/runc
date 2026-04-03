@@ -6,18 +6,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0-rc.2] - 2026-04-02
+
+> いざやいざや、見に行かん
+
+> [!NOTE]
+> runc v1.5.0-rc.2 includes all of the patches backported to runc v1.4.2.
+
+### Fixed ###
+- Building with libpathrs for systems that use non-GNU awk, e.g. Debian.
+  (#5196, #5194)
+
 ### Added ###
+- Installation notes for libpathrs. (#5199, #5195)
 - Support for specs.LinuxSeccompFlagWaitKillableRecv. (#5183, #5172)
 - When building runc, `RUNC_BUILDTAGS` make or shell environment variable can
   be used to add build tags and/or remove existing build tags (when a tag is
-  prefixed with `-`). (#5171, #xxxx)
+  prefixed with `-`). (#5198, #5171)
+
+### Changed ###
+- runc now requires Go 1.25+ to build. (#5211, #5205)
+- libcontainer now pre-opens container root filesystem and uses the file
+  descriptor (rather than the path) for most operations related to container
+  root during container start. (#5204, #5190)
 
 ### Deprecated ###
 - `EXTRA_BUILDTAGS` make variable is deprecated in favor of `RUNC_BUILDTAGS`
   and will be removed in runc 1.6. (#5171, #5198)
 - `libcontainer/devices` has been deprecated in favour of
   `github.com/moby/sys/devices` (which is a carbon copy of the package). It
-  will be removed in runc 1.6.
+  will be removed in runc 1.6. (#5220, #5142)
 
 ## [1.5.0-rc.1] - 2026-03-12
 
@@ -102,6 +120,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   name in the archive. (#5052)
 
 [libpathrs]: https://github.com/cyphar/libpathrs
+
+## [1.4.2] - 2026-04-02
+
+> Я — Земля! Я своих провожаю питомцев.
+
+### Fixed ###
+- A regression in runc v1.3.0 which can result in a stuck `runc exec` or
+  `runc run` when the container process runs for a short time. (#5208,
+  #5210, #5216)
+- Mount sources that need to be open on the host are now closed earlier during
+  container start, reducing the total amount of used file descriptors and
+  helping to avoid hitting the open files limit when handling many such mounts.
+  (#5177, #5201)
 
 ## [1.4.1] - 2026-03-12
 
@@ -1695,7 +1726,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
 
 <!-- 1.4.z patch releases -->
-[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.1...release-1.4
+[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.2...release-1.4
+[1.4.2]: https://github.com/opencontainers/runc/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
 [1.4.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.2...v1.4.0-rc.3
@@ -1703,5 +1735,6 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1
 
 <!-- 1.5.z patch releases -->
-[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...release-1.5
+[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.2...release-1.5
+[1.5.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...v1.5.0-rc.2
 [1.5.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.5.0-rc.1
