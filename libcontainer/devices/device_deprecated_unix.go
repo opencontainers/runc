@@ -17,6 +17,8 @@ import (
 //
 // Deprecated: Use [devices.ErrNotADevice] instead. This package will be
 // removed in runc 1.6.
+//
+//go:fix inline
 var ErrNotADevice = devices.ErrNotADevice
 
 // DeviceFromPath takes the path to a device and its cgroup_permissions (which
@@ -25,6 +27,8 @@ var ErrNotADevice = devices.ErrNotADevice
 //
 // Deprecated: Use [devices.DeviceFromPath] instead. This package will be
 // removed in runc 1.6.
+//
+//go:fix inline
 func DeviceFromPath(path, permissions string) (*config.Device, error) {
 	return devices.DeviceFromPath(path, permissions)
 }
@@ -33,6 +37,8 @@ func DeviceFromPath(path, permissions string) (*config.Device, error) {
 //
 // Deprecated: Use [devices.HostDevices] instead. This package will be
 // removed in runc 1.6.
+//
+//go:fix inline
 func HostDevices() ([]*config.Device, error) {
 	return devices.HostDevices()
 }
@@ -42,6 +48,8 @@ func HostDevices() ([]*config.Device, error) {
 //
 // Deprecated: Use [devices.GetDevices] instead. This package will be
 // removed in runc 1.6.
+//
+//go:fix inline
 func GetDevices(path string) ([]*config.Device, error) {
 	return devices.GetDevices(path)
 }
