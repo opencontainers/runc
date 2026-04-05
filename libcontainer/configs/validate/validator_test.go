@@ -125,6 +125,44 @@ func TestValidateUTSWithoutUTSNamespace(t *testing.T) {
 	}
 }
 
+func TestValidateHooksWithRelativePath(t *testing.T) {
+	config := &configs.Config{
+		Rootfs: "/var",
+		Hooks: configs.Hooks{
+			configs.Prestart: configs.HookList{
+				configs.NewCommandHook(&configs.Command{
+					Path: "bin/echo",
+					Args: []string{"echo", "hello"},
+				}),
+			},
+		},
+	}
+
+	err := Validate(config)
+	if err == nil {
+		t.Error("Expected error to occur but it was nil")
+	}
+}
+
+func TestValidateHooksWithAbsolutePath(t *testing.T) {
+	config := &configs.Config{
+		Rootfs: "/var",
+		Hooks: configs.Hooks{
+			configs.Prestart: configs.HookList{
+				configs.NewCommandHook(&configs.Command{
+					Path: "/bin/echo",
+					Args: []string{"echo", "hello"},
+				}),
+			},
+		},
+	}
+
+	err := Validate(config)
+	if err != nil {
+		t.Errorf("Expected error to not occur: %+v", err)
+	}
+}
+
 func TestValidateSecurityWithMaskPaths(t *testing.T) {
 	config := &configs.Config{
 		Rootfs:    "/var",
@@ -159,11 +197,61 @@ func TestValidateSecurityWithROPaths(t *testing.T) {
 	}
 }
 
+func TestValidateSecurityWithRelativeMaskPath(t *testing.T) {
+	config := &configs.Config{
+		Rootfs:    "/var",
+		MaskPaths: []string{"proc/kcore"},
+		Namespaces: configs.Namespaces(
+			[]configs.Namespace{
+				{Type: configs.NEWNS},
+			},
+		),
+	}
+
+	err := Validate(config)
+	if err == nil {
+		t.Error("Expected error to occur but it was nil")
+	}
+}
+
+func TestValidateSecurityWithRelativeROPaths(t *testing.T) {
+	config := &configs.Config{
+		Rootfs:        "/var",
+		ReadonlyPaths: []string{"proc/sys"},
+		Namespaces: configs.Namespaces(
+			[]configs.Namespace{
+				{Type: configs.NEWNS},
+			},
+		),
+	}
+
+	err := Validate(config)
+	if err == nil {
+		t.Error("Expected error to occur but it was nil")
+	}
+}
+
 func TestValidateSecurityWithoutNEWNS(t *testing.T) {
 	config := &configs.Config{
 		Rootfs:        "/var",
 		MaskPaths:     []string{"/proc/kcore"},
 		ReadonlyPaths: []string{"/proc/sys"},
+	}
+
+	err := Validate(config)
+	if err == nil {
+		t.Error("Expected error to occur but it was nil")
+	}
+}
+
+func TestValidateNamespaceWithRelativePath(t *testing.T) {
+	config := &configs.Config{
+		Rootfs: "/var",
+		Namespaces: configs.Namespaces(
+			[]configs.Namespace{
+				{Type: configs.NEWNET, Path: "proc/self/ns/net"},
+			},
+		),
 	}
 
 	err := Validate(config)
