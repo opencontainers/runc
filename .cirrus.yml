@@ -15,8 +15,6 @@ task:
     BATS_VERSION: "v1.12.0"
     LIBPATHRS_VERSION: "0.2.4"
     RPMS: gcc git-core iptables jq glibc-static libseccomp-devel make criu fuse-sshfs container-selinux policycoreutils cargo lld wget
-    # Allow potentially unsafe tests.
-    RUNC_ALLOW_UNSAFE_TESTS: yes
     # yamllint disable rule:key-duplicates
     matrix:
       - DISTRO: almalinux-8
@@ -85,6 +83,8 @@ task:
     /home/runc/script/setup_rootless.sh
     # set PATH
     echo 'export PATH=/usr/local/go/bin:/usr/local/bin:$PATH' >> /root/.bashrc
+    # Allow potentially unsafe tests.
+    echo 'export RUNC_ALLOW_UNSAFE_TESTS=yes' >> /root/.bashrc
     # Setup ssh localhost for terminal emulation (script -e did not work)
     ssh-keygen -t ed25519 -f /root/.ssh/id_ed25519 -N ""
     cat /root/.ssh/id_ed25519.pub >> /root/.ssh/authorized_keys
