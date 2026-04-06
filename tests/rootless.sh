@@ -29,12 +29,17 @@ if [ -v RUNC_USE_SYSTEMD ]; then
 fi
 ROOT="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
 
+# List of environment variables needed for the tests.
+# They are usually exported, but since we use ssh  below,
+# we need to explicitly add them to the command line.
+ENV_LIST=(PATH RUNC_USE_SYSTEMD ROOTLESS_FEATURES ROOTLESS_UIDMAP_START ROOTLESS_UIDMAP_LENGTH ROOTLESS_GIDMAP_START ROOTLESS_GIDMAP_LENGTH ROOTLESS_AUX_DIR ROOTLESS_AUX_UID)
+
 # FEATURE: Opportunistic new{uid,gid}map support, allowing a rootless container
 #          to be set up with the usage of helper setuid binaries.
 
 function enable_idmap() {
-	export ROOTLESS_UIDMAP_START=100000 ROOTLESS_UIDMAP_LENGTH=65536
-	export ROOTLESS_GIDMAP_START=200000 ROOTLESS_GIDMAP_LENGTH=65536
+	ROOTLESS_UIDMAP_START=100000 ROOTLESS_UIDMAP_LENGTH=65536
+	ROOTLESS_GIDMAP_START=200000 ROOTLESS_GIDMAP_LENGTH=65536
 
 	# Set up sub{uid,gid} mappings.
 	[ -e /etc/subuid.tmp ] && mv /etc/subuid{.tmp,}
@@ -57,17 +62,17 @@ function enable_idmap() {
 	# Create a directory owned by $ROOTLESS_AUX_UID inside container, to be used
 	# by a test case in cwd.bats. This setup can't be done by the test itself,
 	# as it needs root for chown.
-	export ROOTLESS_AUX_UID=1024
+	ROOTLESS_AUX_UID=1024
 	ROOTLESS_AUX_DIR="$(mktemp -d)"
 	# 1000 is linux.uidMappings.containerID value,
 	# as set by runc_rootless_idmap
 	chown "$((ROOTLESS_UIDMAP_START - 1000 + ROOTLESS_AUX_UID))" "$ROOTLESS_AUX_DIR"
-	export ROOTLESS_AUX_DIR
 }
 
 function disable_idmap() {
-	export ROOTLESS_UIDMAP_START ROOTLESS_UIDMAP_LENGTH
-	export ROOTLESS_GIDMAP_START ROOTLESS_GIDMAP_LENGTH
+	unset ROOTLESS_UIDMAP_START ROOTLESS_UIDMAP_LENGTH
+	unset ROOTLESS_GIDMAP_START ROOTLESS_GIDMAP_LENGTH
+	unset ROOTLESS_AUX_UID ROOTLESS_AUX_DIR
 
 	# Deactivate sub{uid,gid} mappings.
 	[ -e /etc/subuid ] && mv /etc/subuid{,.tmp}
@@ -182,26 +187,34 @@ features_powerset="$(powerset "${ALL_FEATURES[@]}")"
 # Iterate over the powerset of all features.
 IFS=:
 idx=0
-for enabled_features in $features_powerset; do
+for ROOTLESS_FEATURES in $features_powerset; do
 	((++idx))
-	printf "[%.2d] run rootless tests ... (${enabled_features%%+})\n" "$idx"
+	printf "[%.2d] run rootless tests ... (${ROOTLESS_FEATURES%%+})\n" "$idx"
 
 	unset IFS
 	for feature in "${ALL_FEATURES[@]}"; do
 		hook_func="disable_$feature"
-		grep -E "(^|\+)$feature(\+|$)" <<<"$enabled_features" &>/dev/null && hook_func="enable_$feature"
+		grep -E "(^|\+)$feature(\+|$)" <<<"$ROOTLESS_FEATURES" &>/dev/null && hook_func="enable_$feature"
 		"$hook_func"
 	done
 
 	# Run the test suite!
 	echo "path: $PATH"
-	export ROOTLESS_FEATURES="$enabled_features"
 	if [ -v RUNC_USE_SYSTEMD ]; then
 		# We use `ssh rootless@localhost` instead of `sudo -u rootless` for creating systemd user session.
 		# Alternatively we could use `machinectl shell`, but it is known not to work well on SELinux-enabled hosts as of April 2020:
 		# https://bugzilla.redhat.com/show_bug.cgi?id=1788616
-		ssh -t -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$HOME/.ssh/rootless.key" rootless@localhost -- PATH="$PATH" RUNC_USE_SYSTEMD="$RUNC_USE_SYSTEMD" bats -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
+		#
+		# Since ssh does not pass all environment variables by default,
+		# we need to add those needed by the tests to the command line.
+		ssh_env=()
+		for v in "${ENV_LIST[@]}"; do
+			[ -v "$v" ] && ssh_env+=("$v=${!v}")
+		done
+		ssh -t -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$HOME/.ssh/rootless.key" \
+			rootless@localhost -- "${ssh_env[@]}" bats -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	else
+		export "${ENV_LIST[@]}"
 		sudo -HE -u rootless PATH="$PATH" "$(which bats)" -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	fi
 	cleanup
