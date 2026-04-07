@@ -26,6 +26,7 @@ import (
 
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/cgroups/fs2"
+	"github.com/opencontainers/runc/internal/cmsg"
 	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
@@ -1132,7 +1133,7 @@ func sendContainerProcessState(listenerPath string, state *specs.ContainerProces
 		return fmt.Errorf("cannot marshall seccomp state: %w", err)
 	}
 
-	if err := utils.SendRawFd(socket, string(b), file.Fd()); err != nil {
+	if err := cmsg.SendRawFd(socket, string(b), file.Fd()); err != nil {
 		return fmt.Errorf("cannot send seccomp fd to %s: %w", listenerPath, err)
 	}
 	runtime.KeepAlive(file)

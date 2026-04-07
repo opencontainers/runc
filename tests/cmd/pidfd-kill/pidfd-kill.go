@@ -14,7 +14,7 @@ import (
 	"github.com/urfave/cli"
 	"golang.org/x/sys/unix"
 
-	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/runc/internal/cmsg"
 )
 
 const (
@@ -109,5 +109,5 @@ func recvPidfd(socketFile string) (*os.File, error) {
 	}
 	defer socket.Close()
 
-	return utils.RecvFile(socket)
+	return cmsg.RecvFile(socket)
 }

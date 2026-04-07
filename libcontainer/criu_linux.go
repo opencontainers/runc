@@ -25,6 +25,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/opencontainers/cgroups"
+	"github.com/opencontainers/runc/internal/cmsg"
 	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
@@ -1193,7 +1194,7 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 		defer master.Close()
 
 		// While we can access console.master, using the API is a good idea.
-		if err := utils.SendFile(process.ConsoleSocket, master); err != nil {
+		if err := cmsg.SendFile(process.ConsoleSocket, master); err != nil {
 			return err
 		}
 	case "status-ready":
