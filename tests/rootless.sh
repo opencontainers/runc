@@ -54,15 +54,15 @@ function enable_idmap() {
 	[ -e /usr/bin/unused-newuidmap ] && mv /usr/bin/{unused-,}newuidmap
 	[ -e /usr/bin/unused-newgidmap ] && mv /usr/bin/{unused-,}newgidmap
 
-	# Create a directory owned by $AUX_UID inside container, to be used
+	# Create a directory owned by $ROOTLESS_AUX_UID inside container, to be used
 	# by a test case in cwd.bats. This setup can't be done by the test itself,
 	# as it needs root for chown.
-	export AUX_UID=1024
-	AUX_DIR="$(mktemp -d)"
+	export ROOTLESS_AUX_UID=1024
+	ROOTLESS_AUX_DIR="$(mktemp -d)"
 	# 1000 is linux.uidMappings.containerID value,
 	# as set by runc_rootless_idmap
-	chown "$((ROOTLESS_UIDMAP_START - 1000 + AUX_UID))" "$AUX_DIR"
-	export AUX_DIR
+	chown "$((ROOTLESS_UIDMAP_START - 1000 + ROOTLESS_AUX_UID))" "$ROOTLESS_AUX_DIR"
+	export ROOTLESS_AUX_DIR
 }
 
 function disable_idmap() {
@@ -81,9 +81,9 @@ function disable_idmap() {
 }
 
 function cleanup() {
-	if [ -v AUX_DIR ]; then
-		rmdir "$AUX_DIR"
-		unset AUX_DIX
+	if [ -v ROOTLESS_AUX_DIR ]; then
+		rmdir "$ROOTLESS_AUX_DIR"
+		unset ROOTLESS_AUX_DIR
 	fi
 }
 
