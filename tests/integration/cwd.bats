@@ -33,25 +33,25 @@ function teardown() {
 @test "runc create sets up user before chdir to cwd if needed" {
 	requires rootless rootless_idmap
 
-	# Some setup for this test (AUX_DIR and AUX_UID) is done
+	# Some setup for this test (ROOTLESS_AUX_DIR and ROOTLESS_AUX_UID) is done
 	# by rootless.sh. Check that setup is done...
-	if [[ ! -v AUX_UID || ! -v AUX_DIR || ! -d "$AUX_DIR" ]]; then
-		skip "bad/unset AUX_DIR/AUX_UID"
+	if [[ ! -v ROOTLESS_AUX_UID || ! -v ROOTLESS_AUX_DIR || ! -d "$ROOTLESS_AUX_DIR" ]]; then
+		skip "bad/unset ROOTLESS_AUX_DIR/ROOTLESS_AUX_UID"
 	fi
 	# ... and is correct, i.e. the current user
-	# does not have permission to access AUX_DIR.
-	if ls -l "$AUX_DIR" 2>/dev/null; then
-		skip "bad AUX_DIR permissions"
+	# does not have permission to access ROOTLESS_AUX_DIR.
+	if ls -l "$ROOTLESS_AUX_DIR" 2>/dev/null; then
+		skip "bad ROOTLESS_AUX_DIR permissions"
 	fi
 
 	update_config '   .mounts += [{
-				source: "'"$AUX_DIR"'",
-				destination: "'"$AUX_DIR"'",
+				source: "'"$ROOTLESS_AUX_DIR"'",
+				destination: "'"$ROOTLESS_AUX_DIR"'",
 				options: ["bind"]
 			    }]
-			| .process.user.uid = '"$AUX_UID"'
-			| .process.cwd = "'"$AUX_DIR"'"
-			| .process.args |= ["ls", "'"$AUX_DIR"'"]'
+			| .process.user.uid = '"$ROOTLESS_AUX_UID"'
+			| .process.cwd = "'"$ROOTLESS_AUX_DIR"'"
+			| .process.args |= ["ls", "'"$ROOTLESS_AUX_DIR"'"]'
 
 	runc run test_busybox
 	[ "$status" -eq 0 ]
