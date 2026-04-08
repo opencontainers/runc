@@ -106,7 +106,6 @@ func BenchmarkExecInBigEnv(b *testing.B) {
 			Cwd:    "/",
 			Args:   []string{"env"},
 			Env:    env,
-			Stdin:  buffers.Stdin,
 			Stdout: buffers.Stdout,
 			Stderr: buffers.Stderr,
 		}

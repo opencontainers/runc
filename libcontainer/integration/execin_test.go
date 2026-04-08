@@ -49,7 +49,6 @@ func TestExecIn(t *testing.T) {
 		Cwd:    "/",
 		Args:   []string{"ps"},
 		Env:    standardEnvironment,
-		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
 	}
@@ -107,7 +106,6 @@ func testExecInRlimit(t *testing.T, userns bool) {
 		Cwd:    "/",
 		Args:   []string{"/bin/sh", "-c", "ulimit -n"},
 		Env:    standardEnvironment,
-		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
 		Rlimits: []configs.Rlimit{
@@ -357,7 +355,6 @@ func TestExecInEnvironment(t *testing.T) {
 		Cwd:    "/",
 		Args:   []string{"/bin/env"},
 		Env:    execEnv,
-		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
 	}
@@ -483,7 +480,6 @@ func TestExecInOomScoreAdj(t *testing.T) {
 		Cwd:    "/",
 		Args:   []string{"/bin/sh", "-c", "cat /proc/self/oom_score_adj"},
 		Env:    standardEnvironment,
-		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
 	}

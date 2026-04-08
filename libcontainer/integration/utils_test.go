@@ -55,14 +55,12 @@ func ptrInt(v int) *int {
 
 func newStdBuffers() *stdBuffers {
 	return &stdBuffers{
-		Stdin:  bytes.NewBuffer(nil),
 		Stdout: bytes.NewBuffer(nil),
 		Stderr: bytes.NewBuffer(nil),
 	}
 }
 
 type stdBuffers struct {
-	Stdin  *bytes.Buffer
 	Stdout *bytes.Buffer
 	Stderr *bytes.Buffer
 }
@@ -187,7 +185,6 @@ func runContainer(t testing.TB, config *configs.Config, args ...string) (buffers
 		Cwd:    "/",
 		Args:   args,
 		Env:    standardEnvironment,
-		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
 		Init:   true,
