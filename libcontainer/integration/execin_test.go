@@ -534,7 +534,7 @@ func TestExecInUserns(t *testing.T) {
 	buffers := newStdBuffers()
 	process2 := &libcontainer.Process{
 		Cwd:  "/",
-		Args: []string{"readlink", "/proc/self/ns/user"},
+		Args: []string{"readlink", "-v", "/proc/self/ns/user"},
 		Env: []string{
 			"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
 		},
