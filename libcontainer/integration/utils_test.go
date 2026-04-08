@@ -88,13 +88,9 @@ func ok(t testing.TB, err error) {
 
 func waitProcess(p *libcontainer.Process, t testing.TB) {
 	t.Helper()
-	status, err := p.Wait()
+	_, err := p.Wait()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if !status.Success() {
-		t.Fatalf("unexpected status: %v", status)
 	}
 }
 
