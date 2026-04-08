@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -163,7 +162,7 @@ func TestEnter(t *testing.T) {
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
 
-	var stdout, stdout2 bytes.Buffer
+	var stdout, stdout2 strings.Builder
 
 	pconfig := libcontainer.Process{
 		Cwd:    "/",
@@ -242,7 +241,7 @@ func TestProcessEnv(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Cwd:  "/",
 		Args: []string{"sh", "-c", "env"},
@@ -288,7 +287,7 @@ func TestProcessEmptyCaps(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Cwd:    "/",
 		Args:   []string{"sh", "-c", "cat /proc/self/status"},
@@ -332,7 +331,7 @@ func TestProcessCaps(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Cwd:          "/",
 		Args:         []string{"sh", "-c", "cat /proc/self/status"},
@@ -393,7 +392,7 @@ func TestAdditionalGroups(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Cwd:              "/",
 		Args:             []string{"sh", "-c", "id", "-Gn"},
@@ -772,7 +771,7 @@ func TestPassExtraFiles(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pipeout1, pipein1, err := os.Pipe()
 	ok(t, err)
 	pipeout2, pipein2, err := os.Pipe()
@@ -831,7 +830,7 @@ func TestSysctl(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Cwd:    "/proc/sys/kernel",
 		Args:   []string{"sh", "-c", cmd},
@@ -941,7 +940,7 @@ func TestOomScoreAdj(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Cwd:    "/",
 		Args:   []string{"sh", "-c", "cat /proc/self/oom_score_adj"},
@@ -1081,7 +1080,7 @@ func TestHook(t *testing.T) {
 		cmd.WriteString("/" + hook + " ")
 	}
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Cwd:    "/",
 		Args:   []string{"sh", "-c", cmd.String()},
@@ -1193,7 +1192,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 	ok(t, err)
 
 	// Run "cat /proc/self/mountinfo" in container and look at mount points.
-	var stdout2 bytes.Buffer
+	var stdout2 strings.Builder
 
 	stdinR2, stdinW2, err := os.Pipe()
 	ok(t, err)
@@ -1305,7 +1304,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 	dir2cont = filepath.Join(dir1cont, filepath.Base(dir2host))
 
 	// Mount something in container and see if it is visible on host.
-	var stdout2 bytes.Buffer
+	var stdout2 strings.Builder
 
 	stdinR2, stdinW2, err := os.Pipe()
 	ok(t, err)
@@ -1340,7 +1339,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 
 	// Check if mount is visible on host or not.
 	out, err := exec.Command("findmnt", "-n", "-f", "-oTARGET", dir2host).CombinedOutput()
-	outtrim := string(bytes.TrimSpace(out))
+	outtrim := strings.TrimSpace(string(out))
 	if err != nil {
 		t.Logf("findmnt error %q: %q", err, outtrim)
 	}
@@ -1627,7 +1626,7 @@ func TestTmpfsCopyUp(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Args:   []string{"ls", "/etc/passwd"},
 		Env:    standardEnvironment,
@@ -1818,7 +1817,7 @@ func TestBindMountAndUser(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 
 	pconfig := libcontainer.Process{
 		Cwd:    "/",

@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -55,14 +54,14 @@ func ptrInt(v int) *int {
 
 func newStdBuffers() *stdBuffers {
 	return &stdBuffers{
-		Stdout: bytes.NewBuffer(nil),
-		Stderr: bytes.NewBuffer(nil),
+		Stdout: new(strings.Builder),
+		Stderr: new(strings.Builder),
 	}
 }
 
 type stdBuffers struct {
-	Stdout *bytes.Buffer
-	Stderr *bytes.Buffer
+	Stdout *strings.Builder
+	Stderr *strings.Builder
 }
 
 func (b *stdBuffers) String() string {

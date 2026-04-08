@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"bytes"
 	"math/rand"
 	"os"
 	"strings"
@@ -95,7 +94,7 @@ func BenchmarkExecInBigEnv(b *testing.B) {
 	const numEnv = 5000
 	env := append(standardEnvironment, genBigEnv(numEnv)...)
 	// Construct the expected output.
-	var wantOut bytes.Buffer
+	var wantOut strings.Builder
 	for _, e := range env {
 		wantOut.WriteString(e + "\n")
 	}
@@ -112,7 +111,7 @@ func BenchmarkExecInBigEnv(b *testing.B) {
 		err = container.Run(exec)
 		ok(b, err)
 		waitProcess(exec, b)
-		if !bytes.Equal(buffers.Stdout.Bytes(), wantOut.Bytes()) {
+		if buffers.Stdout.String() != wantOut.String() {
 			b.Fatalf("unexpected output: %s (stderr: %s)", buffers.Stdout, buffers.Stderr)
 		}
 	}
