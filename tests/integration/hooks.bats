@@ -35,7 +35,11 @@ function teardown() {
 		echo "testing hook $hook"
 		update_config '.hooks |= {"'$hook'": [{"path": "/bin/true"}, {"path": "/bin/false"}]}'
 		runc run "test_hook-$hook"
-		[[ "$output" != "Hello World" ]]
+		# Failed poststart hooks results in container being killed,
+		# but only after it has started, so output may or may not appear.
+		if [ "$hook" != "poststart" ]; then
+			[[ "$output" != "Hello World" ]]
+		fi
 		[ "$status" -ne 0 ]
 		[[ "$output" == *"error running $hook hook #1:"* ]]
 	done

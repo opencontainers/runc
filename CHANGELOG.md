@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `github.com/moby/sys/devices` (which is a carbon copy of the package). It
   will be removed in runc 1.6.
 
+### Fixed ###
+- The poststart hooks are now executed after starting the user-specified
+  process, fixing a runtime-spec conformance issue. (#4347, #5186)
+
 ## [1.5.0-rc.1] - 2026-03-12
 
 > 憎しみを束ねてもそれは脆い！
