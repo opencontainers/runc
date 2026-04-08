@@ -1,4 +1,6 @@
-package utils
+// Package cmsg provides helpers for sending and receiving SCM_RIGHTS messages
+// via sockets.
+package cmsg
 
 /*
  * Copyright 2016, 2017 SUSE LLC
@@ -21,8 +23,9 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/opencontainers/runc/internal/linux"
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/internal/linux"
 )
 
 // MaxNameLen is the maximum length of the name of a file descriptor being sent

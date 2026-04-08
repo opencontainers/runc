@@ -11,12 +11,13 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/containerd/console"
+	"github.com/opencontainers/runc/internal/cmsg"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
-
-	"golang.org/x/sys/unix"
 )
 
 func TestExecIn(t *testing.T) {
@@ -272,7 +273,7 @@ func TestExecInTTY(t *testing.T) {
 
 		done := make(chan (error))
 		go func() {
-			f, err := utils.RecvFile(parent)
+			f, err := cmsg.RecvFile(parent)
 			if err != nil {
 				done <- fmt.Errorf("RecvFile: %w", err)
 				return
