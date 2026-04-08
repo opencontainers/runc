@@ -171,6 +171,7 @@ func TestEnter(t *testing.T) {
 		Env:    standardEnvironment,
 		Stdin:  stdinR,
 		Stdout: &stdout,
+		Stderr: new(strings.Builder),
 		Init:   true,
 	}
 	err = container.Run(&pconfig)
@@ -184,13 +185,13 @@ func TestEnter(t *testing.T) {
 	stdinR2, stdinW2, err := os.Pipe()
 	ok(t, err)
 	pconfig2 := libcontainer.Process{
-		Cwd: "/",
-		Env: standardEnvironment,
+		Cwd:    "/",
+		Args:   []string{"sh", "-c", "cat && readlink /proc/self/ns/pid"},
+		Env:    standardEnvironment,
+		Stdin:  stdinR2,
+		Stdout: &stdout2,
+		Stderr: new(strings.Builder),
 	}
-	pconfig2.Args = []string{"sh", "-c", "cat && readlink /proc/self/ns/pid"}
-	pconfig2.Stdin = stdinR2
-	pconfig2.Stdout = &stdout2
-
 	err = container.Run(&pconfig2)
 	_ = stdinR2.Close()
 	defer stdinW2.Close()
@@ -253,6 +254,7 @@ func TestProcessEnv(t *testing.T) {
 		},
 		Stdin:  nil,
 		Stdout: &stdout,
+		Stderr: new(strings.Builder),
 		Init:   true,
 	}
 	err = container.Run(&pconfig)
@@ -293,6 +295,7 @@ func TestProcessEmptyCaps(t *testing.T) {
 		Env:    standardEnvironment,
 		Stdin:  nil,
 		Stdout: &stdout,
+		Stderr: new(strings.Builder),
 		Init:   true,
 	}
 	err = container.Run(&pconfig)
@@ -336,6 +339,7 @@ func TestProcessCaps(t *testing.T) {
 		Env:          standardEnvironment,
 		Stdin:        nil,
 		Stdout:       &stdout,
+		Stderr:       new(strings.Builder),
 		Capabilities: &configs.Capabilities{},
 		Init:         true,
 	}
@@ -396,6 +400,7 @@ func TestAdditionalGroups(t *testing.T) {
 		Env:              standardEnvironment,
 		Stdin:            nil,
 		Stdout:           &stdout,
+		Stderr:           new(strings.Builder),
 		AdditionalGroups: []int{3333, 99999},
 		Init:             true,
 	}
@@ -833,6 +838,7 @@ func TestSysctl(t *testing.T) {
 		Env:    standardEnvironment,
 		Stdin:  nil,
 		Stdout: &stdout,
+		Stderr: new(strings.Builder),
 		Init:   true,
 	}
 	err = container.Run(&pconfig)
@@ -942,6 +948,7 @@ func TestOomScoreAdj(t *testing.T) {
 		Env:    standardEnvironment,
 		Stdin:  nil,
 		Stdout: &stdout,
+		Stderr: new(strings.Builder),
 		Init:   true,
 	}
 	err = container.Run(&pconfig)
@@ -1081,6 +1088,7 @@ func TestHook(t *testing.T) {
 		Env:    standardEnvironment,
 		Stdin:  nil,
 		Stdout: &stdout,
+		Stderr: new(strings.Builder),
 		Init:   true,
 	}
 	err = container.Run(&pconfig)
@@ -1196,6 +1204,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 		Env:    standardEnvironment,
 		Stdin:  stdinR2,
 		Stdout: &stdout2,
+		Stderr: new(strings.Builder),
 	}
 
 	err = container.Run(pconfig2)
@@ -1307,6 +1316,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 		Env:          standardEnvironment,
 		Stdin:        stdinR2,
 		Stdout:       &stdout2,
+		Stderr:       new(strings.Builder),
 		Capabilities: &configs.Capabilities{},
 	}
 
@@ -1490,6 +1500,7 @@ func TestInitJoinPID(t *testing.T) {
 		Args:   []string{"ps"},
 		Env:    standardEnvironment,
 		Stdout: buffers.Stdout,
+		Stderr: new(strings.Builder),
 	}
 	err = container1.Run(ps)
 	ok(t, err)
@@ -1622,6 +1633,7 @@ func TestTmpfsCopyUp(t *testing.T) {
 		Env:    standardEnvironment,
 		Stdin:  nil,
 		Stdout: &stdout,
+		Stderr: new(strings.Builder),
 		Init:   true,
 	}
 	err = container.Run(&pconfig)

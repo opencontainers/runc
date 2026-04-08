@@ -160,6 +160,7 @@ func TestExecInAdditionalGroups(t *testing.T) {
 		Env:              standardEnvironment,
 		Stdin:            nil,
 		Stdout:           &stdout,
+		Stderr:           new(strings.Builder),
 		AdditionalGroups: []int{4444, 87654},
 	}
 	err = container.Run(&pconfig)
@@ -538,7 +539,7 @@ func TestExecInUserns(t *testing.T) {
 			"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
 		},
 		Stdout: buffers.Stdout,
-		Stderr: os.Stderr,
+		Stderr: new(strings.Builder),
 	}
 	err = container.Run(process2)
 	ok(t, err)
