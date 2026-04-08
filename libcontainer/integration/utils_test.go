@@ -90,7 +90,10 @@ func waitProcess(p *libcontainer.Process, t testing.TB) {
 	t.Helper()
 	_, err := p.Wait()
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		if stderr, ok := p.Stderr.(fmt.Stringer); ok {
+			err = fmt.Errorf("%w; stderr:\n%s", err, stderr)
+		}
+		t.Fatalf("command failed: %v", err)
 	}
 }
 
