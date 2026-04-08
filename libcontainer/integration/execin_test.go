@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -151,7 +150,7 @@ func TestExecInAdditionalGroups(t *testing.T) {
 	defer stdinW.Close()
 	ok(t, err)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Cwd:              "/",
 		Args:             []string{"sh", "-c", "id", "-Gn"},
@@ -264,7 +263,7 @@ func TestExecInTTY(t *testing.T) {
 	// Repeat to increase chances to catch a race; see
 	// https://github.com/opencontainers/runc/issues/2425.
 	for range 300 {
-		var stdout bytes.Buffer
+		var stdout strings.Builder
 
 		parent, child, err := utils.NewSockPair("console")
 		ok(t, err)
@@ -410,7 +409,7 @@ func TestExecinPassExtraFiles(t *testing.T) {
 	defer stdinW.Close()
 	ok(t, err)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pipeout1, pipein1, err := os.Pipe()
 	ok(t, err)
 	pipeout2, pipein2, err := os.Pipe()
