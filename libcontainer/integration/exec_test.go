@@ -63,7 +63,7 @@ func TestIPCPrivate(t *testing.T) {
 	ok(t, err)
 
 	config := newTemplateConfig(t, nil)
-	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/ipc")
+	buffers := runContainerOk(t, config, "readlink", "-v", "/proc/self/ns/ipc")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual == l {
 		t.Fatalf("ipc link should be private to the container but equals host %q %q", actual, l)
@@ -80,7 +80,7 @@ func TestIPCHost(t *testing.T) {
 
 	config := newTemplateConfig(t, nil)
 	config.Namespaces.Remove(configs.NEWIPC)
-	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/ipc")
+	buffers := runContainerOk(t, config, "readlink", "-v", "/proc/self/ns/ipc")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual != l {
 		t.Fatalf("ipc link not equal to host link %q %q", actual, l)
@@ -97,7 +97,7 @@ func TestIPCJoinPath(t *testing.T) {
 
 	config := newTemplateConfig(t, nil)
 	config.Namespaces.Add(configs.NEWIPC, "/proc/1/ns/ipc")
-	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/ipc")
+	buffers := runContainerOk(t, config, "readlink", "-v", "/proc/self/ns/ipc")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual != l {
 		t.Fatalf("ipc link not equal to host link %q %q", actual, l)
@@ -167,7 +167,7 @@ func TestEnter(t *testing.T) {
 
 	pconfig := libcontainer.Process{
 		Cwd:    "/",
-		Args:   []string{"sh", "-c", "cat && readlink /proc/self/ns/pid"},
+		Args:   []string{"sh", "-c", "cat && readlink -v /proc/self/ns/pid"},
 		Env:    standardEnvironment,
 		Stdin:  stdinR,
 		Stdout: &stdout,
@@ -186,7 +186,7 @@ func TestEnter(t *testing.T) {
 	ok(t, err)
 	pconfig2 := libcontainer.Process{
 		Cwd:    "/",
-		Args:   []string{"sh", "-c", "cat && readlink /proc/self/ns/pid"},
+		Args:   []string{"sh", "-c", "cat && readlink -v /proc/self/ns/pid"},
 		Env:    standardEnvironment,
 		Stdin:  stdinR2,
 		Stdout: &stdout2,
@@ -1360,7 +1360,7 @@ func TestPIDHost(t *testing.T) {
 
 	config := newTemplateConfig(t, nil)
 	config.Namespaces.Remove(configs.NEWPID)
-	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/pid")
+	buffers := runContainerOk(t, config, "readlink", "-v", "/proc/self/ns/pid")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual != l {
 		t.Fatalf("ipc link not equal to host link %q %q", actual, l)
@@ -1663,7 +1663,7 @@ func TestCGROUPPrivate(t *testing.T) {
 
 	config := newTemplateConfig(t, nil)
 	config.Namespaces.Add(configs.NEWCGROUP, "")
-	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/cgroup")
+	buffers := runContainerOk(t, config, "readlink", "-v", "/proc/self/ns/cgroup")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual == l {
 		t.Fatalf("cgroup link should be private to the container but equals host %q %q", actual, l)
@@ -1682,7 +1682,7 @@ func TestCGROUPHost(t *testing.T) {
 	ok(t, err)
 
 	config := newTemplateConfig(t, nil)
-	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/cgroup")
+	buffers := runContainerOk(t, config, "readlink", "-v", "/proc/self/ns/cgroup")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual != l {
 		t.Fatalf("cgroup link not equal to host link %q %q", actual, l)
