@@ -34,8 +34,9 @@ import (
 	"sync"
 
 	"github.com/containerd/console"
-	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/urfave/cli"
+
+	"github.com/opencontainers/runc/internal/cmsg"
 )
 
 // version will be populated by the Makefile, read from
@@ -100,7 +101,7 @@ func handleSingle(path string, noStdin bool) error {
 	defer socket.Close()
 
 	// Get the master file descriptor from runC.
-	master, err := utils.RecvFile(socket)
+	master, err := cmsg.RecvFile(socket)
 	if err != nil {
 		return err
 	}
@@ -163,7 +164,7 @@ func handleNull(path string) error {
 			defer socket.Close()
 
 			// Get the master file descriptor from runC.
-			master, err := utils.RecvFile(socket)
+			master, err := cmsg.RecvFile(socket)
 			if err != nil {
 				return
 			}
