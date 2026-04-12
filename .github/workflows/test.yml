@@ -208,8 +208,12 @@ jobs:
         PKG_CONFIG_PATH: /usr/386/lib/pkgconfig
       run: sudo -E PATH="$PATH" -- make GOARCH=386 localunittest
 
-  fedora:
-    timeout-minutes: 30
+  lima:
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        template: [almalinux-8, almalinux-9, centos-stream-10, fedora]
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v6
@@ -228,13 +232,13 @@ jobs:
       # CPUs: min(4, host CPU cores)
       # RAM:  min(4 GiB, half of host memory)
       # Disk: 100 GiB
-      run: limactl start --plain --name=default template://fedora
+      run: limactl start --plain --name=default template:${{ matrix.template }}
 
     - name: "Initialize VM"
       run: |
         set -eux -o pipefail
         limactl cp -r . default:/tmp/runc
-        lima sudo /tmp/runc/script/setup_host_fedora.sh
+        lima sudo /tmp/runc/script/setup_host.sh
 
     - name: "Show guest info"
       run: |
@@ -262,6 +266,8 @@ jobs:
       run: ssh -tt lima-default sudo -i make -C /tmp/runc localintegration
 
     - name: "Run integration tests (systemd driver, rootless)"
+      # Needs cgroup v2
+      if: ${{ matrix.template != 'almalinux-8' }}
       run: ssh -tt lima-default sudo -i make -C /tmp/runc localrootlessintegration RUNC_USE_SYSTEMD=yes
 
     - name: "Run integration tests (fs driver, rootless)"
@@ -271,7 +277,7 @@ jobs:
     needs:
     - test
     - cross-i386
-    - fedora
+    - lima
     runs-on: ubuntu-24.04
     steps:
     - run: echo "All jobs completed"
