@@ -16,13 +16,11 @@ function teardown() {
 
 	testcontainer test_busybox created
 
-	# start container test_busybox
 	runc start test_busybox
 	[ "$status" -eq 0 ]
 
 	testcontainer test_busybox running
 
-	# delete test_busybox
 	runc delete --force test_busybox
 
 	runc state test_busybox

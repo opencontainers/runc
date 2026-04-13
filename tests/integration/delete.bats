@@ -115,14 +115,11 @@ function test_runc_delete_host_pidns() {
 }
 
 @test "runc delete --force" {
-	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
-	# check state
 	testcontainer test_busybox running
 
-	# force delete test_busybox
 	runc delete --force test_busybox
 
 	runc state test_busybox
@@ -209,11 +206,9 @@ EOF
 	set_cgroups_path
 	set_cgroup_mount_writable
 
-	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
-	# check state
 	testcontainer test_busybox running
 
 	# create a sub process
