@@ -241,8 +241,8 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 	// to the current root ("/"), and not to the old rootfs before it becomes "/". Applying the
 	// flag in prepareRoot would affect the host mount namespace if the container's
 	// root mount is shared.
-	// MS_PRIVATE is skipped as rootfsParentMountPrivate() is already called.
-	if config.RootPropagation != 0 && config.RootPropagation&unix.MS_PRIVATE == 0 {
+	// MS_PRIVATE or MS_SLAVE is skipped as rootfsParentMountPropagation() is already called.
+	if config.RootPropagation != 0 && config.RootPropagation&(unix.MS_PRIVATE|unix.MS_SLAVE) == 0 {
 		if err := mount("", "/", "", uintptr(config.RootPropagation), ""); err != nil {
 			return fmt.Errorf("unable to apply root propagation flags: %w", err)
 		}
@@ -1061,19 +1061,27 @@ func mknodDevice(destDir *os.File, destName string, node *devices.Device) error 
 	return nil
 }
 
-// rootfsParentMountPrivate ensures rootfs parent mount is private.
+func rootfsParentMountPropagationFlags(rootPropagation int) uintptr {
+	if rootPropagation&unix.MS_SLAVE != 0 {
+		return unix.MS_SLAVE
+	}
+	return unix.MS_PRIVATE
+}
+
+// rootfsParentMountPropagation ensures rootfs parent mount is not shared.
 // This is needed for two reasons:
 //   - pivot_root() will fail if parent mount is shared;
-//   - when we bind mount rootfs, if its parent is not private, the new mount
+//   - when we bind mount rootfs, if its parent is (r)shared, the new mount
 //     will propagate (leak!) to parent namespace and we don't want that.
-func rootfsParentMountPrivate(path string) error {
+func rootfsParentMountPropagation(path string, rootPropagation int) error {
 	var err error
+	flags := rootfsParentMountPropagationFlags(rootPropagation)
 	// Assuming path is absolute and clean (this is checked in
 	// libcontainer/validate). Any error other than EINVAL means we failed,
 	// and EINVAL means this is not a mount point, so traverse up until we
 	// find one.
 	for {
-		err = unix.Mount("", path, "", unix.MS_PRIVATE, "")
+		err = unix.Mount("", path, "", flags, "")
 		if err == nil {
 			return nil
 		}
@@ -1083,9 +1091,9 @@ func rootfsParentMountPrivate(path string) error {
 		path = filepath.Dir(path)
 	}
 	return &mountError{
-		op:     "remount-private",
+		op:     "remount-propagation",
 		target: path,
-		flags:  unix.MS_PRIVATE,
+		flags:  flags,
 		err:    err,
 	}
 }
@@ -1099,7 +1107,7 @@ func prepareRoot(config *configs.Config) error {
 		return err
 	}
 
-	if err := rootfsParentMountPrivate(config.Rootfs); err != nil {
+	if err := rootfsParentMountPropagation(config.Rootfs, config.RootPropagation); err != nil {
 		return err
 	}
 
