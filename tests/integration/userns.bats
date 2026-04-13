@@ -264,6 +264,44 @@ function teardown() {
 	run ! ip link del dummy0
 }
 
+# Regression test for https://github.com/opencontainers/runc/pull/5242.
+# In a user namespace, mounts inherited from a more privileged mount namespace
+# are locked and cannot have their propagation changed to MS_PRIVATE (EPERM).
+# rootfsParentMountPrivate should skip EPERM in this case.
+@test "userns with shared parent mount" {
+	requires root
+
+	# Relocate the bundle into a shared mount. Using a separate tmpdir
+	# (rather than making $ROOT/bundle shared in-place) avoids cleanup
+	# ordering issues with teardown_bundle's rm -rf of $ROOT.
+	shared_dir=$(mktemp -d "$BATS_RUN_TMPDIR/shared-parent.XXXXXX")
+	chmod a+x "$shared_dir"
+	mount --bind "$shared_dir" "$shared_dir"
+	mount --make-shared "$shared_dir"
+	echo "$shared_dir" >>"$to_umount_list"
+
+	mv "$ROOT/bundle" "$shared_dir/bundle"
+	cd "$shared_dir/bundle"
+
+	update_config '.process.args = ["true"]'
+
+	# Record host mounts under the shared dir before container start.
+	host_mounts_before=$(cat /proc/self/mountinfo | grep "$shared_dir" | wc -l)
+
+	# On kernels where MS_PRIVATE on locked mounts returns EPERM,
+	# this exercises the skip in rootfsParentMountPrivate.
+	# On other kernels, MS_PRIVATE succeeds directly and this
+	# serves as a smoke test for shared-parent-mount + userns.
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+
+	# Verify no mount events leaked from the container to the host
+	# via the shared mount. Since prepareRoot sets MS_SLAVE, container
+	# mounts (proc, sysfs, devtmpfs, etc.) must not propagate back.
+	host_mounts_after=$(cat /proc/self/mountinfo | grep "$shared_dir" | wc -l)
+	[ "$host_mounts_before" -eq "$host_mounts_after" ]
+}
+
 @test "userns with network interface renamed" {
 	requires root
 
