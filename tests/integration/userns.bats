@@ -264,6 +264,44 @@ function teardown() {
 	run ! ip link del dummy0
 }
 
+# Regression test for cross-userns exec failure.
+# When two containers have separate user namespaces but share IPC (the
+# Kubernetes sandbox/workload pattern), runc exec fails because nsexec
+# joins the user namespace BEFORE the IPC namespace. After joining a
+# different userns, setns to the IPC namespace (owned by the first
+# userns) returns EPERM.
+@test "userns exec with cross-userns shared IPC" {
+	requires root
+
+	# Container A (simulates sandbox): own userns, creates IPC namespace.
+	update_config '.process.args = ["sleep", "infinity"]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" sandbox_userns
+	[ "$status" -eq 0 ]
+
+	sandbox_pid="$(__runc state sandbox_userns | jq .pid)"
+
+	# Container B (simulates workload): own userns (different instance),
+	# but joins sandbox's IPC namespace via path.
+	# Remove mqueue mount — mounting mqueue in a different userns than
+	# the IPC namespace owner is not permitted.
+	update_config '.process.args = ["sleep", "infinity"]
+		| .linux.namespaces |= map(
+			if .type == "ipc" then
+				(.path = "/proc/'"$sandbox_pid"'/ns/ipc")
+			else .
+			end
+		)
+		| .mounts |= map(select(.type != "mqueue"))'
+	runc run -d --console-socket "$CONSOLE_SOCKET" workload_userns
+	[ "$status" -eq 0 ]
+
+	# Exec into workload container — this fails because nsexec joins the
+	# workload's userns first, then tries to setns into the sandbox's IPC
+	# namespace which is owned by a different userns → EPERM.
+	runc exec workload_userns id
+	[ "$status" -eq 0 ]
+}
+
 @test "userns with network interface renamed" {
 	requires root
 
