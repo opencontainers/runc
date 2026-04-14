@@ -19,7 +19,9 @@
 package pathrs
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/cyphar/filepath-securejoin/pathrs-lite"
 	"golang.org/x/sys/unix"
@@ -64,4 +66,47 @@ func CreateInRoot(root *os.File, subpath string, flags int, fileMode uint32) (*o
 		return nil, err
 	}
 	return os.NewFile(uintptr(fd), root.Name()+"/"+subpath), nil
+}
+
+// UnlinkInRoot deletes the inode specified at the given subpath. If you pass
+// [unix.AT_REMOVEDIR] it will remove directories, otherwise it will remove
+// non-directory inodes.
+func UnlinkInRoot(root *os.File, subpath string, flags int) error {
+	dirPath, filename, err := splitPath(subpath)
+	if err != nil {
+		return fmt.Errorf("split path %q for unlink: %w", subpath, err)
+	}
+
+	dirFd := root
+	if filepath.Join("/", dirPath) != "/" {
+		newDirFd, err := OpenInRoot(root, dirPath, unix.O_DIRECTORY|unix.O_PATH)
+		if err != nil {
+			return fmt.Errorf("failed to open parent directory %q for unlink: %w", dirPath, err)
+		}
+		dirFd = newDirFd
+		defer dirFd.Close()
+	}
+
+	err = unix.Unlinkat(int(dirFd.Fd()), filename, flags)
+	if err != nil {
+		err = &os.PathError{Op: "unlinkat", Path: dirFd.Name() + "/" + filename, Err: err}
+	}
+	return err
+}
+
+// SymlinkInRoot creates a symlink inside a root with the given target (as well
+// as creating any missing parent directories). If the subpath already exists,
+// an error is returned.
+func SymlinkInRoot(linktarget string, root *os.File, subpath string) error {
+	dirFd, filename, err := MkdirAllParentInRoot(root, subpath, 0o755)
+	if err != nil {
+		return err
+	}
+	defer dirFd.Close()
+
+	err = unix.Symlinkat(linktarget, int(dirFd.Fd()), filename)
+	if err != nil {
+		err = &os.PathError{Op: "symlinkat", Path: dirFd.Name() + "/" + filename, Err: err}
+	}
+	return err
 }
