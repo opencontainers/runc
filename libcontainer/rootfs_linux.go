@@ -184,7 +184,7 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 
 	setupDev := needsSetupDev(config)
 	if setupDev {
-		if err := createDevices(config, rootFd); err != nil {
+		if err := createDevices(rootFd, config); err != nil {
 			return fmt.Errorf("error creating device nodes: %w", err)
 		}
 		if err := setupPtmx(config); err != nil {
@@ -949,7 +949,7 @@ func reOpenDevNull() error {
 }
 
 // Create the device nodes in the container.
-func createDevices(config *configs.Config, rootFd *os.File) error {
+func createDevices(rootFd *os.File, config *configs.Config) error {
 	useBindMount := userns.RunningInUserNS() || config.Namespaces.Contains(configs.NEWUSER)
 	for _, node := range config.Devices {
 
