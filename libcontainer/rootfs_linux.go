@@ -97,6 +97,19 @@ func needsSetupDev(config *configs.Config) bool {
 	return true
 }
 
+func doSetupDev(rootFd *os.File, config *configs.Config) error {
+	if err := createDevices(rootFd, config); err != nil {
+		return fmt.Errorf("error creating device nodes: %w", err)
+	}
+	if err := setupPtmx(rootFd); err != nil {
+		return fmt.Errorf("error setting up ptmx: %w", err)
+	}
+	if err := setupDevSymlinks(rootFd); err != nil {
+		return fmt.Errorf("error setting up /dev symlinks: %w", err)
+	}
+	return nil
+}
+
 // setupAndMountToRootfs sets up the mount for a single mount point and mounts it to the rootfs.
 func setupAndMountToRootfs(pipe *syncSocket, config *configs.Config, mountConfig *mountConfig, m *configs.Mount) error {
 	entry := mountEntry{Mount: m}
@@ -184,14 +197,8 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 
 	setupDev := needsSetupDev(config)
 	if setupDev {
-		if err := createDevices(rootFd, config); err != nil {
-			return fmt.Errorf("error creating device nodes: %w", err)
-		}
-		if err := setupPtmx(config); err != nil {
-			return fmt.Errorf("error setting up ptmx: %w", err)
-		}
-		if err := setupDevSymlinks(config.Rootfs); err != nil {
-			return fmt.Errorf("error setting up /dev symlinks: %w", err)
+		if err := doSetupDev(rootFd, config); err != nil {
+			return fmt.Errorf("configuring container /dev: %w", err)
 		}
 	}
 
@@ -903,7 +910,7 @@ func checkProcMount(rootfs, dest string, m mountEntry) error {
 	return fmt.Errorf("%q cannot be mounted because it is inside /proc", dest)
 }
 
-func setupDevSymlinks(rootfs string) error {
+func setupDevSymlinks(rootFd *os.File) error {
 	// In theory, these should be links to /proc/thread-self, but systems
 	// expect these to be /proc/self and this matches how most distributions
 	// work.
@@ -919,11 +926,8 @@ func setupDevSymlinks(rootfs string) error {
 		links = append(links, [2]string{"/proc/kcore", "/dev/core"})
 	}
 	for _, link := range links {
-		var (
-			src = link[0]
-			dst = filepath.Join(rootfs, link[1])
-		)
-		if err := os.Symlink(src, dst); err != nil && !errors.Is(err, os.ErrExist) {
+		target, devName := link[0], link[1]
+		if err := pathrs.SymlinkInRoot(target, rootFd, devName); err != nil && !errors.Is(err, os.ErrExist) {
 			return err
 		}
 	}
@@ -1131,15 +1135,11 @@ func setReadonly() error {
 	return mount("", "/", "", flags, "")
 }
 
-func setupPtmx(config *configs.Config) error {
-	ptmx := filepath.Join(config.Rootfs, "dev/ptmx")
-	if err := os.Remove(ptmx); err != nil && !errors.Is(err, os.ErrNotExist) {
+func setupPtmx(rootFd *os.File) error {
+	if err := pathrs.UnlinkInRoot(rootFd, "/dev/ptmx", 0); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	if err := os.Symlink("pts/ptmx", ptmx); err != nil {
-		return err
-	}
-	return nil
+	return pathrs.SymlinkInRoot("pts/ptmx", rootFd, "/dev/ptmx")
 }
 
 // pivotRoot will call pivot_root such that rootfs becomes the new root
