@@ -387,7 +387,8 @@ func mountCgroupV1(m mountEntry, c *mountConfig) error {
 			// symlink(2) is very dumb, it will just shove the path into
 			// the link and doesn't do any checks or relative path
 			// conversion. Also, don't error out if the cgroup already exists.
-			if err := os.Symlink(mc, filepath.Join(c.root.Name(), m.Destination, ss)); err != nil && !errors.Is(err, os.ErrExist) {
+			ssPath := filepath.Join(m.Destination, ss)
+			if err := pathrs.SymlinkInRoot(mc, c.root, ssPath); err != nil && !errors.Is(err, os.ErrExist) {
 				return err
 			}
 		}
