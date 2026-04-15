@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -63,7 +62,7 @@ func TestIPCPrivate(t *testing.T) {
 	ok(t, err)
 
 	config := newTemplateConfig(t, nil)
-	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/ipc")
+	buffers := runContainerOk(t, config, "readlink", "-v", "/proc/self/ns/ipc")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual == l {
 		t.Fatalf("ipc link should be private to the container but equals host %q %q", actual, l)
@@ -80,7 +79,7 @@ func TestIPCHost(t *testing.T) {
 
 	config := newTemplateConfig(t, nil)
 	config.Namespaces.Remove(configs.NEWIPC)
-	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/ipc")
+	buffers := runContainerOk(t, config, "readlink", "-v", "/proc/self/ns/ipc")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual != l {
 		t.Fatalf("ipc link not equal to host link %q %q", actual, l)
@@ -97,7 +96,7 @@ func TestIPCJoinPath(t *testing.T) {
 
 	config := newTemplateConfig(t, nil)
 	config.Namespaces.Add(configs.NEWIPC, "/proc/1/ns/ipc")
-	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/ipc")
+	buffers := runContainerOk(t, config, "readlink", "-v", "/proc/self/ns/ipc")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual != l {
 		t.Fatalf("ipc link not equal to host link %q %q", actual, l)
@@ -163,14 +162,15 @@ func TestEnter(t *testing.T) {
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
 
-	var stdout, stdout2 bytes.Buffer
+	var stdout, stdout2 strings.Builder
 
 	pconfig := libcontainer.Process{
 		Cwd:    "/",
-		Args:   []string{"sh", "-c", "cat && readlink /proc/self/ns/pid"},
+		Args:   []string{"sh", "-c", "cat && readlink -v /proc/self/ns/pid"},
 		Env:    standardEnvironment,
 		Stdin:  stdinR,
 		Stdout: &stdout,
+		Stderr: new(strings.Builder),
 		Init:   true,
 	}
 	err = container.Run(&pconfig)
@@ -184,13 +184,13 @@ func TestEnter(t *testing.T) {
 	stdinR2, stdinW2, err := os.Pipe()
 	ok(t, err)
 	pconfig2 := libcontainer.Process{
-		Cwd: "/",
-		Env: standardEnvironment,
+		Cwd:    "/",
+		Args:   []string{"sh", "-c", "cat && readlink -v /proc/self/ns/pid"},
+		Env:    standardEnvironment,
+		Stdin:  stdinR2,
+		Stdout: &stdout2,
+		Stderr: new(strings.Builder),
 	}
-	pconfig2.Args = []string{"sh", "-c", "cat && readlink /proc/self/ns/pid"}
-	pconfig2.Stdin = stdinR2
-	pconfig2.Stdout = &stdout2
-
 	err = container.Run(&pconfig2)
 	_ = stdinR2.Close()
 	defer stdinW2.Close()
@@ -241,7 +241,7 @@ func TestProcessEnv(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Cwd:  "/",
 		Args: []string{"sh", "-c", "env"},
@@ -253,6 +253,7 @@ func TestProcessEnv(t *testing.T) {
 		},
 		Stdin:  nil,
 		Stdout: &stdout,
+		Stderr: new(strings.Builder),
 		Init:   true,
 	}
 	err = container.Run(&pconfig)
@@ -286,13 +287,14 @@ func TestProcessEmptyCaps(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Cwd:    "/",
 		Args:   []string{"sh", "-c", "cat /proc/self/status"},
 		Env:    standardEnvironment,
 		Stdin:  nil,
 		Stdout: &stdout,
+		Stderr: new(strings.Builder),
 		Init:   true,
 	}
 	err = container.Run(&pconfig)
@@ -329,13 +331,14 @@ func TestProcessCaps(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Cwd:          "/",
 		Args:         []string{"sh", "-c", "cat /proc/self/status"},
 		Env:          standardEnvironment,
 		Stdin:        nil,
 		Stdout:       &stdout,
+		Stderr:       new(strings.Builder),
 		Capabilities: &configs.Capabilities{},
 		Init:         true,
 	}
@@ -389,13 +392,14 @@ func TestAdditionalGroups(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Cwd:              "/",
 		Args:             []string{"sh", "-c", "id", "-Gn"},
 		Env:              standardEnvironment,
 		Stdin:            nil,
 		Stdout:           &stdout,
+		Stderr:           new(strings.Builder),
 		AdditionalGroups: []int{3333, 99999},
 		Init:             true,
 	}
@@ -767,7 +771,7 @@ func TestPassExtraFiles(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pipeout1, pipein1, err := os.Pipe()
 	ok(t, err)
 	pipeout2, pipein2, err := os.Pipe()
@@ -826,13 +830,14 @@ func TestSysctl(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Cwd:    "/proc/sys/kernel",
 		Args:   []string{"sh", "-c", cmd},
 		Env:    standardEnvironment,
 		Stdin:  nil,
 		Stdout: &stdout,
+		Stderr: new(strings.Builder),
 		Init:   true,
 	}
 	err = container.Run(&pconfig)
@@ -935,13 +940,14 @@ func TestOomScoreAdj(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Cwd:    "/",
 		Args:   []string{"sh", "-c", "cat /proc/self/oom_score_adj"},
 		Env:    standardEnvironment,
 		Stdin:  nil,
 		Stdout: &stdout,
+		Stderr: new(strings.Builder),
 		Init:   true,
 	}
 	err = container.Run(&pconfig)
@@ -1074,13 +1080,14 @@ func TestHook(t *testing.T) {
 		cmd.WriteString("/" + hook + " ")
 	}
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Cwd:    "/",
 		Args:   []string{"sh", "-c", cmd.String()},
 		Env:    standardEnvironment,
 		Stdin:  nil,
 		Stdout: &stdout,
+		Stderr: new(strings.Builder),
 		Init:   true,
 	}
 	err = container.Run(&pconfig)
@@ -1185,7 +1192,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 	ok(t, err)
 
 	// Run "cat /proc/self/mountinfo" in container and look at mount points.
-	var stdout2 bytes.Buffer
+	var stdout2 strings.Builder
 
 	stdinR2, stdinW2, err := os.Pipe()
 	ok(t, err)
@@ -1196,6 +1203,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 		Env:    standardEnvironment,
 		Stdin:  stdinR2,
 		Stdout: &stdout2,
+		Stderr: new(strings.Builder),
 	}
 
 	err = container.Run(pconfig2)
@@ -1296,7 +1304,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 	dir2cont = filepath.Join(dir1cont, filepath.Base(dir2host))
 
 	// Mount something in container and see if it is visible on host.
-	var stdout2 bytes.Buffer
+	var stdout2 strings.Builder
 
 	stdinR2, stdinW2, err := os.Pipe()
 	ok(t, err)
@@ -1307,6 +1315,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 		Env:          standardEnvironment,
 		Stdin:        stdinR2,
 		Stdout:       &stdout2,
+		Stderr:       new(strings.Builder),
 		Capabilities: &configs.Capabilities{},
 	}
 
@@ -1330,7 +1339,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 
 	// Check if mount is visible on host or not.
 	out, err := exec.Command("findmnt", "-n", "-f", "-oTARGET", dir2host).CombinedOutput()
-	outtrim := string(bytes.TrimSpace(out))
+	outtrim := strings.TrimSpace(string(out))
 	if err != nil {
 		t.Logf("findmnt error %q: %q", err, outtrim)
 	}
@@ -1350,7 +1359,7 @@ func TestPIDHost(t *testing.T) {
 
 	config := newTemplateConfig(t, nil)
 	config.Namespaces.Remove(configs.NEWPID)
-	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/pid")
+	buffers := runContainerOk(t, config, "readlink", "-v", "/proc/self/ns/pid")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual != l {
 		t.Fatalf("ipc link not equal to host link %q %q", actual, l)
@@ -1490,6 +1499,7 @@ func TestInitJoinPID(t *testing.T) {
 		Args:   []string{"ps"},
 		Env:    standardEnvironment,
 		Stdout: buffers.Stdout,
+		Stderr: new(strings.Builder),
 	}
 	err = container1.Run(ps)
 	ok(t, err)
@@ -1616,12 +1626,13 @@ func TestTmpfsCopyUp(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Args:   []string{"ls", "/etc/passwd"},
 		Env:    standardEnvironment,
 		Stdin:  nil,
 		Stdout: &stdout,
+		Stderr: new(strings.Builder),
 		Init:   true,
 	}
 	err = container.Run(&pconfig)
@@ -1651,7 +1662,7 @@ func TestCGROUPPrivate(t *testing.T) {
 
 	config := newTemplateConfig(t, nil)
 	config.Namespaces.Add(configs.NEWCGROUP, "")
-	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/cgroup")
+	buffers := runContainerOk(t, config, "readlink", "-v", "/proc/self/ns/cgroup")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual == l {
 		t.Fatalf("cgroup link should be private to the container but equals host %q %q", actual, l)
@@ -1670,7 +1681,7 @@ func TestCGROUPHost(t *testing.T) {
 	ok(t, err)
 
 	config := newTemplateConfig(t, nil)
-	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/cgroup")
+	buffers := runContainerOk(t, config, "readlink", "-v", "/proc/self/ns/cgroup")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual != l {
 		t.Fatalf("cgroup link not equal to host link %q %q", actual, l)
@@ -1806,7 +1817,7 @@ func TestBindMountAndUser(t *testing.T) {
 	ok(t, err)
 	defer destroyContainer(container)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 
 	pconfig := libcontainer.Process{
 		Cwd:    "/",
