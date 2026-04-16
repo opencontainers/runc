@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -1719,8 +1720,13 @@ func testFdLeaks(t *testing.T, systemd bool) {
 	if testing.Short() {
 		return
 	}
-
 	config := newTemplateConfig(t, &tParam{systemd: systemd})
+
+	// Disable GC to prevent finalizers from closing leaked fds
+	// between fdList() and the readlink check below.
+	oldGC := debug.SetGCPercent(-1)
+	defer debug.SetGCPercent(oldGC)
+
 	// Run a container once to exclude file descriptors that are only
 	// opened once during the process lifetime by the library and are
 	// never closed. Those are not considered leaks.
