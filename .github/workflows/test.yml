@@ -224,7 +224,7 @@ jobs:
     - uses: actions/cache@v5
       with:
         path: ~/.cache/lima
-        key: lima-${{ steps.lima-actions-setup.outputs.version }}
+        key: lima-${{ steps.lima-actions-setup.outputs.version }}-${{ matrix.template }}
 
     - name: "Start VM"
       # --plain is set to disable file sharing, port forwarding, built-in containerd, etc. for faster start up
