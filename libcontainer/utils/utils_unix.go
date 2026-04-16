@@ -8,8 +8,8 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
-	_ "unsafe" // for go:linkname
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
@@ -97,14 +97,11 @@ func CloseExecFrom(minFd int) error {
 	return fdRangeFrom(minFd, unix.CloseOnExec)
 }
 
-//go:linkname runtime_IsPollDescriptor internal/poll.IsPollDescriptor
-
-// In order to make sure we do not close the internal epoll descriptors the Go
-// runtime uses, we need to ensure that we skip descriptors that match
-// "internal/poll".IsPollDescriptor. Yes, this is a Go runtime internal thing,
-// unfortunately there's no other way to be sure we're only keeping the file
-// descriptors the Go runtime needs. Hopefully nothing blows up doing this...
-func runtime_IsPollDescriptor(fd uintptr) bool //nolint:revive
+func isEpollFd(fd int) bool {
+	target, err := os.Readlink("/proc/self/fd/" + strconv.Itoa(fd))
+	// Look for anon_inode:[eventpoll] or anon_inode:[eventfd].
+	return err == nil && strings.HasPrefix(target, "anon_inode:[event")
+}
 
 // UnsafeCloseFrom closes all file descriptors greater or equal to minFd in the
 // current process, except for those critical to Go's runtime (such as the
@@ -119,8 +116,8 @@ func UnsafeCloseFrom(minFd int) error {
 	// We cannot use close_range(2) even if it is available, because we must
 	// not close some file descriptors.
 	return fdRangeFrom(minFd, func(fd int) {
-		if runtime_IsPollDescriptor(uintptr(fd)) {
-			// These are the Go runtimes internal netpoll file descriptors.
+		if isEpollFd(fd) {
+			// Looks like a Go runtime's internal netpoll file descriptor.
 			// These file descriptors are operated on deep in the Go scheduler,
 			// and closing those files from underneath Go can result in panics.
 			// There is no issue with keeping them because they are not
