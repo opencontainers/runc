@@ -215,7 +215,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        template: [almalinux-8, almalinux-9, centos-stream-10, fedora]
+        # A failure in fedora-rawhide should not block merging PRs
+        template: [almalinux-8, almalinux-9, centos-stream-10, fedora, experimental/fedora-rawhide]
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v6
