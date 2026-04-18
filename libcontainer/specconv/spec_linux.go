@@ -1060,6 +1060,9 @@ next:
 				filemode = *d.FileMode &^ unix.S_IFMT
 			}
 			device := &devices.Device{
+				// NOTE despite the name this is not a device access rule
+				// (those live under cgroup), but merely a way to specify
+				// a device type and major:minor for mknod.
 				Rule: devices.Rule{
 					Type:  dt,
 					Major: d.Major,
