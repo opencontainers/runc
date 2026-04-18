@@ -784,6 +784,7 @@ func TestPassExtraFiles(t *testing.T) {
 		ExtraFiles: []*os.File{pipein1, pipein2},
 		Stdin:      nil,
 		Stdout:     &stdout,
+		Stderr:     new(strings.Builder),
 		Init:       true,
 	}
 	err = container.Run(&process)
