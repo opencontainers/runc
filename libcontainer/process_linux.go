@@ -819,6 +819,24 @@ func (p *initProcess) start() (retErr error) {
 		}
 	}()
 
+	// Write a provisional state.json before cgroup Apply. This ensures that
+	// if the runc-create process is killed (e.g., SIGKILL from a higher-level
+	// runtime due to timeout), runc-delete can still find and clean up the
+	// container's cgroup and state directory.
+	//
+	// We temporarily nil out c.initProcess so that the saved state uses
+	// PID -1 (the default when initProcess is nil). This prevents external
+	// tools from seeing the container as "created" before the init process
+	// is fully set up, avoiding a race where "runc start" could be called
+	// with a stale STAGE_PARENT PID that will be reaped during creation.
+	savedInit := p.container.initProcess
+	p.container.initProcess = nil
+	_, uerr := p.container.updateState(nil)
+	p.container.initProcess = savedInit
+	if uerr != nil {
+		return fmt.Errorf("unable to store init state: %w", uerr)
+	}
+
 	// Do this before syncing with child so that no children can escape the
 	// cgroup. We don't need to worry about not doing this and not being root
 	// because we'd be using the rootless cgroup manager in that case.
