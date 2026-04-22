@@ -784,6 +784,7 @@ func TestPassExtraFiles(t *testing.T) {
 		ExtraFiles: []*os.File{pipein1, pipein2},
 		Stdin:      nil,
 		Stdout:     &stdout,
+		Stderr:     new(strings.Builder),
 		Init:       true,
 	}
 	err = container.Run(&process)
@@ -1074,11 +1075,14 @@ func TestHook(t *testing.T) {
 	container, err := newContainer(t, config)
 	ok(t, err)
 
-	// e.g: 'ls /prestart ...'
 	var cmd strings.Builder
 	cmd.WriteString("ls ")
 	for _, hook := range hookFiles {
-		cmd.WriteString("/" + hook + " ")
+		// The poststart hook is racing with this ls command (run as the
+		// container init), so we don't check that hook worked here yet.
+		if hook != "poststart" {
+			cmd.WriteString("/" + hook + " ")
+		}
 	}
 
 	var stdout strings.Builder
@@ -1096,6 +1100,13 @@ func TestHook(t *testing.T) {
 
 	// Wait for process
 	waitProcess(&pconfig, t)
+
+	// Check that poststart hook worked.
+	f, err = os.Open(config.Rootfs + "/poststart")
+	if err != nil {
+		t.Fatalf("poststart hook failed: %s", err)
+	}
+	f.Close()
 
 	if err := container.Destroy(); err != nil {
 		t.Fatalf("container destroy %s", err)
