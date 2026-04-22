@@ -5,13 +5,14 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
 	"os"
 	"os/signal"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/internal/cmsg"
@@ -32,32 +33,32 @@ pidfd:
 )
 
 func main() {
-	app := cli.NewApp()
+	app := &cli.Command{}
 	app.Name = "pidfd-kill"
 	app.Usage = usage
 
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "signal",
 			Value: "SIGKILL",
 			Usage: "Signal to send to the init process",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "pid-file",
 			Value: "",
-			Usage: "Path to write the pidfd-kill process ID to",
+			Usage: "Path to write to pidfd-kill process ID to",
 		},
 	}
 
-	app.Action = func(ctx *cli.Context) error {
-		args := ctx.Args()
+	app.Action = func(_ context.Context, cmd *cli.Command) error {
+		args := cmd.Args().Slice()
 		if len(args) != 1 {
 			return errors.New("required a single socket path")
 		}
 
-		socketFile := ctx.Args()[0]
+		socketFile := args[0]
 
-		pidFile := ctx.String("pid-file")
+		pidFile := cmd.String("pid-file")
 		if pidFile != "" {
 			pid := fmt.Sprintf("%d\n", os.Getpid())
 			if err := os.WriteFile(pidFile, []byte(pid), 0o644); err != nil {
@@ -66,7 +67,7 @@ func main() {
 			defer os.Remove(pidFile)
 		}
 
-		sigStr := ctx.String("signal")
+		sigStr := cmd.String("signal")
 		if sigStr == "" {
 			sigStr = "SIGKILL"
 		}
@@ -84,7 +85,7 @@ func main() {
 
 		return unix.PidfdSendSignal(int(pidfdFile.Fd()), sig, nil, 0)
 	}
-	if err := app.Run(os.Args); err != nil {
+	if err := app.Run(context.Background(), os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, "fatal error:", err)
 		os.Exit(1)
 	}

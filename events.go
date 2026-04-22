@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,10 +15,10 @@ import (
 	"github.com/opencontainers/runc/types"
 
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
-var eventsCommand = cli.Command{
+var eventsCommand = &cli.Command{
 	Name:  "events",
 	Usage: "display container events such as OOM notifications, cpu, memory, and IO usage statistics",
 	ArgsUsage: `<container-id>
@@ -25,19 +26,21 @@ var eventsCommand = cli.Command{
 Where "<container-id>" is the name for the instance of the container.`,
 	Description: `The events command displays information about the container. By default the
 information is displayed once every 5 seconds.`,
+	// Disable comma as separator for slice flags.
+	DisableSliceFlagSeparator: true,
 	Flags: []cli.Flag{
-		cli.DurationFlag{Name: "interval", Value: 5 * time.Second, Usage: "set the stats collection interval"},
-		cli.BoolFlag{Name: "stats", Usage: "display the container's stats then exit"},
+		&cli.DurationFlag{Name: "interval", Value: 5 * time.Second, Usage: "set the stats collection interval"},
+		&cli.BoolFlag{Name: "stats", Usage: "display the container's stats then exit"},
 	},
-	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+	Action: func(_ context.Context, cmd *cli.Command) error {
+		if err := checkArgs(cmd, 1, exactArgs); err != nil {
 			return err
 		}
-		container, err := getContainer(context)
+		container, err := getContainer(cmd)
 		if err != nil {
 			return err
 		}
-		duration := context.Duration("interval")
+		duration := cmd.Duration("interval")
 		if duration <= 0 {
 			return errors.New("duration interval must be greater than 0")
 		}
@@ -61,7 +64,7 @@ information is displayed once every 5 seconds.`,
 				}
 			}
 		})
-		if context.Bool("stats") {
+		if cmd.Bool("stats") {
 			s, err := container.Stats()
 			if err != nil {
 				return err
@@ -72,7 +75,7 @@ information is displayed once every 5 seconds.`,
 			return nil
 		}
 		go func() {
-			for range time.Tick(context.Duration("interval")) {
+			for range time.Tick(cmd.Duration("interval")) {
 				s, err := container.Stats()
 				if err != nil {
 					logrus.Error(err)
