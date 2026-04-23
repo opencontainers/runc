@@ -309,7 +309,7 @@ func intelrdtCheck(config *configs.Config) error {
 	if config.IntelRdt == nil {
 		return nil
 	}
-	if !intelRdt.isEnabled() {
+	if !intelRdtIsEnabled() {
 		return fmt.Errorf("intelRdt is specified in config, but Intel RDT is not enabled")
 	}
 
@@ -317,11 +317,10 @@ func intelrdtCheck(config *configs.Config) error {
 	case clos == ".", clos == "..", len(clos) > 1 && strings.Contains(clos, "/"):
 		return fmt.Errorf("invalid intelRdt.ClosID %q", clos)
 	}
-
-	if !intelRdt.isCATEnabled() && config.IntelRdt.L3CacheSchema != "" {
+	if !intelRdtIsCATEnabled() && config.IntelRdt.L3CacheSchema != "" {
 		return errors.New("intelRdt.l3CacheSchema is specified in config, but Intel RDT/CAT is not enabled")
 	}
-	if !intelRdt.isMBAEnabled() && config.IntelRdt.MemBwSchema != "" {
+	if !intelRdtIsMBAEnabled() && config.IntelRdt.MemBwSchema != "" {
 		return errors.New("intelRdt.memBwSchema is specified in config, but Intel RDT/MBA is not enabled")
 	}
 
