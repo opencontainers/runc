@@ -105,18 +105,20 @@ func TestIntelRdtSet(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			helper := NewIntelRdtTestUtil(t)
-			helper.config.IntelRdt = tc.config
+			intelRdtRoot := fakeRoot(t)
+			config := &configs.Config{
+				IntelRdt: tc.config,
+			}
 
 			intelrdt := &Manager{
-				config: helper.config,
-				path:   helper.IntelRdtPath,
+				config: config,
+				path:   intelRdtRoot,
 			}
-			if err := intelrdt.Set(helper.config); err != nil {
+			if err := intelrdt.Set(config); err != nil {
 				t.Fatal(err)
 			}
 
-			tmpStrings, err := getIntelRdtParamString(helper.IntelRdtPath, "schemata")
+			tmpStrings, err := getIntelRdtParamString(intelRdtRoot, "schemata")
 			if err != nil {
 				t.Fatalf("Failed to parse file 'schemata' - %s", err)
 			}
@@ -186,7 +188,7 @@ func TestApply(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			NewIntelRdtTestUtil(t)
+			intelRdtRoot := fakeRoot(t)
 			id := "abcd-1234"
 			closPath := filepath.Join(intelRdtRoot, id)
 			if tt.config.ClosID != "" {
@@ -288,8 +290,7 @@ func TestDestroy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			NewIntelRdtTestUtil(t)
-
+			intelRdtRoot := fakeRoot(t)
 			id := "abcd-1234"
 			closPath := filepath.Join(intelRdtRoot, id)
 			if tt.config.ClosID != "" {

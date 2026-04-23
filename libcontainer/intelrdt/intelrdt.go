@@ -162,7 +162,7 @@ func NewManager(config *configs.Config, id, path string) *Manager {
 		return nil
 	}
 
-	rootPath, err := Root()
+	rootPath, err := root()
 	if err != nil {
 		return nil
 	}
@@ -197,47 +197,42 @@ var (
 	// The flag to indicate if Intel RDT/MBA is enabled
 	mbaEnabled bool
 
-	// For Intel RDT initialization
-	initOnce sync.Once
-
 	errNotFound = errors.New("Intel RDT not available")
 )
 
 // Check if Intel RDT sub-features are enabled in featuresInit()
-func featuresInit() {
-	initOnce.Do(func() {
-		// 1. Check if Intel RDT "resource control" filesystem is available.
-		// The user guarantees to mount the filesystem.
-		root, err := Root()
-		if err != nil {
-			return
-		}
+var featuresInit = sync.OnceFunc(func() {
+	// 1. Check if Intel RDT "resource control" filesystem is available.
+	// The user guarantees to mount the filesystem.
+	root, err := root()
+	if err != nil {
+		return
+	}
 
-		// 2. Check if Intel RDT sub-features are available in "resource
-		// control" filesystem. Intel RDT sub-features can be
-		// selectively disabled or enabled by kernel command line
-		// (e.g., rdt=!l3cat,mba) in 4.14 and newer kernel
-		if _, err := os.Stat(filepath.Join(root, "info", "L3")); err == nil {
-			catEnabled = true
-		}
-		if _, err := os.Stat(filepath.Join(root, "info", "MB")); err == nil {
-			mbaEnabled = true
-		}
-		if _, err := os.Stat(filepath.Join(root, "info", "L3_MON")); err != nil {
-			return
-		}
-		enabledMonFeatures, err = getMonFeatures(root)
-		if err != nil {
-			return
-		}
-		if enabledMonFeatures.mbmTotalBytes || enabledMonFeatures.mbmLocalBytes {
-			mbmEnabled = true
-		}
-		if enabledMonFeatures.llcOccupancy {
-			cmtEnabled = true
-		}
-	})
-}
+	// 2. Check if Intel RDT sub-features are available in "resource
+	// control" filesystem. Intel RDT sub-features can be
+	// selectively disabled or enabled by kernel command line
+	// (e.g., rdt=!l3cat,mba) in 4.14 and newer kernel
+	if _, err := os.Stat(filepath.Join(root, "info", "L3")); err == nil {
+		catEnabled = true
+	}
+	if _, err := os.Stat(filepath.Join(root, "info", "MB")); err == nil {
+		mbaEnabled = true
+	}
+	if _, err := os.Stat(filepath.Join(root, "info", "L3_MON")); err != nil {
+		return
+	}
+	enabledMonFeatures, err = getMonFeatures(root)
+	if err != nil {
+		return
+	}
+	if enabledMonFeatures.mbmTotalBytes || enabledMonFeatures.mbmLocalBytes {
+		mbmEnabled = true
+	}
+	if enabledMonFeatures.llcOccupancy {
+		cmtEnabled = true
+	}
+})
 
 // findIntelRdtMountpointDir returns the mount point of the Intel RDT "resource control" filesystem.
 func findIntelRdtMountpointDir() (string, error) {
@@ -258,13 +253,6 @@ func findIntelRdtMountpointDir() (string, error) {
 	return mi[0].Mountpoint, nil
 }
 
-// For Root() use only.
-var (
-	intelRdtRoot    string
-	intelRdtRootErr error
-	rootOnce        sync.Once
-)
-
 // The kernel creates this (empty) directory if resctrl is supported by the
 // hardware and kernel. The user is responsible for mounting the resctrl
 // filesystem, and they could mount it somewhere else if they wanted to.
@@ -272,29 +260,27 @@ const defaultResctrlMountpoint = "/sys/fs/resctrl"
 
 // Root returns the Intel RDT "resource control" filesystem mount point.
 func Root() (string, error) {
-	rootOnce.Do(func() {
-		// Does this system support resctrl?
-		var statfs unix.Statfs_t
-		if err := unix.Statfs(defaultResctrlMountpoint, &statfs); err != nil {
-			if errors.Is(err, unix.ENOENT) {
-				err = errNotFound
-			}
-			intelRdtRootErr = err
-			return
-		}
-
-		// Has the resctrl fs been mounted to the default mount point?
-		if statfs.Type == unix.RDTGROUP_SUPER_MAGIC {
-			intelRdtRoot = defaultResctrlMountpoint
-			return
-		}
-
-		// The resctrl fs could have been mounted somewhere nonstandard.
-		intelRdtRoot, intelRdtRootErr = findIntelRdtMountpointDir()
-	})
-
-	return intelRdtRoot, intelRdtRootErr
+	return root()
 }
+
+var root = sync.OnceValues(func() (string, error) {
+	// Does this system support resctrl?
+	var statfs unix.Statfs_t
+	if err := unix.Statfs(defaultResctrlMountpoint, &statfs); err != nil {
+		if errors.Is(err, unix.ENOENT) {
+			err = errNotFound
+		}
+		return "", err
+	}
+
+	// Has the resctrl fs been mounted to the default mount point?
+	if statfs.Type == unix.RDTGROUP_SUPER_MAGIC {
+		return defaultResctrlMountpoint, nil
+	}
+
+	// The resctrl fs could have been mounted somewhere nonstandard.
+	return findIntelRdtMountpointDir()
+})
 
 // Gets a single uint64 value from the specified file.
 func getIntelRdtParamUint(path, file string) (uint64, error) {
@@ -325,7 +311,7 @@ func getIntelRdtParamString(path, file string) (string, error) {
 func getL3CacheInfo() (*L3CacheInfo, error) {
 	l3CacheInfo := &L3CacheInfo{}
 
-	rootPath, err := Root()
+	rootPath, err := root()
 	if err != nil {
 		return l3CacheInfo, err
 	}
@@ -355,7 +341,7 @@ func getL3CacheInfo() (*L3CacheInfo, error) {
 func getMemBwInfo() (*MemBwInfo, error) {
 	memBwInfo := &MemBwInfo{}
 
-	rootPath, err := Root()
+	rootPath, err := root()
 	if err != nil {
 		return memBwInfo, err
 	}
@@ -388,7 +374,7 @@ func getMemBwInfo() (*MemBwInfo, error) {
 
 // Get diagnostics for last filesystem operation error from file info/last_cmd_status
 func getLastCmdStatus() (string, error) {
-	rootPath, err := Root()
+	rootPath, err := root()
 	if err != nil {
 		return "", err
 	}
@@ -419,7 +405,7 @@ func WriteIntelRdtTasks(dir string, pid int) error {
 
 // IsEnabled checks if Intel RDT is enabled.
 func IsEnabled() bool {
-	fsroot, err := Root()
+	fsroot, err := root()
 	return err == nil && fsroot != ""
 }
 
@@ -538,7 +524,7 @@ func (m *Manager) GetStats() (*Stats, error) {
 	defer m.mu.Unlock()
 	stats := newStats()
 
-	rootPath, err := Root()
+	rootPath, err := root()
 	if err != nil {
 		return nil, err
 	}
