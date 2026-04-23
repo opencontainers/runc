@@ -75,7 +75,7 @@ function build_libpathrs() {
 	local tar="libpathrs-${ver}.tar.xz"
 
 	# Download, check, and extract.
-	wget "https://github.com/cyphar/libpathrs/releases/download/v${ver}/${tar}"{,.asc}
+	curl -fsSL --remote-name-all "https://github.com/cyphar/libpathrs/releases/download/v${ver}/${tar}"{,.asc}
 	sha256sum --strict --check - <<<"${LIBPATHRS_SHA256[${ver}]} *${tar}"
 
 	local srcdir
