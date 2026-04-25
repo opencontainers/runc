@@ -824,8 +824,8 @@ func (p *initProcess) start() (retErr error) {
 	// runtime due to timeout), runc-delete can still find and clean up the
 	// container's cgroup and state directory.
 	//
-	// We temporarily nil out c.initProcess so that the saved state uses
-	// PID -1 (the default when initProcess is nil). This prevents external
+	// We temporarily nil out c.initProcess so that init_process_pid is omitted
+	// from the saved state (the default when initProcess is nil). This prevents external
 	// tools from seeing the container as "created" before the init process
 	// is fully set up, avoiding a race where "runc start" could be called
 	// with a stale STAGE_PARENT PID that will be reaped during creation.

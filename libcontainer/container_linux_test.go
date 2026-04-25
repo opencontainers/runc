@@ -1,8 +1,10 @@
 package libcontainer
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/opencontainers/cgroups"
@@ -288,5 +290,37 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
 	}
 	if state.Config.Cgroups.Resources.Memory != 2048 {
 		t.Fatalf("expected Memory to be 2048 but received %q", state.Config.Cgroups.Memory)
+	}
+}
+
+func TestSaveStateOmitsInitProcessPidWithoutInit(t *testing.T) {
+	container := &Container{
+		stateDir: t.TempDir(),
+		id:       "myid",
+		config: &configs.Config{
+			Cgroups: &cgroups.Cgroup{
+				Resources: &cgroups.Resources{},
+			},
+		},
+		cgroupManager: &mockCgroupManager{},
+	}
+	container.state = &stoppedState{c: container}
+
+	if err := container.saveState(container.currentState()); err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(container.stateDir, stateFilename))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var state map[string]any
+	if err := json.Unmarshal(data, &state); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := state["init_process_pid"]; ok {
+		t.Fatalf("did not expect init_process_pid in persisted state: %s", data)
 	}
 }
