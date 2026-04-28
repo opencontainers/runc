@@ -865,21 +865,22 @@ func TestNullProcess(t *testing.T) {
 func TestCreateDevices(t *testing.T) {
 	spec := Example()
 
-	// dummy uid/gid for /dev/tty; will enable the test to check if createDevices()
-	// preferred the spec's device over the redundant default device
+	// Dummy uid/gid for /dev/tty; will enable the test to check if createDevices()
+	// preferred the spec's device over the redundant default device.
 	ttyUid := uint32(1000)
 	ttyGid := uint32(1000)
-	fm := os.FileMode(0o666)
+	ttyMode := os.FileMode(0o666)
+	ttyPath := "/dev/tty"
 
 	spec.Linux = &specs.Linux{
 		Devices: []specs.LinuxDevice{
 			{
 				// This is purposely redundant with one of runc's default devices
-				Path:     "/dev/tty",
+				Path:     ttyPath,
 				Type:     "c",
 				Major:    5,
 				Minor:    0,
-				FileMode: &fm,
+				FileMode: &ttyMode,
 				UID:      &ttyUid,
 				GID:      &ttyGid,
 			},
@@ -900,14 +901,11 @@ func TestCreateDevices(t *testing.T) {
 		t.Errorf("failed to create devices: %v", err)
 	}
 
-	// Verify the returned default devices has the /dev/tty entry deduplicated
-	found := false
-	for _, d := range defaultDevs {
-		if d.Path == "/dev/tty" {
-			if found {
-				t.Errorf("createDevices failed: returned a duplicated device entry: %v", defaultDevs)
-			}
-			found = true
+	// Verify that /dev/tty is not in defaultDevs,
+	// because the one in spec is preferred.
+	for _, dev := range defaultDevs {
+		if dev.Path == ttyPath {
+			t.Errorf("%s should not be present in defaultDevs", ttyPath)
 		}
 	}
 
@@ -934,12 +932,12 @@ func TestCreateDevices(t *testing.T) {
 
 	// Verify that createDevices() deduplicated the /dev/tty entry in the config
 	for _, configDev := range conf.Devices {
-		if configDev.Path == "/dev/tty" {
+		if configDev.Path == ttyPath {
 			wantDev := &devices.Device{
-				Path:     "/dev/tty",
-				FileMode: 0o666,
-				Uid:      1000,
-				Gid:      1000,
+				Path:     ttyPath,
+				FileMode: ttyMode,
+				Uid:      ttyUid,
+				Gid:      ttyGid,
 				Rule: devices.Rule{
 					Type:  devices.CharDevice,
 					Major: 5,
@@ -954,7 +952,7 @@ func TestCreateDevices(t *testing.T) {
 	}
 
 	// Verify that createDevices() added the entry for /dev/ram0 in the config
-	found = false
+	found := false
 	for _, configDev := range conf.Devices {
 		if configDev.Path == "/dev/ram0" {
 			found = true
