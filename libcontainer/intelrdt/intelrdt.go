@@ -180,12 +180,6 @@ func NewManager(config *configs.Config, id, path string) *Manager {
 		}
 	}
 
-	return newManager(config, id, path)
-}
-
-// newManager is the same as NewManager, except it does not check if the feature
-// is actually available. Used by unit tests that mock intelrdt paths.
-func newManager(config *configs.Config, id, path string) *Manager {
 	return &Manager{
 		config: config,
 		id:     id,

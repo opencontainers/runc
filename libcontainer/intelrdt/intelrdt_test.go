@@ -108,7 +108,10 @@ func TestIntelRdtSet(t *testing.T) {
 			helper := NewIntelRdtTestUtil(t)
 			helper.config.IntelRdt = tc.config
 
-			intelrdt := newManager(helper.config, "", helper.IntelRdtPath)
+			intelrdt := &Manager{
+				config: helper.config,
+				path:   helper.IntelRdtPath,
+			}
 			if err := intelrdt.Set(helper.config); err != nil {
 				t.Fatal(err)
 			}
@@ -195,7 +198,11 @@ func TestApply(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			m := newManager(&configs.Config{IntelRdt: &tt.config}, id, closPath)
+			m := &Manager{
+				config: &configs.Config{IntelRdt: &tt.config},
+				id:     id,
+				path:   closPath,
+			}
 			err := m.Apply(pid)
 			if tt.isError && err == nil {
 				t.Fatal("expected error, got nil")
@@ -292,7 +299,11 @@ func TestDestroy(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			m := newManager(&configs.Config{IntelRdt: &tt.config}, id, closPath)
+			m := &Manager{
+				config: &configs.Config{IntelRdt: &tt.config},
+				id:     id,
+				path:   closPath,
+			}
 			if err := m.Apply(1234); err != nil {
 				t.Fatalf("Apply() failed: %v", err)
 			}
