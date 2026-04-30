@@ -22,10 +22,7 @@ import (
 //
 // Returns the prepared environment.
 func prepareEnv(env []string, uid int) ([]string, error) {
-	if env == nil {
-		return nil, nil
-	}
-	var homeIsSet bool
+	homeIsSet := false
 
 	// Deduplication code based on dedupEnv from Go 1.22 os/exec.
 

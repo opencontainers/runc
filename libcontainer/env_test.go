@@ -22,6 +22,10 @@ func TestPrepareEnv(t *testing.T) {
 		env, wantEnv []string
 	}{
 		{
+			env:     nil,
+			wantEnv: []string{home},
+		},
+		{
 			env:     []string{},
 			wantEnv: []string{home},
 		},
