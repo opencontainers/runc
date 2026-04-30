@@ -8,35 +8,25 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-type intelRdtTestUtil struct {
-	config *configs.Config
-
-	// Path to the mock Intel RDT "resource control" filesystem directory
-	IntelRdtPath string
-
-	t *testing.T
-}
-
-// Creates a new test util
-func NewIntelRdtTestUtil(t *testing.T) *intelRdtTestUtil {
-	config := &configs.Config{
-		IntelRdt: &configs.IntelRdt{},
-	}
-
+// fakeRoot creates a new fake root for tests and returns its path.
+// Once this is called, Root() returns the same path.
+func fakeRoot(t *testing.T) string {
 	// Assign fake intelRtdRoot value, returned by Root().
-	intelRdtRoot = t.TempDir()
-	// Make sure Root() won't even try to parse mountinfo.
-	rootOnce.Do(func() {})
-
-	testIntelRdtPath := filepath.Join(intelRdtRoot, "resctrl")
-
-	// Ensure the full mock Intel RDT "resource control" filesystem path exists
-	if err := os.MkdirAll(testIntelRdtPath, 0o755); err != nil {
+	intelRdtRoot := filepath.Join(t.TempDir(), "resctrl")
+	if err := os.MkdirAll(intelRdtRoot, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	return &intelRdtTestUtil{config: config, IntelRdtPath: testIntelRdtPath, t: t}
+
+	origRoot := root
+	t.Cleanup(func() {
+		root = origRoot
+	})
+
+	root = func() (string, error) {
+		return intelRdtRoot, nil
+	}
+
+	return intelRdtRoot
 }

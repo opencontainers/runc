@@ -105,15 +105,20 @@ func TestIntelRdtSet(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			helper := NewIntelRdtTestUtil(t)
-			helper.config.IntelRdt = tc.config
+			intelRdtRoot := fakeRoot(t)
+			config := &configs.Config{
+				IntelRdt: tc.config,
+			}
 
-			intelrdt := newManager(helper.config, "", helper.IntelRdtPath)
-			if err := intelrdt.Set(helper.config); err != nil {
+			intelrdt := &Manager{
+				config: config,
+				path:   intelRdtRoot,
+			}
+			if err := intelrdt.Set(config); err != nil {
 				t.Fatal(err)
 			}
 
-			tmpStrings, err := getIntelRdtParamString(helper.IntelRdtPath, "schemata")
+			tmpStrings, err := getIntelRdtParamString(intelRdtRoot, "schemata")
 			if err != nil {
 				t.Fatalf("Failed to parse file 'schemata' - %s", err)
 			}
@@ -183,7 +188,7 @@ func TestApply(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			NewIntelRdtTestUtil(t)
+			intelRdtRoot := fakeRoot(t)
 			id := "abcd-1234"
 			closPath := filepath.Join(intelRdtRoot, id)
 			if tt.config.ClosID != "" {
@@ -195,7 +200,11 @@ func TestApply(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			m := newManager(&configs.Config{IntelRdt: &tt.config}, id, closPath)
+			m := &Manager{
+				config: &configs.Config{IntelRdt: &tt.config},
+				id:     id,
+				path:   closPath,
+			}
 			err := m.Apply(pid)
 			if tt.isError && err == nil {
 				t.Fatal("expected error, got nil")
@@ -281,8 +290,7 @@ func TestDestroy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			NewIntelRdtTestUtil(t)
-
+			intelRdtRoot := fakeRoot(t)
 			id := "abcd-1234"
 			closPath := filepath.Join(intelRdtRoot, id)
 			if tt.config.ClosID != "" {
@@ -292,7 +300,11 @@ func TestDestroy(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			m := newManager(&configs.Config{IntelRdt: &tt.config}, id, closPath)
+			m := &Manager{
+				config: &configs.Config{IntelRdt: &tt.config},
+				id:     id,
+				path:   closPath,
+			}
 			if err := m.Apply(1234); err != nil {
 				t.Fatalf("Apply() failed: %v", err)
 			}

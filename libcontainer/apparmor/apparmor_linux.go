@@ -11,21 +11,14 @@ import (
 	"github.com/opencontainers/runc/internal/pathrs"
 )
 
-var (
-	appArmorEnabled bool
-	checkAppArmor   sync.Once
-)
-
 // isEnabled returns true if apparmor is enabled for the host.
-func isEnabled() bool {
-	checkAppArmor.Do(func() {
-		if _, err := os.Stat("/sys/kernel/security/apparmor"); err == nil {
-			buf, err := os.ReadFile("/sys/module/apparmor/parameters/enabled")
-			appArmorEnabled = err == nil && len(buf) > 1 && buf[0] == 'Y'
-		}
-	})
-	return appArmorEnabled
-}
+var isEnabled = sync.OnceValue(func() bool {
+	if _, err := os.Stat("/sys/kernel/security/apparmor"); err != nil {
+		return false
+	}
+	buf, err := os.ReadFile("/sys/module/apparmor/parameters/enabled")
+	return err == nil && len(buf) > 0 && buf[0] == 'Y'
+})
 
 func setProcAttr(attr, value string) error {
 	attr = pathrs.LexicallyCleanPath(attr)

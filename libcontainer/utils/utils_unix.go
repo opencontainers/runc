@@ -18,29 +18,21 @@ import (
 	"github.com/opencontainers/runc/internal/pathrs"
 )
 
-var (
-	haveCloseRangeCloexecBool bool
-	haveCloseRangeCloexecOnce sync.Once
-)
+var haveCloseRangeCloexec = sync.OnceValue(func() bool {
+	// Make sure we're not closing a random file descriptor.
+	tmpFd, err := unix.FcntlInt(0, unix.F_DUPFD_CLOEXEC, 0)
+	if err != nil {
+		return false
+	}
+	defer unix.Close(tmpFd)
 
-func haveCloseRangeCloexec() bool {
-	haveCloseRangeCloexecOnce.Do(func() {
-		// Make sure we're not closing a random file descriptor.
-		tmpFd, err := unix.FcntlInt(0, unix.F_DUPFD_CLOEXEC, 0)
-		if err != nil {
-			return
-		}
-		defer unix.Close(tmpFd)
-
-		err = unix.CloseRange(uint(tmpFd), uint(tmpFd), unix.CLOSE_RANGE_CLOEXEC)
-		// Any error means we cannot use close_range(CLOSE_RANGE_CLOEXEC).
-		// -ENOSYS and -EINVAL ultimately mean we don't have support, but any
-		// other potential error would imply that even the most basic close
-		// operation wouldn't work.
-		haveCloseRangeCloexecBool = err == nil
-	})
-	return haveCloseRangeCloexecBool
-}
+	err = unix.CloseRange(uint(tmpFd), uint(tmpFd), unix.CLOSE_RANGE_CLOEXEC)
+	// Any error means we cannot use close_range(CLOSE_RANGE_CLOEXEC).
+	// -ENOSYS and -EINVAL ultimately mean we don't have support, but any
+	// other potential error would imply that even the most basic close
+	// operation wouldn't work.
+	return err == nil
+})
 
 type fdFunc func(fd int)
 
@@ -162,10 +154,13 @@ func WithProcfdFile(file *os.File, fn func(procfd string) error) error {
 
 type ProcThreadSelfCloser func()
 
-var (
-	haveProcThreadSelf     bool
-	haveProcThreadSelfOnce sync.Once
-)
+var haveProcThreadSelf = sync.OnceValue(func() bool {
+	if _, err := os.Stat("/proc/thread-self/"); err != nil {
+		logrus.Debugf("cannot stat /proc/thread-self (%v), falling back to /proc/self/task/<tid>", err)
+		return false
+	}
+	return true
+})
 
 // ProcThreadSelf returns a string that is equivalent to
 // /proc/thread-self/<subpath>, with a graceful fallback on older kernels where
@@ -174,14 +169,6 @@ var (
 // the returned procThreadSelfCloser function (which is runtime.UnlockOSThread)
 // *only once* after it has finished using the returned path string.
 func ProcThreadSelf(subpath string) (string, ProcThreadSelfCloser) {
-	haveProcThreadSelfOnce.Do(func() {
-		if _, err := os.Stat("/proc/thread-self/"); err == nil {
-			haveProcThreadSelf = true
-		} else {
-			logrus.Debugf("cannot stat /proc/thread-self (%v), falling back to /proc/self/task/<tid>", err)
-		}
-	})
-
 	// We need to lock our thread until the caller is done with the path string
 	// because any non-atomic operation on the path (such as opening a file,
 	// then reading it) could be interrupted by the Go runtime where the
@@ -196,7 +183,7 @@ func ProcThreadSelf(subpath string) (string, ProcThreadSelfCloser) {
 	runtime.LockOSThread()
 
 	threadSelf := "/proc/thread-self/"
-	if !haveProcThreadSelf {
+	if !haveProcThreadSelf() {
 		// Pre-3.17 kernels did not have /proc/thread-self, so do it manually.
 		threadSelf = "/proc/self/task/" + strconv.Itoa(unix.Gettid()) + "/"
 		if _, err := os.Stat(threadSelf); err != nil {
