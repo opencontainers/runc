@@ -126,3 +126,20 @@ _EOF_
 	[[ "$output" != *'TERM='* ]]
 	[[ "$output" != *'PATH='* ]]
 }
+
+@test "env HOME is set for runc exec -p with no process.env" {
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	# "env" is not set.
+	cat <<_EOF_ >process.json
+{
+    "args": ["/bin/env"],
+    "cwd": "/"
+}
+_EOF_
+	runc exec -p process.json test_busybox
+	[ "$status" -eq 0 ]
+	# Env should have HOME set from container's /etc/passwd.
+	[[ "$output" == *'HOME=/root'* ]]
+}
