@@ -100,8 +100,12 @@ function teardown() {
 
 	runc exec --env RUNC_EXEC_TEST=true test_busybox env
 	[ "$status" -eq 0 ]
-
-	[[ ${output} == *"RUNC_EXEC_TEST=true"* ]]
+	[[ "$output" == *"RUNC_EXEC_TEST=true"* ]]
+	# Env should inherit what's in config.json.
+	[[ "$output" == *'PATH='* ]]
+	[[ "$output" == *'TERM='* ]]
+	# Env should have HOME set from container's /etc/passwd.
+	[[ "$output" == *'HOME='* ]]
 }
 
 @test "runc exec --user" {
