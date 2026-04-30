@@ -29,6 +29,7 @@ platform:el9 | platform:el10)
 	;;
 *)
 	# Fedora
+	DNF5=yes
 	DNF+=(--exclude="kernel,kernel-core")
 	;;
 esac
@@ -38,7 +39,18 @@ RPMS=(cargo container-selinux fuse-sshfs git-core glibc-static golang iptables j
 # Work around dnf mirror failures by retrying a few times.
 for i in $(seq 0 2); do
 	sleep "$i"
-	"${DNF[@]}" update && "${DNF[@]}" install "${RPMS[@]}" && break
+	# Install and upgrade in a single transaction using dnf do or dnf shell.
+	if [ -v DNF5 ]; then
+		# dnf5: use dnf do.
+		"${DNF[@]}" 'do' --action upgrade '*' --action=install "${RPMS[@]}" && break
+	else
+		# dnf4: use dnf shell.
+		cat << _EOF_ | "${DNF[@]}" shell && break
+update
+install ${RPMS[@]}
+ts run
+_EOF_
+	fi
 done
 # shellcheck disable=SC2181
 [ $? -eq 0 ] # fail if dnf failed
