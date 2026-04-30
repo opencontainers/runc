@@ -95,3 +95,51 @@ function teardown() {
 	#
 	[ "$(wc -l <<<"$output")" -eq 4 ]
 }
+
+# Check that runc exec -p process.json takes env from
+# process.json only, not from config.json, and that HOME
+# is always set.
+@test "env [runc exec -p]" {
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	cat <<_EOF_ >process.json
+{
+    "terminal": false,
+    "args": [
+        "/bin/env"
+    ],
+    "cwd": "/",
+    "env": [
+        "FOO=bar"
+    ]
+}
+_EOF_
+
+	runc exec -p process.json test_busybox
+	[ "$status" -eq 0 ]
+	# Env should have entries from process.json.
+	[[ "$output" == *'FOO=bar'* ]]
+	# ...and HOME set from container's /etc/passwd.
+	[[ "$output" == *'HOME=/root'* ]]
+	# Env should NOT contain entries from config.json.
+	[[ "$output" != *'TERM='* ]]
+	[[ "$output" != *'PATH='* ]]
+}
+
+@test "env HOME is set for runc exec -p with no process.env" {
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	# "env" is not set.
+	cat <<_EOF_ >process.json
+{
+    "args": ["/bin/env"],
+    "cwd": "/"
+}
+_EOF_
+	runc exec -p process.json test_busybox
+	[ "$status" -eq 0 ]
+	# Env should have HOME set from container's /etc/passwd.
+	[[ "$output" == *'HOME=/root'* ]]
+}
