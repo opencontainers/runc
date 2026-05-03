@@ -419,10 +419,11 @@ func mountCgroupV2(m mountEntry, c *mountConfig) error {
 		// Emulate cgroupns by bind-mounting the container cgroup path
 		// rather than the whole /sys/fs/cgroup.
 		bindM.Source = c.cgroup2Path
-	} else {
-		// Match the old fresh-mount behaviour more closely by detaching the
-		// bind mount from any host-side propagation relationship. This avoids
-		// exposing an external master that CRIU cannot restore.
+	}
+	if !c.cgroupns {
+		// With host cgroup namespace, bind-mount the existing cgroup2
+		// hierarchy instead of mounting a fresh cgroup2 instance, and detach
+		// it from host-side propagation.
 		bindM.PropagationFlags = append(bindM.PropagationFlags, unix.MS_PRIVATE)
 	}
 	// mountToRootfs() handles remounting for MS_RDONLY.
