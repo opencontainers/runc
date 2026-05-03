@@ -364,6 +364,26 @@ test_mount_target() {
 	test_ro_cgroup_mount
 }
 
+@test "runc run [shared cgroupns preserves host cgroup2 mount options]" {
+	requires root cgroups_v2
+	local status host_opts
+
+	host_opts=$(awk '$5 == "/sys/fs/cgroup" { split($0, parts, " - "); split(parts[2], fields, " "); print fields[3]; exit }' /proc/self/mountinfo)
+	[ -n "$host_opts" ]
+
+	if ! grep -qw nsdelegate <<<"$host_opts"; then
+		skip "host cgroup2 mount does not have nsdelegate"
+	fi
+
+	# shellcheck disable=SC2016
+	update_config '.linux.namespaces -= [{"type": "cgroup"}]
+		| .process.args |= ["awk", "$5 == \"/sys/fs/cgroup\" { split($0, parts, \" - \"); split(parts[2], fields, \" \"); print fields[3]; exit }", "/proc/self/mountinfo"]'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+	[ "$output" = "$host_opts" ]
+}
+
 @test "runc run [mount order, container bind-mount source]" {
 	test_mount_order
 }
