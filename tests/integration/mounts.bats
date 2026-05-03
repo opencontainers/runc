@@ -163,6 +163,10 @@ test_mount_target() {
 	mv "$old_config" "./config.json"
 }
 
+function get_cgroup_mount_flags() {
+	awk '$5 == "/sys/fs/cgroup" {print $10; exit}' /proc/self/mountinfo
+}
+
 # https://github.com/opencontainers/runc/issues/3991
 @test "runc run [tmpcopyup]" {
 	mkdir -p rootfs/dir1/dir2
@@ -354,7 +358,13 @@ test_mount_target() {
 @test "runc run [ro /sys/fs/cgroup mounts]" {
 	# Without cgroup namespace.
 	update_config '.linux.namespaces -= [{"type": "cgroup"}]'
+	# Save the host cgroup mount flags.
+	CG_MNT=$(get_cgroup_mount_flags)
 	test_ro_cgroup_mount
+	# Verify that the cgroup mount flags after container creation are the same as before container creation.
+	if [ "$CG_MNT" != "$(get_cgroup_mount_flags)" ]; then
+		fail "Host cgroup mount flags changed"
+	fi
 }
 
 @test "runc run [ro /sys/fs/cgroup mounts + cgroupns]" {
