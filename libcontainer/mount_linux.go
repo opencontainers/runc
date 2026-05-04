@@ -139,7 +139,7 @@ func (e *mountError) Unwrap() error {
 
 // mount is a simple unix.Mount wrapper, returning an error with more context
 // in case it failed.
-func mount(source, target, fstype string, flags uintptr, data string) error {
+func mount(source, target, fstype string, flags uintptr, data string) error { //nolint:unparam // mount(2) wrapper
 	return mountViaFds(source, nil, target, "", fstype, flags, data)
 }
 
