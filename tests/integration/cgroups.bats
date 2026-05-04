@@ -428,7 +428,7 @@ convert_hugetlb_size() {
 			}
 			| .linux.resources.unified |= {
 				"memory.min": "131072",
-				"memory.max": "10485760",
+				"memory.max": "20971520",
 				"pids.max": "42",
 				"cpu.max": "5000 50000",
 				"cpu.weight": "42"
@@ -443,7 +443,7 @@ convert_hugetlb_size() {
 
 	runc exec test_cgroups_unified cat /sys/fs/cgroup/memory.max
 	[ "$status" -eq 0 ]
-	[ "$output" = '10485760' ]
+	[ "$output" = '20971520' ]
 
 	runc exec test_cgroups_unified cat /sys/fs/cgroup/pids.max
 	[ "$status" -eq 0 ]
