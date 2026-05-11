@@ -1334,38 +1334,6 @@ type mountFunc func(source string, srcFile *mountSource, target, dstFd, fstype s
 // mountFn is the package-level mount implementation; tests override it.
 var mountFn mountFunc = mountViaFds
 
-// isProcFdPath reports whether path is one of the procfs fd aliases runc uses
-// for mount targets. These aliases should not be kept as reusable sources.
-//
-// The accepted forms are (where <pid> and <tid> are decimal integers):
-//
-//	/proc/thread-self/fd/...
-//	/proc/self/fd/...
-//	/proc/<pid>/fd/...
-//	/proc/self/task/<tid>/fd/...
-//	/proc/<pid>/task/<tid>/fd/...
-func isProcFdPath(path string) bool {
-	parts := strings.Split(strings.Trim(pathrs.LexicallyCleanPath(path), "/"), "/")
-	if len(parts) < 3 || parts[0] != "proc" {
-		return false
-	}
-	if parts[1] == "thread-self" {
-		return parts[2] == "fd"
-	}
-	if parts[2] == "fd" && (parts[1] == "self" || isProcID(parts[1])) {
-		return true
-	}
-	if len(parts) < 5 || parts[2] != "task" || parts[4] != "fd" {
-		return false
-	}
-	return isProcID(parts[3]) && (parts[1] == "self" || isProcID(parts[1]))
-}
-
-func isProcID(value string) bool {
-	_, err := strconv.ParseUint(value, 10, 64)
-	return err == nil
-}
-
 // maskPaths masks the top of the specified paths inside a container to avoid
 // security issues from processes reading information from non-namespace aware
 // mounts ( proc/kcore ).
@@ -1417,9 +1385,11 @@ func maskPaths(rootFd *os.File, paths []string, mountLabel string) error {
 			label.FormatMountLabel("nr_blocks=1,nr_inodes=1", mountLabel)); err != nil {
 			return err
 		}
-		// Establish this mount as the reusable shared source, but skip
-		// procfs fd aliases because they are not stable rootfs paths.
-		if !bindFailed && sharedMaskSrc == nil && !isProcFdPath(path) {
+		// Establish this mount as the reusable shared source. reopenAfterMount
+		// resolves the underlying inode via procfs and re-opens it through
+		// rootFd, so the resulting fd is anchored to the real path inside the
+		// container rootfs even if path was a /proc/self/fd/N alias.
+		if !bindFailed && sharedMaskSrc == nil {
 			reopened, err := reopenAfterMount(rootFd, dstFh, unix.O_PATH|unix.O_CLOEXEC)
 			if err != nil {
 				return fmt.Errorf("can't reopen shared directory mask: %w", err)
