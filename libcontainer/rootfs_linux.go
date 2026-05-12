@@ -1338,6 +1338,7 @@ func maskPaths(paths []string, mountLabel string) error {
 	procSelfFd, closer := utils.ProcThreadSelf("fd/")
 	defer closer()
 
+	maskedPaths := make(map[string]struct{})
 	for _, path := range paths {
 		// Open the target path; skip if it doesn't exist.
 		dstFh, err := os.OpenFile(path, unix.O_PATH|unix.O_CLOEXEC, 0)
@@ -1352,6 +1353,14 @@ func maskPaths(paths []string, mountLabel string) error {
 			dstFh.Close()
 			return fmt.Errorf("can't mask path %q: %w", path, err)
 		}
+		// skip duplicate masked paths.
+		cleanPath := pathrs.LexicallyCleanPath(path)
+		if _, ok := maskedPaths[cleanPath]; ok {
+			dstFh.Close()
+			continue
+		}
+		maskedPaths[cleanPath] = struct{}{}
+
 		var dstType string
 		if st.IsDir() {
 			// Destination is a directory: bind mount a ro tmpfs over it.

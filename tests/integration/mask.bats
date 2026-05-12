@@ -55,6 +55,20 @@ function teardown() {
 	[[ "${output}" == *"Operation not permitted"* ]]
 }
 
+@test "mask paths [duplicate paths]" {
+	update_config '(.. | select(.maskedPaths? != null)) .maskedPaths += ["/testdir", "/testfile"]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	runc exec test_busybox sh -c "mount | grep /testdir -c"
+	[ "$status" -eq 0 ]
+	[[ "${output}" == "1" ]]
+
+	runc exec test_busybox sh -c "mount | grep /testfile -c"
+	[ "$status" -eq 0 ]
+	[[ "${output}" == "1" ]]
+}
+
 @test "mask paths [prohibit symlink /proc]" {
 	ln -s /symlink rootfs/proc
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
