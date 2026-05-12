@@ -419,7 +419,7 @@ func mountCgroupV2(m mountEntry, c *mountConfig) error {
 		// Mask `/sys/fs/cgroup` to ensure it is read-only, even when `/sys` is mounted
 		// with `rbind,ro` (`runc spec --rootless` produces `rbind,ro` for `/sys`).
 		err = utils.WithProcfdFile(m.dstFile, func(procfd string) error {
-			return maskPaths([]string{procfd}, c.label)
+			return maskPaths(c.root, []string{procfd}, c.label)
 		})
 	}
 	return err
@@ -1335,7 +1335,7 @@ func verifyDevNull(f *os.File) error {
 // mounts ( proc/kcore ).
 // For files, maskPath bind mounts /dev/null over the top of the specified path.
 // For directories, maskPath mounts read-only tmpfs over the top of the specified path.
-func maskPaths(paths []string, mountLabel string) error {
+func maskPaths(rootFd *os.File, paths []string, mountLabel string) error {
 	devNull, err := os.OpenFile("/dev/null", unix.O_PATH, 0)
 	if err != nil {
 		return fmt.Errorf("can't mask paths: %w", err)
@@ -1348,6 +1348,16 @@ func maskPaths(paths []string, mountLabel string) error {
 	procSelfFd, closer := utils.ProcThreadSelf("fd/")
 	defer closer()
 
+	var (
+		sharedMaskFile *os.File
+		sharedMaskSrc  *mountSource
+		bindFailed     bool
+	)
+	defer func() {
+		if sharedMaskFile != nil {
+			_ = sharedMaskFile.Close()
+		}
+	}()
 	maskedPaths := make(map[string]struct{})
 	for _, path := range paths {
 		// Open the target path; skip if it doesn't exist.
@@ -1375,7 +1385,31 @@ func maskPaths(paths []string, mountLabel string) error {
 		if st.IsDir() {
 			// Destination is a directory: bind mount a ro tmpfs over it.
 			dstType = "dir"
-			err = mount("tmpfs", path, "tmpfs", unix.MS_RDONLY, label.FormatMountLabel("nr_blocks=1,nr_inodes=1", mountLabel))
+			if !bindFailed && sharedMaskSrc != nil {
+				dstFd := filepath.Join(procSelfFd, strconv.Itoa(int(dstFh.Fd())))
+				err = mountViaFds("", sharedMaskSrc, path, dstFd, "", unix.MS_BIND, "")
+				if err != nil {
+					// A bind-mount inherits MNT_READONLY from the source vfsmount,
+					// but if it fails fall back to individual tmpfs mounts.
+					bindFailed = true
+					logrus.WithError(err).Warn("maskPaths: shared tmpfs bind-mount failed, falling back to per-directory tmpfs")
+				}
+			}
+			if bindFailed || sharedMaskSrc == nil {
+				err = mount("tmpfs", path, "tmpfs", unix.MS_RDONLY, label.FormatMountLabel("nr_blocks=1,nr_inodes=1", mountLabel))
+				if err == nil && !bindFailed && sharedMaskSrc == nil {
+					// Establish this mount as the reusable shared source. reopenAfterMount
+					// resolves the underlying inode via procfs and re-opens it through
+					// rootFd, so the resulting fd is anchored to the real path inside the
+					// container rootfs even if path was a /proc/self/fd/N alias.
+					reopened, err := reopenAfterMount(rootFd, dstFh, unix.O_PATH|unix.O_CLOEXEC)
+					if err != nil {
+						return fmt.Errorf("can't reopen shared directory mask: %w", err)
+					}
+					sharedMaskFile = reopened
+					sharedMaskSrc = &mountSource{Type: mountSourcePlain, file: sharedMaskFile}
+				}
+			}
 		} else {
 			// Destination is a file: mount it to /dev/null.
 			dstType = "path"
