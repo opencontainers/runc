@@ -1365,7 +1365,7 @@ func maskPaths(paths []string, mountLabel string) error {
 		if st.IsDir() {
 			// Destination is a directory: bind mount a ro tmpfs over it.
 			dstType = "dir"
-			err = mount("tmpfs", path, "tmpfs", unix.MS_RDONLY, label.FormatMountLabel("", mountLabel))
+			err = mount("tmpfs", path, "tmpfs", unix.MS_RDONLY, label.FormatMountLabel("nr_blocks=1,nr_inodes=1", mountLabel))
 		} else {
 			// Destination is a file: mount it to /dev/null.
 			dstType = "path"
