@@ -6,7 +6,7 @@ function setup() {
 	setup_busybox
 
 	# Create fake rootfs.
-	mkdir rootfs/testdir
+	mkdir rootfs/testdir rootfs/testdir2 rootfs/testdir3
 	echo "Forbidden information!" >rootfs/testfile
 
 	# add extra masked paths
@@ -86,4 +86,34 @@ function teardown() {
 	# On cgroup v1, this may fail before checking if /sys is a symlink,
 	# so we merely check that it fails, and do not check the exact error
 	# message like for /proc above.
+}
+
+@test "mask paths [directories share tmpfs]" {
+	update_config '(.. | select(.maskedPaths? != null)) .maskedPaths += ["/testdir2", "/testdir3"]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	# shellcheck disable=SC2016
+	runc exec test_busybox sh -euc '
+		set -- $(stat -c %d /testdir /testdir2 /testdir3)
+		[ "$1" = "$2" ]
+		[ "$2" = "$3" ]
+	'
+	[ "$status" -eq 0 ]
+
+	runc exec test_busybox touch /testdir2/foo
+	[ "$status" -eq 1 ]
+	[[ "${output}" == *"Read-only file system"* ]]
+}
+
+@test "mask paths [directory with read-only rootfs]" {
+	update_config '(.. | select(.maskedPaths? != null)) .maskedPaths += ["/testdir2", "/testdir3"]'
+	update_config '.root.readonly = true'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	runc exec test_busybox ls /testdir
+	[ "$status" -eq 0 ]
+	[ -z "$output" ]
 }
