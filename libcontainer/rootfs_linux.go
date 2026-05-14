@@ -1379,7 +1379,10 @@ func maskPaths(rootFd *os.File, paths []string, mountLabel string) error {
 		}
 		maskedPaths[cleanPath] = struct{}{}
 
-		var dstType string
+		var (
+			dstType   string
+			assertRO  bool // verify ST_RDONLY after this mask succeeds
+		)
 		if st.IsDir() {
 			// Destination is a directory: bind mount a ro tmpfs over it.
 			dstType = "dir"
@@ -1391,21 +1394,31 @@ func maskPaths(rootFd *os.File, paths []string, mountLabel string) error {
 					// but if it fails fall back to individual tmpfs mounts.
 					bindFailed = true
 					logrus.WithError(err).Warn("maskPaths: shared tmpfs bind-mount failed, falling back to per-directory tmpfs")
+				} else {
+					// We rely on MNT_READONLY being inherited from the
+					// MS_RDONLY tmpfs source vfsmount; assert it post-bind
+					// as defence-in-depth in case the kernel ever stops
+					// propagating that flag.
+					assertRO = true
 				}
 			}
 			if bindFailed || sharedMaskSrc == nil {
 				err = mount("tmpfs", path, "tmpfs", unix.MS_RDONLY, label.FormatMountLabel("nr_blocks=1,nr_inodes=1", mountLabel))
-				if err == nil && !bindFailed && sharedMaskSrc == nil {
-					// Establish this mount as the reusable shared source. reopenAfterMount
-					// resolves the underlying inode via procfs and re-opens it through
-					// rootFd, so the resulting fd is anchored to the real path inside the
-					// container rootfs even if path was a /proc/self/fd/N alias.
-					reopened, err := reopenAfterMount(rootFd, dstFh, unix.O_PATH|unix.O_CLOEXEC)
-					if err != nil {
-						return fmt.Errorf("can't reopen shared directory mask: %w", err)
+				if err == nil {
+					// Per-path tmpfs mount: same belt-and-suspenders check.
+					assertRO = true
+					if !bindFailed && sharedMaskSrc == nil {
+						// Establish this mount as the reusable shared source. reopenAfterMount
+						// resolves the underlying inode via procfs and re-opens it through
+						// rootFd, so the resulting fd is anchored to the real path inside the
+						// container rootfs even if path was a /proc/self/fd/N alias.
+						reopened, err := reopenAfterMount(rootFd, dstFh, unix.O_PATH|unix.O_CLOEXEC)
+						if err != nil {
+							return fmt.Errorf("can't reopen shared directory mask: %w", err)
+						}
+						sharedMaskFile = reopened
+						sharedMaskSrc = &mountSource{Type: mountSourcePlain, file: sharedMaskFile}
 					}
-					sharedMaskFile = reopened
-					sharedMaskSrc = &mountSource{Type: mountSourcePlain, file: sharedMaskFile}
 				}
 			}
 		} else {
@@ -1417,6 +1430,22 @@ func maskPaths(rootFd *os.File, paths []string, mountLabel string) error {
 		dstFh.Close()
 		if err != nil {
 			return fmt.Errorf("can't mask %s %q: %w", dstType, path, err)
+		}
+		if assertRO {
+			// Confirm the freshly-installed directory mask is read-only.
+			// Both the shared-bind and per-path tmpfs paths above derive
+			// their read-only-ness from an MS_RDONLY source, but a future
+			// kernel regression or unexpected mount-propagation interaction
+			// could leave the destination writable, which would silently
+			// undermine the maskedPaths guarantee. Statfs the destination
+			// and refuse to continue if ST_RDONLY is not set.
+			var rost unix.Statfs_t
+			if err := unix.Statfs(path, &rost); err != nil {
+				return fmt.Errorf("can't verify mask read-only state for %q: %w", path, err)
+			}
+			if rost.Flags&unix.ST_RDONLY == 0 {
+				return fmt.Errorf("masked path %q is not read-only after mount (ST_RDONLY not set)", path)
+			}
 		}
 	}
 
