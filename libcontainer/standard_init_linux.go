@@ -141,17 +141,10 @@ func (l *linuxStandardInit) Init() error {
 		}
 	}
 
-	if len(l.config.Config.MaskPaths) > 0 {
-		rootFd, err := os.OpenFile("/", unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_PATH, 0)
-		if err != nil {
-			return fmt.Errorf("open rootfs handle for masked paths: %w", err)
-		}
-		err = maskPaths(rootFd, l.config.Config.MaskPaths, l.config.Config.MountLabel)
-		rootFd.Close()
-		if err != nil {
-			return err
-		}
+	if err := maskPaths("/", l.config.Config.MaskPaths, l.config.Config.MountLabel); err != nil {
+		return err
 	}
+
 	pdeath, err := system.GetParentDeathSignal()
 	if err != nil {
 		return fmt.Errorf("can't get pdeath signal: %w", err)
