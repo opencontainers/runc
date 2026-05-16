@@ -1338,7 +1338,10 @@ func maskDir(path, mountLabel string) error {
 // mounts ( proc/kcore ).
 // For files, maskPath bind mounts /dev/null over the top of the specified path.
 // For directories, maskPath mounts read-only tmpfs over the top of the specified path.
-func maskPaths(rootFd *os.File, paths []string, mountLabel string) error {
+func maskPaths(rootFs string, paths []string, mountLabel string) error {
+	if len(paths) == 0 {
+		return nil
+	}
 	devNull, err := os.OpenFile("/dev/null", unix.O_PATH, 0)
 	if err != nil {
 		return fmt.Errorf("can't mask paths: %w", err)
@@ -1405,7 +1408,12 @@ func maskPaths(rootFd *os.File, paths []string, mountLabel string) error {
 					// resolves the underlying inode via procfs and re-opens it through
 					// rootFd, so the resulting fd is anchored to the real path inside the
 					// container rootfs even if path was a /proc/self/fd/N alias.
+					rootFd, err := os.OpenFile(rootFs, unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_PATH, 0)
+					if err != nil {
+						return fmt.Errorf("open rootfs handle for masked paths: %w", err)
+					}
 					reopened, err := reopenAfterMount(rootFd, dstFh, unix.O_PATH|unix.O_CLOEXEC)
+					rootFd.Close()
 					if err != nil {
 						return fmt.Errorf("can't reopen shared directory mask: %w", err)
 					}
