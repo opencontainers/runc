@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,7 +14,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 const formatOptions = `table or json`
@@ -41,7 +42,7 @@ type containerState struct {
 	Owner string `json:"owner"`
 }
 
-var listCommand = cli.Command{
+var listCommand = &cli.Command{
 	Name:  "list",
 	Usage: "lists containers started by runc with the given root",
 	ArgsUsage: `
@@ -56,34 +57,38 @@ To list containers created via the default "--root":
 EXAMPLE 2:
 To list containers created using a non-default value for "--root":
        # runc --root value list`,
+	// Disable comma as separator for slice flags.
+	DisableSliceFlagSeparator: true,
 	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "format, f",
-			Value: "table",
-			Usage: `select one of: ` + formatOptions,
+		&cli.StringFlag{
+			Name:    "format",
+			Aliases: []string{"f"},
+			Value:   "table",
+			Usage:   `select one of: ` + formatOptions,
 		},
-		cli.BoolFlag{
-			Name:  "quiet, q",
-			Usage: "display only container IDs",
+		&cli.BoolFlag{
+			Name:    "quiet",
+			Aliases: []string{"q"},
+			Usage:   "display only container IDs",
 		},
 	},
-	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 0, exactArgs); err != nil {
+	Action: func(_ context.Context, cmd *cli.Command) error {
+		if err := checkArgs(cmd, 0, exactArgs); err != nil {
 			return err
 		}
-		s, err := getContainers(context)
+		s, err := getContainers(cmd)
 		if err != nil {
 			return err
 		}
 
-		if context.Bool("quiet") {
+		if cmd.Bool("quiet") {
 			for _, item := range s {
 				fmt.Println(item.ID)
 			}
 			return nil
 		}
 
-		switch context.String("format") {
+		switch cmd.String("format") {
 		case "table":
 			w := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
 			fmt.Fprint(w, "ID\tPID\tSTATUS\tBUNDLE\tCREATED\tOWNER\n")
@@ -110,11 +115,11 @@ To list containers created using a non-default value for "--root":
 	},
 }
 
-func getContainers(context *cli.Context) ([]containerState, error) {
-	root := context.GlobalString("root")
+func getContainers(cmd *cli.Command) ([]containerState, error) {
+	root := cmd.String("root")
 	list, err := os.ReadDir(root)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) && context.IsSet("root") {
+		if errors.Is(err, os.ErrNotExist) && cmd.IsSet("root") {
 			// Ignore non-existing default root directory
 			// (no containers created yet).
 			return nil, nil

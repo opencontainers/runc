@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -20,7 +21,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 // version is set from the contents of VERSION file.
@@ -37,10 +38,10 @@ var extraVersion = ""
 // and will be populated by the Makefile.
 var gitCommit = ""
 
-func printVersion(c *cli.Context) {
-	w := c.App.Writer
+func printVersion(c *cli.Command) {
+	w := c.Writer
 
-	fmt.Fprintln(w, "runc version", c.App.Version)
+	fmt.Fprintln(w, "runc version", c.Version)
 	if gitCommit != "" {
 		fmt.Fprintln(w, "commit:", gitCommit)
 	}
@@ -81,10 +82,12 @@ value for "bundle" is the current directory.`
 )
 
 func main() {
-	app := cli.NewApp()
+	app := &cli.Command{}
 	app.Name = "runc"
 	app.Version = strings.TrimSpace(version) + extraVersion
 	app.Usage = usage
+	// Disable comma as separator for slice flags.
+	app.DisableSliceFlagSeparator = true
 
 	cli.VersionPrinter = printVersion
 
@@ -97,36 +100,36 @@ func main() {
 	}
 
 	app.Flags = []cli.Flag{
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "debug",
 			Usage: "enable debug logging",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "log",
 			Value: "",
 			Usage: "set the log file to write runc logs to (default is '/dev/stderr')",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "log-format",
 			Value: "text",
 			Usage: "set the log format ('text' (default), or 'json')",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "root",
 			Value: root,
 			Usage: "root directory for storage of container state (this should be located in tmpfs)",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "systemd-cgroup",
 			Usage: "enable systemd cgroup support, expects cgroupsPath to be of form \"slice:prefix:name\" for e.g. \"system.slice:runc:434234\"",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "rootless",
 			Value: "auto",
 			Usage: "ignore cgroup permission errors ('true', 'false', or 'auto')",
 		},
 	}
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		checkpointCommand,
 		createCommand,
 		deleteCommand,
@@ -145,8 +148,8 @@ func main() {
 		updateCommand,
 		featuresCommand,
 	}
-	app.Before = func(context *cli.Context) error {
-		if !context.IsSet("root") && xdgDirUsed {
+	app.Before = func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
+		if !cmd.IsSet("root") && xdgDirUsed {
 			// According to the XDG specification, we need to set anything in
 			// XDG_RUNTIME_DIR to have a sticky bit if we don't want it to get
 			// auto-pruned.
@@ -159,18 +162,22 @@ func main() {
 				fatal(err)
 			}
 		}
-		if err := reviseRootDir(context); err != nil {
-			return err
+		if err := reviseRootDir(cmd); err != nil {
+			return ctx, err
 		}
 
-		return configLogrus(context)
+		if err := configLogrus(cmd); err != nil {
+			return ctx, err
+		}
+
+		return ctx, nil
 	}
 
 	// If the command returns an error, cli takes upon itself to print
 	// the error on cli.ErrWriter and exit.
 	// Use our own writer here to ensure the log gets sent to the right location.
 	cli.ErrWriter = &FatalWriter{cli.ErrWriter}
-	if err := app.Run(os.Args); err != nil {
+	if err := app.Run(context.Background(), os.Args); err != nil {
 		fatal(err)
 	}
 }
@@ -187,8 +194,8 @@ func (f *FatalWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func configLogrus(context *cli.Context) error {
-	if context.GlobalBool("debug") {
+func configLogrus(cmd *cli.Command) error {
+	if cmd.Bool("debug") {
 		logrus.SetLevel(logrus.DebugLevel)
 		logrus.SetReportCaller(true)
 		// Shorten function and file names reported by the logger, by
@@ -205,7 +212,7 @@ func configLogrus(context *cli.Context) error {
 		})
 	}
 
-	switch f := context.GlobalString("log-format"); f {
+	switch f := cmd.String("log-format"); f {
 	case "":
 		// do nothing
 	case "text":
@@ -216,7 +223,7 @@ func configLogrus(context *cli.Context) error {
 		return errors.New("invalid log-format: " + f)
 	}
 
-	if file := context.GlobalString("log"); file != "" {
+	if file := cmd.String("log"); file != "" {
 		f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_SYNC, 0o644)
 		if err != nil {
 			return err
