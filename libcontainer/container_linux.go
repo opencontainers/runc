@@ -563,7 +563,7 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 		exePath = "/proc/self/exe"
 	} else {
 		var err error
-		safeExe, err = exeseal.CloneSelfExe(c.stateDir)
+		safeExe, err = exeseal.CloneSelfExe(c.stateDir, c.config.CloneSelfExe)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create safe /proc/self/exe clone for runc init: %w", err)
 		}

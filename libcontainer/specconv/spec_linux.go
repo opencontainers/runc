@@ -25,6 +25,7 @@ import (
 	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/exeseal"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 )
@@ -432,6 +433,13 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	}
 
 	config.Cgroups = c
+
+	cloneSelfExe, err := initCloneSelfExeMode(spec)
+	if err != nil {
+		return nil, err
+	}
+	config.CloneSelfExe = cloneSelfExe
+
 	// set linux-specific config
 	if spec.Linux != nil {
 		initMaps()
@@ -773,6 +781,14 @@ func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
 	}
 
 	return sp, nil
+}
+
+func initCloneSelfExeMode(spec *specs.Spec) (exeseal.Mode, error) {
+	value, ok := spec.Annotations[exeseal.AnnotationKey]
+	if !ok {
+		return exeseal.ModeUnset, nil
+	}
+	return exeseal.ParseMode(value)
 }
 
 func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*cgroups.Cgroup, error) {
