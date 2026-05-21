@@ -215,24 +215,45 @@ func IsCloned(exe *os.File) bool {
 // /proc/self/exe). This binary can then be used for "runc init" in order to
 // make sure the container process can never resolve the original runc binary.
 // For more details on why this is necessary, see CVE-2019-5736.
-func CloneSelfExe(tmpDir string) (*os.File, error) {
-	// Try to create a temporary overlayfs to produce a readonly version of
-	// /proc/self/exe that cannot be "unwrapped" by the container. In contrast
-	// to CloneBinary, this technique does not require any extra memory usage
-	// and does not have the (fairly noticeable) performance impact of copying
-	// a large binary file into a memfd.
-	//
-	// Based on some basic performance testing, the overlayfs approach has
-	// effectively no performance overhead (it is on par with both
-	// MS_BIND+MS_RDONLY and no binary cloning at all) while memfd copying adds
-	// around ~60% overhead during container startup.
-	overlayFile, err := sealedOverlayfs("/proc/self/exe", tmpDir)
-	if err == nil {
+func CloneSelfExe(tmpDir string, mode Mode) (*os.File, error) {
+	switch mode {
+	case ModeROSharedPage:
+		overlayFile, err := sealedOverlayfs("/proc/self/exe", tmpDir)
+		if err != nil {
+			return nil, fmt.Errorf("%s=ro-shared-page requested but overlayfs unavailable: %w",
+				AnnotationKey, err)
+		}
 		logrus.Debug("runc exeseal: using overlayfs for sealed /proc/self/exe") // used for tests
 		return overlayFile, nil
-	}
-	logrus.WithError(err).Debugf("could not use overlayfs for /proc/self/exe sealing -- falling back to making a temporary copy")
 
+	case ModeIndependentDataCopy:
+		return cloneSelfExeViaCloneBinary(tmpDir)
+
+	case ModeUnset:
+		// Try to create a temporary overlayfs to produce a readonly version of
+		// /proc/self/exe that cannot be "unwrapped" by the container. In contrast
+		// to CloneBinary, this technique does not require any extra memory usage
+		// and does not have the (fairly noticeable) performance impact of copying
+		// a large binary file into a memfd.
+		//
+		// Based on some basic performance testing, the overlayfs approach has
+		// effectively no performance overhead (it is on par with both
+		// MS_BIND+MS_RDONLY and no binary cloning at all) while memfd copying adds
+		// around ~60% overhead during container startup.
+		overlayFile, err := sealedOverlayfs("/proc/self/exe", tmpDir)
+		if err == nil {
+			logrus.Debug("runc exeseal: using overlayfs for sealed /proc/self/exe") // used for tests
+			return overlayFile, nil
+		}
+		logrus.WithError(err).Debugf("could not use overlayfs for /proc/self/exe sealing -- falling back to making a temporary copy")
+		return cloneSelfExeViaCloneBinary(tmpDir)
+
+	default:
+		return nil, fmt.Errorf("internal error: unhandled CloneSelfExe mode %v", mode)
+	}
+}
+
+func cloneSelfExeViaCloneBinary(tmpDir string) (*os.File, error) {
 	selfExe, err := os.Open("/proc/self/exe")
 	if err != nil {
 		return nil, fmt.Errorf("opening current binary: %w", err)
@@ -244,7 +265,7 @@ func CloneSelfExe(tmpDir string) (*os.File, error) {
 		return nil, fmt.Errorf("checking /proc/self/exe size: %w", err)
 	}
 	size := stat.Size()
-
+	logrus.Debug("runc exeseal: using clone-binary path") // used for tests
 	return CloneBinary(selfExe, size, "/proc/self/exe", tmpDir)
 }
 
