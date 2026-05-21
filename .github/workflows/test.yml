@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 env:
-  LIBPATHRS_VERSION: "0.2.4"
+  LIBPATHRS_VERSION: "893bcf88f60109620baa1ec3c4d273d09244eb28"
   # Don't ignore C warnings. Note that the output of "go env CGO_CFLAGS" by default is "-g -O2", so we keep them.
   CGO_CFLAGS: -g -O2 -Werror
   # Allow potentially unsafe tests.
