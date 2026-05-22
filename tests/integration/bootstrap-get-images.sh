@@ -10,7 +10,7 @@ set -Eeuo pipefail
 
 images=(
 	# https://github.com/docker-library/official-images/commits/HEAD/library/busybox
-	'https://github.com/docker-library/official-images/raw/67f09d75e7915359c2216cb12cf6fc1150d42a26/library/busybox:glibc'
+	'https://github.com/docker-library/official-images/raw/da3b030b9dd58f7cb1cd0063a96984c2686ffd5f/library/busybox:glibc'
 
 	# pinned to an older Debian Buster which has more architectures than the latest does (Buster transitioned from the Debian Security Team to the LTS Team which supports a smaller set)
 	'https://github.com/docker-library/official-images/raw/ce10f6b60289c0c0b5de6f785528b8725f225a58/library/debian:buster-slim'
