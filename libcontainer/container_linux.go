@@ -554,7 +554,7 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 		exePath string
 		safeExe *os.File
 	)
-	if exeseal.IsSelfExeCloned() {
+	if c.config.CloneSelfExe == exeseal.ModeUnset && exeseal.IsSelfExeCloned() {
 		// /proc/self/exe is already a cloned binary -- no need to do anything
 		logrus.Debug("skipping binary cloning -- /proc/self/exe is already cloned!")
 		// We don't need to use /proc/thread-self here because the exe mm of a

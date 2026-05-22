@@ -18,7 +18,6 @@ import (
 
 	"github.com/opencontainers/cgroups"
 	devices "github.com/opencontainers/cgroups/devices/config"
-	"github.com/opencontainers/runc/libcontainer/exeseal"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -208,7 +207,7 @@ type Config struct {
 	Labels []string `json:"labels"`
 
 	// CloneSelfExe selects how runc protects runc binary against tampering.
-	CloneSelfExe exeseal.Mode `json:"clone_self_exe,omitempty"`
+	CloneSelfExe string `json:"clone_self_exe,omitempty"`
 
 	// NoNewKeyring will not allocated a new session keyring for the container.  It will use the
 	// callers keyring in this case.
