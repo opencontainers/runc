@@ -114,7 +114,7 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 	root := context.GlobalString("root")
 	list, err := os.ReadDir(root)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) && context.IsSet("root") {
+		if errors.Is(err, os.ErrNotExist) && !context.GlobalIsSet("root") {
 			// Ignore non-existing default root directory
 			// (no containers created yet).
 			return nil, nil
