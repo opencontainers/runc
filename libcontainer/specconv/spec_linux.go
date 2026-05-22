@@ -434,11 +434,10 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 
 	config.Cgroups = c
 
-	cloneSelfExe, err := initCloneSelfExeMode(spec)
-	if err != nil {
+	config.CloneSelfExe = spec.Annotations[exeseal.AnnotationKey]
+	if err := exeseal.ValidateMode(config.CloneSelfExe); err != nil {
 		return nil, err
 	}
-	config.CloneSelfExe = cloneSelfExe
 
 	// set linux-specific config
 	if spec.Linux != nil {
@@ -781,14 +780,6 @@ func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
 	}
 
 	return sp, nil
-}
-
-func initCloneSelfExeMode(spec *specs.Spec) (exeseal.Mode, error) {
-	value, ok := spec.Annotations[exeseal.AnnotationKey]
-	if !ok {
-		return exeseal.ModeUnset, nil
-	}
-	return exeseal.ParseMode(value)
 }
 
 func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*cgroups.Cgroup, error) {
