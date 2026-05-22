@@ -327,8 +327,8 @@ convert_hugetlb_size() {
 	update_config ' .linux.resources.unified |= {
 				"memory.min":   "131072",
 				"memory.low":   "524288",
-				"memory.high": "5242880",
-				"memory.max": "10485760",
+				"memory.high": "20971520",
+				"memory.max": "41943040",
 				"pids.max": "99",
 				"cpu.max": "10000 100000",
 				"cpu.weight": "42"
@@ -343,15 +343,15 @@ convert_hugetlb_size() {
 
 	echo "$output" | grep -q '^memory.min:131072$'
 	echo "$output" | grep -q '^memory.low:524288$'
-	echo "$output" | grep -q '^memory.high:5242880$'
-	echo "$output" | grep -q '^memory.max:10485760$'
+	echo "$output" | grep -q '^memory.high:20971520$'
+	echo "$output" | grep -q '^memory.max:41943040$'
 	echo "$output" | grep -q '^pids.max:99$'
 	echo "$output" | grep -q '^cpu.max:10000 100000$'
 
 	check_systemd_value "MemoryMin" 131072
 	check_systemd_value "MemoryLow" 524288
-	check_systemd_value "MemoryHigh" 5242880
-	check_systemd_value "MemoryMax" 10485760
+	check_systemd_value "MemoryHigh" 20971520
+	check_systemd_value "MemoryMax" 41943040
 	check_systemd_value "TasksMax" 99
 	check_cpu_quota 10000 100000
 	check_cpu_weight 42
@@ -393,7 +393,7 @@ convert_hugetlb_size() {
 			}
 			| .linux.resources.unified |= {
 				"memory.min": "131072",
-				"memory.max": "10485760",
+				"memory.max": "41943040",
 				"pids.max": "42",
 				"cpu.max": "5000 50000",
 				"cpu.weight": "42"
@@ -408,7 +408,7 @@ convert_hugetlb_size() {
 
 	runc exec test_cgroups_unified cat /sys/fs/cgroup/memory.max
 	[ "$status" -eq 0 ]
-	[ "$output" = '10485760' ]
+	[ "$output" = '41943040' ]
 
 	runc exec test_cgroups_unified cat /sys/fs/cgroup/pids.max
 	[ "$status" -eq 0 ]
