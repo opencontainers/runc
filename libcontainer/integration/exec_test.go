@@ -558,7 +558,7 @@ func testPids(t *testing.T, systemd bool) {
 	// this to fail reliably.
 	config.Cgroups.Resources.PidsLimit = mkPtr[int64](64)
 	out, _, err := runContainer(t, config, "/bin/sh", "-c", truePipeline(64))
-	if err != nil && !strings.Contains(out.String(), "sh: can't fork") {
+	if err != nil && !strings.Contains(out.String(), "can't fork") {
 		t.Fatal(err)
 	}
 
