@@ -51,3 +51,15 @@ function teardown() {
 	[[ "${lines[0]}" == *[,][\{]"\"ociVersion\""[:]"\""*[0-9][\.]*[0-9][\.]*[0-9]*"\""[,]"\"id\""[:]"\"test_box2\""[,]"\"pid\""[:]*[0-9][,]"\"status\""[:]*"\"running\""[,]"\"bundle\""[:]*$bundle*[,]"\"rootfs\""[:]"\""*"\""[,]"\"created\""[:]*[0-9]*[\}]* ]]
 	[[ "${lines[0]}" == *[,][\{]"\"ociVersion\""[:]"\""*[0-9][\.]*[0-9][\.]*[0-9]*"\""[,]"\"id\""[:]"\"test_box3\""[,]"\"pid\""[:]*[0-9][,]"\"status\""[:]*"\"running\""[,]"\"bundle\""[:]*$bundle*[,]"\"rootfs\""[:]"\""*"\""[,]"\"created\""[:]*[0-9]*[\}][\]] ]]
 }
+
+@test "list with non-existent root fails" {
+	ROOT=/non-existent-dir runc list
+	[ "$status" -ne 0 ]
+}
+
+@test "list with default non-existent root succeeds" {
+	requires root # rootless auto-creates a directory under $XDG_RUNTIME_DIR.
+	test -d /root/runc && skip "requires missing /root/runc"
+	ROOT='' runc list
+	[ "$status" -eq 0 ]
+}
