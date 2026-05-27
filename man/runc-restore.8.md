@@ -24,7 +24,7 @@ image files directory.
 
 **--tcp-established**
 : Allow checkpoint/restore of established TCP connections. See
-[criu --tcp-establised option](https://criu.org/CLI/opt/--tcp-established).
+[criu --tcp-established option](https://criu.org/CLI/opt/--tcp-established).
 
 **--ext-unix-sk**
 : Allow checkpoint/restore of external unix sockets. See

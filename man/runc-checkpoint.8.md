@@ -26,7 +26,7 @@ image files directory.
 
 **--tcp-established**
 : Allow checkpoint/restore of established TCP connections. See
-[criu --tcp-establised option](https://criu.org/CLI/opt/--tcp-established).
+[criu --tcp-established option](https://criu.org/CLI/opt/--tcp-established).
 
 **--tcp-skip-in-flight**
 : Skip in-flight TCP connections. See

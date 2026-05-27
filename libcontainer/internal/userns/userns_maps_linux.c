@@ -9,7 +9,7 @@
 #include <stdlib.h>
 
 /*
- * All of the code here is run inside an aync-signal-safe context, so we need
+ * All of the code here is run inside an async-signal-safe context, so we need
  * to be careful to not call any functions that could cause issues. In theory,
  * since we are a Go program, there are fewer restrictions in practice, it's
  * better to be safe than sorry.

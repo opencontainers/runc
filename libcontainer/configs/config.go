@@ -109,7 +109,7 @@ type Config struct {
 	Umask *uint32 `json:"umask,omitempty"`
 
 	// Readonlyfs will remount the container's rootfs as readonly where only externally mounted
-	// bind mounts are writtable.
+	// bind mounts are writable.
 	Readonlyfs bool `json:"readonlyfs,omitempty"`
 
 	// Specifies the mount propagation flags to be applied to /.
