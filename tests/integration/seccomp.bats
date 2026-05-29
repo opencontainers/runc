@@ -102,8 +102,11 @@ function flags_value() {
 
 	# Get the list of flags supported by runc/seccomp/kernel,
 	# or "null" if no flags are supported or runc is too old.
+	#
+	# Filter out WAIT_KILLABLE_RECV as it requires a listener,
+	# and thus tested separately in seccomp-notify.bats.
 	mapfile -t flags < <(__runc features | jq -c '.linux.seccomp.supportedFlags' |
-		tr -d '[]\n' | tr ',' '\n')
+		tr -d '[]\n' | tr ',' '\n' | grep -v 'WAIT_KILLABLE_RECV')
 
 	# This is a set of all possible flag combinations to test.
 	declare -A TEST_CASES=(
@@ -155,6 +158,7 @@ function flags_value() {
 @test "runc run [seccomp] (SCMP_ACT_KILL)" {
 	update_config '  .process.args = ["/bin/sh", "-c", "mkdir /dev/shm/foo"]
 			| .process.noNewPrivileges = false
+			| .process.rlimits = [{"type": "RLIMIT_CORE", "soft": 0, "hard": 0}]
 			| .linux.seccomp = {
 				"defaultAction":"SCMP_ACT_ALLOW",
 				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
@@ -173,6 +177,7 @@ function flags_value() {
 				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
 				"syscalls":[{"names":["mkdir","mkdirat"], "action":"SCMP_ACT_KILL"}]
 			}
+			| .process.rlimits = [{"type": "RLIMIT_CORE", "soft": 0, "hard": 0}]
 			| .hooks = {
 				"startContainer": [ {
 						"path": "/bin/sh",

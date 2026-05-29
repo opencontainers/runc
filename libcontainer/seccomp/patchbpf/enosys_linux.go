@@ -51,6 +51,11 @@ const uintptr_t C_FILTER_FLAG_SPEC_ALLOW = SECCOMP_FILTER_FLAG_SPEC_ALLOW;
 #endif
 const uintptr_t C_FILTER_FLAG_NEW_LISTENER = SECCOMP_FILTER_FLAG_NEW_LISTENER;
 
+#ifndef SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV
+#	define SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV (1UL << 5)
+#endif
+const uintptr_t C_FILTER_FLAG_WAIT_KILLABLE_RECV = SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV;
+
 #ifndef AUDIT_ARCH_RISCV64
 #ifndef EM_RISCV
 #define EM_RISCV		243
@@ -665,6 +670,13 @@ func filterFlags(config *configs.Seccomp, filter *libseccomp.ScmpFilter) (flags 
 			return 0, false, fmt.Errorf("unable to fetch SECCOMP_FILTER_FLAG_SPEC_ALLOW bit: %w", err)
 		} else if ssb {
 			flags |= uint(C.C_FILTER_FLAG_SPEC_ALLOW)
+		}
+	}
+	if apiLevel >= 7 {
+		if waitKill, err := filter.GetWaitKill(); err != nil {
+			return 0, false, fmt.Errorf("unable to fetch SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV bit: %w", err)
+		} else if waitKill {
+			flags |= uint(C.C_FILTER_FLAG_WAIT_KILLABLE_RECV)
 		}
 	}
 	// XXX: add newly supported filter flags above this line.

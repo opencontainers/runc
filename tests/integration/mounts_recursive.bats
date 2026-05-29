@@ -23,7 +23,7 @@ function teardown_volume() {
 
 function setup() {
 	setup_volume
-	setup_busybox
+	setup_debian
 }
 
 function teardown() {
@@ -75,4 +75,54 @@ function teardown() {
 	runc exec test_rbind_ro_rro touch /mnt/subvol/bar
 	[ "$status" -eq 1 ]
 	[[ "${output}" == *"Read-only file system"* ]]
+}
+
+# https://github.com/opencontainers/runc/issues/5095
+@test "runc run [ check rbind,r*atime mounts]" {
+	requires_kernel 5.12
+	update_config ".mounts += [{source: \"${TESTVOLUME}\" , destination: \"/mnt1\", options: [\"rbind\",\"ratime\"]}]"
+	update_config ".mounts += [{source: \"${TESTVOLUME}\" , destination: \"/mnt2\", options: [\"rbind\",\"rnoatime\"]}]"
+	update_config ".mounts += [{source: \"${TESTVOLUME}\" , destination: \"/mnt3\", options: [\"rbind\",\"rstrictatime\"]}]"
+	update_config ".mounts += [{source: \"${TESTVOLUME}\" , destination: \"/mnt4\", options: [\"rbind\",\"rnostrictatime\"]}]"
+	update_config ".mounts += [{source: \"${TESTVOLUME}\" , destination: \"/mnt5\", options: [\"rbind\",\"rrelatime\"]}]"
+	update_config ".mounts += [{source: \"${TESTVOLUME}\" , destination: \"/mnt6\", options: [\"rbind\",\"rnorelatime\"]}]"
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_rbind_ratime
+	[ "$status" -eq 0 ]
+
+	runc exec test_rbind_ratime findmnt --noheadings -o options /mnt1
+	[[ "${output}" == "rw,relatime,"* ]]
+
+	runc exec test_rbind_ratime findmnt --noheadings -o options /mnt1/subvol
+	[[ "${output}" == "rw,relatime,"* ]]
+
+	runc exec test_rbind_ratime findmnt --noheadings -o options /mnt2
+	[[ "${output}" == "rw,noatime,"* ]]
+
+	runc exec test_rbind_ratime findmnt --noheadings -o options /mnt2/subvol
+	[[ "${output}" == "rw,noatime,"* ]]
+
+	runc exec test_rbind_ratime findmnt --noheadings -o options /mnt3
+	[[ "${output}" == "rw,"* ]]
+
+	runc exec test_rbind_ratime findmnt --noheadings -o options /mnt3/subvol
+	[[ "${output}" == "rw,"* ]]
+
+	runc exec test_rbind_ratime findmnt --noheadings -o options /mnt4
+	[[ "${output}" == "rw,relatime,"* ]]
+
+	runc exec test_rbind_ratime findmnt --noheadings -o options /mnt4/subvol
+	[[ "${output}" == "rw,relatime,"* ]]
+
+	runc exec test_rbind_ratime findmnt --noheadings -o options /mnt5
+	[[ "${output}" == "rw,relatime,"* ]]
+
+	runc exec test_rbind_ratime findmnt --noheadings -o options /mnt5/subvol
+	[[ "${output}" == "rw,relatime,"* ]]
+
+	runc exec test_rbind_ratime findmnt --noheadings -o options /mnt6
+	[[ "${output}" == "rw,relatime,"* ]]
+
+	runc exec test_rbind_ratime findmnt --noheadings -o options /mnt6/subvol
+	[[ "${output}" == "rw,relatime,"* ]]
 }

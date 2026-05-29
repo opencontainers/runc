@@ -38,7 +38,9 @@ is_allowed_fdtarget() {
 			# overlayfs binary reference (CVE-2019-5736)
 			grep -Ex "/runc" <<<"$target" ||
 			# memfd cloned binary (CVE-2019-5736)
-			grep -Fx "/memfd:runc_cloned:/proc/self/exe (deleted)" <<<"$target"
+			grep -Fx "/memfd:runc_cloned:/proc/self/exe (deleted)" <<<"$target" ||
+			# Go 1.25+ runtime opens these cgroup v1 files (see https://go.dev/cl/670497).
+			grep -Ex ".*/cpu.cfs_(quota|period)_us" <<<"$target"
 	} >/dev/null
 	return "$?"
 }
@@ -69,6 +71,8 @@ is_allowed_fdtarget() {
 		if ! is_allowed_fdtarget "$target"; then
 			echo "Violation: FD $fd_name -> '$target'"
 			violation_found=1
+		else
+			echo "Permitted: FD $fd_name -> '$target'"
 		fi
 	done < <(find "/proc/$pid/fd" -type l -print0)
 	[ "$violation_found" -eq 0 ]

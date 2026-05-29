@@ -21,6 +21,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/cgroups"
+	"github.com/opencontainers/runc/internal/cmsg"
 	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer/capabilities"
@@ -406,7 +407,7 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 		}
 	}
 	// While we can access console.master, using the API is a good idea.
-	if err := utils.SendRawFd(socket, pty.Name(), pty.Fd()); err != nil {
+	if err := cmsg.SendRawFd(socket, pty.Name(), pty.Fd()); err != nil {
 		return err
 	}
 	runtime.KeepAlive(pty)
@@ -728,7 +729,7 @@ func setupPidfd(socket *os.File, initType string) error {
 		return fmt.Errorf("failed to pidfd_open: %w", err)
 	}
 
-	if err := utils.SendRawFd(socket, initType, uintptr(pidFd)); err != nil {
+	if err := cmsg.SendRawFd(socket, initType, uintptr(pidFd)); err != nil {
 		unix.Close(pidFd)
 		return fmt.Errorf("failed to send pidfd on socket: %w", err)
 	}

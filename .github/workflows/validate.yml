@@ -8,10 +8,13 @@ on:
       - release-*
   pull_request:
   workflow_dispatch:
-env:
-  GO_VERSION: 1.25
+
 permissions:
   contents: read
+
+env:
+  GO_VERSION: 1.25
+  LIBPATHRS_VERSION: "0.2.4"
 
 jobs:
   keyring:
@@ -41,7 +44,7 @@ jobs:
           sudo apt -qy install libseccomp-dev
       - uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.6
+          version: v2.10
           skip-cache: true
       # Extra linters, only checking new code from a pull request to main.
       - name: lint-extra
@@ -68,7 +71,7 @@ jobs:
           git diff --exit-code
       - name: run modernize
         run: |
-          go run golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest -fix ./...
+          go run golang.org/x/tools/go/analysis/passes/modernize/cmd/modernize@latest -fix ./...
           git diff --exit-code
 
   compile-buildtags:
@@ -85,11 +88,14 @@ jobs:
       - name: install deps
         run: |
           sudo apt update
-          sudo apt -y install libseccomp-dev
+          sudo apt -y install libseccomp-dev lld
+      - name: install libpathrs ${{ env.LIBPATHRS_VERSION }}
+        run: |
+          sudo -E PATH="$PATH" ./script/build-libpathrs.sh "$LIBPATHRS_VERSION" /usr
       - name: compile with no build tags
         run: make BUILDTAGS=""
       - name: compile with runc_nocriu build tag
-        run: make EXTRA_BUILDTAGS="runc_nocriu"
+        run: make RUNC_BUILDTAGS="runc_nocriu"
 
   codespell:
     runs-on: ubuntu-24.04
@@ -234,7 +240,7 @@ jobs:
     - name: make releaseall
       run: make releaseall
     - name: upload artifacts
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: release-${{ github.run_id }}
         path: release/*
@@ -263,6 +269,53 @@ jobs:
         ./bootstrap-get-images.sh > get-images.sh
         git diff --exit-code
 
+  conmon:
+    runs-on: ubuntu-24.04
+    steps:
+    - name: checkout
+      uses: actions/checkout@v6
+
+    - name: install runc and conmon deps
+      # XXX maybe switch to conmon/hack/github-actions-setup if the burden
+      # to maintain the list of needed packages here is too much to handle.
+      run: |
+        sudo apt update
+        sudo apt -y install libseccomp-dev libglib2.0-dev libsystemd-dev socat
+    - name: install libpathrs ${{ env.LIBPATHRS_VERSION }}
+      run: |
+        sudo -E PATH="$PATH" ./script/build-libpathrs.sh "$LIBPATHRS_VERSION" /usr
+
+    - name: install Go
+      uses: actions/setup-go@v6
+      with:
+        go-version: "${{ env.GO_VERSION }}"
+
+    - name: build runc
+      run: make
+
+    - name: setup bats
+      uses: bats-core/bats-action@4.0.0
+      with:
+        bats-version: 1.13.0 # As required by conmon in hack/github-actions-setup.
+        support-install: false
+        assert-install: false
+        detik-install: false
+        file-install: false
+
+    - name: checkout conmon
+      uses: actions/checkout@v6
+      with:
+        repository: containers/conmon
+        path: conmon
+        ref: v2.2.1
+
+    - name: build conmon
+      run: cd conmon && make
+
+    - name: run conmon tests
+      run: |
+        RUNTIME_BINARY=$(pwd)/runc ./conmon/test/run-tests.sh -j $(nproc)
+
   all-done:
     needs:
       - check-go
@@ -270,6 +323,7 @@ jobs:
       - codespell
       - commit
       - compile-buildtags
+      - conmon
       - deps
       - get-images
       - keyring

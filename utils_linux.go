@@ -12,7 +12,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	selinux "github.com/opencontainers/selinux/go-selinux"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/internal/pathrs"
@@ -20,6 +20,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
+	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/system/kernelversion"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
@@ -28,12 +29,12 @@ var errEmptyID = errors.New("container id cannot be empty")
 
 // getContainer returns the specified container instance by loading it from
 // a state directory (root).
-func getContainer(context *cli.Context) (*libcontainer.Container, error) {
-	id := context.Args().First()
+func getContainer(cmd *cli.Command) (*libcontainer.Container, error) {
+	id := cmd.Args().First()
 	if id == "" {
 		return nil, errEmptyID
 	}
-	root := context.GlobalString("root")
+	root := cmd.String("root")
 	return libcontainer.Load(root, id)
 }
 
@@ -180,16 +181,16 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	return os.Rename(tmpName, path)
 }
 
-func createContainer(context *cli.Context, id string, spec *specs.Spec) (*libcontainer.Container, error) {
-	rootlessCg, err := shouldUseRootlessCgroupManager(context)
+func createContainer(cmd *cli.Command, id string, spec *specs.Spec) (*libcontainer.Container, error) {
+	rootlessCg, err := shouldUseRootlessCgroupManager(cmd)
 	if err != nil {
 		return nil, err
 	}
 	config, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
 		CgroupName:       id,
-		UseSystemdCgroup: context.GlobalBool("systemd-cgroup"),
-		NoPivotRoot:      context.Bool("no-pivot"),
-		NoNewKeyring:     context.Bool("no-new-keyring"),
+		UseSystemdCgroup: cmd.Bool("systemd-cgroup"),
+		NoPivotRoot:      cmd.Bool("no-pivot"),
+		NoNewKeyring:     cmd.Bool("no-new-keyring"),
 		Spec:             spec,
 		RootlessEUID:     os.Geteuid() != 0,
 		RootlessCgroups:  rootlessCg,
@@ -198,7 +199,7 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (*libcon
 		return nil, err
 	}
 
-	root := context.GlobalString("root")
+	root := cmd.String("root")
 	return libcontainer.Create(root, id, config)
 }
 
@@ -219,14 +220,16 @@ type runner struct {
 	subCgroupPaths  map[string]string
 }
 
-func (r *runner) run(config *specs.Process) (int, error) {
-	var err error
+func (r *runner) run(config *specs.Process) (_ int, retErr error) {
+	detach := r.detach || (r.action == CT_ACT_CREATE)
 	defer func() {
-		if err != nil {
+		// For a non-detached container, or we get an error, we
+		// should destroy the container.
+		if !detach || retErr != nil {
 			r.destroy()
 		}
 	}()
-	if err = r.checkTerminal(config); err != nil {
+	if err := r.checkTerminal(config); err != nil {
 		return -1, err
 	}
 	process, err := newProcess(config)
@@ -255,11 +258,19 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		}
 		process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), "PreserveFD:"+strconv.Itoa(i)))
 	}
-	detach := r.detach || (r.action == CT_ACT_CREATE)
 	// Setting up IO is a two stage process. We need to modify process to deal
 	// with detaching containers, and then we get a tty after the container has
 	// started.
-	handlerCh := newSignalHandler(r.enableSubreaper, r.notifySocket)
+	if r.enableSubreaper {
+		// set us as the subreaper before registering the signal handler for the container
+		if err := system.SetSubreaper(1); err != nil {
+			logrus.Warn(err)
+		}
+	}
+	var handlerCh chan *signalHandler
+	if !detach {
+		handlerCh = newSignalHandler()
+	}
 	tty, err := setupIO(process, r.container, config.Terminal, detach, r.consoleSocket)
 	if err != nil {
 		return -1, err
@@ -287,29 +298,32 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	if err != nil {
 		return -1, err
 	}
+	defer func() {
+		// We should terminate the process once we got an error.
+		if retErr != nil {
+			r.terminate(process)
+		}
+	}()
 	if err = tty.waitConsole(); err != nil {
-		r.terminate(process)
 		return -1, err
 	}
 	tty.ClosePostStart()
 	if r.pidFile != "" {
 		if err = createPidFile(r.pidFile, process); err != nil {
-			r.terminate(process)
 			return -1, err
 		}
 	}
-	handler := <-handlerCh
-	status, err := handler.forward(process, tty, detach)
-	if err != nil {
-		r.terminate(process)
+	if r.notifySocket != nil {
+		if err = r.notifySocket.forward(process, detach); err != nil {
+			return -1, err
+		}
 	}
 	if detach {
 		return 0, nil
 	}
-	if err == nil {
-		r.destroy()
-	}
-	return status, err
+	// For non-detached container, we should forward signals to the container.
+	handler := <-handlerCh
+	return handler.forward(process, tty)
 }
 
 func (r *runner) destroy() {
@@ -364,26 +378,26 @@ const (
 	CT_ACT_RESTORE
 )
 
-func startContainer(context *cli.Context, action CtAct, criuOpts *libcontainer.CriuOpts) (int, error) {
-	if err := revisePidFile(context); err != nil {
+func startContainer(cmd *cli.Command, action CtAct, criuOpts *libcontainer.CriuOpts) (int, error) {
+	if err := revisePidFile(cmd); err != nil {
 		return -1, err
 	}
-	spec, err := setupSpec(context)
+	spec, err := setupSpec(cmd)
 	if err != nil {
 		return -1, err
 	}
 
-	id := context.Args().First()
+	id := cmd.Args().First()
 	if id == "" {
 		return -1, errEmptyID
 	}
 
-	notifySocket := newNotifySocket(context, os.Getenv("NOTIFY_SOCKET"), id)
+	notifySocket := newNotifySocket(cmd, os.Getenv("NOTIFY_SOCKET"), id)
 	if notifySocket != nil {
 		notifySocket.setupSpec(spec)
 	}
 
-	container, err := createContainer(context, id, spec)
+	container, err := createContainer(cmd, id, spec)
 	if err != nil {
 		return -1, err
 	}
@@ -400,16 +414,16 @@ func startContainer(context *cli.Context, action CtAct, criuOpts *libcontainer.C
 	}
 
 	r := &runner{
-		enableSubreaper: !context.Bool("no-subreaper"),
-		shouldDestroy:   !context.Bool("keep"),
+		enableSubreaper: !cmd.Bool("no-subreaper"),
+		shouldDestroy:   !cmd.Bool("keep"),
 		container:       container,
 		listenFDs:       activation.Files(), // On-demand socket activation.
 		notifySocket:    notifySocket,
-		consoleSocket:   context.String("console-socket"),
-		pidfdSocket:     context.String("pidfd-socket"),
-		detach:          context.Bool("detach"),
-		pidFile:         context.String("pid-file"),
-		preserveFDs:     context.Int("preserve-fds"),
+		consoleSocket:   cmd.String("console-socket"),
+		pidfdSocket:     cmd.String("pidfd-socket"),
+		detach:          cmd.Bool("detach"),
+		pidFile:         cmd.String("pid-file"),
+		preserveFDs:     cmd.Int("preserve-fds"),
 		action:          action,
 		criuOpts:        criuOpts,
 		init:            true,

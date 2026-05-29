@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,10 +10,10 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
-var specCommand = cli.Command{
+var specCommand = &cli.Command{
 	Name:      "spec",
 	Usage:     "create a new specification file",
 	ArgsUsage: "",
@@ -64,24 +65,27 @@ generate a proper rootless spec file.
 Note that --rootless is not needed when you execute runc as the root in a user namespace
 created by an unprivileged user.
 `,
+	// Disable comma as separator for slice flags.
+	DisableSliceFlagSeparator: true,
 	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "bundle, b",
-			Value: "",
-			Usage: "path to the root of the bundle directory",
+		&cli.StringFlag{
+			Name:    "bundle",
+			Aliases: []string{"b"},
+			Value:   "",
+			Usage:   "path to the root of the bundle directory",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "rootless",
 			Usage: "generate a configuration for a rootless container",
 		},
 	},
-	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 0, exactArgs); err != nil {
+	Action: func(_ context.Context, cmd *cli.Command) error {
+		if err := checkArgs(cmd, 0, exactArgs); err != nil {
 			return err
 		}
 		spec := specconv.Example()
 
-		rootless := context.Bool("rootless")
+		rootless := cmd.Bool("rootless")
 		if rootless {
 			specconv.ToRootless(spec)
 		}
@@ -96,7 +100,7 @@ created by an unprivileged user.
 			}
 			return nil
 		}
-		bundle := context.String("bundle")
+		bundle := cmd.String("bundle")
 		if bundle != "" {
 			if err := os.Chdir(bundle); err != nil {
 				return err

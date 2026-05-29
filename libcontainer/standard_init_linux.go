@@ -142,9 +142,10 @@ func (l *linuxStandardInit) Init() error {
 		}
 	}
 
-	if err := maskPaths(l.config.Config.MaskPaths, l.config.Config.MountLabel); err != nil {
+	if err := maskPaths("/", l.config.Config.MaskPaths, l.config.Config.MountLabel); err != nil {
 		return err
 	}
+
 	pdeath, err := system.GetParentDeathSignal()
 	if err != nil {
 		return fmt.Errorf("can't get pdeath signal: %w", err)

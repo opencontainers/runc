@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -11,12 +10,13 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/containerd/console"
+	"github.com/opencontainers/runc/internal/cmsg"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
-
-	"golang.org/x/sys/unix"
 )
 
 func TestExecIn(t *testing.T) {
@@ -48,7 +48,6 @@ func TestExecIn(t *testing.T) {
 		Cwd:    "/",
 		Args:   []string{"ps"},
 		Env:    standardEnvironment,
-		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
 	}
@@ -106,7 +105,6 @@ func testExecInRlimit(t *testing.T, userns bool) {
 		Cwd:    "/",
 		Args:   []string{"/bin/sh", "-c", "ulimit -n"},
 		Env:    standardEnvironment,
-		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
 		Rlimits: []configs.Rlimit{
@@ -152,13 +150,14 @@ func TestExecInAdditionalGroups(t *testing.T) {
 	defer stdinW.Close()
 	ok(t, err)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pconfig := libcontainer.Process{
 		Cwd:              "/",
 		Args:             []string{"sh", "-c", "id", "-Gn"},
 		Env:              standardEnvironment,
 		Stdin:            nil,
 		Stdout:           &stdout,
+		Stderr:           new(strings.Builder),
 		AdditionalGroups: []int{4444, 87654},
 	}
 	err = container.Run(&pconfig)
@@ -264,7 +263,7 @@ func TestExecInTTY(t *testing.T) {
 	// Repeat to increase chances to catch a race; see
 	// https://github.com/opencontainers/runc/issues/2425.
 	for range 300 {
-		var stdout bytes.Buffer
+		var stdout strings.Builder
 
 		parent, child, err := utils.NewSockPair("console")
 		ok(t, err)
@@ -272,7 +271,7 @@ func TestExecInTTY(t *testing.T) {
 
 		done := make(chan (error))
 		go func() {
-			f, err := utils.RecvFile(parent)
+			f, err := cmsg.RecvFile(parent)
 			if err != nil {
 				done <- fmt.Errorf("RecvFile: %w", err)
 				return
@@ -355,7 +354,6 @@ func TestExecInEnvironment(t *testing.T) {
 		Cwd:    "/",
 		Args:   []string{"/bin/env"},
 		Env:    execEnv,
-		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
 	}
@@ -411,7 +409,7 @@ func TestExecinPassExtraFiles(t *testing.T) {
 	defer stdinW.Close()
 	ok(t, err)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	pipeout1, pipein1, err := os.Pipe()
 	ok(t, err)
 	pipeout2, pipein2, err := os.Pipe()
@@ -423,6 +421,7 @@ func TestExecinPassExtraFiles(t *testing.T) {
 		ExtraFiles: []*os.File{pipein1, pipein2},
 		Stdin:      nil,
 		Stdout:     &stdout,
+		Stderr:     new(strings.Builder),
 	}
 	err = container.Run(inprocess)
 	ok(t, err)
@@ -481,7 +480,6 @@ func TestExecInOomScoreAdj(t *testing.T) {
 		Cwd:    "/",
 		Args:   []string{"/bin/sh", "-c", "cat /proc/self/oom_score_adj"},
 		Env:    standardEnvironment,
-		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
 	}
@@ -532,12 +530,12 @@ func TestExecInUserns(t *testing.T) {
 	buffers := newStdBuffers()
 	process2 := &libcontainer.Process{
 		Cwd:  "/",
-		Args: []string{"readlink", "/proc/self/ns/user"},
+		Args: []string{"readlink", "-v", "/proc/self/ns/user"},
 		Env: []string{
 			"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
 		},
 		Stdout: buffers.Stdout,
-		Stderr: os.Stderr,
+		Stderr: new(strings.Builder),
 	}
 	err = container.Run(process2)
 	ok(t, err)

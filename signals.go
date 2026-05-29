@@ -5,7 +5,6 @@ import (
 	"os/signal"
 
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
 
 	"github.com/sirupsen/logrus"
@@ -16,29 +15,23 @@ const signalBufferSize = 2048
 
 // newSignalHandler returns a signal handler for processing SIGCHLD and SIGWINCH signals
 // while still forwarding all other signals to the process.
-// If notifySocket is present, use it to read systemd notifications from the container and
-// forward them to notifySocketHost.
-func newSignalHandler(enableSubreaper bool, notifySocket *notifySocket) chan *signalHandler {
-	if enableSubreaper {
-		// set us as the subreaper before registering the signal handler for the container
-		if err := system.SetSubreaper(1); err != nil {
-			logrus.Warn(err)
-		}
-	}
+func newSignalHandler() chan *signalHandler {
 	handler := make(chan *signalHandler)
+
+	// Ensure that we have a large buffer size so that we do not miss any
+	// signals in case we are not processing them fast enough.
+	s := make(chan os.Signal, signalBufferSize)
+
 	// signal.Notify is actually quite expensive, as it has to configure the
 	// signal mask and add signal handlers for all signals (all ~65 of them).
 	// So, defer this to a background thread while doing the rest of the io/tty
-	// setup.
+	// setup, except for SIGCHLD which is very important (see #5208).
+	signal.Notify(s, unix.SIGCHLD)
 	go func() {
-		// ensure that we have a large buffer size so that we do not miss any
-		// signals in case we are not processing them fast enough.
-		s := make(chan os.Signal, signalBufferSize)
 		// handle all signals for the process.
 		signal.Notify(s)
 		handler <- &signalHandler{
-			signals:      s,
-			notifySocket: notifySocket,
+			signals: s,
 		}
 	}()
 	return handler
@@ -52,31 +45,17 @@ type exit struct {
 }
 
 type signalHandler struct {
-	signals      chan os.Signal
-	notifySocket *notifySocket
+	signals chan os.Signal
 }
 
 // forward handles the main signal event loop forwarding, resizing, or reaping depending
 // on the signal received.
-func (h *signalHandler) forward(process *libcontainer.Process, tty *tty, detach bool) (int, error) {
+func (h *signalHandler) forward(process *libcontainer.Process, tty *tty) (int, error) {
 	// make sure we know the pid of our main process so that we can return
 	// after it dies.
-	if detach && h.notifySocket == nil {
-		return 0, nil
-	}
-
 	pid1, err := process.Pid()
 	if err != nil {
 		return -1, err
-	}
-
-	if h.notifySocket != nil {
-		if detach {
-			_ = h.notifySocket.run(pid1)
-			return 0, nil
-		}
-		_ = h.notifySocket.run(os.Getpid())
-		go func() { _ = h.notifySocket.run(0) }()
 	}
 
 	// Perform the initial tty resize. Always ignore errors resizing because

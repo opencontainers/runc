@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"bytes"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -54,7 +53,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
 
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 
 	pconfig := libcontainer.Process{
 		Cwd:    "/",
@@ -131,7 +130,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 	restoreStdinR, restoreStdinW, err := os.Pipe()
 	ok(t, err)
 
-	var restoreStdout bytes.Buffer
+	var restoreStdout strings.Builder
 	restoreProcessConfig := &libcontainer.Process{
 		Cwd:    "/",
 		Stdin:  restoreStdinR,

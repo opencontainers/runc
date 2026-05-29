@@ -11,9 +11,17 @@ GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 GIT_BRANCH_CLEAN := $(shell echo $(GIT_BRANCH) | sed -e "s/[^[:alnum:]]/-/g")
 RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
 PROJECT := github.com/opencontainers/runc
-EXTRA_BUILDTAGS :=
-BUILDTAGS := seccomp urfave_cli_no_docs
-BUILDTAGS += $(EXTRA_BUILDTAGS)
+BUILDTAGS := seccomp libpathrs
+# Tags prefixed with - in RUNC_BUILDTAGS are removed from BUILDTAGS; others are added.
+RUNC_BUILDTAGS ?=
+BUILDTAGS_REMOVE := $(patsubst -%,%,$(filter -%,$(RUNC_BUILDTAGS)))
+BUILDTAGS_ADD    := $(filter-out -%,$(RUNC_BUILDTAGS))
+BUILDTAGS := $(filter-out $(BUILDTAGS_REMOVE),$(BUILDTAGS)) $(BUILDTAGS_ADD)
+# TODO: remove EXTRA_BUILDTAGS for runc 1.6.
+ifdef EXTRA_BUILDTAGS
+  $(warning EXTRA_BUILDTAGS is deprecated; use RUNC_BUILDTAGS instead)
+  BUILDTAGS += $(EXTRA_BUILDTAGS)
+endif
 
 COMMIT := $(shell git describe --dirty --long --always)
 EXTRA_VERSION :=
@@ -56,7 +64,7 @@ GO_BUILD_STATIC := $(GO) build $(TRIMPATH) $(GO_BUILDMODE_STATIC) \
 	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
 	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS_STATIC) $(EXTRA_LDFLAGS)"
 
-GPG_KEYID ?= asarai@suse.de
+GPG_KEYID ?= cyphar@cyphar.com
 
 # Some targets need cgo, which is disabled by default when cross compiling.
 # Enable cgo explicitly for those.
@@ -77,11 +85,7 @@ runc-bin:
 	$(GO_BUILD) -o runc .
 
 .PHONY: all
-all: runc memfd-bind
-
-.PHONY: memfd-bind
-memfd-bind:
-	$(GO_BUILD) -o contrib/cmd/$@/$@ ./contrib/cmd/$@
+all: runc
 
 TESTBINDIR := tests/cmd/_bin
 $(TESTBINDIR):
@@ -96,7 +100,6 @@ $(TESTBINS): $(TESTBINDIR)
 .PHONY: clean
 clean:
 	rm -f runc runc-*
-	rm -f contrib/cmd/memfd-bind/memfd-bind
 	rm -fr $(TESTBINDIR)
 	sudo rm -rf release
 	rm -rf man/man8

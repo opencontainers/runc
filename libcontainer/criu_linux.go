@@ -25,6 +25,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/opencontainers/cgroups"
+	"github.com/opencontainers/runc/internal/cmsg"
 	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
@@ -553,10 +554,16 @@ func isOnTmpfs(path string, mounts []*configs.Mount) bool {
 // This function also creates missing mountpoints as long as they
 // are not on top of a tmpfs, as CRIU will restore tmpfs content anyway.
 func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
+	rootFd, err := os.OpenFile(c.config.Rootfs, unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_PATH, 0)
+	if err != nil {
+		return fmt.Errorf("open rootfs handle: %w", err)
+	}
+	defer rootFd.Close()
+
 	umounts := []string{}
 	defer func() {
 		for _, u := range umounts {
-			mntFile, err := pathrs.OpenInRoot(c.config.Rootfs, u, unix.O_PATH)
+			mntFile, err := pathrs.OpenInRoot(rootFd, u, unix.O_PATH)
 			if err != nil {
 				logrus.Warnf("Error during cleanup unmounting %s: open handle: %v", u, err)
 				continue
@@ -590,7 +597,7 @@ func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
 			continue
 		}
 		me := mountEntry{Mount: m}
-		if err := me.createOpenMountpoint(c.config.Rootfs); err != nil {
+		if err := me.createOpenMountpoint(rootFd); err != nil {
 			return fmt.Errorf("create criu restore mountpoint for %s mount: %w", me.Destination, err)
 		}
 		if me.dstFile != nil {
@@ -1187,7 +1194,7 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 		defer master.Close()
 
 		// While we can access console.master, using the API is a good idea.
-		if err := utils.SendFile(process.ConsoleSocket, master); err != nil {
+		if err := cmsg.SendFile(process.ConsoleSocket, master); err != nil {
 			return err
 		}
 	case "status-ready":

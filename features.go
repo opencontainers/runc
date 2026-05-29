@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -11,10 +12,10 @@ import (
 	runcfeatures "github.com/opencontainers/runc/types/features"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/opencontainers/runtime-spec/specs-go/features"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
-var featuresCommand = cli.Command{
+var featuresCommand = &cli.Command{
 	Name:      "features",
 	Usage:     "show the enabled features",
 	ArgsUsage: "",
@@ -22,8 +23,10 @@ var featuresCommand = cli.Command{
    The result is parsable as a JSON.
    See https://github.com/opencontainers/runtime-spec/blob/main/features.md for the type definition.
 `,
-	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 0, exactArgs); err != nil {
+	// Disable comma as separator for slice flags.
+	DisableSliceFlagSeparator: true,
+	Action: func(_ context.Context, cmd *cli.Command) error {
+		if err := checkArgs(cmd, 0, exactArgs); err != nil {
 			return err
 		}
 
@@ -93,7 +96,7 @@ var featuresCommand = cli.Command{
 			feat.Annotations[runcfeatures.AnnotationLibseccompVersion] = fmt.Sprintf("%d.%d.%d", major, minor, patch)
 		}
 
-		enc := json.NewEncoder(context.App.Writer)
+		enc := json.NewEncoder(cmd.Writer)
 		enc.SetIndent("", "    ")
 		return enc.Encode(feat)
 	},

@@ -4,12 +4,10 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/intelrdt"
 )
 
 func TestValidateIntelRdt(t *testing.T) {
-	// Call init to trigger the sync.Once and enable overriding the rdt status
-	intelRdt.init()
-
 	testCases := []struct {
 		name       string
 		rdtEnabled bool
@@ -90,11 +88,17 @@ func TestValidateIntelRdt(t *testing.T) {
 			},
 		},
 	}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			intelRdt.rdtEnabled = tc.rdtEnabled
-			intelRdt.catEnabled = tc.catEnabled
-			intelRdt.mbaEnabled = tc.mbaEnabled
+			t.Cleanup(func() {
+				intelRdtIsEnabled = intelrdt.IsEnabled
+				intelRdtIsCATEnabled = intelrdt.IsCATEnabled
+				intelRdtIsMBAEnabled = intelrdt.IsMBAEnabled
+			})
+			intelRdtIsEnabled = func() bool { return tc.rdtEnabled }
+			intelRdtIsCATEnabled = func() bool { return tc.catEnabled }
+			intelRdtIsMBAEnabled = func() bool { return tc.mbaEnabled }
 
 			config := &configs.Config{
 				Rootfs:   "/var",

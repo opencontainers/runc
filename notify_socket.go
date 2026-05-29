@@ -15,7 +15,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	"golang.org/x/sys/unix"
 )
 
@@ -25,12 +25,12 @@ type notifySocket struct {
 	socketPath string
 }
 
-func newNotifySocket(context *cli.Context, notifySocketHost, id string) *notifySocket {
+func newNotifySocket(cmd *cli.Command, notifySocketHost, id string) *notifySocket {
 	if notifySocketHost == "" {
 		return nil
 	}
 
-	root := filepath.Join(context.GlobalString("root"), id)
+	root := filepath.Join(cmd.String("root"), id)
 	socketPath := filepath.Join(root, "notify", "notify.sock")
 
 	notifySocket := &notifySocket{
@@ -84,8 +84,8 @@ func (s *notifySocket) setupSocketDirectory() error {
 	return os.Mkdir(path.Dir(s.socketPath), 0o755)
 }
 
-func notifySocketStart(context *cli.Context, notifySocketHost, id string) (*notifySocket, error) {
-	notifySocket := newNotifySocket(context, notifySocketHost, id)
+func notifySocketStart(cmd *cli.Command, notifySocketHost, id string) (*notifySocket, error) {
+	notifySocket := newNotifySocket(cmd, notifySocketHost, id)
 	if notifySocket == nil {
 		return nil, nil
 	}
@@ -149,6 +149,22 @@ func (s *notifySocket) run(pid1 int) error {
 			return notifyHost(client, b, pid1)
 		}
 	}
+}
+
+// forward reads systemd notifications from the container and forwards them
+// to notifySocketHost.
+func (s *notifySocket) forward(process *libcontainer.Process, detach bool) error {
+	if detach {
+		pid, err := process.Pid()
+		if err != nil {
+			return err
+		}
+		_ = s.run(pid)
+	} else {
+		_ = s.run(os.Getpid())
+		go func() { _ = s.run(0) }()
+	}
+	return nil
 }
 
 // notifyHost tells the host (usually systemd) that the container reported READY.

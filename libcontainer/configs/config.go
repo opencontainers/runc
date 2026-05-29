@@ -109,7 +109,7 @@ type Config struct {
 	Umask *uint32 `json:"umask,omitempty"`
 
 	// Readonlyfs will remount the container's rootfs as readonly where only externally mounted
-	// bind mounts are writtable.
+	// bind mounts are writable.
 	Readonlyfs bool `json:"readonlyfs,omitempty"`
 
 	// Specifies the mount propagation flags to be applied to /.
@@ -464,17 +464,6 @@ type Capabilities struct {
 	Permitted []string `json:"Permitted,omitempty"`
 	// Ambient is the ambient set of capabilities that are kept.
 	Ambient []string `json:"Ambient,omitempty"`
-}
-
-// Deprecated: use [Hooks.Run] instead.
-func (hooks HookList) RunHooks(state *specs.State) error {
-	for i, h := range hooks {
-		if err := h.Run(state); err != nil {
-			return fmt.Errorf("error running hook #%d: %w", i, err)
-		}
-	}
-
-	return nil
 }
 
 func (hooks *Hooks) UnmarshalJSON(b []byte) error {

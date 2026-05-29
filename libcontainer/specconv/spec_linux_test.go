@@ -686,8 +686,9 @@ func TestInitSystemdProps(t *testing.T) {
 		exp  expT
 	}{
 		{
-			in:  inT{"org.systemd.property.TimeoutStopUSec", "uint64 123456789"},
-			exp: expT{false, "TimeoutStopUSec", uint64(123456789)},
+			desc: "convert USec to Sec (simple case)",
+			in:   inT{"org.systemd.property.TimeoutStopUSec", "uint64 123456789"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(123456789)},
 		},
 		{
 			desc: "convert USec to Sec (default numeric type)",
@@ -750,8 +751,14 @@ func TestInitSystemdProps(t *testing.T) {
 			exp:  expT{false, "FOOSec", 123},
 		},
 		{
-			in:  inT{"org.systemd.property.CollectMode", "'inactive-or-failed'"},
-			exp: expT{false, "CollectMode", "inactive-or-failed"},
+			desc: "convert USec to Sec (short name)",
+			in:   inT{"org.systemd.property.Sec", "123"},
+			exp:  expT{false, "Sec", 123},
+		},
+		{
+			desc: "CollectMode",
+			in:   inT{"org.systemd.property.CollectMode", "'inactive-or-failed'"},
+			exp:  expT{false, "CollectMode", "inactive-or-failed"},
 		},
 		{
 			desc: "unrelated property",
@@ -778,33 +785,35 @@ func TestInitSystemdProps(t *testing.T) {
 	spec := &specs.Spec{}
 
 	for _, tc := range testCases {
-		spec.Annotations = map[string]string{tc.in.name: tc.in.value}
+		t.Run(tc.desc, func(t *testing.T) {
+			spec.Annotations = map[string]string{tc.in.name: tc.in.value}
 
-		outMap, err := initSystemdProps(spec)
-		// t.Logf("input %+v, expected %+v, got err:%v out:%+v", tc.in, tc.exp, err, outMap)
+			outMap, err := initSystemdProps(spec)
+			// t.Logf("input %+v, expected %+v, got err:%v out:%+v", tc.in, tc.exp, err, outMap)
 
-		if tc.exp.isErr != (err != nil) {
-			t.Errorf("input %+v, expecting error: %v, got %v", tc.in, tc.exp.isErr, err)
-		}
-		expLen := 1 // expect a single item
-		if tc.exp.name == "" {
-			expLen = 0 // expect nothing
-		}
-		if len(outMap) != expLen {
-			t.Fatalf("input %+v, expected %d, got %d entries: %v", tc.in, expLen, len(outMap), outMap)
-		}
-		if expLen == 0 {
-			continue
-		}
+			if tc.exp.isErr != (err != nil) {
+				t.Errorf("input %+v, expecting error: %v, got %v", tc.in, tc.exp.isErr, err)
+			}
+			expLen := 1 // expect a single item
+			if tc.exp.name == "" {
+				expLen = 0 // expect nothing
+			}
+			if len(outMap) != expLen {
+				t.Fatalf("input %+v, expected %d, got %d entries: %v", tc.in, expLen, len(outMap), outMap)
+			}
+			if expLen == 0 {
+				return // No more checks.
+			}
 
-		out := outMap[0]
-		if tc.exp.name != out.Name {
-			t.Errorf("input %+v, expecting name: %q, got %q", tc.in, tc.exp.name, out.Name)
-		}
-		expValue := dbus.MakeVariant(tc.exp.value).String()
-		if expValue != out.Value.String() {
-			t.Errorf("input %+v, expecting value: %s, got %s", tc.in, expValue, out.Value)
-		}
+			out := outMap[0]
+			if tc.exp.name != out.Name {
+				t.Errorf("input %+v, expecting name: %q, got %q", tc.in, tc.exp.name, out.Name)
+			}
+			expValue := dbus.MakeVariant(tc.exp.value).String()
+			if expValue != out.Value.String() {
+				t.Errorf("input %+v, expecting value: %s, got %s", tc.in, expValue, out.Value)
+			}
+		})
 	}
 }
 

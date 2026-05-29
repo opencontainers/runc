@@ -41,10 +41,11 @@ func (m Mapping) toSys() (uids, gids []syscall.SysProcIDMap) {
 // the uid and gid mappings (because the order doesn't matter to the kernel).
 // The set of userns handles is indexed using this ID.
 func (m Mapping) id() string {
-	var uids, gids []string
+	uids := make([]string, 0, len(m.UIDMappings))
 	for _, idmap := range m.UIDMappings {
 		uids = append(uids, fmt.Sprintf("%d:%d:%d", idmap.ContainerID, idmap.HostID, idmap.Size))
 	}
+	gids := make([]string, 0, len(m.GIDMappings))
 	for _, idmap := range m.GIDMappings {
 		gids = append(gids, fmt.Sprintf("%d:%d:%d", idmap.ContainerID, idmap.HostID, idmap.Size))
 	}

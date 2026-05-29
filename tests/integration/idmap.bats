@@ -104,7 +104,27 @@ function setup_idmap_single_mount() {
 
 function setup_idmap_basic_mount() {
 	mountname="${1:-1}"
-	setup_idmap_single_mount 0:100000:65536 0:100000:65536 "$mountname"
+	destname="${2:-}"
+	setup_idmap_single_mount 0:100000:65536 0:100000:65536 "$mountname" "$destname"
+}
+
+@test "Check mount source fds are cleaned up with idmapped mounts [userns]" {
+	setup_idmap_userns
+	for i in {1..10}; do
+		setup_idmap_basic_mount 1 "1$i"
+		setup_idmap_basic_mount 2 "2$i"
+	done
+
+	update_config '.process.args = ["sh", "-c", "stat -c =%u=%g= /tmp/mount-11/foo.txt"]'
+	update_config '.process.rlimits = [{
+		"type": "RLIMIT_NOFILE",
+		"soft": 20,
+		"hard": 20
+	}]'
+
+	runc run test_debian
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"=0=0="* ]]
 }
 
 @test "simple idmap mount [userns]" {

@@ -2,7 +2,6 @@ package sys
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"strings"
 
@@ -42,10 +41,7 @@ func WriteSysctls(sysctls map[string]string) error {
 		}
 		defer sysctlFile.Close()
 
-		n, err := io.WriteString(sysctlFile, value)
-		if n != len(value) && err == nil {
-			err = fmt.Errorf("short write to file (%d bytes != %d bytes)", n, len(value))
-		}
+		_, err = sysctlFile.WriteString(value)
 		if err != nil {
 			return fmt.Errorf("failed to write sysctl %s = %q: %w", key, value, err)
 		}

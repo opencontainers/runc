@@ -19,7 +19,7 @@ column, the result is undefined.
 # OPTIONS
 **--format**|**-f** **table**|**json**
 : Output format. Default is **table**. The **json** format shows a mere array
-of PIDs belonging to a container; if used, all **ps** options are gnored.
+of PIDs belonging to a container; if used, all **ps** options are ignored.
 
 # SEE ALSO
 **runc-list**(8),

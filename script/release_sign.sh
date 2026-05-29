@@ -112,6 +112,9 @@ tmp_seccomp_gpgflags=("--homedir=$tmp_gpgdir" "--no-default-keyring" "--keyring=
 gpg "${tmp_seccomp_gpgflags[@]}" --recv-keys 0x47A68FCE37C7D7024FD65E11356CE62C2B524099
 gpg "${tmp_seccomp_gpgflags[@]}" --recv-keys 0x7100AADFAE6E6E940D2E0AD655E45A5AE8CA7C8A
 
+tmp_libpathrs_gpgflags=("--homedir=$tmp_gpgdir" "--no-default-keyring" "--keyring=libpathrs.keyring" "--keyserver=keys.openpgp.org")
+gpg "${tmp_libpathrs_gpgflags[@]}" --recv-keys 0xC9C370B246B09F6DBCFC744C34401015D1D2D386
+
 gpg "${gpgflags[@]}" --clear-sign <<<"[This is test text used for $project release scripts. $(date --rfc-email)]" |
 	gpg "${tmp_runc_gpgflags[@]}" --verify || bail "Signing key ${keyid:-DEFAULT} is not in trusted $project.keyring list!"
 
@@ -155,5 +158,8 @@ gpg "${tmp_runc_gpgflags[@]}" --verify "$project.$hashcmd"
 
 # Verify seccomp tarball.
 gpg "${tmp_seccomp_gpgflags[@]}" --verify libseccomp*.asc
+
+# Verify libpathrs tarball.
+gpg "${tmp_libpathrs_gpgflags[@]}" --verify libpathrs*.asc
 
 popd

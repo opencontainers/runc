@@ -1,6 +1,7 @@
 package libcontainer
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -18,12 +19,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
+	"github.com/opencontainers/runtime-spec/specs-go"
+
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/cgroups/fs2"
+	"github.com/opencontainers/runc/internal/cmsg"
+	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
@@ -177,33 +181,33 @@ type setnsProcess struct {
 
 // tryResetCPUAffinity tries to reset the CPU affinity of the process
 // identified by pid to include all possible CPUs (notwithstanding cgroup
-// cpuset restrictions and isolated CPUs).
+// cpuset restrictions, isolated CPUs and CPU online status).
 func tryResetCPUAffinity(pid int) {
-	// When resetting the CPU affinity, we want to match the configured cgroup
-	// cpuset (or the default set of all CPUs, if no cpuset is configured)
-	// rather than some more restrictive affinity we were spawned in (such as
-	// one that may have been inherited from systemd). The cpuset cgroup used
-	// to reconfigure the cpumask automatically for joining processes, but
-	// kcommit da019032819a ("sched: Enforce user requested affinity") changed
-	// this behaviour in Linux 6.2.
+	// When resetting the CPU affinity, we want to allow all
+	// possible CPUs in the system, including those not in
+	// cpuset.cpus, online or even present (hot-plugged) at call
+	// time. Using a cpumask any tighter this that may disallow
+	// using those CPUs if they are added to cpuset.cpus later.
 	//
-	// Parsing cpuset.cpus.effective is quite inefficient (and looking at
-	// things like /proc/stat would be wrong for most nested containers), but
-	// luckily sched_setaffinity(2) will implicitly:
+	// Note that sched_setaffinity(2) will implicitly:
 	//
-	//  * Clamp the cpumask so that it matches the current number of CPUs on
-	//    the system.
+	//  * Clamp the cpumask so that it matches the number of CPUs
+	//    supported by the kernel.
+	//
 	//  * Mask out any CPUs that are not a member of the target task's
-	//    configured cgroup cpuset.
+	//    configured cgroup cpuset. This is for task's effective affinity,
+	//    without forgetting masked-out CPUs should the cgroup cpuset
+	//    change later.
 	//
-	// So we can just pass a very large array of set cpumask bits and the
-	// kernel will silently convert that to the correct value very cheaply.
-	var cpuset unix.CPUSet
-	cpuset.Fill() // set all bits
-	if err := unix.SchedSetaffinity(pid, &cpuset); err != nil {
-		logrus.WithError(
-			os.NewSyscallError("sched_setaffinity", err),
-		).Warnf("resetting the CPU affinity of pid %d failed -- the container process may inherit runc's CPU affinity", pid)
+	// Therefore, preparing the cpumask, we can avoid reading
+	// /sys/devices/system/cpu/possible and kernel_max.
+	// Instead, we use a huge buffer similarly to go 1.25 runtime in
+	// getCPUCount().
+	const maxCPUs = 64 * 1024
+	buf := bytes.Repeat([]byte{0xff}, maxCPUs/8)
+	if err := linux.SchedSetaffinity(pid, buf); err != nil {
+		logrus.WithError(err).Warnf("resetting the CPU affinity of pid %d failed -- the container process may inherit runc's CPU affinity", pid)
+		return
 	}
 }
 
@@ -287,32 +291,66 @@ func (p *setnsProcess) addIntoCgroupV1() error {
 	return nil
 }
 
+// initProcessCgroupPath returns container init's cgroup path,
+// as read from /proc/PID/cgroup. Only works for cgroup v2.
+// Returns empty string if the path can not be obtained.
+//
+// This is used by runc exec in these cases:
+//
+//  1. On cgroup v2 + nesting + domain controllers, adding to initial cgroup
+//     may fail with EBUSY (https://github.com/opencontainers/runc/issues/2356);
+//
+//  2. A container init process with no cgroupns and /sys/fs/cgroup rw access
+//     may move itself to any other cgroup, and the original cgroup will disappear.
+func (p *setnsProcess) initProcessCgroupPath() string {
+	if p.initProcessPid == 0 || !cgroups.IsCgroup2UnifiedMode() {
+		return ""
+	}
+
+	cg, err := cgroups.ParseCgroupFile("/proc/" + strconv.Itoa(p.initProcessPid) + "/cgroup")
+	if err != nil {
+		return ""
+	}
+	cgroup, ok := cg[""]
+	if !ok {
+		return ""
+	}
+
+	return fs2.UnifiedMountpoint + cgroup
+}
+
 func (p *setnsProcess) addIntoCgroupV2() error {
 	sub := p.process.SubCgroupPaths[""]
 	err := p.manager.AddPid(sub, p.pid())
-	if err != nil && !p.rootlessCgroups {
-		// On cgroup v2 + nesting + domain controllers, adding to initial cgroup may fail with EBUSY.
-		// https://github.com/opencontainers/runc/issues/2356#issuecomment-621277643
-		// Try to join the cgroup of InitProcessPid, unless sub-cgroup is explicitly set.
-		if p.initProcessPid != 0 && sub == "" {
-			initProcCgroupFile := fmt.Sprintf("/proc/%d/cgroup", p.initProcessPid)
-			initCg, initCgErr := cgroups.ParseCgroupFile(initProcCgroupFile)
-			if initCgErr == nil {
-				if initCgPath, ok := initCg[""]; ok {
-					initCgDirpath := filepath.Join(fs2.UnifiedMountpoint, initCgPath)
-					logrus.Debugf("adding pid %d to cgroup failed (%v), attempting to join %s",
-						p.pid(), err, initCgDirpath)
-					// NOTE: initCgDirPath is not guaranteed to exist because we didn't pause the container.
-					err = cgroups.WriteCgroupProc(initCgDirpath, p.pid())
-				}
-			}
-		}
-		if err != nil {
-			return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
-		}
+	if err == nil {
+		return nil
 	}
 
+	// Failed to join the configured cgroup. Fall back to container init's cgroup
+	// unless sub-cgroup is explicitly requested.
+	var path string
+	if sub != "" {
+		goto fail
+	}
+	path = p.initProcessCgroupPath()
+	if path == "" {
+		goto fail
+	}
+	logrus.Debugf("adding pid %d to configured cgroup failed (%v), will join container init cgroup %q", p.pid(), err, path)
+	// NOTE: path is not guaranteed to exist because we didn't pause the container.
+	err = cgroups.WriteCgroupProc(path, p.pid())
+	if err != nil {
+		goto fail
+	}
 	return nil
+
+fail:
+	if p.rootlessCgroups {
+		// Ignore cgroup join errors when rootless.
+		return nil
+	}
+
+	return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
 }
 
 func (p *setnsProcess) addIntoCgroup() error {
@@ -331,6 +369,8 @@ func (p *setnsProcess) addIntoCgroup() error {
 // to join cgroup early, in p.cmd.Start. Returns an *os.File which
 // must be closed by the caller after p.Cmd.Start return.
 func (p *setnsProcess) prepareCgroupFD() (*os.File, error) {
+	const openFlags = unix.O_PATH | unix.O_DIRECTORY | unix.O_CLOEXEC
+
 	if !cgroups.IsCgroup2UnifiedMode() {
 		return nil, nil
 	}
@@ -348,14 +388,28 @@ func (p *setnsProcess) prepareCgroupFD() (*os.File, error) {
 		return nil, fmt.Errorf("bad sub cgroup path: %s", sub)
 	}
 
-	fd, err := cgroups.OpenFile(base, sub, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC)
+	fd, err := cgroups.OpenFile(base, sub, openFlags)
+	if err == nil {
+		goto success
+	}
+	// Failed to open the configured cgroup. Fall back to container init's cgroup
+	// unless sub-cgroup is explicitly requested. The fallback logic should be
+	// the same as in addIntoCgroupV2.
+	if sub != "" {
+		goto fail
+	}
+	cgroup = p.initProcessCgroupPath()
+	if cgroup == "" {
+		goto fail
+	}
+	logrus.Debugf("failed to open configured cgroup (%v), will open container init cgroup %q", err, cgroup)
+	// NOTE: path is not guaranteed to exist because we didn't pause the container.
+	fd, err = cgroups.OpenFile(cgroup, "", openFlags)
 	if err != nil {
-		if p.rootlessCgroups {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("can't open cgroup: %w", err)
+		goto fail
 	}
 
+success:
 	logrus.Debugf("using CLONE_INTO_CGROUP %q", cgroup)
 	if p.cmd.SysProcAttr == nil {
 		p.cmd.SysProcAttr = &syscall.SysProcAttr{}
@@ -364,6 +418,13 @@ func (p *setnsProcess) prepareCgroupFD() (*os.File, error) {
 	p.cmd.SysProcAttr.CgroupFD = int(fd.Fd())
 
 	return fd, nil
+
+fail:
+	// Ignore cgroup join error for rootless.
+	if p.rootlessCgroups {
+		return nil, nil
+	}
+	return nil, fmt.Errorf("can't open cgroup: %w", err)
 }
 
 // startWithCgroupFD starts a process via clone3 with CLONE_INTO_CGROUP,
@@ -380,11 +441,14 @@ func (p *setnsProcess) startWithCgroupFD() error {
 		defer fd.Close()
 	}
 
+	cmdCopy := cloneCmd(p.cmd)
 	err = p.startWithCPUAffinity()
 	if err != nil && p.cmd.SysProcAttr.UseCgroupFD {
 		logrus.Debugf("exec with CLONE_INTO_CGROUP failed: %v; retrying without", err)
 		// SysProcAttr.CgroupFD is never used when UseCgroupFD is unset.
-		p.cmd.SysProcAttr.UseCgroupFD = false
+		cmdCopy.SysProcAttr.UseCgroupFD = false
+		// Must not reuse exec.Cmd.
+		p.cmd = cmdCopy
 		err = p.startWithCPUAffinity()
 	}
 
@@ -719,20 +783,6 @@ func (p *initProcess) start() (retErr error) {
 	if err != nil {
 		p.process.ops = nil
 		return fmt.Errorf("unable to start init: %w", err)
-	}
-
-	// If the runc-create process is terminated due to receiving SIGKILL signal,
-	// it may lead to the runc-init process leaking due
-	// to issues like cgroup freezing,
-	// and it cannot be cleaned up by runc delete/stop
-	// because the container lacks a state.json file.
-	// This typically occurs when higher-level
-	// container runtimes terminate the runc create process due to context cancellation or timeout.
-	// If the runc-create process terminates due to SIGKILL before
-	// reaching this line of code, we won't encounter the cgroup freezing issue.
-	_, err = p.container.updateState(nil)
-	if err != nil {
-		return fmt.Errorf("unable to store init state before creating cgroup: %w", err)
 	}
 
 	defer func() {
@@ -1083,7 +1133,7 @@ func sendContainerProcessState(listenerPath string, state *specs.ContainerProces
 		return fmt.Errorf("cannot marshall seccomp state: %w", err)
 	}
 
-	if err := utils.SendRawFd(socket, string(b), file.Fd()); err != nil {
+	if err := cmsg.SendRawFd(socket, string(b), file.Fd()); err != nil {
 		return fmt.Errorf("cannot send seccomp fd to %s: %w", listenerPath, err)
 	}
 	runtime.KeepAlive(file)

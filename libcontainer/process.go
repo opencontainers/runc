@@ -127,7 +127,7 @@ type Process struct {
 
 // Wait waits for the process to exit.
 // Wait releases any resources associated with the Process
-func (p Process) Wait() (*os.ProcessState, error) {
+func (p *Process) Wait() (*os.ProcessState, error) {
 	if p.ops == nil {
 		return nil, errInvalidProcess
 	}
@@ -135,7 +135,7 @@ func (p Process) Wait() (*os.ProcessState, error) {
 }
 
 // Pid returns the process ID
-func (p Process) Pid() (int, error) {
+func (p *Process) Pid() (int, error) {
 	// math.MinInt32 is returned here, because it's invalid value
 	// for the kill() system call.
 	if p.ops == nil {
@@ -145,7 +145,7 @@ func (p Process) Pid() (int, error) {
 }
 
 // Signal sends a signal to the Process.
-func (p Process) Signal(sig os.Signal) error {
+func (p *Process) Signal(sig os.Signal) error {
 	if p.ops == nil {
 		return errInvalidProcess
 	}

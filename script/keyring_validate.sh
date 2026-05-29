@@ -47,7 +47,10 @@ echo "------------------------------------------------------------"
 
 # Create a dummy gpg keyring from the set of MAINTAINERS.
 while IFS="" read -r username || [ -n "$username" ]; do
-	curl -sSL "https://github.com/$username.gpg" | gpg_user "$username" --import
+	keydata="$(curl -sSL "https://github.com/$username.gpg")"
+	if ! gpg_user "$username" --import <<<"$keydata"; then
+		log "WARNING: $username does not have any GPG keys on GitHub."
+	fi
 done < <(printf '%s\n' "${maintainers[@]}")
 
 # Make sure all of the keys in the keyring have a github=... comment.

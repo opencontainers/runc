@@ -110,7 +110,7 @@ func (e *mountError) Error() string {
 
 	if e.source != "" {
 		out += "src=" + e.source + ", "
-		if e.srcFile != nil {
+		if e.srcFile != nil && e.srcFile.file != nil {
 			out += "srcType=" + string(e.srcFile.Type) + ", "
 			out += "srcFd=" + strconv.Itoa(int(e.srcFile.file.Fd())) + ", "
 		}
