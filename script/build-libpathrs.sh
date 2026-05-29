@@ -72,16 +72,15 @@ function build_libpathrs() {
 	local dest="$1"
 	shift
 	local go_arches=("$@")
-	local tar="libpathrs-${ver}.tar.xz"
-
-	# Download, check, and extract.
-	wget "https://github.com/cyphar/libpathrs/releases/download/v${ver}/${tar}"{,.asc}
-	sha256sum --strict --check - <<<"${LIBPATHRS_SHA256[${ver}]} *${tar}"
+	local tar="$PWD/libpathrs-${ver}.tar.xz"
 
 	local srcdir
 	srcdir="$(mktemp -d)"
-	tar xf "$tar" -C "$srcdir"
-	pushd "$srcdir/libpathrs-$ver" || return
+	git clone "https://github.com/cyphar/libpathrs.git" "$srcdir/libpathrs"
+	pushd "$srcdir/libpathrs" || return
+
+	git reset --hard "$ver"
+	git archive HEAD | xz >"$tar"
 
 	# Use cargo-auditable if available.
 	if cargo auditable --version &>/dev/null; then
@@ -140,7 +139,7 @@ function build_libpathrs() {
 	# Place the source tarball to $dest/src.
 	popd || return
 	mkdir -p "$dest"/src
-	mv "$tar"{,.asc} "$dest"/src
+	mv "$tar" "$dest"/src
 }
 
 if [ $# -lt 2 ]; then

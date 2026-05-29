@@ -14,7 +14,7 @@ permissions:
 
 env:
   GO_VERSION: 1.25
-  LIBPATHRS_VERSION: "0.2.4"
+  LIBPATHRS_VERSION: "893bcf88f60109620baa1ec3c4d273d09244eb28"
 
 jobs:
   keyring:

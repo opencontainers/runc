@@ -3,6 +3,7 @@ module github.com/opencontainers/runc
 go 1.25.0
 
 require (
+	cyphar.com/go-pathrs v0.2.5-0.20260521202425-893bcf88f601
 	github.com/checkpoint-restore/go-criu/v7 v7.2.0
 	github.com/containerd/console v1.0.5
 	github.com/coreos/go-systemd/v22 v22.7.0
@@ -28,7 +29,4 @@ require (
 	google.golang.org/protobuf v1.36.11
 )
 
-require (
-	cyphar.com/go-pathrs v0.2.4 // indirect
-	github.com/cilium/ebpf v0.17.3 // indirect
-)
+require github.com/cilium/ebpf v0.17.3 // indirect

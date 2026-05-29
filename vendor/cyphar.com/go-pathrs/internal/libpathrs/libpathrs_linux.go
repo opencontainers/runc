@@ -154,14 +154,14 @@ func InRootCreat(rootFd uintptr, path string, flags int, mode uint32) (uintptr, 
 }
 
 // InRootRename wraps pathrs_inroot_rename.
-func InRootRename(rootFd uintptr, src, dst string, flags uint) error {
-	cSrc := C.CString(src)
-	defer C.free(unsafe.Pointer(cSrc))
+func InRootRename(oldRootFd uintptr, oldPath string, newRootFd uintptr, newPath string, flags uint64) error {
+	cOldPath := C.CString(oldPath)
+	defer C.free(unsafe.Pointer(cOldPath))
 
-	cDst := C.CString(dst)
-	defer C.free(unsafe.Pointer(cDst))
+	cNewPath := C.CString(newPath)
+	defer C.free(unsafe.Pointer(cNewPath))
 
-	err := C.pathrs_inroot_rename(C.int(rootFd), cSrc, cDst, C.uint(flags))
+	err := C.pathrs_inroot_rename(C.int(oldRootFd), cOldPath, C.int(newRootFd), cNewPath, C.uint64_t(flags))
 	return fetchError(err)
 }
 
@@ -193,26 +193,26 @@ func InRootMknod(rootFd uintptr, path string, mode uint32, dev uint64) error {
 }
 
 // InRootSymlink wraps pathrs_inroot_symlink.
-func InRootSymlink(rootFd uintptr, path, target string) error {
-	cPath := C.CString(path)
-	defer C.free(unsafe.Pointer(cPath))
+func InRootSymlink(target string, rootFd uintptr, linkpath string) error {
+	cLinkpath := C.CString(linkpath)
+	defer C.free(unsafe.Pointer(cLinkpath))
 
 	cTarget := C.CString(target)
 	defer C.free(unsafe.Pointer(cTarget))
 
-	err := C.pathrs_inroot_symlink(C.int(rootFd), cPath, cTarget)
+	err := C.pathrs_inroot_symlink(cTarget, C.int(rootFd), cLinkpath)
 	return fetchError(err)
 }
 
 // InRootHardlink wraps pathrs_inroot_hardlink.
-func InRootHardlink(rootFd uintptr, path, target string) error {
-	cPath := C.CString(path)
-	defer C.free(unsafe.Pointer(cPath))
+func InRootHardlink(oldRootFd uintptr, oldPath string, newRootFd uintptr, newPath string, flags uint64) error {
+	cNewPath := C.CString(newPath)
+	defer C.free(unsafe.Pointer(cNewPath))
 
-	cTarget := C.CString(target)
-	defer C.free(unsafe.Pointer(cTarget))
+	cOldPath := C.CString(oldPath)
+	defer C.free(unsafe.Pointer(cOldPath))
 
-	err := C.pathrs_inroot_hardlink(C.int(rootFd), cPath, cTarget)
+	err := C.pathrs_inroot_hardlink(C.int(oldRootFd), cOldPath, C.int(newRootFd), cNewPath, C.uint64_t(flags))
 	return fetchError(err)
 }
 
@@ -334,4 +334,32 @@ func (how *ProcfsOpenHow) Flags() *C.uint64_t { return &how.flags }
 func ProcfsOpen(how *ProcfsOpenHow) (uintptr, error) {
 	fd := C.pathrs_procfs_open((*C.pathrs_procfs_open_how)(how), C.size_t(unsafe.Sizeof(*how)))
 	return uintptr(fd), fetchError(fd)
+}
+
+// VersionInfo is a Go-friendly form of pathrs_version_info_t (struct).
+type VersionInfo struct {
+	VersionString string
+}
+
+// versionInfo is pathrs_version_info_t (struct).
+type versionInfo C.pathrs_version_info_t
+
+// Version is pathrs_version_info_t (sizeof(version) is passed automatically).
+func Version() (*VersionInfo, error) {
+	var rawVersion versionInfo
+	size := C.pathrs_version((*C.pathrs_version_info_t)(&rawVersion), C.size_t(unsafe.Sizeof(rawVersion)))
+	switch {
+	case size < 0:
+		return nil, fetchError(size)
+	case size > 0:
+		// TODO(log): Logging?
+		fallthrough
+	default:
+		// TODO(log): Add a log statement if sizeof(rawVersion) is bigger than
+		// the number of fields we store in VersionInfo. Otherwise a rebuild
+		// will mask that Go callers cannot see any new fields.
+		return &VersionInfo{
+			VersionString: C.GoString(rawVersion.version_string),
+		}, nil
+	}
 }
