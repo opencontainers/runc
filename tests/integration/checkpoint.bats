@@ -126,12 +126,12 @@ function simple_cr() {
 	testcontainer test_busybox running
 
 	for _ in $(seq 2); do
-		runc "$@" checkpoint --work-path ./work-dir test_busybox
+		runc "$@" checkpoint --work-path ./work-dir --manage-cgroups-mode ignore test_busybox
 		[ "$status" -eq 0 ]
 
 		testcontainer test_busybox checkpointed
 
-		runc "$@" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+		runc "$@" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" --manage-cgroups-mode ignore test_busybox
 		[ "$status" -eq 0 ]
 
 		testcontainer test_busybox running
@@ -163,12 +163,12 @@ function simple_cr() {
 	[[ "$output" == *"mtu $mtu_value "* ]]
 
 	for _ in $(seq 2); do
-		runc checkpoint --work-path ./work-dir test_busybox_netdevice
+		runc checkpoint --work-path ./work-dir --manage-cgroups-mode ignore test_busybox_netdevice
 		[ "$status" -eq 0 ]
 
 		testcontainer test_busybox_netdevice checkpointed
 
-		runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox_netdevice
+		runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" --manage-cgroups-mode ignore test_busybox_netdevice
 		[ "$status" -eq 0 ]
 
 		testcontainer test_busybox_netdevice running
@@ -216,12 +216,12 @@ function simple_cr() {
 	testcontainer test_busybox running
 
 	# runc should fail with absolute parent image path.
-	runc checkpoint --parent-path "$(pwd)"/parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
+	runc checkpoint --parent-path "$(pwd)"/parent-dir --work-path ./work-dir --image-path ./image-dir --manage-cgroups-mode ignore test_busybox
 	[[ "${output}" == *"--parent-path"* ]]
 	[ "$status" -ne 0 ]
 
 	# runc should fail with invalid parent image path.
-	runc checkpoint --parent-path ./parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
+	runc checkpoint --parent-path ./parent-dir --work-path ./work-dir --image-path ./image-dir --manage-cgroups-mode ignore test_busybox
 	[[ "${output}" == *"--parent-path"* ]]
 	[ "$status" -ne 0 ]
 }
@@ -235,14 +235,14 @@ function simple_cr() {
 	runc_run_with_pipes test_busybox
 
 	mkdir parent-dir
-	runc checkpoint --pre-dump --image-path ./parent-dir test_busybox
+	runc checkpoint --pre-dump --image-path ./parent-dir --manage-cgroups-mode ignore test_busybox
 	[ "$status" -eq 0 ]
 
 	testcontainer test_busybox running
 
 	mkdir image-dir
 	mkdir work-dir
-	runc checkpoint --parent-path ../parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
+	runc checkpoint --parent-path ../parent-dir --work-path ./work-dir --image-path ./image-dir --manage-cgroups-mode ignore test_busybox
 	[ "$status" -eq 0 ]
 
 	# check parent path is valid
@@ -250,7 +250,7 @@ function simple_cr() {
 
 	testcontainer test_busybox checkpointed
 
-	runc_restore_with_pipes ./work-dir test_busybox
+	runc_restore_with_pipes ./work-dir test_busybox --manage-cgroups-mode ignore
 	check_pipes
 }
 
@@ -281,6 +281,7 @@ function simple_cr() {
 		--manage-cgroups-mode=ignore \
 		--work-path ./work-dir \
 		--image-path ./image-dir \
+		--manage-cgroups-mode ignore \
 		test_busybox &
 	cpt_pid=$!
 
@@ -346,13 +347,13 @@ function simple_cr() {
 	for _ in $(seq 2); do
 		# checkpoint the running container; this automatically tells CRIU to
 		# handle the network namespace defined in config.json as an external
-		runc checkpoint --work-path ./work-dir test_busybox
+		runc checkpoint --work-path ./work-dir --manage-cgroups-mode ignore test_busybox
 		[ "$status" -eq 0 ]
 
 		testcontainer test_busybox checkpointed
 
 		# restore from checkpoint; this should restore the container into the existing network namespace
-		runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+		runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" --manage-cgroups-mode ignore test_busybox
 		[ "$status" -eq 0 ]
 
 		testcontainer test_busybox running
@@ -394,7 +395,7 @@ function simple_cr() {
 
 	testcontainer test_busybox running
 
-	runc checkpoint --work-path ./work-dir test_busybox
+	runc checkpoint --work-path ./work-dir --manage-cgroups-mode ignore test_busybox
 	[ "$status" -eq 0 ]
 	run ! test -f ./work-dir/"$tmplog1"
 	test -f ./work-dir/"$tmplog2"
@@ -403,7 +404,7 @@ function simple_cr() {
 
 	test -f ./work-dir/"$tmplog2" && unlink ./work-dir/"$tmplog2"
 
-	runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+	runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" --manage-cgroups-mode ignore test_busybox
 	[ "$status" -eq 0 ]
 	run ! test -f ./work-dir/"$tmplog1"
 	test -f ./work-dir/"$tmplog2"
@@ -434,7 +435,7 @@ function simple_cr() {
 
 	testcontainer test_busybox running
 
-	runc checkpoint --work-path ./work-dir test_busybox
+	runc checkpoint --work-path ./work-dir --manage-cgroups-mode ignore test_busybox
 	[ "$status" -eq 0 ]
 
 	testcontainer test_busybox checkpointed
@@ -443,7 +444,7 @@ function simple_cr() {
 	# the mountpoints should be recreated during restore - that is the actual thing tested here
 	rm -rf "${bind1:?}"/*
 
-	runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+	runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" --manage-cgroups-mode ignore test_busybox
 	[ "$status" -eq 0 ]
 
 	testcontainer test_busybox running
@@ -470,7 +471,7 @@ function simple_cr() {
 	# Restore into a different cgroup.
 	set_cgroups_path # Changes the path.
 	runc restore -d --manage-cgroups-mode ignore --pid-file pid \
-		--work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+		--work-path ./work-dir --console-socket "$CONSOLE_SOCKET" --manage-cgroups-mode ignore test_busybox
 	[ "$status" -eq 0 ]
 	testcontainer test_busybox running
 
@@ -496,12 +497,12 @@ function simple_cr() {
 
 	local execed_pid=""
 	for _ in $(seq 2); do
-		runc checkpoint --work-path ./work-dir test_busybox
+		runc checkpoint --work-path ./work-dir --manage-cgroups-mode ignore test_busybox
 		[ "$status" -eq 0 ]
 
 		testcontainer test_busybox checkpointed
 
-		runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+		runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" --manage-cgroups-mode ignore test_busybox
 		[ "$status" -eq 0 ]
 
 		testcontainer test_busybox running
