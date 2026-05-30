@@ -83,9 +83,10 @@ func testCheckpoint(t *testing.T, userns bool) {
 		parentImage = "../criu-parent"
 		parentDir := filepath.Join(tmp, "criu-parent")
 		preDumpOpts := &libcontainer.CriuOpts{
-			ImagesDirectory: parentDir,
-			WorkDirectory:   parentDir,
-			PreDump:         true,
+			ImagesDirectory:   parentDir,
+			WorkDirectory:     parentDir,
+			PreDump:           true,
+			ManageCgroupsMode: "ignore",
 		}
 
 		if err := container.Checkpoint(preDumpOpts); err != nil {
@@ -103,9 +104,10 @@ func testCheckpoint(t *testing.T, userns bool) {
 	imagesDir := filepath.Join(tmp, "criu")
 
 	checkpointOpts := &libcontainer.CriuOpts{
-		ImagesDirectory: imagesDir,
-		WorkDirectory:   imagesDir,
-		ParentImage:     parentImage,
+		ImagesDirectory:   imagesDir,
+		WorkDirectory:     imagesDir,
+		ParentImage:       parentImage,
+		ManageCgroupsMode: "ignore",
 	}
 
 	if err := container.Checkpoint(checkpointOpts); err != nil {
