@@ -43,7 +43,6 @@ function teardown() {
 			| .process.noNewPrivileges = false
 			| .linux.seccomp = {
 				"defaultAction":"SCMP_ACT_ALLOW",
-				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
 				"syscalls":[{"names":["mkdir","mkdirat"], "action":"SCMP_ACT_ERRNO"}]
 			}'
 
@@ -57,7 +56,6 @@ function teardown() {
 			| .process.noNewPrivileges = false
 			| .linux.seccomp = {
 				"defaultAction":"SCMP_ACT_ALLOW",
-				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
 				"syscalls":[{"names":["mkdir","mkdirat"], "action":"SCMP_ACT_ERRNO", "errnoRet": 100}]
 			}'
 
@@ -96,7 +94,6 @@ function flags_value() {
 			| .process.noNewPrivileges = false
 			| .linux.seccomp = {
 				"defaultAction":"SCMP_ACT_ALLOW",
-				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
 				"syscalls":[{"names":["mkdir", "mkdirat"], "action":"SCMP_ACT_ERRNO"}]
 			}'
 
@@ -161,7 +158,6 @@ function flags_value() {
 			| .process.rlimits = [{"type": "RLIMIT_CORE", "soft": 0, "hard": 0}]
 			| .linux.seccomp = {
 				"defaultAction":"SCMP_ACT_ALLOW",
-				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
 				"syscalls":[{"names":["mkdir","mkdirat"], "action":"SCMP_ACT_KILL"}]
 			}'
 
@@ -174,7 +170,6 @@ function flags_value() {
 	update_config '   .process.args = ["/bin/true"]
 			| .linux.seccomp = {
 				"defaultAction":"SCMP_ACT_ALLOW",
-				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
 				"syscalls":[{"names":["mkdir","mkdirat"], "action":"SCMP_ACT_KILL"}]
 			}
 			| .process.rlimits = [{"type": "RLIMIT_CORE", "soft": 0, "hard": 0}]
@@ -196,7 +191,6 @@ function flags_value() {
 			| .process.noNewPrivileges = false
 			| .linux.seccomp = {
 				"defaultAction":"SCMP_ACT_ALLOW",
-				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
 				"syscalls":[{"names":["close_range", "fsopen", "fsconfig", "fspick", "openat2", "open_tree", "move_mount", "mount_setattr"], "action":"SCMP_ACT_ERRNO", "errnoRet": 38}]
 			}'
 
