@@ -28,7 +28,7 @@ function setup() {
 }
 
 function teardown() {
-	ip link del dev dummy0
+	ip link del dev dummy0 &>/dev/null
 	delete_netns
 	teardown_bundle
 }
