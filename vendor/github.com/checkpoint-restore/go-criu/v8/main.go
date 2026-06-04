@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"syscall"
 
+	proto "github.com/checkpoint-restore/go-criu/v8/internal/proto"
 	"github.com/checkpoint-restore/go-criu/v8/rpc"
-	"google.golang.org/protobuf/proto"
 )
 
 // extraFilesStartFd is the first fd number assigned to cmd.ExtraFiles by os/exec.
@@ -72,8 +72,8 @@ func (c *Criu) ensureInheritFd(opts *rpc.CriuOpts) {
 	for i, key := range keys {
 		fd := int32(extraFilesStartFd + i)
 		opts.InheritFd = append(opts.InheritFd, &rpc.InheritFd{
-			Key: proto.String(key),
-			Fd:  proto.Int32(fd),
+			Key: proto.Ptr(key),
+			Fd:  proto.Ptr(fd),
 		})
 	}
 }
@@ -177,7 +177,7 @@ func (c *Criu) doSwrkWithResp(reqType rpc.CriuReqType, opts *rpc.CriuOpts, nfy N
 	}
 
 	if nfy != nil {
-		opts.NotifyScripts = proto.Bool(true)
+		opts.NotifyScripts = proto.Ptr(true)
 	}
 
 	if features != nil {
@@ -200,7 +200,7 @@ func (c *Criu) doSwrkWithResp(reqType rpc.CriuReqType, opts *rpc.CriuOpts, nfy N
 	}
 
 	for {
-		reqB, err := proto.Marshal(&req)
+		reqB, err := req.MarshalVT()
 		if err != nil {
 			return nil, err
 		}
@@ -211,7 +211,7 @@ func (c *Criu) doSwrkWithResp(reqType rpc.CriuReqType, opts *rpc.CriuOpts, nfy N
 		}
 
 		resp = &rpc.CriuResp{}
-		err = proto.Unmarshal(respB[:respS], resp)
+		err = resp.UnmarshalVT(respB[:respS])
 		if err != nil {
 			return nil, err
 		}
@@ -259,7 +259,7 @@ func (c *Criu) doSwrkWithResp(reqType rpc.CriuReqType, opts *rpc.CriuOpts, nfy N
 
 		req = rpc.CriuReq{
 			Type:          &respType,
-			NotifySuccess: proto.Bool(true),
+			NotifySuccess: proto.Ptr(true),
 		}
 	}
 

@@ -25,10 +25,12 @@ require (
 	github.com/vishvananda/netns v0.0.5
 	golang.org/x/net v0.55.0
 	golang.org/x/sys v0.45.0
-	google.golang.org/protobuf v1.36.11
 )
 
 require (
 	cyphar.com/go-pathrs v0.2.4 // indirect
+	github.com/aperturerobotics/protobuf-go-lite v0.14.0 // indirect
 	github.com/cilium/ebpf v0.17.3 // indirect
 )
+
+replace github.com/checkpoint-restore/go-criu/v8 => github.com/kolyshkin/go-criu/v8 v8.0.0-20260604012011-6d5f7610f3f1
