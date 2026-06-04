@@ -17,8 +17,8 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/checkpoint-restore/go-criu/v7"
-	criurpc "github.com/checkpoint-restore/go-criu/v7/rpc"
+	"github.com/checkpoint-restore/go-criu/v8"
+	criurpc "github.com/checkpoint-restore/go-criu/v8/rpc"
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"

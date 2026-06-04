@@ -3,7 +3,7 @@ module github.com/opencontainers/runc
 go 1.25.0
 
 require (
-	github.com/checkpoint-restore/go-criu/v7 v7.2.0
+	github.com/checkpoint-restore/go-criu/v8 v8.2.0
 	github.com/containerd/console v1.0.5
 	github.com/coreos/go-systemd/v22 v22.7.0
 	github.com/cyphar/filepath-securejoin v0.6.1

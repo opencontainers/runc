@@ -4,10 +4,10 @@ cyphar.com/go-pathrs
 cyphar.com/go-pathrs/internal/fdutils
 cyphar.com/go-pathrs/internal/libpathrs
 cyphar.com/go-pathrs/procfs
-# github.com/checkpoint-restore/go-criu/v7 v7.2.0
-## explicit; go 1.20
-github.com/checkpoint-restore/go-criu/v7
-github.com/checkpoint-restore/go-criu/v7/rpc
+# github.com/checkpoint-restore/go-criu/v8 v8.2.0
+## explicit; go 1.24.0
+github.com/checkpoint-restore/go-criu/v8
+github.com/checkpoint-restore/go-criu/v8/rpc
 # github.com/cilium/ebpf v0.17.3
 ## explicit; go 1.22
 github.com/cilium/ebpf
