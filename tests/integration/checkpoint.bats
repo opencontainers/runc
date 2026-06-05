@@ -184,6 +184,73 @@ function simple_cr() {
 	simple_cr
 }
 
+@test "checkpoint and restore [ensure OCI lifecycle contract satisfied for prestart/createruntime hooks]" {
+	# Regression test for https://github.com/opencontainers/runc/issues/5296.
+	#
+	# Per the OCI runtime spec, prestart/createRuntime hooks fire when:
+	#   1. The container's runtime environment has been created (mount
+	#      tree assembled at declared destinations).
+	#   2. pivot_root has NOT yet been executed.
+	#   3. The container is in "created" state (user process not running).
+	#   4. The hook process is in the runtime namespace, not the container's.
+	#   5. The state JSON's bundle path is absolute.
+
+	touch source-marker
+	update_config '.mounts += [{"destination": "/RUNC_5296_BIND_MARKER", "type": "bind", "source": "'"$PWD"'/source-marker", "options": ["bind"]}]'
+
+	cat >"marker-check.sh" <<-'EOF'
+		#!/bin/sh
+		set -e
+		state=$(cat)
+		pid=$(echo "$state" | jq -r .pid)
+		status=$(echo "$state" | jq -r .status)
+		bundle=$(echo "$state" | jq -r .bundle)
+
+		# Contract: 3.container is in "created" state
+		[ "$status" = "created" ] || {
+			echo "expected status=created, got status=$status" >&2
+			exit 1
+		}
+
+		# Contract: 5.bundle path MUST be absolute.
+		case "$bundle" in
+			/*) ;;
+			*) echo "bundle path not absolute: $bundle" >&2; exit 1 ;;
+		esac
+
+		# Contract: 4.hook MUST execute in the runtime namespace
+		for ns in mnt pid net uts ipc cgroup; do
+			h=$(readlink /proc/self/ns/$ns 2>/dev/null || true)
+			c=$(readlink /proc/$pid/ns/$ns 2>/dev/null || true)
+			if [ -n "$h" ] && [ -n "$c" ] && [ "$h" = "$c" ]; then
+				echo "hook running in container's $ns namespace, expected runtime" >&2
+				exit 1
+			fi
+		done
+
+		# Contract: 1.runtime environment is created — mount tree assembled.
+		grep -qE ' /RUNC_5296_BIND_MARKER ' /proc/$pid/mountinfo || {
+			echo "bind mount not found at declared destination in mountinfo" >&2
+			exit 1
+		}
+
+		# Contract: 2.pivot_root has NOT yet been executed.
+		host_root=$(stat -c '%d:%i' /)
+		ctr_root=$(stat -c '%d:%i' /proc/$pid/root/)
+		[ "$host_root" = "$ctr_root" ] || {
+			echo "pivot_root already executed (host=$host_root ctr=$ctr_root)" >&2
+			exit 1
+		}
+	EOF
+	chmod +x marker-check.sh
+
+	for hook in prestart createRuntime; do
+		update_config '.hooks |= {"'$hook'": [{"path": "'"$PWD/marker-check.sh"'"}]}'
+		simple_cr
+		__runc delete -f test_busybox
+	done
+}
+
 @test "checkpoint and restore (bind mount, destination is symlink)" {
 	mkdir -p rootfs/real/conf
 	ln -s /real/conf rootfs/conf

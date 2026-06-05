@@ -29,6 +29,7 @@ import (
 	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var criuFeatures *criurpc.CriuFeatures
@@ -1128,14 +1129,26 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 		if err := lockNetwork(c.config); err != nil {
 			return err
 		}
-	case "setup-namespaces":
+	case "post-mount":
+		// Run prestart/createRuntime hooks here. Per the OCI runtime spec,
+		// these hooks fire after the runtime environment has been created
+		// but before pivot_root, with the container in "created" state and
+		// the hook executing in the runtime namespace. post-mount is a proposed new
+		// CRIU notification that exposes that exact lifecycle position
+		// We override the OCI status to "created" because
+		// c.currentOCIState() reads from c.state, which at this point
+		// still holds the pre-restore stoppedState (the transition to
+		// restoredState happens in the post-restore case below). The OCI
+		// lifecycle position when these hooks fire is "created" by
+		// definition, so we report it as such.
 		if c.config.HasHook(configs.Prestart, configs.CreateRuntime) {
+			pid := notify.GetPid()
 			s, err := c.currentOCIState()
 			if err != nil {
-				return nil
+				return err
 			}
-			s.Pid = int(notify.GetPid())
-
+			s.Pid = int(pid)
+			s.Status = specs.StateCreated
 			if err := c.config.Hooks.Run(configs.Prestart, s); err != nil {
 				return err
 			}
@@ -1143,6 +1156,7 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 				return err
 			}
 		}
+
 	case "post-restore":
 		pid := notify.GetPid()
 
