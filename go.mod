@@ -23,7 +23,7 @@ require (
 	github.com/urfave/cli/v3 v3.9.0
 	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5
-	golang.org/x/net v0.55.0
+	golang.org/x/net v0.56.0
 	golang.org/x/sys v0.46.0
 	google.golang.org/protobuf v1.36.11
 )
