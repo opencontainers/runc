@@ -141,13 +141,10 @@ func (cmd *Command) run(ctx context.Context, osArgs []string) (_ context.Context
 	var rargs Args = &stringSliceArgs{v: osArgs}
 	var args Args = &stringSliceArgs{rargs.Tail()}
 
-	if cmd.isCompletionCommand {
-		tracef("completion command detected, skipping pre-parse (cmd=%[1]q)", cmd.Name)
-		cmd.parsedArgs = args
-		return ctx, cmd.Action(ctx, cmd)
-	}
-
 	for _, f := range cmd.allFlags() {
+		if cmd.hasPersistentFlagOnAncestor(f) {
+			continue
+		}
 		if err := f.PreParse(); err != nil {
 			return ctx, err
 		}
@@ -268,13 +265,12 @@ func (cmd *Command) run(ctx context.Context, osArgs []string) (_ context.Context
 		subCmd = cmd.Command(name)
 		if subCmd == nil {
 			hasDefault := cmd.DefaultCommand != ""
-			isFlagName := slices.Contains(cmd.FlagNames(), name)
 
 			if hasDefault {
 				tracef("using default command=%[1]q (cmd=%[2]q)", cmd.DefaultCommand, cmd.Name)
 			}
 
-			if isFlagName || hasDefault {
+			if hasDefault {
 				argsWithDefault := cmd.argsWithDefaultCommand(cmd.parsedArgs)
 				tracef("using default command args=%[1]q (cmd=%[2]q)", argsWithDefault, cmd.Name)
 				subCmd = cmd.Command(argsWithDefault.First())
