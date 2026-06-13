@@ -30,7 +30,7 @@ This release includes a fix for the following low-severity security issue:
   #5249, #5269, #5287, #5295, #5304)
 
 ### Changed ###
-- When masking directories with `maskPaths`, runc will now re-use a single
+- When masking directories with `maskPaths`, runc will now reuse a single
   `tmpfs` instance (which is not writeable) to reduce the number `tmpfs`
   superblocks that need to be reaped when containers die (in particular,
   Kubernetes applies masks to per-CPU sysfs directories which get expensive
