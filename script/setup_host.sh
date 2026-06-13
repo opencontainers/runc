@@ -34,7 +34,7 @@ platform:el9 | platform:el10)
 esac
 
 # Install common packages
-RPMS=(cargo container-selinux fuse-sshfs git-core glibc-static golang iptables jq libseccomp-devel lld make policycoreutils wget)
+RPMS=(cargo container-selinux curl fuse-sshfs git-core glibc-static golang iptables jq libseccomp-devel lld make policycoreutils)
 # Work around dnf mirror failures by retrying a few times.
 for i in $(seq 0 2); do
 	sleep "$i"
