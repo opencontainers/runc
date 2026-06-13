@@ -24,6 +24,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/opencontainers/cgroups"
+	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
@@ -539,19 +540,31 @@ func isOnTmpfs(path string, mounts []*configs.Mount) bool {
 // This function also creates missing mountpoints as long as they
 // are not on top of a tmpfs, as CRIU will restore tmpfs content anyway.
 func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
+	rootFd, err := os.OpenFile(c.config.Rootfs, unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_PATH, 0)
+	if err != nil {
+		return fmt.Errorf("open rootfs handle: %w", err)
+	}
+	defer rootFd.Close()
+
 	umounts := []string{}
 	defer func() {
 		for _, u := range umounts {
-			_ = utils.WithProcfd(c.config.Rootfs, u, func(procfd string) error {
-				if e := unix.Unmount(procfd, unix.MNT_DETACH); e != nil {
-					if e != unix.EINVAL {
+			mntFile, err := pathrs.OpenInRoot(rootFd, u, unix.O_PATH)
+			if err != nil {
+				logrus.Warnf("Error during cleanup unmounting %s: open handle: %v", u, err)
+				continue
+			}
+			_ = utils.WithProcfdFile(mntFile, func(procfd string) error {
+				if err := unix.Unmount(procfd, unix.MNT_DETACH); err != nil {
+					if err != unix.EINVAL {
 						// Ignore EINVAL as it means 'target is not a mount point.'
 						// It probably has already been unmounted.
-						logrus.Warnf("Error during cleanup unmounting of %s (%s): %v", procfd, u, e)
+						logrus.Warnf("Error during cleanup unmounting of %s (%s): %v", procfd, u, err)
 					}
 				}
 				return nil
 			})
+			_ = mntFile.Close()
 		}
 	}()
 	// Now go through all mounts and create the required mountpoints.
@@ -570,7 +583,7 @@ func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
 			continue
 		}
 		me := mountEntry{Mount: m}
-		if err := me.createOpenMountpoint(c.config.Rootfs); err != nil {
+		if err := me.createOpenMountpoint(rootFd); err != nil {
 			return fmt.Errorf("create criu restore mountpoint for %s mount: %w", me.Destination, err)
 		}
 		if me.dstFile != nil {

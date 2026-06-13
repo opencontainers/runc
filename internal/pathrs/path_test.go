@@ -51,3 +51,70 @@ func TestIsLexicallyInRoot(t *testing.T) {
 		})
 	}
 }
+
+func TestLexicallyCleanPath(t *testing.T) {
+	path := LexicallyCleanPath("")
+	if path != "" {
+		t.Errorf("expected to receive empty string and received %s", path)
+	}
+
+	path = LexicallyCleanPath("rootfs")
+	if path != "rootfs" {
+		t.Errorf("expected to receive 'rootfs' and received %s", path)
+	}
+
+	path = LexicallyCleanPath("../../../var")
+	if path != "var" {
+		t.Errorf("expected to receive 'var' and received %s", path)
+	}
+
+	path = LexicallyCleanPath("/../../../var")
+	if path != "/var" {
+		t.Errorf("expected to receive '/var' and received %s", path)
+	}
+
+	path = LexicallyCleanPath("/foo/bar/")
+	if path != "/foo/bar" {
+		t.Errorf("expected to receive '/foo/bar' and received %s", path)
+	}
+
+	path = LexicallyCleanPath("/foo/bar/../")
+	if path != "/foo" {
+		t.Errorf("expected to receive '/foo' and received %s", path)
+	}
+}
+
+func TestLexicallyStripRoot(t *testing.T) {
+	for _, test := range []struct {
+		root, path, out string
+	}{
+		// Works with multiple components.
+		{"/a/b", "/a/b/c", "/c"},
+		{"/hello/world", "/hello/world/the/quick-brown/fox", "/the/quick-brown/fox"},
+		// '/' must be a no-op.
+		{"/", "/a/b/c", "/a/b/c"},
+		// Must be the correct order.
+		{"/a/b", "/a/c/b", "/a/c/b"},
+		// Must be at start.
+		{"/abc/def", "/foo/abc/def/bar", "/foo/abc/def/bar"},
+		// Must be a lexical parent.
+		{"/foo/bar", "/foo/barSAMECOMPONENT", "/foo/barSAMECOMPONENT"},
+		// Must only strip the root once.
+		{"/foo/bar", "/foo/bar/foo/bar/baz", "/foo/bar/baz"},
+		// Deal with .. in a fairly sane way.
+		{"/foo/bar", "/foo/bar/../baz", "/foo/baz"},
+		{"/foo/bar", "../../../../../../foo/bar/baz", "/baz"},
+		{"/foo/bar", "/../../../../../../foo/bar/baz", "/baz"},
+		{"/foo/bar/../baz", "/foo/baz/bar", "/bar"},
+		{"/foo/bar/../baz", "/foo/baz/../bar/../baz/./foo", "/foo"},
+		// All paths are made absolute before stripping.
+		{"foo/bar", "/foo/bar/baz/bee", "/baz/bee"},
+		{"/foo/bar", "foo/bar/baz/beef", "/baz/beef"},
+		{"foo/bar", "foo/bar/baz/beets", "/baz/beets"},
+	} {
+		got := LexicallyStripRoot(test.root, test.path)
+		if got != test.out {
+			t.Errorf("LexicallyStripRoot(%q, %q) -- got %q, expected %q", test.root, test.path, got, test.out)
+		}
+	}
+}
