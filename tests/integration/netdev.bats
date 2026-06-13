@@ -31,7 +31,7 @@ function setup() {
 }
 
 function teardown() {
-	ip link del dev dummy0
+	ip link del dev dummy0 &>/dev/null
 	delete_netns
 	teardown_bundle
 }
@@ -141,6 +141,10 @@ function teardown() {
 	mac_address="00:11:22:33:44:55"
 	# set a custom mac address to the interface
 	ip link set address "$mac_address" dev dummy0
+	ip link set dev dummy0 up
+	# Even when a specific MAC address is explicitly set, Fedora may still randomize it.
+	# Read back the actual address to confirm.
+	mac_address=$(ip link show dummy0 | awk '$1=="link/ether"{print $2}')
 
 	runc run test_busybox
 	[ "$status" -eq 0 ]
@@ -178,6 +182,10 @@ function teardown() {
 	ip link set address "$mac_address" dev dummy0
 	# Set a custom ip address to the interface.
 	ip address add "$global_ip" dev dummy0
+	ip link set dev dummy0 up
+	# Even when a specific MAC address is explicitly set, Fedora may still randomize it.
+	# Read back the actual address to confirm.
+	mac_address=$(ip link show dummy0 | awk '$1=="link/ether"{print $2}')
 
 	runc run test_busybox
 	[ "$status" -eq 0 ]

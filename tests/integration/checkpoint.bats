@@ -28,7 +28,7 @@ function setup() {
 }
 
 function teardown() {
-	ip link del dev dummy0
+	ip link del dev dummy0 &>/dev/null
 	delete_netns
 	teardown_bundle
 }
@@ -147,6 +147,10 @@ function simple_cr() {
 	ip link set mtu "$mtu_value" dev dummy0
 	ip link set address "$mac_address" dev dummy0
 	ip address add "$global_ip" dev dummy0
+	ip link set dev dummy0 up
+	# Even when a specific MAC address is explicitly set, Fedora may still randomize it.
+	# Read back the actual address to confirm.
+	mac_address=$(ip link show dummy0 | awk '$1=="link/ether"{print $2}')
 
 	# Tell runc which network namespace to use.
 	create_netns
