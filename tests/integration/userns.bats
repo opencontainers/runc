@@ -280,3 +280,27 @@ function teardown() {
 	# is deleted during the namespace cleanup.
 	run ! ip link del dummy0
 }
+
+@test "checkpoint userns container" {
+	requires criu root criu_version_4.3
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	testcontainer test_busybox running
+
+	for _ in $(seq 2); do
+		runc checkpoint --work-path ./work-dir test_busybox
+		[ "$status" -eq 0 ]
+
+		testcontainer test_busybox checkpointed
+
+		# we need to chown images because child process can try to read them.
+		chown -R 100000:200000 ./checkpoint
+
+		runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+		[ "$status" -eq 0 ]
+
+		testcontainer test_busybox running
+	done
+}
