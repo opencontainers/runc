@@ -588,7 +588,7 @@ This release includes fixes for the following high-severity security issues:
    `github.com/checkpoint-restore/go-criu`. (#3652)
  * Add `--pidfd-socket` to `runc run` and `runc exec` to allow for management
    processes to receive a pidfd for the new process, allowing them to avoid pid
-   reuse attacks. (#4045)
+   re-use attacks. (#4045)
 
 [mount_setattr.2]: https://man7.org/linux/man-pages/man2/mount_setattr.2.html
 [cve-2019-5736]: https://github.com/advisories/GHSA-gxmr-w5mj-v8hh
