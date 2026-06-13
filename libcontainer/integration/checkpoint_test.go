@@ -103,9 +103,10 @@ func testCheckpoint(t *testing.T, userns bool) {
 	imagesDir := filepath.Join(tmp, "criu")
 
 	checkpointOpts := &libcontainer.CriuOpts{
-		ImagesDirectory: imagesDir,
-		WorkDirectory:   imagesDir,
-		ParentImage:     parentImage,
+		ImagesDirectory:   imagesDir,
+		WorkDirectory:     imagesDir,
+		ParentImage:       parentImage,
+		ManageCgroupsMode: "ignore",
 	}
 
 	if err := container.Checkpoint(checkpointOpts); err != nil {
