@@ -6,6 +6,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0-rc.3] - 2026-06-13
+
+> The best way to get a drink out of a Vogon is to stick your finger down his
+> throat.
+
+### Security ###
+
+This release includes a fix for the following low-severity security issue:
+
+- [CVE-2026-41579][] allowed a malicious image with a `/dev` symlink to have
+  limited write access to the host filesystem in ways that our analysis
+  indicates was too limited to be problematic in practice. This bug was very
+  similar to those fixed in [CVE-2025-31133][], [CVE-2025-52565][],
+  [CVE-2025-31133][] and was simply missed at the time when we hardened the
+  rootfs preparation code. We have conducted a deeper audit and not found any
+  other problematic cases.
+
+[CVE-2026-41579]: https://github.com/opencontainers/runc/security/advisories/GHSA-xjvp-4fhw-gc47
+
+### libcontainer API ###
+- The `cmsg` helpers from `github.com/opencontainers/runc/libcontainer/utils`
+  have been moved to an internal package. We have included wrapper functions
+  but they will be removed in runc 1.6. (#5227, #5231)
+- Added `//go:fix inline` to ease migration for `libcontainer/devices` symbols
+  that are deprecated and scheduled for removal in runc 1.6. (#5223, #5225)
+
+### Fixed ###
+- `runc list` now correctly handles non-existent `--root` arguments. (#5297,
+  #5301)
+- Various integration test improvements. (#5222, #5226, #5232, #5239, #5230,
+  #5236, #5246, #5248, #5279, #5283, #5269, #5286, #5295, #5303)
+
+### Changed ###
+- When masking directories with `maskPaths`, runc will now re-use a single
+  `tmpfs` instance (which is not writeable) to reduce the number `tmpfs`
+  superblocks that need to be reaped when containers die (in particular,
+  Kubernetes applies masks to per-CPU sysfs directories which get expensive
+  quickly). (#5275, #5280)
+
 ## [1.5.0-rc.2] - 2026-04-02
 
 > いざやいざや、見に行かん
@@ -1669,7 +1708,8 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.1...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...HEAD
+[1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
 [1.3.0]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...v1.3.0
 [1.2.0]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.1...v1.2.0
 [1.1.0]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...v1.1.0
@@ -1735,6 +1775,7 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1
 
 <!-- 1.5.z patch releases -->
-[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.2...release-1.5
+[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...release-1.5
+[1.5.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.2...v1.5.0-rc.3
 [1.5.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...v1.5.0-rc.2
 [1.5.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.5.0-rc.1
