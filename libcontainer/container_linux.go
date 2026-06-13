@@ -239,25 +239,103 @@ func (c *Container) exec() error {
 	return c.postStart()
 }
 
+// handleFifo listens for either a byte written to the FIFO file or
+// the init process exiting. On kernels supporting pidfd_open(2)
+// (>= 5.3), it uses a single poll(2) for efficiency. On older kernels,
+// it falls back to a polling loop that periodically checks the init
+// process's liveness. This function is blocking.
 func handleFifo(path string, pid int) error {
-	blockingFifoOpenCh := awaitFifoOpen(path)
-	for {
-		select {
-		case result := <-blockingFifoOpenCh:
-			return handleFifoResult(result)
+	f, err := os.OpenFile(path, os.O_RDONLY|unix.O_NONBLOCK, 0)
+	if err != nil {
+		return fmt.Errorf("exec fifo: %w", err)
+	}
+	defer f.Close()
 
-		case <-time.After(time.Millisecond * 100):
-			stat, err := system.Stat(pid)
-			if err != nil || stat.State == system.Zombie {
-				// could be because process started, ran, and completed between our 100ms timeout and our system.Stat() check.
-				// see if the fifo exists and has data (with a non-blocking open, which will succeed if the writing process is complete).
-				if err := handleFifoResult(fifoOpen(path, false)); err != nil {
-					return errors.New("container process is already dead")
-				}
-				return nil
-			}
+	if err := waitForFifoReady(f, pid); err != nil {
+		return err
+	}
+
+	if err := readFromExecFifo(f); err != nil {
+		return err
+	}
+
+	if err := os.Remove(f.Name()); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
+}
+
+// waitForFifoReady blocks until either the FIFO has data available to read,
+// or the init process has exited. It does not consume the data — it only
+// returns once a subsequent read on f will not block indefinitely.
+func waitForFifoReady(f *os.File, pid int) error {
+	// TODO: switch to os.Process.WithHandle once go < 1.26 is no longer supported.
+	pidFd, err := unix.PidfdOpen(pid, 0)
+	if err == nil {
+		defer unix.Close(pidFd)
+		return waitForFifoReadyPidfd(f, pidFd)
+	}
+	// fall through to the polling path.
+	return waitForFifoReadyPolling(f, pid)
+}
+
+// fast path: a single poll(2) on both the
+// FIFO and a pidfd, blocking with no timeout.
+func waitForFifoReadyPidfd(f *os.File, pidFd int) error {
+	pfds := []unix.PollFd{
+		{Fd: int32(f.Fd()), Events: unix.POLLIN},
+		{Fd: int32(pidFd), Events: unix.POLLIN},
+	}
+	for {
+		_, err := unix.Poll(pfds, -1)
+		if errors.Is(err, unix.EINTR) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("poll exec fifo: %w", err)
+		}
+		// We don't care which FD woke us up. In all cases the next step
+		// is to read the FIFO: if init wrote the byte (alive or dead),
+		// it's there to be read; if init died without writing, the read
+		// returns EOF and readFromExecFifo reports the dead-process error.
+		return nil
+	}
+}
+
+// the fallback for kernels without pidfd_open.
+func waitForFifoReadyPolling(f *os.File, pid int) error {
+	pfd := []unix.PollFd{{Fd: int32(f.Fd()), Events: unix.POLLIN}}
+	const pollIntervalMs = 100
+	for {
+		n, err := unix.Poll(pfd, pollIntervalMs)
+		if errors.Is(err, unix.EINTR) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("poll exec fifo: %w", err)
+		}
+		if n > 0 && pfd[0].Revents&(unix.POLLIN|unix.POLLHUP) != 0 {
+			return nil
+		}
+		// If init is dead, fallthrough and let readFromExecFifo distinguish
+		// "wrote before dying" from "died before writing".
+		stat, err := system.Stat(pid)
+		if err != nil || stat.State == system.Zombie {
+			return nil
 		}
 	}
+}
+
+func readFromExecFifo(execFifo io.Reader) error {
+	var buf [1]byte
+	n, err := execFifo.Read(buf[:])
+	if err != nil && err != io.EOF {
+		return fmt.Errorf("read exec fifo: %w", err)
+	}
+	if n == 0 {
+		return errors.New("exec fifo is empty: container init did not signal execve readiness (process died before writing, or fifo already consumed)")
+	}
+	return nil
 }
 
 func (c *Container) postStart() (retErr error) {
@@ -281,59 +359,6 @@ func (c *Container) postStart() (retErr error) {
 		return err
 	}
 	return c.config.Hooks.Run(configs.Poststart, s)
-}
-
-func readFromExecFifo(execFifo io.Reader) error {
-	data, err := io.ReadAll(execFifo)
-	if err != nil {
-		return err
-	}
-	if len(data) <= 0 {
-		return errors.New("cannot start an already running container")
-	}
-	return nil
-}
-
-func awaitFifoOpen(path string) <-chan openResult {
-	fifoOpened := make(chan openResult)
-	go func() {
-		result := fifoOpen(path, true)
-		fifoOpened <- result
-	}()
-	return fifoOpened
-}
-
-func fifoOpen(path string, block bool) openResult {
-	flags := os.O_RDONLY
-	if !block {
-		flags |= unix.O_NONBLOCK
-	}
-	f, err := os.OpenFile(path, flags, 0)
-	if err != nil {
-		return openResult{err: fmt.Errorf("exec fifo: %w", err)}
-	}
-	return openResult{file: f}
-}
-
-func handleFifoResult(result openResult) error {
-	if result.err != nil {
-		return result.err
-	}
-	f := result.file
-	defer f.Close()
-	if err := readFromExecFifo(f); err != nil {
-		return err
-	}
-	err := os.Remove(f.Name())
-	if err == nil || errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	return err
-}
-
-type openResult struct {
-	file *os.File
-	err  error
 }
 
 func (c *Container) start(process *Process) (retErr error) {
