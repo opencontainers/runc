@@ -6,22 +6,144 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added ###
-- When building runc, `RUNC_BUILDTAGS` make or shell environment variable can
-  be used to add build tags and/or remove existing build tags (when a tag is
-  prefixed with `-`). (#5171)
-- Support for specs.LinuxSeccompFlagWaitKillableRecv. (#5172)
-
-### Deprecated ###
-- `EXTRA_BUILDTAGS` make variable is deprecated in favor of `RUNC_BUILDTAGS`
-  and will be removed in runc 1.6. (#5171)
-- `libcontainer/devices` has been deprecated in favour of
-  `github.com/moby/sys/devices` (which is a carbon copy of the package). It
-  will be removed in runc 1.6.
-
 ### Fixed ###
 - The poststart hooks are now executed after starting the user-specified
   process, fixing a runtime-spec conformance issue. (#4347, #5186)
+
+## [1.5.0-rc.3] - 2026-06-13
+
+> The best way to get a drink out of a Vogon is to stick your finger down his
+> throat.
+
+### Security ###
+
+This release includes a fix for the following low-severity security issue:
+
+- [CVE-2026-41579][] allowed a malicious image with a `/dev` symlink to have
+  limited write access to the host filesystem in ways that our analysis
+  indicates was too limited to be problematic in practice. This bug was very
+  similar to those fixed in [CVE-2025-31133][], [CVE-2025-52565][],
+  [CVE-2025-31133][] and was simply missed at the time when we hardened the
+  rootfs preparation code. We have conducted a deeper audit and not found any
+  other problematic cases.
+
+[CVE-2026-41579]: https://github.com/opencontainers/runc/security/advisories/GHSA-xjvp-4fhw-gc47
+
+### libcontainer API ###
+- The `cmsg` helpers from `github.com/opencontainers/runc/libcontainer/utils`
+  have been moved to an internal package. We have included wrapper functions
+  but they will be removed in runc 1.6. (#5227, #5231)
+- Added `//go:fix inline` to ease migration for `libcontainer/devices` symbols
+  that are deprecated and scheduled for removal in runc 1.6. (#5223, #5225)
+
+### Fixed ###
+- `runc list` now correctly handles non-existent `--root` arguments. (#5297,
+  #5301)
+- Various integration test improvements. (#5222, #5226, #5232, #5239, #5230,
+  #5236, #5246, #5248, #5279, #5283, #5269, #5286, #5295, #5303)
+
+### Changed ###
+- When masking directories with `maskPaths`, runc will now reuse a single
+  `tmpfs` instance (which is not writable) to reduce the number `tmpfs`
+  superblocks that need to be reaped when containers die (in particular,
+  Kubernetes applies masks to per-CPU sysfs directories which get expensive
+  quickly). (#5275, #5280)
+
+## [1.4.3] - 2026-06-13
+
+> The best way to irritate him is to feed his grandmother to the Ravenous
+> Bugblatter Beast of Traal.
+
+### Security ###
+
+This release includes a fix for the following low-severity security issue:
+
+- [CVE-2026-41579][] allowed a malicious image with a `/dev` symlink to have
+  limited write access to the host filesystem in ways that our analysis
+  indicates was too limited to be problematic in practice. This bug was very
+  similar to those fixed in [CVE-2025-31133][], [CVE-2025-52565][],
+  [CVE-2025-31133][] and was simply missed at the time when we hardened the
+  rootfs preparation code. We have conducted a deeper audit and not found any
+  other problematic cases.
+
+[CVE-2026-41579]: https://github.com/opencontainers/runc/security/advisories/GHSA-xjvp-4fhw-gc47
+
+### Fixed ###
+- Various integration test improvements. (#5222, #5237, #5226, #5229, #5239,
+  #5249, #5269, #5287, #5295, #5304)
+
+### Changed ###
+- When masking directories with `maskPaths`, runc will now reuse a single
+  `tmpfs` instance (which is not writable) to reduce the number `tmpfs`
+  superblocks that need to be reaped when containers die (in particular,
+  Kubernetes applies masks to per-CPU sysfs directories which get expensive
+  quickly). (#5275, #5281)
+
+## [1.3.6] - 2026-06-13
+
+> On no account should you allow a Vogon to read poetry at you.
+
+### Security ###
+
+This release includes a fix for the following low-severity security issue:
+
+- [CVE-2026-41579][] allowed a malicious image with a `/dev` symlink to have
+  limited write access to the host filesystem in ways that our analysis
+  indicates was too limited to be problematic in practice. This bug was very
+  similar to those fixed in [CVE-2025-31133][], [CVE-2025-52565][],
+  [CVE-2025-31133][] and was simply missed at the time when we hardened the
+  rootfs preparation code. We have conducted a deeper audit and not found any
+  other problematic cases.
+
+  This patchset required backports for #5190 and #5285, which were primarily
+  code reorganisations that were already backported to runc 1.4 and 1.5.
+
+[CVE-2026-41579]: https://github.com/opencontainers/runc/security/advisories/GHSA-xjvp-4fhw-gc47
+
+### Fixed ###
+- A regression in runc v1.3.0 which can result in a stuck `runc exec` or
+  `runc run` when the container process runs for a short time. (#5208,
+  #5210, #5215)
+- Various integration test improvements. (#5159, #5188, #5226, #5228, #5239,
+  #5253, #5269, #5288)
+
+### Changed ###
+- When masking directories with `maskPaths`, runc will now reuse a single
+  `tmpfs` instance (which is not writable) to reduce the number `tmpfs`
+  superblocks that need to be reaped when containers die (in particular,
+  Kubernetes applies masks to per-CPU sysfs directories which get expensive
+  quickly). (#5275, #5281)
+
+## [1.5.0-rc.2] - 2026-04-02
+
+> いざやいざや、見に行かん
+
+> [!NOTE]
+> runc v1.5.0-rc.2 includes all of the patches backported to runc v1.4.2.
+
+### Fixed ###
+- Building with libpathrs for systems that use non-GNU awk, e.g. Debian.
+  (#5196, #5194)
+
+### Added ###
+- Installation notes for libpathrs. (#5199, #5195)
+- Support for specs.LinuxSeccompFlagWaitKillableRecv. (#5183, #5172)
+- When building runc, `RUNC_BUILDTAGS` make or shell environment variable can
+  be used to add build tags and/or remove existing build tags (when a tag is
+  prefixed with `-`). (#5198, #5171)
+
+### Changed ###
+- runc now requires Go 1.25+ to build. (#5211, #5205)
+- libcontainer now pre-opens container root filesystem and uses the file
+  descriptor (rather than the path) for most operations related to container
+  root during container start. (#5204, #5190)
+
+### Deprecated ###
+- `EXTRA_BUILDTAGS` make variable is deprecated in favor of `RUNC_BUILDTAGS`
+  and will be removed in runc 1.6. (#5171, #5198)
+- `libcontainer/devices` has been deprecated in favour of
+  `github.com/moby/sys/devices` (which is a carbon copy of the package). It
+  will be removed in runc 1.6. (#5220, #5142)
 
 ## [1.5.0-rc.1] - 2026-03-12
 
@@ -1705,7 +1827,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.2.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.2.0-rc.1
 
 <!-- 1.3.z patch releases -->
-[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.5...release-1.3
+[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.6...release-1.3
+[1.3.6]: https://github.com/opencontainers/runc/compare/v1.3.5...v1.3.6
 [1.3.5]: https://github.com/opencontainers/runc/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/opencontainers/runc/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/opencontainers/runc/compare/v1.3.2...v1.3.3
@@ -1716,7 +1839,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
 
 <!-- 1.4.z patch releases -->
-[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.1...release-1.4
+[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.2...release-1.4
+[1.4.2]: https://github.com/opencontainers/runc/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
 [1.4.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.2...v1.4.0-rc.3
@@ -1724,5 +1848,7 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1
 
 <!-- 1.5.z patch releases -->
-[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...release-1.5
+[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...release-1.5
+[1.5.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.2...v1.5.0-rc.3
+[1.5.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...v1.5.0-rc.2
 [1.5.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.5.0-rc.1
