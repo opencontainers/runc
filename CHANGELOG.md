@@ -6,6 +6,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.4.z]
 
+## [1.4.3] - 2026-06-13
+
+> The best way to irritate him is to feed his grandmother to the Ravenous
+> Bugblatter Beast of Traal.
+
+### Security ###
+
+This release includes a fix for the following low-severity security issue:
+
+- [CVE-2026-41579][] allowed a malicious image with a `/dev` symlink to have
+  limited write access to the host filesystem in ways that our analysis
+  indicates was too limited to be problematic in practice. This bug was very
+  similar to those fixed in [CVE-2025-31133][], [CVE-2025-52565][],
+  [CVE-2025-31133][] and was simply missed at the time when we hardened the
+  rootfs preparation code. We have conducted a deeper audit and not found any
+  other problematic cases.
+
+[CVE-2026-41579]: https://github.com/opencontainers/runc/security/advisories/GHSA-xjvp-4fhw-gc47
+
+### Fixed ###
+- Various integration test improvements. (#5222, #5237, #5226, #5229, #5239,
+  #5249, #5269, #5287, #5295, #5304)
+
+### Changed ###
+- When masking directories with `maskPaths`, runc will now re-use a single
+  `tmpfs` instance (which is not writeable) to reduce the number `tmpfs`
+  superblocks that need to be reaped when containers die (in particular,
+  Kubernetes applies masks to per-CPU sysfs directories which get expensive
+  quickly). (#5275, #5281)
+
 ## [1.4.2] - 2026-04-02
 
 > Я — Земля! Я своих провожаю питомцев.
@@ -1428,7 +1458,8 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.1...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.1...HEAD
+[1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
 [1.3.0]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...v1.3.0
 [1.2.0]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.1...v1.2.0
 [1.1.0]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...v1.1.0
@@ -1479,7 +1510,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
 
 <!-- 1.4.z patch releases -->
-[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.2...release-1.4
+[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.3...release-1.4
+[1.4.3]: https://github.com/opencontainers/runc/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/opencontainers/runc/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
