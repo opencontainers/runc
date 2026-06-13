@@ -6,6 +6,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.3.z]
 
+## [1.3.6] - 2026-06-13
+
+> On no account should you allow a Vogon to read poetry at you.
+
+### Security ###
+
+This release includes a fix for the following low-severity security issue:
+
+- [CVE-2026-41579][] allowed a malicious image with a `/dev` symlink to have
+  limited write access to the host filesystem in ways that our analysis
+  indicates was too limited to be problematic in practice. This bug was very
+  similar to those fixed in [CVE-2025-31133][], [CVE-2025-52565][],
+  [CVE-2025-31133][] and was simply missed at the time when we hardened the
+  rootfs preparation code. We have conducted a deeper audit and not found any
+  other problematic cases.
+
+  This patchset required backports for #5190 and #5285, which were primarily
+  code reorganisations that were already backported to runc 1.4 and 1.5.
+
+[CVE-2026-41579]: https://github.com/opencontainers/runc/security/advisories/GHSA-xjvp-4fhw-gc47
+
+### Fixed ###
+- A regression in runc v1.3.0 which can result in a stuck `runc exec` or
+  `runc run` when the container process runs for a short time. (#5208,
+  #5210, #5215)
+- Various integration test improvements. (#5159, #5188, #5226, #5228, #5239,
+  #5253, #5269, #5288)
+
+### Added ###
+- When masking directories with `maskPaths`, runc will now re-use a single
+  `tmpfs` instance (which is not writeable) to reduce the number `tmpfs`
+  superblocks that need to be reaped when containers die (in particular,
+  Kubernetes applies masks to per-CPU sysfs directories which get expensive
+  quickly). (#5275, #5281)
+
 ## [1.3.5] - 2026-03-17
 
 > Lo viejo funciona!
@@ -1252,7 +1287,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.2.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.2.0-rc.1
 
 <!-- 1.3.z patch releases -->
-[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.5...release-1.3
+[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.6...release-1.3
+[1.3.6]: https://github.com/opencontainers/runc/compare/v1.3.5...v1.3.6
 [1.3.5]: https://github.com/opencontainers/runc/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/opencontainers/runc/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/opencontainers/runc/compare/v1.3.2...v1.3.3
