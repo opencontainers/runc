@@ -25,6 +25,7 @@ import (
 	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/exeseal"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 )
@@ -432,6 +433,12 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	}
 
 	config.Cgroups = c
+
+	config.CloneSelfExe = spec.Annotations[exeseal.AnnotationKey]
+	if err := exeseal.ValidateMode(config.CloneSelfExe); err != nil {
+		return nil, err
+	}
+
 	// set linux-specific config
 	if spec.Linux != nil {
 		initMaps()
