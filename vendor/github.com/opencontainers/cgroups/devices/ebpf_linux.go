@@ -1,6 +1,8 @@
 package devices
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"os"
@@ -8,18 +10,128 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/asm"
-	"github.com/cilium/ebpf/link"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
-func nilCloser() error {
+// nativeEndian is binary.LittleEndian or binary.BigEndian resolved at init
+// time. cilium/ebpf/asm.Instructions.Marshal requires one of these two
+// concrete types; it rejects binary.NativeEndian via a type switch.
+var nativeEndian binary.ByteOrder
+
+func init() {
+	var x uint32 = 1
+	if *(*byte)(unsafe.Pointer(&x)) == 1 {
+		nativeEndian = binary.LittleEndian
+	} else {
+		nativeEndian = binary.BigEndian
+	}
+}
+
+// bpfProgLoad loads a BPF program of type BPF_PROG_TYPE_CGROUP_DEVICE
+// and returns its file descriptor.
+func bpfProgLoad(insns asm.Instructions, license string) (int, error) {
+	buf := new(bytes.Buffer)
+	if err := insns.Marshal(buf, nativeEndian); err != nil {
+		return -1, err
+	}
+	insnsBytes := buf.Bytes()
+
+	licensePtr, err := unix.BytePtrFromString(license)
+	if err != nil {
+		return -1, err
+	}
+
+	// Minimal BPF_PROG_LOAD attr — only the fields we set; the rest are zero.
+	type bpfProgLoadAttr struct {
+		progType uint32
+		insnCnt  uint32
+		insns    uint64 // pointer
+		license  uint64 // pointer
+	}
+	attr := bpfProgLoadAttr{
+		progType: unix.BPF_PROG_TYPE_CGROUP_DEVICE,
+		insnCnt:  uint32(len(insnsBytes) / asm.InstructionSize),
+		insns:    uint64(uintptr(unsafe.Pointer(&insnsBytes[0]))),
+		license:  uint64(uintptr(unsafe.Pointer(licensePtr))),
+	}
+
+	fd, _, errno := unix.Syscall(unix.SYS_BPF,
+		uintptr(unix.BPF_PROG_LOAD),
+		uintptr(unsafe.Pointer(&attr)),
+		unsafe.Sizeof(attr))
+	runtime.KeepAlive(insnsBytes)
+	runtime.KeepAlive(licensePtr)
+	if errno != 0 {
+		return -1, errno
+	}
+	return int(fd), nil
+}
+
+// bpfProgGetFdByID returns the fd for the BPF program with the given ID.
+func bpfProgGetFdByID(id uint32) (int, error) {
+	attr := struct{ id uint32 }{id}
+	fd, _, errno := unix.Syscall(unix.SYS_BPF,
+		uintptr(unix.BPF_PROG_GET_FD_BY_ID),
+		uintptr(unsafe.Pointer(&attr)),
+		unsafe.Sizeof(attr))
+	if errno != 0 {
+		return -1, errno
+	}
+	return int(fd), nil
+}
+
+// bpfProgAttach attaches progFd to cgroupFd with the given flags.
+// If replaceFd >= 0, the ReplaceBpfFd field is set (for BPF_F_REPLACE semantics).
+func bpfProgAttach(cgroupFd, progFd int, attachFlags uint32, replaceFd int) error {
+	attr := struct {
+		targetFd     uint32
+		attachBpfFd  uint32
+		attachType   uint32
+		attachFlags  uint32
+		replaceBpfFd uint32
+	}{
+		targetFd:    uint32(cgroupFd),
+		attachBpfFd: uint32(progFd),
+		attachType:  uint32(unix.BPF_CGROUP_DEVICE),
+		attachFlags: attachFlags,
+	}
+	if replaceFd >= 0 {
+		attr.replaceBpfFd = uint32(replaceFd)
+	}
+	_, _, errno := unix.Syscall(unix.SYS_BPF,
+		uintptr(unix.BPF_PROG_ATTACH),
+		uintptr(unsafe.Pointer(&attr)),
+		unsafe.Sizeof(attr))
+	if errno != 0 {
+		return errno
+	}
 	return nil
 }
 
-func findAttachedCgroupDeviceFilters(dirFd int) ([]*ebpf.Program, error) {
+// bpfProgDetach detaches progFd from cgroupFd.
+func bpfProgDetach(cgroupFd, progFd int) error {
+	attr := struct {
+		targetFd    uint32
+		attachBpfFd uint32
+		attachType  uint32
+	}{
+		targetFd:    uint32(cgroupFd),
+		attachBpfFd: uint32(progFd),
+		attachType:  uint32(unix.BPF_CGROUP_DEVICE),
+	}
+	_, _, errno := unix.Syscall(unix.SYS_BPF,
+		uintptr(unix.BPF_PROG_DETACH),
+		uintptr(unsafe.Pointer(&attr)),
+		unsafe.Sizeof(attr))
+	if errno != 0 {
+		return errno
+	}
+	return nil
+}
+
+func findAttachedCgroupDeviceFilters(dirFd int) ([]int, error) {
 	type bpfAttrQuery struct {
 		TargetFd    uint32
 		AttachType  uint32
@@ -59,9 +171,9 @@ func findAttachedCgroupDeviceFilters(dirFd int) ([]*ebpf.Program, error) {
 
 		// Convert the ids to program handles.
 		progIds = progIds[:size]
-		programs := make([]*ebpf.Program, 0, len(progIds))
+		fds := make([]int, 0, len(progIds))
 		for _, progId := range progIds {
-			program, err := ebpf.NewProgramFromID(ebpf.ProgramID(progId))
+			fd, err := bpfProgGetFdByID(progId)
 			if err != nil {
 				// We skip over programs that give us -EACCES or -EPERM. This
 				// is necessary because there may be BPF programs that have
@@ -72,16 +184,16 @@ func findAttachedCgroupDeviceFilters(dirFd int) ([]*ebpf.Program, error) {
 				// restrictions, there's no real issue with just ignoring these
 				// programs (and stops runc from breaking on distributions with
 				// very strict SELinux policies).
-				if errors.Is(err, os.ErrPermission) {
+				if os.IsPermission(err) {
 					logrus.Debugf("ignoring existing CGROUP_DEVICE program (prog_id=%v) which cannot be accessed by runc -- likely due to LSM policy: %v", progId, err)
 					continue
 				}
 				return nil, fmt.Errorf("cannot fetch program from id: %w", err)
 			}
-			programs = append(programs, program)
+			fds = append(fds, fd)
 		}
 		runtime.KeepAlive(progIds)
-		return programs, nil
+		return fds, nil
 	}
 
 	return nil, errors.New("could not get complete list of CGROUP_DEVICE programs")
@@ -98,19 +210,15 @@ var (
 // TODO: move this logic to cilium/ebpf
 func haveBpfProgReplace() bool {
 	haveBpfProgReplaceOnce.Do(func() {
-		prog, err := ebpf.NewProgram(&ebpf.ProgramSpec{
-			Type:    ebpf.CGroupDevice,
-			License: "MIT",
-			Instructions: asm.Instructions{
-				asm.Mov.Imm(asm.R0, 0),
-				asm.Return(),
-			},
-		})
+		progFd, err := bpfProgLoad(asm.Instructions{
+			asm.Mov.Imm(asm.R0, 0),
+			asm.Return(),
+		}, "MIT")
 		if err != nil {
-			logrus.Warnf("checking for BPF_F_REPLACE support: ebpf.NewProgram failed: %v", err)
+			logrus.Warnf("checking for BPF_F_REPLACE support: bpfProgLoad failed: %v", err)
 			return
 		}
-		defer prog.Close()
+		defer unix.Close(progFd)
 
 		devnull, err := os.Open("/dev/null")
 		if err != nil {
@@ -122,24 +230,14 @@ func haveBpfProgReplace() bool {
 		// We know that we have BPF_PROG_ATTACH since we can load
 		// BPF_CGROUP_DEVICE programs. If passing BPF_F_REPLACE gives us EINVAL
 		// we know that the feature isn't present.
-		err = link.RawAttachProgram(link.RawAttachProgramOptions{
-			// We rely on this fd being checked after attachFlags in the kernel.
-			Target: int(devnull.Fd()),
-			// Attempt to "replace" our BPF program with itself. This will
-			// always fail, but we should get -EINVAL if BPF_F_REPLACE is not
-			// supported.
-			Anchor:  link.ReplaceProgram(prog),
-			Program: prog,
-			Attach:  ebpf.AttachCGroupDevice,
-			Flags:   unix.BPF_F_ALLOW_MULTI,
-		})
-		if errors.Is(err, ebpf.ErrNotSupported) || errors.Is(err, unix.EINVAL) {
+		err = bpfProgAttach(int(devnull.Fd()), progFd, unix.BPF_F_ALLOW_MULTI|unix.BPF_F_REPLACE, progFd)
+		if errors.Is(err, unix.EINVAL) {
 			// not supported
 			return
 		}
 		if !errors.Is(err, unix.EBADF) {
 			// If we see any new errors here, it's possible that there is a
-			// regression due to a cilium/ebpf update and the above EINVAL
+			// regression due to a kernel update and the above EINVAL
 			// checks are not working. So, be loud about it so someone notices
 			// and we can get the issue fixed quicker.
 			logrus.Warnf("checking for BPF_F_REPLACE: got unexpected (not EBADF or EINVAL) error: %v", err)
@@ -154,7 +252,7 @@ func haveBpfProgReplace() bool {
 // Requires the system to be running in cgroup2 unified-mode with kernel >= 4.15 .
 //
 // https://github.com/torvalds/linux/commit/ebc614f687369f9df99828572b1d85a7c2de3d92
-func loadAttachCgroupDeviceFilter(insts asm.Instructions, license string, dirFd int) (func() error, error) {
+func loadAttachCgroupDeviceFilter(insts asm.Instructions, license string, dirFd int) error {
 	// Increase `ulimit -l` limit to avoid BPF_PROG_LOAD error (#2167).
 	// This limit is not inherited into the container.
 	memlockLimit := &unix.Rlimit{
@@ -164,93 +262,65 @@ func loadAttachCgroupDeviceFilter(insts asm.Instructions, license string, dirFd 
 	_ = unix.Setrlimit(unix.RLIMIT_MEMLOCK, memlockLimit)
 
 	// Get the list of existing programs.
-	oldProgs, err := findAttachedCgroupDeviceFilters(dirFd)
+	oldFds, err := findAttachedCgroupDeviceFilters(dirFd)
 	if err != nil {
-		return nilCloser, err
+		return err
 	}
-	useReplaceProg := haveBpfProgReplace() && len(oldProgs) == 1
+	useReplaceProg := haveBpfProgReplace() && len(oldFds) == 1
 
 	// Generate new program.
-	spec := &ebpf.ProgramSpec{
-		Type:         ebpf.CGroupDevice,
-		Instructions: insts,
-		License:      license,
-	}
-	prog, err := ebpf.NewProgram(spec)
+	progFd, err := bpfProgLoad(insts, license)
 	if err != nil {
-		return nilCloser, err
+		for _, fd := range oldFds {
+			unix.Close(fd)
+		}
+		return err
 	}
 
 	// If there is only one old program, we can just replace it directly.
-
-	attachProgramOptions := link.RawAttachProgramOptions{
-		Target:  dirFd,
-		Program: prog,
-		Attach:  ebpf.AttachCGroupDevice,
-		Flags:   unix.BPF_F_ALLOW_MULTI,
-	}
-
+	replaceFd := -1
+	attachFlags := uint32(unix.BPF_F_ALLOW_MULTI)
 	if useReplaceProg {
-		attachProgramOptions.Anchor = link.ReplaceProgram(oldProgs[0])
+		replaceFd = oldFds[0]
+		attachFlags |= unix.BPF_F_REPLACE
 	}
-	err = link.RawAttachProgram(attachProgramOptions)
+	err = bpfProgAttach(dirFd, progFd, attachFlags, replaceFd)
+	unix.Close(progFd) // kernel keeps program alive via cgroup attachment; FD no longer needed
 	if err != nil {
-		return nilCloser, fmt.Errorf("failed to call BPF_PROG_ATTACH (BPF_CGROUP_DEVICE, BPF_F_ALLOW_MULTI): %w", err)
-	}
-	closer := func() error {
-		err = link.RawDetachProgram(link.RawDetachProgramOptions{
-			Target:  dirFd,
-			Program: prog,
-			Attach:  ebpf.AttachCGroupDevice,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to call BPF_PROG_DETACH (BPF_CGROUP_DEVICE): %w", err)
+		for _, fd := range oldFds {
+			unix.Close(fd)
 		}
-		// TODO: Should we attach the old filters back in this case? Otherwise
-		//       we fail-open on a security feature, which is a bit scary.
-		return nil
+		return fmt.Errorf("failed to call BPF_PROG_ATTACH (BPF_CGROUP_DEVICE, BPF_F_ALLOW_MULTI): %w", err)
 	}
+
 	if !useReplaceProg {
 		logLevel := logrus.DebugLevel
 		// If there was more than one old program, give a warning (since this
 		// really shouldn't happen with runc-managed cgroups) and then detach
 		// all the old programs.
-		if len(oldProgs) > 1 {
+		if len(oldFds) > 1 {
 			// NOTE: Ideally this should be a warning but it turns out that
 			//       systemd-managed cgroups trigger this warning (apparently
 			//       systemd doesn't delete old non-systemd programs when
 			//       setting properties).
-			logrus.Infof("found more than one filter (%d) attached to a cgroup -- removing extra filters!", len(oldProgs))
+			logrus.Infof("found more than one filter (%d) attached to a cgroup -- removing extra filters!", len(oldFds))
 			logLevel = logrus.InfoLevel
 		}
-		for idx, oldProg := range oldProgs {
-			// Output some extra debug info.
-			if info, err := oldProg.Info(); err == nil {
-				fields := logrus.Fields{
-					"type": info.Type.String(),
-					"tag":  info.Tag,
-					"name": info.Name,
-				}
-				if id, ok := info.ID(); ok {
-					fields["id"] = id
-				}
-				if runCount, ok := info.RunCount(); ok {
-					fields["run_count"] = runCount
-				}
-				if runtime, ok := info.Runtime(); ok {
-					fields["runtime"] = runtime.String()
-				}
-				logrus.WithFields(fields).Logf(logLevel, "removing old filter %d from cgroup", idx)
-			}
-			err = link.RawDetachProgram(link.RawDetachProgramOptions{
-				Target:  dirFd,
-				Program: oldProg,
-				Attach:  ebpf.AttachCGroupDevice,
-			})
+		for idx, oldFd := range oldFds {
+			logrus.WithFields(logrus.Fields{
+				"fd": oldFd,
+			}).Logf(logLevel, "removing old filter %d from cgroup", idx)
+			err = bpfProgDetach(dirFd, oldFd)
 			if err != nil {
-				return closer, fmt.Errorf("failed to call BPF_PROG_DETACH (BPF_CGROUP_DEVICE) on old filter program: %w", err)
+				return fmt.Errorf("failed to call BPF_PROG_DETACH (BPF_CGROUP_DEVICE) on old filter program: %w", err)
 			}
 		}
 	}
-	return closer, nil
+
+	// Close fds for old programs — the kernel keeps them alive via the attachment.
+	for _, fd := range oldFds {
+		unix.Close(fd)
+	}
+
+	return nil
 }
