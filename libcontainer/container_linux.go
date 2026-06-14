@@ -938,7 +938,7 @@ func (c *Container) currentState() *State {
 	var (
 		startTime           uint64
 		externalDescriptors []string
-		pid                 = -1
+		pid                 int
 	)
 	if c.initProcess != nil {
 		pid = c.initProcess.pid()
