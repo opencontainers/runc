@@ -94,7 +94,7 @@ github.com/seccomp/libseccomp-golang
 ## explicit; go 1.17
 github.com/sirupsen/logrus
 github.com/sirupsen/logrus/hooks/test
-# github.com/urfave/cli/v3 v3.9.1
+# github.com/urfave/cli/v3 v3.10.0
 ## explicit; go 1.22
 github.com/urfave/cli/v3
 # github.com/vishvananda/netlink v1.3.1
