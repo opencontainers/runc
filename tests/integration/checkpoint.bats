@@ -25,6 +25,7 @@ function setup() {
 
 	# Create a dummy interface to move to the container.
 	ip link add dummy0 type dummy
+	udevadm settle
 }
 
 function teardown() {
