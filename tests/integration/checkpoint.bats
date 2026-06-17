@@ -30,6 +30,9 @@ function delete_netns() {
 
 	# Delete the namespace only if the ns_name variable is set.
 	[ -v ns_name ] && ip netns del "$ns_name"
+
+	unset ns_name
+	unset ns_path
 }
 
 function setup() {
