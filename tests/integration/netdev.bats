@@ -35,7 +35,10 @@ function setup() {
 }
 
 function teardown() {
-	ip link del dev dummy0
+	# The interface might be on the host or not, depending the test. If it's on the host, let's
+	# delete it.
+	ip link del dev dummy0 2>/dev/null
+
 	delete_netns
 	teardown_bundle
 }
