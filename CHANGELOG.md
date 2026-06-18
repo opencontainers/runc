@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The poststart hooks are now executed after starting the user-specified
   process, fixing a runtime-spec conformance issue. (#4347, #5186)
 
+### Added ###
+- `runc version` and `runc features` now provide version information about
+  libpathrs when runc is built with the `libpathrs` build tag. (#5291)
+
+### Changed ###
+- runc now depends on [libpathrs v0.2.5] or later, and attempting to build with
+  older versions will cause compilation errors. (#5291)
+
+[libpathrs v0.2.5]: https://github.com/cyphar/libpathrs/releases/tag/v0.2.5
+
 ## [1.5.0-rc.3] - 2026-06-13
 
 > The best way to get a drink out of a Vogon is to stick your finger down his
