@@ -51,6 +51,10 @@ func printVersion(c *cli.Context) {
 	if major+minor+micro > 0 {
 		fmt.Fprintf(w, "libseccomp: %d.%d.%d\n", major, minor, micro)
 	}
+
+	if v := pathrsVersionString(); v != "" {
+		fmt.Fprintf(w, "libpathrs: %s\n", v)
+	}
 }
 
 const (
