@@ -36,7 +36,7 @@ var featuresCommand = &cli.Command{
 			OCIVersionMin: "1.0.0",
 			OCIVersionMax: specs.Version,
 			Annotations: map[string]string{
-				runcfeatures.AnnotationRuncVersion:           version,
+				runcfeatures.AnnotationRuncVersion:           cmd.Root().Version,
 				runcfeatures.AnnotationRuncCommit:            gitCommit,
 				runcfeatures.AnnotationRuncCheckpointEnabled: "true",
 			},
