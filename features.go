@@ -96,6 +96,10 @@ var featuresCommand = &cli.Command{
 			feat.Annotations[runcfeatures.AnnotationLibseccompVersion] = fmt.Sprintf("%d.%d.%d", major, minor, patch)
 		}
 
+		if v := pathrsVersionString(); v != "" {
+			feat.Annotations[runcfeatures.AnnotationLibpathrsVersion] = v
+		}
+
 		enc := json.NewEncoder(cmd.Writer)
 		enc.SetIndent("", "    ")
 		return enc.Encode(feat)
