@@ -24,12 +24,14 @@ function create_netns() {
 }
 
 function delete_netns() {
+	[ -v ns_name ] || return
+
 	# The interface shouldn't be on the host, but if we failed to move it to the container, it
 	# might. Let's delete it if we created one (i.e. if ns_name is defined).
-	[ -v ns_name ] && ip link del dev dummy0 2>/dev/null
+	ip link del dev dummy0 2>/dev/null
 
 	# Delete the namespace only if the ns_name variable is set.
-	[ -v ns_name ] && ip netns del "$ns_name"
+	ip netns del "$ns_name"
 
 	unset ns_name
 	unset ns_path
