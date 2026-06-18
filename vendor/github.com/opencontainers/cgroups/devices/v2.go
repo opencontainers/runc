@@ -64,7 +64,7 @@ func setV2(dirPath string, r *cgroups.Resources) error {
 		return fmt.Errorf("cannot get dir FD for %s", dirPath)
 	}
 	defer unix.Close(dirFD)
-	if _, err := loadAttachCgroupDeviceFilter(insts, license, dirFD); err != nil {
+	if err := loadAttachCgroupDeviceFilter(insts, license, dirFD); err != nil {
 		if !canSkipEBPFError(r) {
 			return err
 		}
