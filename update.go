@@ -17,6 +17,7 @@ import (
 	"github.com/urfave/cli"
 )
 
+// TODO: replace with new(v) once Go < 1.26 is not supported.
 func mkPtr[T any](v T) *T { return &v }
 
 var updateCommand = cli.Command{
