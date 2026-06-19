@@ -35,7 +35,7 @@ This release includes a fix for the following low-severity security issue:
   #5253, #5269, #5288)
 
 ### Added ###
-- When masking directories with `maskPaths`, runc will now re-use a single
+- When masking directories with `maskPaths`, runc will now reuse a single
   `tmpfs` instance (which is not writeable) to reduce the number `tmpfs`
   superblocks that need to be reaped when containers die (in particular,
   Kubernetes applies masks to per-CPU sysfs directories which get expensive
@@ -172,7 +172,7 @@ This release includes fixes for the following high-severity security issues:
 > Mr. President, we must not allow a mine shaft gap!
 
 ### Fixed
- * Removed pre-emptive "full access to cgroups" warning when calling `runc
+ * Removed preemptive "full access to cgroups" warning when calling `runc
    pause` or `runc unpause` as an unprivileged user without
    `--systemd-cgroups`. Now the warning is only emitted if an actual permission
    error was encountered. (#4709)
@@ -588,7 +588,7 @@ This release includes fixes for the following high-severity security issues:
    `github.com/checkpoint-restore/go-criu`. (#3652)
  * Add `--pidfd-socket` to `runc run` and `runc exec` to allow for management
    processes to receive a pidfd for the new process, allowing them to avoid pid
-   re-use attacks. (#4045)
+   reuse attacks. (#4045)
 
 [mount_setattr.2]: https://man7.org/linux/man-pages/man2/mount_setattr.2.html
 [cve-2019-5736]: https://github.com/advisories/GHSA-gxmr-w5mj-v8hh
