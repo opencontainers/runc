@@ -22,4 +22,7 @@ const (
 	// AnnotationLibseccompVersion is the version of libseccomp, e.g., "2.5.1".
 	// Note that the runtime MAY support seccomp even when this annotation is not present.
 	AnnotationLibseccompVersion = "io.github.seccomp.libseccomp.version"
+
+	// AnnotationLibpathrsVersion is the runtime version of libpathrs.
+	AnnotationLibpathrsVersion = "com.cyphar.pathrs.libpathrs.version"
 )

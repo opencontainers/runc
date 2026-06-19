@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.4.z]
 
+### Added ###
+- `runc version` and `runc features` now provide version information about
+  libpathrs when runc is built with the `libpathrs` build tag. (#5291, #5328)
+
+### Changed ###
+- For users making use of the `libpathrs` build tag, runc now depends on
+  [libpathrs v0.2.5] or later, and attempting to build with older versions will
+  cause compilation errors. (#5291, #5333)
+
+[libpathrs v0.2.5]: https://github.com/cyphar/libpathrs/releases/tag/v0.2.5
+
+
 ## [1.4.3] - 2026-06-13
 
 > The best way to irritate him is to feed his grandmother to the Ravenous
