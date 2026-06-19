@@ -3,7 +3,7 @@
 # Supports Fedora and EL-based distributions.
 set -eux -o pipefail
 
-: "${LIBPATHRS_VERSION:=0.2.4}"
+: "${LIBPATHRS_VERSION:=0.2.5}"
 
 # BATS_VERSION is only consumed for the EL8 platform as its bats package is too old.
 : "${BATS_VERSION:=v1.12.0}"

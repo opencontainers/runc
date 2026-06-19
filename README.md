@@ -61,8 +61,8 @@ The following dependencies are optional:
 
 [libpathrs][] is a Rust library runc can optionally use for path safety. As
 mentioned in [the build tag section](#build-tags), its use is controlled with
-the `libpathrs` build tag. runc currently requires at least libpathrs 0.2.4 in
-order to function properly.
+the `libpathrs` build tag. runc currently requires *at least libpathrs 0.2.5*
+in order to function properly.
 
 At time of writing, very few distributions have libpathrs packages and so it is
 usually necessary to build and install it locally. For detailed installation
@@ -76,7 +76,7 @@ dependencies like `clang` and `lld`), the following steps are all that are
 really necessary to install libpathrs:
 
 ```sh
-LIBPATHRS_VERSION=0.2.4
+LIBPATHRS_VERSION=0.2.5
 curl -o - -sSL https://github.com/cyphar/libpathrs/releases/download/v${LIBPATHRS_VERSION}/libpathrs-${LIBPATHRS_VERSION}.tar.xz | tar xvfJ -
 cd libpathrs-${LIBPATHRS_VERSION}/
 make release
