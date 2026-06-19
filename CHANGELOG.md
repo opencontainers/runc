@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed ###
 - The poststart hooks are now executed after starting the user-specified
   process, fixing a runtime-spec conformance issue. (#4347, #5186)
+- Some long-standing file-descriptor leaks on the eBPF devices cgroups were
+  fixed. (#5322)
 
 ### Added ###
 - `runc version` and `runc features` now provide version information about
