@@ -61,7 +61,7 @@ type Handles struct {
 
 // Release all resources associated with this Handle. All existing files
 // returned from Get() will continue to work even after calling Release(). The
-// same Handles can be re-used after calling Release().
+// same Handles can be reused after calling Release().
 func (hs *Handles) Release() {
 	hs.m.Lock()
 	defer hs.m.Unlock()
