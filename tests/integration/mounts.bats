@@ -401,3 +401,33 @@ test_mount_target() {
 	rm -rf rootfs/tmp/hosts
 	test_mount_target . /etc/hosts /tmp/hosts
 }
+
+# https://github.com/opencontainers/runc/pull/3118
+@test "runc delete [cleanup host mount namespace]" {
+  requires root
+
+  # Remove 'mount' namespace and clear masked/readonly paths
+  update_config ' .linux.namespaces |= map(select(.type != "mount"))
+                | .linux.maskedPaths = []
+                | .linux.readonlyPaths = [] '
+
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_host_mnt
+  [ "$status" -eq 0 ]
+
+  runc state test_host_mnt
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"running"* ]]
+
+  # Verify the rootfs is a mount point on the host.
+  ROOTFS_DIR="$PWD/rootfs"
+  mountpoint -q "$ROOTFS_DIR"
+  [ "$status" -eq 0 ]
+
+  runc kill test_host_mnt KILL
+  runc delete test_host_mnt
+  [ "$status" -eq 0 ]
+
+  # Verify the mount is gone.
+  run mountpoint -q "$ROOTFS_DIR"
+  [ "$status" -ne 0 ]
+}
