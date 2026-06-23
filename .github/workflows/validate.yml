@@ -44,7 +44,7 @@ jobs:
           sudo apt -qy install libseccomp-dev
       - uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.10
+          version: v2.12
           skip-cache: true
       # Extra linters, only checking new code from a pull request to main.
       - name: lint-extra
