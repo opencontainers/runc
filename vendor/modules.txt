@@ -14,19 +14,12 @@ github.com/checkpoint-restore/go-criu/v8/internal/proto
 github.com/checkpoint-restore/go-criu/v8/rpc
 # github.com/cilium/ebpf v0.17.3
 ## explicit; go 1.22
-github.com/cilium/ebpf
 github.com/cilium/ebpf/asm
-github.com/cilium/ebpf/btf
 github.com/cilium/ebpf/internal
-github.com/cilium/ebpf/internal/kallsyms
-github.com/cilium/ebpf/internal/kconfig
 github.com/cilium/ebpf/internal/linux
 github.com/cilium/ebpf/internal/sys
-github.com/cilium/ebpf/internal/sysenc
 github.com/cilium/ebpf/internal/testutils/fdtrace
-github.com/cilium/ebpf/internal/tracefs
 github.com/cilium/ebpf/internal/unix
-github.com/cilium/ebpf/link
 # github.com/containerd/console v1.0.5
 ## explicit; go 1.13
 github.com/containerd/console
@@ -71,7 +64,7 @@ github.com/moby/sys/userns
 # github.com/mrunalp/fileutils v0.5.1
 ## explicit; go 1.13
 github.com/mrunalp/fileutils
-# github.com/opencontainers/cgroups v0.0.7
+# github.com/opencontainers/cgroups v0.0.7 => github.com/kolyshkin/oc-cgroups v0.0.8-0.20260623072343-0fd3600485dc
 ## explicit; go 1.24.0
 github.com/opencontainers/cgroups
 github.com/opencontainers/cgroups/devices
@@ -115,3 +108,4 @@ golang.org/x/net/bpf
 ## explicit; go 1.25.0
 golang.org/x/sys/unix
 golang.org/x/sys/windows
+# github.com/opencontainers/cgroups => github.com/kolyshkin/oc-cgroups v0.0.8-0.20260623072343-0fd3600485dc

@@ -32,3 +32,5 @@ require (
 	github.com/aperturerobotics/protobuf-go-lite v0.14.0 // indirect
 	github.com/cilium/ebpf v0.17.3 // indirect
 )
+
+replace github.com/opencontainers/cgroups => github.com/kolyshkin/oc-cgroups v0.0.8-0.20260623072343-0fd3600485dc
