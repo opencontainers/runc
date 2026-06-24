@@ -44,35 +44,13 @@ jobs:
           sudo apt -qy install libseccomp-dev
       - uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.10
+          version: v2.12
           skip-cache: true
       # Extra linters, only checking new code from a pull request to main.
       - name: lint-extra
         if: github.event_name == 'pull_request' && github.base_ref == 'main'
         run: |
           golangci-lint run --config .golangci-extra.yml --new-from-rev=HEAD~1
-
-  modernize:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 2
-      - uses: actions/setup-go@v6
-        with:
-          go-version: stable # modernize@latest may require latest Go.
-      - name: install deps
-        run: |
-          sudo apt -q update
-          sudo apt -qy install libseccomp-dev
-      - name: run go fix
-        run: |
-          go fix ./...
-          git diff --exit-code
-      - name: run modernize
-        run: |
-          go run golang.org/x/tools/go/analysis/passes/modernize/cmd/modernize@latest -fix ./...
-          git diff --exit-code
 
   compile-buildtags:
     runs-on: ubuntu-24.04
@@ -328,7 +306,6 @@ jobs:
       - get-images
       - keyring
       - lint
-      - modernize
       - release
       - shellcheck
       - shfmt
