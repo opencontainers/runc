@@ -1,7 +1,6 @@
 package libcontainer
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -204,7 +203,8 @@ func tryResetCPUAffinity(pid int) {
 	// Instead, we use a huge buffer similarly to go 1.25 runtime in
 	// getCPUCount().
 	const maxCPUs = 64 * 1024
-	buf := bytes.Repeat([]byte{0xff}, maxCPUs/8)
+	buf := unix.NewCPUSet(maxCPUs)
+	buf.Fill()
 	if err := linux.SchedSetaffinity(pid, buf); err != nil {
 		logrus.WithError(err).Warnf("resetting the CPU affinity of pid %d failed -- the container process may inherit runc's CPU affinity", pid)
 		return
