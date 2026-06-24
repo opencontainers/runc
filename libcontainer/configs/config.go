@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unsafe"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
@@ -305,26 +304,53 @@ func ToSchedAttr(scheduler *Scheduler) (*unix.SchedAttr, error) {
 type IOPriority = specs.LinuxIOPriority
 
 type CPUAffinity struct {
-	Initial, Final *unix.CPUSet
+	Initial, Final unix.CPUSetDynamic
 }
 
-// ToCPUSet parses a string in list format into a unix.CPUSet, e.g. "0-3,5,7-9".
-func ToCPUSet(str string) (*unix.CPUSet, error) {
+// MaxCPU is the highest CPU/NUMA node ID that [ToCPUSet] accepts.
+// It is an arbitrary sanity limit, used to avoid allocating
+// an unreasonably large mask for a bogus input.
+const MaxCPU = 64 * 1024
+
+// ToCPUSet parses a string in list format (e.g. "0-3,5,7-9")
+// into a [unix.CPUSetDynamic].
+func ToCPUSet(str string) (unix.CPUSetDynamic, error) {
 	if str == "" {
 		return nil, nil
 	}
-	s := new(unix.CPUSet)
 
-	// Since (*CPUset).Set silently ignores too high CPU values,
-	// find out what the maximum is, and return an error.
-	maxCPU := uint64(unsafe.Sizeof(*s) * 8)
+	maxID, ranges, err := cpuStrToRanges(str)
+	if err != nil {
+		return nil, err
+	}
+	if len(ranges) == 0 {
+		return nil, fmt.Errorf("no members found in set %q", str)
+	}
+
+	s := unix.NewCPUSet(maxID + 1)
+	for _, cr := range ranges {
+		for i := cr.start; i <= cr.end; i++ {
+			s.Set(i)
+		}
+	}
+
+	return s, nil
+}
+
+type cpuRange struct {
+	start, end int
+}
+
+// cpuStrToRanges parses string (e.g. "0-3,5,7-9") into a slice of cpuRange
+// values. It also returns the maximum value and an error, if any.
+func cpuStrToRanges(str string) (maxID int, ranges []cpuRange, _ error) {
 	toInt := func(v string) (int, error) {
 		ret, err := strconv.ParseUint(v, 10, 32)
 		if err != nil {
 			return 0, err
 		}
-		if ret >= maxCPU {
-			return 0, fmt.Errorf("values larger than %d are not supported", maxCPU-1)
+		if ret > MaxCPU {
+			return 0, fmt.Errorf("values larger than %d are not supported", MaxCPU)
 		}
 		return int(ret), nil
 	}
@@ -336,34 +362,27 @@ func ToCPUSet(str string) (*unix.CPUSet, error) {
 		if r == "" {
 			continue
 		}
-		if r0, r1, found := strings.Cut(r, "-"); found {
-			start, err := toInt(r0)
-			if err != nil {
-				return nil, err
+		start, end, found := strings.Cut(r, "-")
+		cr := cpuRange{}
+		var err error
+		if cr.start, err = toInt(start); err != nil {
+			return 0, nil, err
+		}
+		if found {
+			if cr.end, err = toInt(end); err != nil {
+				return 0, nil, err
 			}
-			end, err := toInt(r1)
-			if err != nil {
-				return nil, err
-			}
-			if start > end {
-				return nil, errors.New("invalid range: " + r)
-			}
-			for i := start; i <= end; i++ {
-				s.Set(i)
+			if cr.start > cr.end {
+				return 0, nil, errors.New("invalid range: " + r)
 			}
 		} else {
-			val, err := toInt(r)
-			if err != nil {
-				return nil, err
-			}
-			s.Set(val)
+			cr.end = cr.start
 		}
-	}
-	if s.Count() == 0 {
-		return nil, fmt.Errorf("no members found in set %q", str)
+		maxID = max(maxID, cr.end)
+		ranges = append(ranges, cr)
 	}
 
-	return s, nil
+	return maxID, ranges, nil
 }
 
 // ConvertCPUAffinity converts [specs.CPUAffinity] to [CPUAffinity].

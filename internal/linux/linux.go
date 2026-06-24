@@ -81,10 +81,10 @@ func Sendmsg(fd int, p, oob []byte, to unix.Sockaddr, flags int) error {
 	return os.NewSyscallError("sendmsg", err)
 }
 
-// SetMempolicy wraps set_mempolicy.
-func SetMempolicy(mode int, mask *unix.CPUSet) error {
+// SetMempolicy wraps [unix.SetMempolicyDynamic].
+func SetMempolicy(mode int, mask unix.CPUSetDynamic) error {
 	err := retryOnEINTR(func() error {
-		return unix.SetMemPolicy(mode, mask)
+		return unix.SetMemPolicyDynamic(mode, mask)
 	})
 	return os.NewSyscallError("set_mempolicy", err)
 }
