@@ -10,5 +10,5 @@ type LinuxMemoryPolicy struct {
 	// Flags contains mode flags.
 	Flags int `json:"flags,omitempty"`
 	// Nodes contains NUMA nodes to which the mode applies.
-	Nodes *unix.CPUSet `json:"nodes,omitempty"`
+	Nodes unix.CPUSetDynamic `json:"nodes,omitempty"`
 }

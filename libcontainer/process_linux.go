@@ -223,7 +223,7 @@ func (p *setnsProcess) startWithCPUAffinity() error {
 	go func() {
 		runtime.LockOSThread()
 		// Command inherits the CPU affinity.
-		if err := unix.SchedSetaffinity(unix.Gettid(), aff.Initial); err != nil {
+		if err := unix.SchedSetaffinityDynamic(unix.Gettid(), aff.Initial); err != nil {
 			errCh <- fmt.Errorf("error setting initial CPU affinity: %w", err)
 			return
 		}
@@ -249,7 +249,7 @@ func (p *setnsProcess) setFinalCPUAffinity() error {
 	if aff.Final == nil {
 		return nil
 	}
-	if err := unix.SchedSetaffinity(p.pid(), aff.Final); err != nil {
+	if err := unix.SchedSetaffinityDynamic(p.pid(), aff.Final); err != nil {
 		return fmt.Errorf("error setting final CPU affinity: %w", err)
 	}
 	return nil
