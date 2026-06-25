@@ -1,7 +1,6 @@
 package libcontainer
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -27,7 +26,6 @@ import (
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/cgroups/fs2"
 	"github.com/opencontainers/runc/internal/cmsg"
-	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
@@ -204,8 +202,9 @@ func tryResetCPUAffinity(pid int) {
 	// Instead, we use a huge buffer similarly to go 1.25 runtime in
 	// getCPUCount().
 	const maxCPUs = 64 * 1024
-	buf := bytes.Repeat([]byte{0xff}, maxCPUs/8)
-	if err := linux.SchedSetaffinity(pid, buf); err != nil {
+	buf := unix.NewCPUSet(maxCPUs)
+	buf.Fill()
+	if err := unix.SchedSetaffinityDynamic(pid, buf); err != nil {
 		logrus.WithError(err).Warnf("resetting the CPU affinity of pid %d failed -- the container process may inherit runc's CPU affinity", pid)
 		return
 	}
@@ -224,7 +223,7 @@ func (p *setnsProcess) startWithCPUAffinity() error {
 	go func() {
 		runtime.LockOSThread()
 		// Command inherits the CPU affinity.
-		if err := unix.SchedSetaffinity(unix.Gettid(), aff.Initial); err != nil {
+		if err := unix.SchedSetaffinityDynamic(unix.Gettid(), aff.Initial); err != nil {
 			errCh <- fmt.Errorf("error setting initial CPU affinity: %w", err)
 			return
 		}
@@ -250,7 +249,7 @@ func (p *setnsProcess) setFinalCPUAffinity() error {
 	if aff.Final == nil {
 		return nil
 	}
-	if err := unix.SchedSetaffinity(p.pid(), aff.Final); err != nil {
+	if err := unix.SchedSetaffinityDynamic(p.pid(), aff.Final); err != nil {
 		return fmt.Errorf("error setting final CPU affinity: %w", err)
 	}
 	return nil

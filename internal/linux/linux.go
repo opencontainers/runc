@@ -2,7 +2,6 @@ package linux
 
 import (
 	"os"
-	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
@@ -66,22 +65,6 @@ func Recvfrom(fd int, p []byte, flags int) (n int, from unix.Sockaddr, err error
 	return n, from, err
 }
 
-// SchedSetaffinity wraps sched_setaffinity syscall without unix.CPUSet size limitation.
-func SchedSetaffinity(pid int, buf []byte) error {
-	err := retryOnEINTR(func() error {
-		_, _, errno := unix.Syscall(
-			unix.SYS_SCHED_SETAFFINITY,
-			uintptr(pid),
-			uintptr(len(buf)),
-			uintptr((unsafe.Pointer)(&buf[0])))
-		if errno != 0 {
-			return errno
-		}
-		return nil
-	})
-	return os.NewSyscallError("sched_setaffinity", err)
-}
-
 // Sendmsg wraps [unix.Sendmsg].
 func Sendmsg(fd int, p, oob []byte, to unix.Sockaddr, flags int) error {
 	err := retryOnEINTR(func() error {
@@ -91,9 +74,9 @@ func Sendmsg(fd int, p, oob []byte, to unix.Sockaddr, flags int) error {
 }
 
 // SetMempolicy wraps set_mempolicy.
-func SetMempolicy(mode int, mask *unix.CPUSet) error {
+func SetMempolicy(mode int, mask unix.CPUSetDynamic) error {
 	err := retryOnEINTR(func() error {
-		return unix.SetMemPolicy(mode, mask)
+		return unix.SetMemPolicyDynamic(mode, mask)
 	})
 	return os.NewSyscallError("set_mempolicy", err)
 }
