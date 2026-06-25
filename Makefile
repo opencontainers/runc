@@ -27,7 +27,8 @@ endif
 COMMIT := $(shell git describe --dirty --long --always)
 EXTRA_VERSION :=
 LDFLAGS_COMMON := -X main.gitCommit=$(COMMIT) \
-		  $(if $(strip $(EXTRA_VERSION)),-X main.extraVersion=$(EXTRA_VERSION),)
+		  $(if $(strip $(EXTRA_VERSION)),-X main.extraVersion=$(EXTRA_VERSION),) \
+		  -X main.PATHRS_MIN_VERSION=$(PATHRS_MIN_VERSION)
 
 GOARCH := $(shell $(GO) env GOARCH)
 
