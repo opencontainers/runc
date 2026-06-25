@@ -3,6 +3,17 @@
 load helpers
 
 function create_netns() {
+	mtu_value=1789
+	mac_address="00:11:22:33:44:55"
+	global_ip="169.254.169.77/32"
+
+	# Create a dummy interface to move to the container.
+	# Specify all link-level parameters at creation time, this way it is not created without
+	# those values unassigned and we might race with host's daemons to set them.
+	ip link add dummy0 address "$mac_address" mtu $mtu_value type dummy
+	udevadm settle
+	ip address add "$global_ip" dev dummy0
+
 	# Create a temporary name for the test network namespace.
 	tmp=$(mktemp -u)
 	ns_name=$(basename "$tmp")
@@ -13,8 +24,17 @@ function create_netns() {
 }
 
 function delete_netns() {
+	[ -v ns_name ] || return
+
+	# The interface shouldn't be on the host, but if we failed to move it to the container, it
+	# might. Let's delete it if we created one (i.e. if ns_name is defined).
+	ip link del dev dummy0 2>/dev/null
+
 	# Delete the namespace only if the ns_name variable is set.
-	[ -v ns_name ] && ip netns del "$ns_name"
+	ip netns del "$ns_name"
+
+	unset ns_name
+	unset ns_path
 }
 
 function setup() {
@@ -22,13 +42,9 @@ function setup() {
 	requires criu root
 
 	setup_busybox
-
-	# Create a dummy interface to move to the container.
-	ip link add dummy0 type dummy
 }
 
 function teardown() {
-	ip link del dev dummy0
 	delete_netns
 	teardown_bundle
 }
@@ -141,15 +157,6 @@ function simple_cr() {
 }
 
 @test "checkpoint and restore with netdevice" {
-	# Set custom parameters to the netdevice to validate those are respected
-	mtu_value=1789
-	mac_address="00:11:22:33:44:55"
-	global_ip="169.254.169.77/32"
-
-	ip link set mtu "$mtu_value" dev dummy0
-	ip link set address "$mac_address" dev dummy0
-	ip address add "$global_ip" dev dummy0
-
 	# Tell runc which network namespace to use.
 	create_netns
 	update_config '(.. | select(.type? == "network")) .path |= "'"$ns_path"'"'
