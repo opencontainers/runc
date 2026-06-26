@@ -10,13 +10,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The poststart hooks are now executed after starting the user-specified
   process, fixing a runtime-spec conformance issue. (#4347, #5186)
 
+## [1.5.0] - 2026-06-19
+
+> Why do we even have that lever?!
+
 ### Added ###
 - `runc version` and `runc features` now provide version information about
-  libpathrs when runc is built with the `libpathrs` build tag. (#5291)
+  libpathrs (when runc is built with the `libpathrs` build tag). (#5291, #5328)
+
+### Fixed ###
+- Since runc 1.3.0, the `org.opencontainers.runc.version` annotation included
+  in `runc features` contained an extraneous `\n`, possibly causing issues with
+  tools that parse the output. It is now properly stripped. (#5329, #5330,
+  #5331, #5335)
 
 ### Changed ###
-- runc now depends on [libpathrs v0.2.5] or later, and attempting to build with
-  older versions will cause compilation errors. (#5291)
+- runc (when built with the `libpathrs` build tag) now depends on [libpathrs
+  v0.2.5] or later, and attempting to build with older versions will cause
+  compilation errors. (#5291, #5328)
+- Switched to go-criu v8.3.0, which reduces our binary size from ~16MB to
+  ~14MB. (#5312, #5326)
 
 [libpathrs v0.2.5]: https://github.com/cyphar/libpathrs/releases/tag/v0.2.5
 
@@ -54,7 +67,7 @@ This release includes a fix for the following low-severity security issue:
 
 ### Changed ###
 - When masking directories with `maskPaths`, runc will now reuse a single
-  `tmpfs` instance (which is not writable) to reduce the number `tmpfs`
+  `tmpfs` instance (which is not writeable) to reduce the number `tmpfs`
   superblocks that need to be reaped when containers die (in particular,
   Kubernetes applies masks to per-CPU sysfs directories which get expensive
   quickly). (#5275, #5280)
@@ -238,6 +251,19 @@ This release includes a fix for the following low-severity security issue:
   name in the archive. (#5052)
 
 [libpathrs]: https://github.com/cyphar/libpathrs
+
+## [1.4.2] - 2026-04-02
+
+> Я — Земля! Я своих провожаю питомцев.
+
+### Fixed ###
+- A regression in runc v1.3.0 which can result in a stuck `runc exec` or
+  `runc run` when the container process runs for a short time. (#5208,
+  #5210, #5216)
+- Mount sources that need to be open on the host are now closed earlier during
+  container start, reducing the total amount of used file descriptors and
+  helping to avoid hitting the open files limit when handling many such mounts.
+  (#5177, #5201)
 
 ## [1.4.1] - 2026-03-12
 
@@ -1790,7 +1816,9 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.1...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...HEAD
+[1.5.0]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...v1.5.0
+[1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
 [1.3.0]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...v1.3.0
 [1.2.0]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.1...v1.2.0
 [1.1.0]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...v1.1.0
@@ -1858,7 +1886,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1
 
 <!-- 1.5.z patch releases -->
-[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...release-1.5
+[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.0...release-1.5
+[1.5.0]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...v1.5.0
 [1.5.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.2...v1.5.0-rc.3
 [1.5.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...v1.5.0-rc.2
 [1.5.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.5.0-rc.1
