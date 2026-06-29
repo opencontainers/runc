@@ -1338,7 +1338,13 @@ func maskDir(path, mountLabel string) error {
 	// "nr_inodes<2", so let's keep `nr_inodes=2` here!
 	// For reference, search for "case Opt_nr_inodes" in:
 	// https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/focal/plain/mm/shmem.c?h=Ubuntu-5.4.0-216.236
-	return mount("tmpfs", path, "tmpfs", unix.MS_RDONLY, label.FormatMountLabel("nr_blocks=1,nr_inodes=2", mountLabel))
+	err := mount("tmpfs", path, "tmpfs", unix.MS_RDONLY, label.FormatMountLabel("nr_blocks=1,nr_inodes=2", mountLabel))
+	// We don't know whether some kernels will fail with "nr_inodes=2",
+	// so let's fall back to mount a tmpfs without this option.
+	if errors.Is(err, unix.EINVAL) {
+		err = mount("tmpfs", path, "tmpfs", unix.MS_RDONLY, label.FormatMountLabel("nr_blocks=1", mountLabel))
+	}
+	return err
 }
 
 // maskPaths masks the top of the specified paths inside a container to avoid
