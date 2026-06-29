@@ -673,7 +673,7 @@ func filterFlags(config *configs.Seccomp, filter *libseccomp.ScmpFilter) (flags 
 		}
 	}
 	if apiLevel >= 7 {
-		if waitKill, err := filter.GetWaitKill(); err != nil {
+		if waitKill, err := filter.GetWaitKill(); err != nil && !errors.Is(err, unix.EINVAL) {
 			return 0, false, fmt.Errorf("unable to fetch SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV bit: %w", err)
 		} else if waitKill {
 			flags |= uint(C.C_FILTER_FLAG_WAIT_KILLABLE_RECV)
