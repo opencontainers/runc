@@ -16,7 +16,7 @@ require (
 	github.com/moby/sys/user v0.4.1
 	github.com/moby/sys/userns v0.1.0
 	github.com/mrunalp/fileutils v0.5.1
-	github.com/opencontainers/cgroups v0.0.6
+	github.com/opencontainers/cgroups v0.0.7
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/opencontainers/selinux v1.15.1
 	github.com/seccomp/libseccomp-golang v0.11.1
@@ -32,3 +32,5 @@ require (
 	github.com/aperturerobotics/protobuf-go-lite v0.14.0 // indirect
 	github.com/cilium/ebpf v0.17.3 // indirect
 )
+
+replace github.com/opencontainers/cgroups => github.com/kolyshkin/oc-cgroups v0.0.8-0.20260623072343-0fd3600485dc
