@@ -491,6 +491,19 @@ function have_criu() {
 	run ! grep -q '^criu-3\.17-[123]\.el9' <<<"$ver"
 }
 
+function have_criu_version() {
+	local major_required minor_required
+	major_required=$(echo "$1" | cut -d. -f1)
+	minor_required=$(echo "$1" | cut -d. -f2)
+
+	local current_ver major_current minor_current
+	current_ver=$(criu --version | grep Version | awk '{print $2}')
+	major_current=$(echo "$current_ver" | cut -d. -f1)
+	minor_current=$(echo "$current_ver" | cut -d. -f2)
+
+	[[ $major_current -gt $major_required || ($major_current -eq $major_required && $minor_current -ge $minor_required) ]]
+}
+
 # Allows a test to specify what things it requires. If the environment can't
 # support it, the test is skipped with a message.
 function requires() {
@@ -506,6 +519,12 @@ function requires() {
 			var=${var#criu_feature_}
 			if ! criu check --feature "$var"; then
 				skip "requires CRIU feature ${var}"
+			fi
+			;;
+		criu_version_*)
+			var=${var#criu_version_}
+			if ! have_criu_version "$var"; then
+				skip "requires CRIU version ${var}"
 			fi
 			;;
 		root)
