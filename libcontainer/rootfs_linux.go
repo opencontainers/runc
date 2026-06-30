@@ -1333,7 +1333,18 @@ func verifyDevNull(f *os.File) error {
 
 // maskDir mounts a read-only tmpfs on top of the specified path.
 func maskDir(path, mountLabel string) error {
-	return mount("tmpfs", path, "tmpfs", unix.MS_RDONLY, label.FormatMountLabel("nr_blocks=1,nr_inodes=1", mountLabel))
+	// On most kernels `nr_inodes=1` works fine. However, Ubuntu 20.04 (Focal) with
+	// the official 5.4 kernel carries a private patch in mm/shmem.c that rejects
+	// "nr_inodes<2", so let's keep `nr_inodes=2` here!
+	// For reference, search for "case Opt_nr_inodes" in:
+	// https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/focal/plain/mm/shmem.c?h=Ubuntu-5.4.0-216.236
+	err := mount("tmpfs", path, "tmpfs", unix.MS_RDONLY, label.FormatMountLabel("nr_blocks=1,nr_inodes=2", mountLabel))
+	// We don't know whether some kernels will fail with "nr_inodes=2",
+	// so let's fall back to mount a tmpfs without this option.
+	if errors.Is(err, unix.EINVAL) {
+		err = mount("tmpfs", path, "tmpfs", unix.MS_RDONLY, label.FormatMountLabel("nr_blocks=1", mountLabel))
+	}
+	return err
 }
 
 // maskPaths masks the top of the specified paths inside a container to avoid
