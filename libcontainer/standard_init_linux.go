@@ -93,6 +93,10 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 
+	if err := sys.WriteSysctls(l.config.Config.Sysctl); err != nil {
+		return err
+	}
+
 	err = prepareRootfs(l.pipe, l.config)
 	if err != nil {
 		return err
@@ -134,9 +138,6 @@ func (l *linuxStandardInit) Init() error {
 		}
 	}
 
-	if err := sys.WriteSysctls(l.config.Config.Sysctl); err != nil {
-		return err
-	}
 	for _, path := range l.config.Config.ReadonlyPaths {
 		if err := readonlyPath(path); err != nil {
 			return fmt.Errorf("can't make %q read-only: %w", path, err)
