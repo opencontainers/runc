@@ -14,7 +14,6 @@ import (
 	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/internal/sys"
-	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/keys"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
@@ -79,6 +78,14 @@ func (l *linuxStandardInit) Init() error {
 		}
 	}
 
+	closer, err := applyMACLabels(l.config)
+	if closer != nil {
+		defer closer()
+	}
+	if err != nil {
+		return err
+	}
+
 	if err := setupNetwork(l.config); err != nil {
 		return err
 	}
@@ -86,10 +93,7 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 
-	// initialises the labeling system
-	selinux.GetEnabled()
-
-	err := prepareRootfs(l.pipe, l.config)
+	err = prepareRootfs(l.pipe, l.config)
 	if err != nil {
 		return err
 	}
@@ -128,9 +132,6 @@ func (l *linuxStandardInit) Init() error {
 		if err := unix.Setdomainname([]byte(domainname)); err != nil {
 			return &os.SyscallError{Syscall: "setdomainname", Err: err}
 		}
-	}
-	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
-		return fmt.Errorf("unable to apply apparmor profile: %w", err)
 	}
 
 	if err := sys.WriteSysctls(l.config.Config.Sysctl); err != nil {
@@ -180,12 +181,6 @@ func (l *linuxStandardInit) Init() error {
 	// write to a socket.
 	if err := syncParentReady(l.pipe); err != nil {
 		return fmt.Errorf("sync ready: %w", err)
-	}
-	if l.config.ProcessLabel != "" {
-		if err := selinux.SetExecLabel(l.config.ProcessLabel); err != nil {
-			return fmt.Errorf("can't set process label: %w", err)
-		}
-		defer selinux.SetExecLabel("") //nolint: errcheck
 	}
 	// Without NoNewPrivileges seccomp is a privileged operation, so we need to
 	// do this before dropping capabilities; otherwise do it as late as possible
