@@ -18,8 +18,13 @@ function setup_netns() {
 }
 
 function delete_netns() {
+	[ -v ns_name ] || return
+
 	# Delete the namespace only if the ns_name variable is set.
-	[ -v ns_name ] && ip netns del "$ns_name"
+	ip netns del "$ns_name"
+
+	unset ns_name
+	unset ns_path
 }
 
 function setup() {
@@ -28,10 +33,14 @@ function setup() {
 
 	# Create a dummy interface to move to the container.
 	ip link add dummy0 type dummy
+	udevadm settle
 }
 
 function teardown() {
-	ip link del dev dummy0
+	# The interface might be on the host or not, depending the test. If it's on the host, let's
+	# delete it.
+	ip link del dev dummy0 2>/dev/null
+
 	delete_netns
 	teardown_bundle
 }
