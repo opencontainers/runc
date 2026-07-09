@@ -108,6 +108,9 @@ github.com/vishvananda/netlink/nl
 # github.com/vishvananda/netns v0.0.5
 ## explicit; go 1.17
 github.com/vishvananda/netns
+# golang.org/x/mod v0.37.0
+## explicit; go 1.25.0
+golang.org/x/mod/semver
 # golang.org/x/net v0.56.0
 ## explicit; go 1.25.0
 golang.org/x/net/bpf

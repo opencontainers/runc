@@ -2,6 +2,7 @@ SHELL = /bin/bash
 
 CONTAINER_ENGINE := docker
 GO ?= go
+PATHRS_MIN_VERSION ?= 0.2.5
 
 PREFIX ?= /usr/local
 BINDIR := $(PREFIX)/sbin
@@ -26,7 +27,8 @@ endif
 COMMIT := $(shell git describe --dirty --long --always)
 EXTRA_VERSION :=
 LDFLAGS_COMMON := -X main.gitCommit=$(COMMIT) \
-		  $(if $(strip $(EXTRA_VERSION)),-X main.extraVersion=$(EXTRA_VERSION),)
+		  $(if $(strip $(EXTRA_VERSION)),-X main.extraVersion=$(EXTRA_VERSION),) \
+		  -X main.PATHRS_MIN_VERSION=$(PATHRS_MIN_VERSION)
 
 GOARCH := $(shell $(GO) env GOARCH)
 
@@ -81,11 +83,25 @@ endif
 runc: runc-bin
 
 .PHONY: runc-bin
-runc-bin:
+runc-bin: check-libpathrs
 	$(GO_BUILD) -o runc .
 
 .PHONY: all
 all: runc
+
+.PHONY: check-libpathrs
+check-libpathrs:
+	@if [ -n "$(filter libpathrs,$(BUILDTAGS))" ]; then \
+		PATHRS_VERSION=$$(pkg-config --modversion pathrs 2>/dev/null); \
+		if [ -z "$$PATHRS_VERSION" ]; then \
+			echo "ERROR: pathrs not found via pkg-config" >&2; \
+			exit 1; \
+		fi; \
+		if ! printf '%s\n%s' "$(PATHRS_MIN_VERSION)" "$$PATHRS_VERSION" | sort -V -C; then \
+			echo "ERROR: pathrs version '$$PATHRS_VERSION' is too old; need >= '$(PATHRS_MIN_VERSION)'" >&2; \
+			exit 1; \
+		fi; \
+	fi
 
 TESTBINDIR := tests/cmd/_bin
 $(TESTBINDIR):
@@ -108,7 +124,7 @@ clean:
 static: static-bin
 
 .PHONY: static-bin
-static-bin:
+static-bin: check-libpathrs
 	$(GO_BUILD_STATIC) -o runc .
 
 .PHONY: releaseall
