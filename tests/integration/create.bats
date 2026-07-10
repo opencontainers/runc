@@ -38,7 +38,11 @@ is_allowed_fdtarget() {
 			# overlayfs binary reference (CVE-2019-5736)
 			grep -Ex "/runc" <<<"$target" ||
 			# memfd cloned binary (CVE-2019-5736)
-			grep -Fx "/memfd:runc_cloned:/proc/self/exe (deleted)" <<<"$target"
+			grep -Fx "/memfd:runc_cloned:/proc/self/exe (deleted)" <<<"$target" ||
+			# Go 1.25+ runtime opens these cgroup v1 files (see https://go.dev/cl/670497).
+			grep -Ex ".*/cpu.cfs_(quota|period)_us" <<<"$target" ||
+			# Ditto for the cgroup v2 equivalent.
+			grep -Ex ".*/cpu.max" <<<"$target"
 	} >/dev/null
 	return "$?"
 }

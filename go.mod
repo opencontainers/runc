@@ -1,6 +1,6 @@
 module github.com/opencontainers/runc
 
-go 1.23.0
+go 1.25.0
 
 require (
 	github.com/checkpoint-restore/go-criu/v6 v6.3.0
@@ -21,8 +21,8 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/urfave/cli v1.22.16
 	github.com/vishvananda/netlink v1.3.0
-	golang.org/x/net v0.35.0
-	golang.org/x/sys v0.30.0
+	golang.org/x/net v0.57.0
+	golang.org/x/sys v0.47.0
 	google.golang.org/protobuf v1.36.5
 )
 
