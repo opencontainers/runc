@@ -574,7 +574,7 @@ func mountToRootfs(c *mountConfig, m *mountEntry) error {
 		}
 
 		// The initial MS_BIND won't change the mount options, we need to do a
-		// separate MS_BIND|MS_REMOUNT to apply the mount options. We skip
+		// separate mount_setattr(2) to apply the mount options. We skip
 		// doing this if the user has not specified any mount flags at all
 		// (including cleared flags) -- in which case we just keep the original
 		// mount flags.
@@ -583,6 +583,37 @@ func mountToRootfs(c *mountConfig, m *mountEntry) error {
 		// contrast to mount(8)'s current behaviour, but is what users probably
 		// expect. See <https://github.com/util-linux/util-linux/issues/2433>.
 		if m.Flags & ^(unix.MS_BIND|unix.MS_REC|unix.MS_REMOUNT) != 0 || m.ClearedFlags != 0 {
+			// Prefer mount_setattr(2), which applies the flags to the mount itself
+			// rather than through a /proc/thread-self/fd path. It cannot be used
+			// if any of the flags have no MOUNT_ATTR_* counterpart (MS_LAZYTIME,
+			// MS_SYNCHRONOUS, MS_DIRSYNC, MS_MANDLOCK, MS_SILENT, ...), because
+			// such flags would be silently ignored. For those we fall back to
+			// MS_BIND|MS_REMOUNT, which can apply all of them.
+			unsupported := unsupportedMountFlags(m.Flags)
+			if unsupported != 0 {
+				logrus.Debugf("mount flags %s cannot be applied by mount_setattr(2), using MS_BIND|MS_REMOUNT for bind-mount %q", stringifyMountFlags(unsupported), m.Destination)
+			} else if hasNewMountAPI() {
+				// Note that this is not recursive, which matches the
+				// MS_BIND|MS_REMOUNT behaviour below: mount(2) ignores MS_REC
+				// for a bind remount. Recursive attributes are set separately
+				// by setRecAttr (which uses AT_RECURSIVE).
+				attrSet, attrClr := msFlagsToMountAttr(m.Flags)
+				err := unix.MountSetattr(int(m.dstFile.Fd()), "", unix.AT_EMPTY_PATH, &unix.MountAttr{
+					Attr_set: attrSet,
+					Attr_clr: attrClr,
+				})
+				if err == nil {
+					return setRecAttr(m)
+				}
+				// Fall back to MS_BIND|MS_REMOUNT if mount_setattr(2) is not
+				// available, or this mount does not allow the flags to be
+				// changed this way (e.g. locked mount flags).
+				if !errors.Is(err, unix.ENOSYS) && !errors.Is(err, unix.EOPNOTSUPP) &&
+					!errors.Is(err, unix.EPERM) && !errors.Is(err, unix.EINVAL) {
+					return err
+				}
+				logrus.Debugf("mount_setattr(2) failed for bind-mount %q (%v), falling back to MS_BIND|MS_REMOUNT", m.Destination, err)
+			}
 			if err := utils.WithProcfdFile(m.dstFile, func(dstFd string) error {
 				flags := m.Flags | unix.MS_BIND | unix.MS_REMOUNT
 				// The runtime-spec says we SHOULD map to the relevant mount(8)
