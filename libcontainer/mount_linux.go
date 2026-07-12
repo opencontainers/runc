@@ -417,40 +417,51 @@ func fsconfigApplyOptions(fsfd int, opts string) error {
 	return nil
 }
 
-// msFlagsToMountAttr converts MS_* mount flags (as used by mount(2)) to
-// MOUNT_ATTR_* flags (as used by fsmount(2) and mount_setattr(2)).
-func msFlagsToMountAttr(flags int) int {
-	attr := 0
-	if flags&unix.MS_RDONLY != 0 {
-		attr |= unix.MOUNT_ATTR_RDONLY
+// msFlagsToMountAttr converts mount(2) flags to mount attributes for
+// mount_setattr(2). It returns the set and clear bits for the mount attributes.
+func msFlagsToMountAttr(flags int) (set, cls uint64) {
+	// Binary mount flags: if the flag is set, add it to "set"; otherwise add
+	// it to "cls" so that mount_setattr(2) clears it.
+	for _, f := range []struct {
+		msFlag    int
+		mountAttr uint64
+	}{
+		{unix.MS_RDONLY, unix.MOUNT_ATTR_RDONLY},
+		{unix.MS_NOSUID, unix.MOUNT_ATTR_NOSUID},
+		{unix.MS_NODEV, unix.MOUNT_ATTR_NODEV},
+		{unix.MS_NOEXEC, unix.MOUNT_ATTR_NOEXEC},
+		{unix.MS_NODIRATIME, unix.MOUNT_ATTR_NODIRATIME},
+		{unix.MS_NOSYMFOLLOW, unix.MOUNT_ATTR_NOSYMFOLLOW},
+	} {
+		if flags&f.msFlag != 0 {
+			set |= f.mountAttr
+		} else {
+			cls |= f.mountAttr
+		}
 	}
-	if flags&unix.MS_NOSUID != 0 {
-		attr |= unix.MOUNT_ATTR_NOSUID
-	}
-	if flags&unix.MS_NODEV != 0 {
-		attr |= unix.MOUNT_ATTR_NODEV
-	}
-	if flags&unix.MS_NOEXEC != 0 {
-		attr |= unix.MOUNT_ATTR_NOEXEC
-	}
-	if flags&unix.MS_NOSYMFOLLOW != 0 {
-		attr |= unix.MOUNT_ATTR_NOSYMFOLLOW
-	}
-	if flags&unix.MS_NODIRATIME != 0 {
-		attr |= unix.MOUNT_ATTR_NODIRATIME
-	}
-	// The atime mode flags are mutually exclusive and map to a multi-bit
-	// field (bits 4-6) in MOUNT_ATTR. MS_RELATIME maps to 0 (default).
-	switch flags & (unix.MS_NOATIME | unix.MS_RELATIME | unix.MS_STRICTATIME) {
-	case unix.MS_NOATIME:
-		attr |= unix.MOUNT_ATTR_NOATIME
-	case unix.MS_STRICTATIME:
-		attr |= unix.MOUNT_ATTR_STRICTATIME
+	// Unlike the binary flags above, the atime behaviour is a multi-valued
+	// field, not an independent on/off bit. MOUNT_ATTR__ATIME (0x70) is the
+	// bitmask that covers this 3-bit field, with these possible values:
+	//   - MOUNT_ATTR_RELATIME    (0x00)  — the default; update atime relative to mtime/ctime
+	//   - MOUNT_ATTR_NOATIME     (0x10)  — do not update access times
+	//   - MOUNT_ATTR_STRICTATIME (0x20)  — always update access times
+	switch {
+	case flags&unix.MS_NOATIME != 0:
+		set |= unix.MOUNT_ATTR_NOATIME
+	case flags&unix.MS_STRICTATIME != 0:
+		set |= unix.MOUNT_ATTR_STRICTATIME
+	case flags&unix.MS_RELATIME != 0:
+		set |= unix.MOUNT_ATTR_RELATIME
 	}
 	if flags&unix.MS_LAZYTIME != 0 {
-		logrus.Warnf("MS_LAZYTIME mount flag specified, but kernel does not support MOUNT_ATTR_LAZYTIME")
+		logrus.Warnf("MS_LAZYTIME mount flag specified, but kernel does not support MOUNT_ATTR_LAZYTIME; ignoring")
 	}
-	return attr
+	// Always clear the atime mask in attr_clr: whether an atime option was
+	// specified or not, mount_setattr(2) needs the mask to modify this
+	// multi-valued field -- either to set a new value or reset to default.
+	cls |= unix.MOUNT_ATTR__ATIME
+
+	return set, cls
 }
 
 // createDetachedFsMount creates a detached filesystem mount using fsopen(2),
@@ -489,7 +500,8 @@ func createDetachedFsMount(m *configs.Mount, flagsMask int, mountLabel string) (
 	if flagsMask != 0 {
 		flags &= flagsMask
 	}
-	fd, err := unix.Fsmount(fsfd, unix.FSMOUNT_CLOEXEC, msFlagsToMountAttr(flags))
+	mountAttrs, _ := msFlagsToMountAttr(flags)
+	fd, err := unix.Fsmount(fsfd, unix.FSMOUNT_CLOEXEC, int(mountAttrs))
 	if err != nil {
 		return nil, &os.PathError{Op: "fsmount", Path: fstype, Err: err}
 	}
