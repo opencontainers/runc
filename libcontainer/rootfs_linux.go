@@ -573,7 +573,7 @@ func mountToRootfs(c *mountConfig, m *mountEntry) error {
 		}
 
 		// The initial MS_BIND won't change the mount options, we need to do a
-		// separate MS_BIND|MS_REMOUNT to apply the mount options. We skip
+		// separate mount_setattr(2) to apply the mount options. We skip
 		// doing this if the user has not specified any mount flags at all
 		// (including cleared flags) -- in which case we just keep the original
 		// mount flags.
@@ -582,6 +582,26 @@ func mountToRootfs(c *mountConfig, m *mountEntry) error {
 		// contrast to mount(8)'s current behaviour, but is what users probably
 		// expect. See <https://github.com/util-linux/util-linux/issues/2433>.
 		if m.Flags & ^(unix.MS_BIND|unix.MS_REC|unix.MS_REMOUNT) != 0 || m.ClearedFlags != 0 {
+			// The kernel does not yet support MOUNT_ATTR_LAZYTIME.
+			if m.Flags&unix.MS_LAZYTIME == 0 {
+				// Try to use mount_setattr(2) with AT_EMPTY_PATH to apply the flags
+				// directly to the detached mount fd. This is more secure and efficient
+				// than the old MS_BIND|MS_REMOUNT approach.
+				attrSet, attrCls := msFlagsToMountAttr(m.Flags)
+				attr := unix.MountAttr{
+					Attr_set: attrSet,
+					Attr_clr: attrCls,
+				}
+				mountErr := unix.MountSetattr(int(m.dstFile.Fd()), "", unix.AT_EMPTY_PATH, &attr)
+				if mountErr == nil {
+					return setRecAttr(m)
+				}
+				if !errors.Is(mountErr, unix.ENOSYS) && !errors.Is(mountErr, unix.EOPNOTSUPP) && !errors.Is(mountErr, unix.EPERM) {
+					return mountErr
+				}
+				// fallback to old school MS_BIND|MS_REMOUNT.
+				logrus.Debugf("mount_setattr(2) failed for bind-mount %s, falling back to MS_BIND|MS_REMOUNT: %v", m.Destination, mountErr)
+			}
 			if err := utils.WithProcfdFile(m.dstFile, func(dstFd string) error {
 				flags := m.Flags | unix.MS_BIND | unix.MS_REMOUNT
 				// The runtime-spec says we SHOULD map to the relevant mount(8)
