@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-07-14
+
+> El lujo es vulgaridad, dijo, y me conquistó.
+
+### Fixed ###
+- There was a regression reported in with the `maskPaths` optimisation added in
+  1.5.0-rc.3 (#5275). On Ubuntu Focal (20.04), attempts to mount `tmpfs` with
+  the `nr_inodes=1` option will fail due to a downstream kernel patch
+  (ironically originating from AUFS). We now have a fallback path using
+  `nr_inodes=2` instead if the operation fails. (#5348, #5358, #5359)
+- Properly handle `EINVAL` for seccomp `SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV`
+  when trying to rewrite the filter. This appears to only happen if you compile
+  runc with libseccomp >= 2.6.0 and then run it with an < 2.6.0 libseccomp.
+  (#5347, #5354)
+
 ## [1.5.0] - 2026-06-19
 
 > Why do we even have that lever?!
@@ -1799,7 +1814,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1
 
 <!-- 1.5.z patch releases -->
-[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.0...release-1.5
+[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.1...release-1.5
+[1.5.1]: https://github.com/opencontainers/runc/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...v1.5.0
 [1.5.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.2...v1.5.0-rc.3
 [1.5.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...v1.5.0-rc.2
