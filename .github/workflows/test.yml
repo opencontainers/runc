@@ -109,7 +109,7 @@ jobs:
         criu --version
 
     - name: install go ${{ matrix.go-version }}
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@v7
       with:
         go-version: ${{ matrix.go-version }}
         check-latest: true
@@ -197,7 +197,7 @@ jobs:
         sudo ldconfig /usr/386/lib
 
     - name: install go
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@v7
       with:
         go-version: 1.x # Latest stable
         check-latest: true
