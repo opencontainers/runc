@@ -93,6 +93,16 @@ type Process struct {
 	// PidfdSocket provides process file descriptor of it own.
 	PidfdSocket *os.File
 
+	// ExecWaitFifo is an optional O_PATH fd to a FIFO that a setns ("runc exec")
+	// process reopens for writing immediately before execve, blocking until an
+	// external reader opens the read end. The reader must consume the "0"
+	// acknowledgment byte before closing, or the write can fail with EPIPE.
+	// This lets a supervisor register the process (e.g. via PidfdSocket) before
+	// its requested program starts. The caller owns the original fd and the
+	// FIFO's creation and cleanup; the child closes its copy before execve.
+	// It is only honored for exec (non-Init) processes.
+	ExecWaitFifo *os.File
+
 	// Init specifies whether the process is the first process in the container.
 	Init bool
 
