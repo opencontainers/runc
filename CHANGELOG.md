@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added ###
+- `runc exec` now accepts an optional `--exec-wait-fifo <path>` flag. When set,
+  the exec process opens the caller-owned FIFO for writing just before `execve`.
+  Opening a FIFO for writing blocks until a reader is present, so the process
+  pauses there until an external supervisor opens the read end and reads the
+  acknowledgment byte. This lets the supervisor register the detached exec
+  process (e.g. one identified via `--pidfd-socket`) before its program runs.
+  (#5373)
+
 ### Fixed ###
 - The poststart hooks are now executed after starting the user-specified
   process, fixing a runtime-spec conformance issue. (#4347, #5186)

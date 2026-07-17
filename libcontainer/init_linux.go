@@ -215,6 +215,19 @@ func startInitialization() (retErr error) {
 		defer pidfdSocket.Close()
 	}
 
+	// Only setns ("runc exec") processes may be given an exec-wait FIFO.
+	var execWaitFifo *os.File
+	if it == initSetns {
+		if envFd := os.Getenv("_LIBCONTAINER_EXECWAITFD"); envFd != "" {
+			fd, err := strconv.Atoi(envFd)
+			if err != nil {
+				return fmt.Errorf("unable to convert _LIBCONTAINER_EXECWAITFD: %w", err)
+			}
+			execWaitFifo = os.NewFile(uintptr(fd), "exec-wait-fifo")
+			defer execWaitFifo.Close()
+		}
+	}
+
 	// From here on, we don't need current process environment. It is not
 	// used directly anywhere below this point, but let's clear it anyway.
 	os.Clearenv()
@@ -235,10 +248,10 @@ func startInitialization() (retErr error) {
 	}
 
 	// If init succeeds, it will not return, hence none of the defers will be called.
-	return containerInit(it, &config, syncPipe, consoleSocket, pidfdSocket, fifoFile, logPipe)
+	return containerInit(it, &config, syncPipe, consoleSocket, pidfdSocket, fifoFile, logPipe, execWaitFifo)
 }
 
-func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSocket, pidfdSocket, fifoFile, logPipe *os.File) error {
+func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSocket, pidfdSocket, fifoFile, logPipe, execWaitFifo *os.File) error {
 	// Clean the RLIMIT_NOFILE cache in go runtime.
 	// Issue: https://github.com/opencontainers/runc/issues/4195
 	maybeClearRlimitNofileCache(config.Rlimits)
@@ -251,6 +264,7 @@ func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSock
 			pidfdSocket:   pidfdSocket,
 			config:        config,
 			logPipe:       logPipe,
+			execWaitFifo:  execWaitFifo,
 		}
 		return i.Init()
 	case initStandard:
@@ -734,4 +748,30 @@ func setupPidfd(socket *os.File, initType string) error {
 		return fmt.Errorf("failed to send pidfd on socket: %w", err)
 	}
 	return unix.Close(pidFd)
+}
+
+// awaitExecFifo blocks until a reader opens the read end of the exec FIFO
+// referenced by fifo (an O_PATH fd), then writes a single byte to signal that
+// the process is about to execve.
+//
+// fifo is re-opened here for the write but not closed: the caller owns it and
+// must close it before execve (see the CVE-2016-9962 note at the call site).
+//
+// The reader must consume the byte. Opening the read end and closing it without
+// reading races with the write and can fail with EPIPE, surfacing here as a
+// failed exec. This matches the create/start exec.fifo contract, whose reader
+// (runc start) always reads.
+func awaitExecFifo(fifo *os.File) error {
+	// The fd we were handed is an O_PATH fd to the FIFO, which cannot be used
+	// for I/O. Re-open it for writing through /proc/self/fd; this blocks until
+	// an external reader opens the read end.
+	w, err := pathrs.Reopen(fifo, unix.O_WRONLY|unix.O_CLOEXEC)
+	if err != nil {
+		return fmt.Errorf("reopen exec fifo: %w", err)
+	}
+	defer w.Close()
+	if _, err := w.Write([]byte("0")); err != nil {
+		return &os.PathError{Op: "write exec fifo", Path: w.Name(), Err: err}
+	}
+	return nil
 }

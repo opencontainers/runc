@@ -12,7 +12,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/internal/linux"
-	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/internal/sys"
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -260,16 +259,10 @@ func (l *linuxStandardInit) Init() error {
 	}
 
 	// Wait for the FIFO to be opened on the other side before exec-ing the
-	// user process. We open it through /proc/self/fd/$fd, because the fd that
-	// was given to us was an O_PATH fd to the fifo itself. Linux allows us to
-	// re-open an O_PATH fd through /proc.
-	fifoFile, err := pathrs.Reopen(l.fifoFile, unix.O_WRONLY|unix.O_CLOEXEC)
-	if err != nil {
-		return fmt.Errorf("reopen exec fifo: %w", err)
-	}
-	defer fifoFile.Close()
-	if _, err := fifoFile.Write([]byte("0")); err != nil {
-		return &os.PathError{Op: "write exec fifo", Path: fifoFile.Name(), Err: err}
+	// user process. The fd we were given is an O_PATH fd to the fifo itself,
+	// which awaitExecFifo re-opens through /proc to signal readiness.
+	if err := awaitExecFifo(l.fifoFile); err != nil {
+		return err
 	}
 
 	// Close the O_PATH fifofd fd before exec because the kernel resets
@@ -278,7 +271,6 @@ func (l *linuxStandardInit) Init() error {
 	// N.B. the core issue itself (passing dirfds to the host filesystem) has
 	// since been resolved.
 	// https://github.com/torvalds/linux/blob/v4.9/fs/exec.c#L1290-L1318
-	_ = fifoFile.Close()
 	_ = l.fifoFile.Close()
 
 	if s := l.config.SpecState; s != nil {
