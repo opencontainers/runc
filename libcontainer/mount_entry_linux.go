@@ -228,17 +228,49 @@ func (m *mountEntry) mountPropagate(rootFd *os.File, mountLabel string) error {
 	}
 
 	// Apply the propagation flags on the new mount.
-	if err := utils.WithProcfdFile(m.dstFile, func(dstFd string) error {
+	if err := m.setPropagation(); err != nil {
+		return fmt.Errorf("change mount propagation: %w", err)
+	}
+	return nil
+}
+
+// setPropagation changes the propagation type of the mount.
+//
+// On kernels that support it, mount_setattr(2) is used as it operates on the
+// mount itself instead of having to go through a /proc/thread-self/fd path.
+// Note that mount_setattr(2) can only set a single propagation type per call
+// (a mount can only have one, and this is enforced by configs/validate), and
+// that MS_REC has to be passed as AT_RECURSIVE.
+//
+// The mount(2) fallback is still needed for kernels older than 5.12, as well as
+// for the internal bind-mounts created by mountToRootfs (see mountCgroupV2),
+// which can have more than one propagation flag.
+func (m *mountEntry) setPropagation() error {
+	if len(m.PropagationFlags) == 0 {
+		return nil
+	}
+	if len(m.PropagationFlags) == 1 && hasNewMountAPI() {
+		pflag := m.PropagationFlags[0]
+		attrFlags := uint(unix.AT_EMPTY_PATH)
+		if pflag&unix.MS_REC != 0 {
+			attrFlags |= unix.AT_RECURSIVE
+		}
+		err := unix.MountSetattr(int(m.dstFile.Fd()), "", attrFlags, &unix.MountAttr{
+			Propagation: uint64(pflag & ^unix.MS_REC),
+		})
+		if err == nil {
+			return nil
+		}
+		logrus.Debugf("mount_setattr(2) failed for %q (%v), falling back to mount(2)", m.Destination, err)
+	}
+	return utils.WithProcfdFile(m.dstFile, func(dstFd string) error {
 		for _, pflag := range m.PropagationFlags {
 			if err := mountViaFds("", nil, m.Destination, dstFd, "", uintptr(pflag), ""); err != nil {
 				return err
 			}
 		}
 		return nil
-	}); err != nil {
-		return fmt.Errorf("change mount propagation through procfd: %w", err)
-	}
-	return nil
+	})
 }
 
 func setRecAttr(m *mountEntry) error {

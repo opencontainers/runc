@@ -415,6 +415,20 @@ func checkBindOptions(m *configs.Mount) error {
 	return nil
 }
 
+// checkPropagationFlags makes sure the mount has at most one propagation flag.
+//
+// A mount can only have a single propagation type (e.g. "private" or
+// "rprivate", where the latter is just "private" applied recursively), so
+// specifying more than one of them is a configuration error. This also allows
+// mount_setattr(2) to be used, as it can only change the propagation type of a
+// mount to a single value per call.
+func checkPropagationFlags(m *configs.Mount) error {
+	if len(m.PropagationFlags) > 1 {
+		return errors.New("mount cannot have more than one propagation flag")
+	}
+	return nil
+}
+
 func checkIDMapMounts(config *configs.Config, m *configs.Mount) error {
 	// Make sure MOUNT_ATTR_IDMAP is not set on any of our mounts. This
 	// attribute is handled differently to all other attributes (through
@@ -457,6 +471,9 @@ func mountsWarn(config *configs.Config) error {
 func mountsStrict(config *configs.Config) error {
 	for _, m := range config.Mounts {
 		if err := checkBindOptions(m); err != nil {
+			return fmt.Errorf("invalid mount %+v: %w", m, err)
+		}
+		if err := checkPropagationFlags(m); err != nil {
 			return fmt.Errorf("invalid mount %+v: %w", m, err)
 		}
 		if err := checkIDMapMounts(config, m); err != nil {
