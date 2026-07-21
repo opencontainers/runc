@@ -64,8 +64,9 @@ func doSetupDev(rootFd *os.File, config *configs.Config) error {
 }
 
 // setupAndMountToRootfs sets up the mount for a single mount point and mounts it to the rootfs.
-func setupAndMountToRootfs(pipe *syncSocket, config *configs.Config, mountConfig *mountConfig, m *configs.Mount) error {
+func setupAndMountToRootfs(pipe *syncSocket, config *configs.Config, mountConfig *mountConfig, m *configs.Mount) (retErr error) {
 	entry := mountEntry{Mount: m}
+	defer entry.cleanup()
 	// Figure out whether we need to request runc to give us an
 	// open_tree(2)-style mountfd. For idmapped mounts, this is always
 	// necessary. For bind-mounts, this is only necessary if we cannot
@@ -89,7 +90,11 @@ func setupAndMountToRootfs(pipe *syncSocket, config *configs.Config, mountConfig
 		if sync.File == nil {
 			return fmt.Errorf("mountfd request for %q: response missing attached fd", m.Source)
 		}
-		defer sync.File.Close()
+		defer func() {
+			if retErr != nil {
+				_ = sync.File.Close()
+			}
+		}()
 		// Sanity-check to make sure we didn't get the wrong fd back. Note
 		// that while m.Source might contain symlinks, the (*os.File).Name
 		// is based on the path provided to os.OpenFile, not what it
@@ -111,7 +116,7 @@ func setupAndMountToRootfs(pipe *syncSocket, config *configs.Config, mountConfig
 		src.file = sync.File
 		entry.srcFile = src
 	}
-	if err := mountToRootfs(mountConfig, entry); err != nil {
+	if err := mountToRootfs(mountConfig, &entry); err != nil {
 		return fmt.Errorf("error mounting %q to rootfs at %q: %w", m.Source, m.Destination, err)
 	}
 	return nil
@@ -272,7 +277,7 @@ func cleanupTmp(tmpdir string) {
 	_ = os.RemoveAll(tmpdir)
 }
 
-func mountCgroupV1(m mountEntry, c *mountConfig) error {
+func mountCgroupV1(m *mountEntry, c *mountConfig) error {
 	binds, err := getCgroupMounts(m.Mount)
 	if err != nil {
 		return err
@@ -292,8 +297,10 @@ func mountCgroupV1(m mountEntry, c *mountConfig) error {
 		Data:             "mode=755",
 		PropagationFlags: m.PropagationFlags,
 	}
+	entry := mountEntry{Mount: tmpfs}
+	defer entry.cleanup()
 
-	if err := mountToRootfs(c, mountEntry{Mount: tmpfs}); err != nil {
+	if err := mountToRootfs(c, &entry); err != nil {
 		return err
 	}
 
@@ -326,7 +333,9 @@ func mountCgroupV1(m mountEntry, c *mountConfig) error {
 				return err
 			}
 		} else {
-			if err := mountToRootfs(c, mountEntry{Mount: b}); err != nil {
+			subEntry := mountEntry{Mount: b}
+			defer subEntry.cleanup()
+			if err := mountToRootfs(c, &subEntry); err != nil {
 				return err
 			}
 		}
@@ -376,7 +385,9 @@ func mountCgroupV2(m mountEntry, c *mountConfig) error {
 		bindM.PropagationFlags = append(bindM.PropagationFlags, unix.MS_PRIVATE)
 	}
 	// mountToRootfs() handles remounting for MS_RDONLY.
-	err := mountToRootfs(c, mountEntry{Mount: bindM})
+	entry := mountEntry{Mount: bindM}
+	defer entry.cleanup()
+	err := mountToRootfs(c, &entry)
 	if c.rootlessCgroups && errors.Is(err, unix.ENOENT) {
 		// ENOENT (for `src = c.cgroup2Path`) happens when rootless runc is being executed
 		// outside the userns+mountns.
@@ -390,7 +401,7 @@ func mountCgroupV2(m mountEntry, c *mountConfig) error {
 	return err
 }
 
-func doTmpfsCopyUp(m mountEntry, mountLabel string) (Err error) {
+func doTmpfsCopyUp(m *mountEntry, mountLabel string) (Err error) {
 	// Set up a scratch dir for the tmpfs on the host.
 	tmpdir, err := prepareTmp("/tmp")
 	if err != nil {
@@ -493,14 +504,7 @@ func statfsToMountFlags(st unix.Statfs_t) int {
 	return flags
 }
 
-func mountToRootfs(c *mountConfig, m mountEntry) error {
-	defer func() {
-		if m.dstFile != nil {
-			_ = m.dstFile.Close()
-			m.dstFile = nil
-		}
-	}()
-
+func mountToRootfs(c *mountConfig, m *mountEntry) error {
 	// procfs and sysfs are special because we need to ensure they are actually
 	// mounted on a specific path in a container without any funny business.
 	switch m.Device {
@@ -511,9 +515,12 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		// TODO: This won't be necessary once we switch to libpathrs and we can
 		//       stop all of these symlink-exchange attacks.
 		rootfs := c.root.Name()
-		// Do not use securejoin as it resolves symlinks.
-		dest := filepath.Join(rootfs, m.Destination)
-		if err := checkProcMount(rootfs, dest, m); err != nil {
+		dest := filepath.Clean(m.Destination)
+		if !pathrs.IsLexicallyInRoot(rootfs, dest) {
+			// Do not use securejoin as it resolves symlinks.
+			dest = filepath.Join(rootfs, dest)
+		}
+		if err := checkProcMount(rootfs, dest, *m); err != nil {
 			return err
 		}
 		if fi, err := os.Lstat(dest); err != nil {
@@ -666,7 +673,7 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		return setRecAttr(m)
 	case "cgroup":
 		if cgroups.IsCgroup2UnifiedMode() {
-			return mountCgroupV2(m, c)
+			return mountCgroupV2(*m, c)
 		}
 		return mountCgroupV1(m, c)
 	default:
