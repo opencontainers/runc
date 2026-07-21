@@ -218,11 +218,24 @@ func (m *mountEntry) mountPropagate(rootFd *os.File, mountLabel string) error {
 	return nil
 }
 
-func setRecAttr(m mountEntry) error {
+func setRecAttr(m *mountEntry) error {
 	if m.RecAttr == nil {
 		return nil
 	}
 	return utils.WithProcfdFile(m.dstFile, func(procfd string) error {
 		return unix.MountSetattr(-1, procfd, unix.AT_RECURSIVE, m.RecAttr)
 	})
+}
+
+// cleanup closes any open file descriptors in the mountEntry. This is called
+// after the mount has been completed and the mountEntry is no longer needed.
+func (m *mountEntry) cleanup() {
+	if m.dstFile != nil {
+		_ = m.dstFile.Close()
+		m.dstFile = nil
+	}
+	if m.srcFile != nil && m.srcFile.file != nil {
+		_ = m.srcFile.file.Close()
+		m.srcFile.file = nil
+	}
 }
