@@ -543,6 +543,11 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 		cmd.SysProcAttr = &unix.SysProcAttr{}
 	}
 	cmd.Env = append(cmd.Env, "GOMAXPROCS="+os.Getenv("GOMAXPROCS"))
+	// Allow the new mount API to be forced on or off (used by tests), so that
+	// both the new API and the legacy mount(2) fallback paths can be checked.
+	if value := os.Getenv("_LIBCONTAINER_NEWMOUNTAPI"); value != "" {
+		cmd.Env = append(cmd.Env, "_LIBCONTAINER_NEWMOUNTAPI="+value)
+	}
 	cmd.ExtraFiles = append(cmd.ExtraFiles, p.ExtraFiles...)
 	if p.ConsoleSocket != nil {
 		cmd.ExtraFiles = append(cmd.ExtraFiles, p.ConsoleSocket)

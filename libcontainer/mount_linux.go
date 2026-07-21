@@ -7,12 +7,14 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
+	"github.com/opencontainers/runc/libcontainer/system/kernelversion"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
@@ -27,6 +29,9 @@ const (
 	mountSourceOpenTree mountSourceType = "open_tree"
 	// A plain file descriptor that can be mounted through /proc/thread-self/fd.
 	mountSourcePlain mountSourceType = "plain-open"
+	// A file descriptor returned by fsopen(2) that needs to be installed using
+	// fsmount(2) and move_mount(2).
+	mountSourceFsOpen mountSourceType = "fsopen"
 )
 
 type mountSource struct {
@@ -166,7 +171,7 @@ func mountViaFds(source string, srcFile *mountSource, target, dstFd, fstype stri
 		dst = dstFd
 	}
 	src := source
-	isMoveMount := srcFile != nil && srcFile.Type == mountSourceOpenTree
+	isMoveMount := srcFile != nil && (srcFile.Type == mountSourceOpenTree || srcFile.Type == mountSourceFsOpen)
 	if srcFile != nil {
 		// If we're going to use the /proc/thread-self/... path for classic
 		// mount(2), we need to get a safe handle to /proc/thread-self. This
@@ -341,4 +346,224 @@ func mountFd(nsHandles *userns.Handles, m *configs.Mount) (_ *mountSource, retEr
 		Type: sourceType,
 		file: mountFile,
 	}, nil
+}
+
+// hasNewMountAPI reports whether the running kernel supports the new mount API
+// (open_tree(2), move_mount(2), fsopen(2), fsmount(2)), which was introduced
+// in Linux 5.2.
+//
+// The probe itself is a copy of the one used by
+// <https://github.com/cyphar/filepath-securejoin/blob/main/pathrs-lite/internal/linux/mount_linux.go>.
+var hasNewMountAPI = sync.OnceValue(func() bool {
+	// Allow the new mount API to be forced on or off, so that both the new
+	// API and the legacy mount(2) fallback paths can be exercised. The value
+	// is forwarded to us by newParentProcess() (see _LIBCONTAINER_NEWMOUNTAPI).
+	if value := os.Getenv("_LIBCONTAINER_NEWMOUNTAPI"); value != "" {
+		enabled, err := strconv.ParseBool(value)
+		if err != nil {
+			logrus.Warnf("ignoring invalid _LIBCONTAINER_NEWMOUNTAPI value %q: %v", value, err)
+		} else {
+			logrus.Debugf("new mount api: %v (overridden by environment)", enabled)
+			return enabled
+		}
+	}
+	// All of the pieces of the new mount API we use (fsopen, fsconfig,
+	// fsmount, open_tree) were added together in Linux 5.2[1,2], so we can
+	// just check for one of the syscalls and the others should also be
+	// available.
+	//
+	// Just try to use open_tree(2) to open a file without OPEN_TREE_CLONE.
+	// This is equivalent to openat(2), but tells us if open_tree is
+	// available (and thus all of the other basic new mount API syscalls).
+	// open_tree(2) is most light-weight syscall to test here.
+	//
+	// [1]: merge commit 400913252d09
+	// [2]: <https://lore.kernel.org/lkml/153754740781.17872.7869536526927736855.stgit@warthog.procyon.org.uk/>
+	fd, err := unix.OpenTree(-int(unix.EBADF), "/", unix.OPEN_TREE_CLOEXEC)
+	if err != nil {
+		return false
+	}
+	_ = unix.Close(fd)
+
+	// RHEL 8 has a backport of fsopen(2) that appears to have some very
+	// difficult to debug performance pathology. As such, it seems prudent to
+	// simply reject pre-5.2 kernels.
+	isNotBackport, _ := kernelversion.GreaterEqualThan(kernelversion.KernelVersion{Kernel: 5, Major: 2})
+	return isNotBackport
+})
+
+// createDetachedBindMount creates a detached bind mount using open_tree(2).
+func createDetachedBindMount(m *configs.Mount) (_ *mountSource, retErr error) {
+	openTreeFlags := uint(unix.OPEN_TREE_CLONE | unix.OPEN_TREE_CLOEXEC)
+	if m.Flags&unix.MS_REC != 0 {
+		openTreeFlags |= unix.AT_RECURSIVE
+	}
+	fd, err := unix.OpenTree(unix.AT_FDCWD, m.Source, openTreeFlags)
+	if err != nil {
+		return nil, &os.PathError{Op: "open_tree", Path: m.Source, Err: err}
+	}
+	return &mountSource{
+		Type: mountSourceOpenTree,
+		file: os.NewFile(uintptr(fd), m.Source),
+	}, nil
+}
+
+// fsconfigApplyOptions applies the options specified in opts to the filesystem
+// file descriptor fsfd using fsconfig(2). The options are expected to be a
+// comma-separated list of key=value pairs or flags.
+func fsconfigApplyOptions(fsfd int, opts string) error {
+	fields, err := utils.ParseKV(opts)
+	if err != nil {
+		return err
+	}
+	for opt, val := range fields {
+		opt = strings.TrimSpace(opt)
+		if opt == "" {
+			continue
+		}
+		if val != "" {
+			if err := unix.FsconfigSetString(fsfd, opt, val); err != nil {
+				return fmt.Errorf("failed to set fsconfig option %s=%s: %w", opt, val, err)
+			}
+		} else {
+			if err := unix.FsconfigSetFlag(fsfd, opt); err != nil {
+				return fmt.Errorf("failed to set fsconfig flag %s: %w", opt, err)
+			}
+		}
+	}
+	return nil
+}
+
+// msFlagsToMountAttr converts MS_* mount flags (as used by mount(2)) to
+// MOUNT_ATTR_* flags (as used by fsmount(2) and mount_setattr(2)).
+//
+// Flags that have no MOUNT_ATTR_* counterpart are ignored here; callers are
+// expected to check them beforehand with unsupportedMountFlags.
+func msFlagsToMountAttr(flags int) int {
+	attr := 0
+	if flags&unix.MS_RDONLY != 0 {
+		attr |= unix.MOUNT_ATTR_RDONLY
+	}
+	if flags&unix.MS_NOSUID != 0 {
+		attr |= unix.MOUNT_ATTR_NOSUID
+	}
+	if flags&unix.MS_NODEV != 0 {
+		attr |= unix.MOUNT_ATTR_NODEV
+	}
+	if flags&unix.MS_NOEXEC != 0 {
+		attr |= unix.MOUNT_ATTR_NOEXEC
+	}
+	if flags&unix.MS_NOSYMFOLLOW != 0 {
+		attr |= unix.MOUNT_ATTR_NOSYMFOLLOW
+	}
+	if flags&unix.MS_NODIRATIME != 0 {
+		attr |= unix.MOUNT_ATTR_NODIRATIME
+	}
+	// The atime mode flags are mutually exclusive and map to a multi-bit
+	// field (bits 4-6) in MOUNT_ATTR. MS_RELATIME maps to 0 (default).
+	switch flags & (unix.MS_NOATIME | unix.MS_RELATIME | unix.MS_STRICTATIME) {
+	case unix.MS_NOATIME:
+		attr |= unix.MOUNT_ATTR_NOATIME
+	case unix.MS_STRICTATIME:
+		attr |= unix.MOUNT_ATTR_STRICTATIME
+	}
+	return attr
+}
+
+// mountAttrFlags is the set of mount(2) flags that have a MOUNT_ATTR_*
+// counterpart, and thus can be applied using mount_setattr(2) (or when
+// creating a mount with fsmount(2)).
+const mountAttrFlags = unix.MS_RDONLY | unix.MS_NOSUID | unix.MS_NODEV |
+	unix.MS_NOEXEC | unix.MS_NOSYMFOLLOW | mntAtimeFlags
+
+// unsupportedMountFlags returns the flags that cannot be applied using the new
+// mount API because they have no MOUNT_ATTR_* counterpart (e.g. MS_LAZYTIME,
+// MS_SYNCHRONOUS, MS_DIRSYNC, MS_MANDLOCK, MS_SILENT, MS_I_VERSION). Such
+// flags require a fallback to mount(2), otherwise they would be silently
+// ignored.
+//
+// MS_BIND, MS_REC and MS_REMOUNT are not reported here because they describe
+// the mount operation itself rather than the resulting mount.
+func unsupportedMountFlags(flags int) int {
+	flags &^= unix.MS_BIND | unix.MS_REC | unix.MS_REMOUNT
+	return flags & ^mountAttrFlags
+}
+
+// mountFstype returns the filesystem type to use in mount(2) and fsopen(2) for
+// the given mount configuration.
+func mountFstype(m *configs.Mount) string {
+	// A "cgroup" device means a cgroup2 mount here, since cgroup v1 mounts
+	// are always handled by mountCgroupV1. Note that the kernel expects the
+	// filesystem type (and not the device) to be "cgroup2" in this case.
+	if m.Device == "cgroup" {
+		return "cgroup2"
+	}
+	return m.Device
+}
+
+// createDetachedFsMount creates a detached filesystem mount using fsopen(2),
+// fsconfig(2), fsmount(2), and move_mount(2).
+func createDetachedFsMount(m *configs.Mount, flagsMask int, mountLabel string) (_ *mountSource, retErr error) {
+	flags := m.Flags
+	if flagsMask != 0 {
+		flags &= flagsMask
+	}
+	// Fail early (so that the caller can fall back to mount(2)) if there are
+	// flags that mount_setattr(2) is unable to apply.
+	if unsupported := unsupportedMountFlags(flags); unsupported != 0 {
+		return nil, fmt.Errorf("cannot apply mount flags %s with mount_setattr(2)", stringifyMountFlags(unsupported))
+	}
+
+	fstype := mountFstype(m)
+	fsfd, err := unix.Fsopen(fstype, unix.FSOPEN_CLOEXEC)
+	if err != nil {
+		return nil, &os.PathError{Op: "fsopen", Path: fstype, Err: err}
+	}
+	defer unix.Close(fsfd)
+
+	if err := fsconfigApplyOptions(fsfd, m.Data); err != nil {
+		return nil, &os.PathError{Op: "fsconfigset", Path: fstype, Err: err}
+	}
+	if mountLabel != "" {
+		if err := unix.FsconfigSetString(fsfd, "context", mountLabel); err != nil {
+			return nil, &os.PathError{Op: "fsconfigset(context)", Path: fstype, Err: err}
+		}
+	}
+	source := m.Source
+	if m.Device == "cgroup" {
+		source = fstype
+	}
+	if err := unix.FsconfigSetString(fsfd, "source", source); err != nil {
+		return nil, &os.PathError{Op: "fsconfigset(source)", Path: fstype, Err: err}
+	}
+	if err := unix.FsconfigCreate(fsfd); err != nil {
+		return nil, &os.PathError{Op: "fsconfig", Path: fstype, Err: err}
+	}
+
+	fd, err := unix.Fsmount(fsfd, unix.FSMOUNT_CLOEXEC, msFlagsToMountAttr(flags))
+	if err != nil {
+		return nil, &os.PathError{Op: "fsmount", Path: fstype, Err: err}
+	}
+	return &mountSource{
+		Type: mountSourceFsOpen,
+		file: os.NewFile(uintptr(fd), fstype),
+	}, nil
+}
+
+// createDetachedMountSource creates a detached mount source for the given mount
+// configuration. If the mount is a bind-mount, it will use open_tree(2). If it
+// is a filesystem mount, it will use fsopen(2), fsconfig(2), and fsmount(2).
+func createDetachedMountSource(m *configs.Mount, flagsMask int, mountLabel string) (_ *mountSource, retErr error) {
+	if m.IsBind() {
+		// 1. For mount flags:
+		//    Since we create a detached bind mount, there is no need to set mount attributes upfront.
+		//    They can be applied later using move_mount(2) and mount_setattr(2).
+		//
+		// 2. For mountLabel:
+		//    Mount labels cannot be set on a detached bind mount, so we skip setting it here.
+		//    As documented in mount(2): if MS_BIND is included in mountflags,
+		//    the filesystem type and mount data arguments are ignored.
+		return createDetachedBindMount(m)
+	}
+	return createDetachedFsMount(m, flagsMask, mountLabel)
 }

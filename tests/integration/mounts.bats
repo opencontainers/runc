@@ -224,6 +224,21 @@ function get_cgroup_mount_flags() {
 	assert_line --index 0 --partial 'ro,'
 }
 
+# Same as above, but with the new mount API disabled, to make sure the legacy
+# mount(2) fallback still works (see _LIBCONTAINER_NEWMOUNTAPI).
+@test "runc run [ro tmpfs mount, new mount API disabled]" {
+	update_config '	  .mounts += [{
+					source: "tmpfs",
+					destination: "/mnt",
+					type: "tmpfs",
+					options: ["ro", "nodev", "nosuid", "mode=755"]
+				}]
+			| .process.args |= ["grep", "^tmpfs /mnt", "/proc/mounts"]'
+
+	_LIBCONTAINER_NEWMOUNTAPI=0 run -0 runc run test_busybox
+	assert_line --index 0 --partial 'ro,'
+}
+
 # https://github.com/opencontainers/runc/issues/3248
 @test "runc run [ro /dev mount]" {
 	update_config '   .mounts |= map((select(.destination == "/dev") | .options += ["ro"]) // .)

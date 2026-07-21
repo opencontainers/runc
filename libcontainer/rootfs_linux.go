@@ -91,7 +91,7 @@ func setupAndMountToRootfs(pipe *syncSocket, config *configs.Config, mountConfig
 			return fmt.Errorf("mountfd request for %q: response missing attached fd", m.Source)
 		}
 		defer func() {
-			if retErr != nil {
+			if retErr != nil && entry.srcFile == nil {
 				_ = sync.File.Close()
 			}
 		}()
@@ -334,8 +334,9 @@ func mountCgroupV1(m *mountEntry, c *mountConfig) error {
 			}
 		} else {
 			subEntry := mountEntry{Mount: b}
-			defer subEntry.cleanup()
-			if err := mountToRootfs(c, &subEntry); err != nil {
+			err := mountToRootfs(c, &subEntry)
+			subEntry.cleanup()
+			if err != nil {
 				return err
 			}
 		}
@@ -432,6 +433,7 @@ func doTmpfsCopyUp(m *mountEntry, mountLabel string) (Err error) {
 		Mount:   m.Mount,
 		dstFile: tmpDirFile,
 	}
+	defer hostMount.cleanup()
 	if err := hostMount.mountPropagate(hostRootFd, mountLabel); err != nil {
 		return err
 	}
