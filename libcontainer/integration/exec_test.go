@@ -1748,10 +1748,6 @@ func testFdLeaks(t *testing.T, systemd bool) {
 	}
 	// Show the extra opened files.
 
-	excludedPaths := []string{
-		"anon_inode:bpf-prog", // FIXME: see https://github.com/opencontainers/runc/issues/2366#issuecomment-776411392
-	}
-
 	count := 0
 
 	procSelfFd, closer, err := pathrs.ProcThreadSelfOpen("fd/", unix.O_DIRECTORY|unix.O_CLOEXEC)
@@ -1767,12 +1763,6 @@ next_fd:
 			}
 		}
 		dst, _ := linux.Readlinkat(procSelfFd, fd1)
-		for _, ex := range excludedPaths {
-			if ex == dst {
-				continue next_fd
-			}
-		}
-
 		count++
 		t.Logf("extra fd %s -> %s", fd1, dst)
 	}
