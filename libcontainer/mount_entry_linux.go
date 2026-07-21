@@ -227,16 +227,44 @@ func (m *mountEntry) mountPropagate(rootFd *os.File, mountLabel string) error {
 		m.dstFile = newDstFile
 	}
 
-	// Apply the propagation flags on the new mount.
-	if err := utils.WithProcfdFile(m.dstFile, func(dstFd string) error {
+	// Apply the propagation flags on the new mount using mount_setattr(2) if
+	// available, otherwise fall back to mount(2).
+	if len(m.PropagationFlags) > 0 {
+		// Try to use mount_setattr(2) for propagation flags. This is more
+		// secure and efficient than using mount(2).
+		//
+		// PropagationFlags can contain MS_REC combined with propagation types
+		// (e.g., "rprivate" = MS_PRIVATE | MS_REC). For mount_setattr, we need
+		// to handle MS_REC separately as the AT_RECURSIVE flag parameter.
+		var propagation uint64
+		// Always use AT_EMPTY_PATH since we're operating on the fd directly
+		pflags := uint(unix.AT_EMPTY_PATH)
 		for _, pflag := range m.PropagationFlags {
-			if err := mountViaFds("", nil, m.Destination, dstFd, "", uintptr(pflag), ""); err != nil {
-				return err
+			if pflag&unix.MS_REC != 0 {
+				pflags |= unix.AT_RECURSIVE
 			}
+			// Only include the propagation type, not MS_REC
+			propagation |= uint64(pflag & ^unix.MS_REC)
 		}
-		return nil
-	}); err != nil {
-		return fmt.Errorf("change mount propagation through procfd: %w", err)
+		attr := unix.MountAttr{
+			Propagation: propagation,
+		}
+		err := unix.MountSetattr(int(m.dstFile.Fd()), "", pflags, &attr)
+		if err == nil {
+			return nil
+		}
+		// fall back to mount(2).
+		logrus.Debugf("mount_setattr failed for %s: %v, falling back to mount(2)", m.Destination, err)
+		if err := utils.WithProcfdFile(m.dstFile, func(dstFd string) error {
+			for _, pflag := range m.PropagationFlags {
+				if err := mountViaFds("", nil, m.Destination, dstFd, "", uintptr(pflag), ""); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			return fmt.Errorf("change mount propagation through procfd: %w", err)
+		}
 	}
 	return nil
 }
