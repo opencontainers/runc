@@ -87,6 +87,23 @@ function enable_userns() {
 	[ "$status" -eq 0 ]
 }
 
+@test "runc run (custom mount label)" {
+	MOUNTLABEL="system_u:object_r:container_file_t:s0:c344,c805"
+	update_config '	  .process.selinuxLabel |= "system_u:system_r:container_t:s0:c4,c5"
+			| .process.args = ["/bin/sleep", "infinite"]
+			| .linux.mountLabel="'"$MOUNTLABEL"'"'
+	runc run -d --console-socket "$CONSOLE_SOCKET" tst
+	[ "$status" -eq 0 ]
+
+	runc exec tst getfattr -n security.selinux /dev
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"$MOUNTLABEL"* ]]
+
+	runc exec tst getfattr -n security.selinux /proc
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"system_u:object_r:proc_t:s0"* ]]
+}
+
 @test "runc run (session keyring security label)" {
 	run_check_label
 }
