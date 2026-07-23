@@ -82,6 +82,26 @@ function enable_userns() {
 	run -0 runc run tst
 }
 
+@test "runc run (custom mount label)" {
+	# Note that the MCS categories of the mount label have to match the ones
+	# of the process label, otherwise the container is not allowed to access
+	# the mounts (nor its own console).
+	MOUNTLABEL="system_u:object_r:container_file_t:s0:c4,c5"
+	cp "${TESTBINDIR}/getfattr" rootfs/bin/
+	update_config '	  .process.selinuxLabel |= "system_u:system_r:container_t:s0:c4,c5"
+			| .process.args = ["/bin/getfattr", "-n", "security.selinux", "/dev"]
+			| .linux.mountLabel = "'"$MOUNTLABEL"'"'
+
+	# The container /dev tmpfs is mounted with the mount label.
+	run -0 runc run tst
+	assert_output --partial "security.selinux=\"$MOUNTLABEL\""
+
+	# procfs has its own labeling rules, so the mount label does not apply.
+	update_config ' .process.args = ["/bin/getfattr", "-n", "security.selinux", "/proc"]'
+	run -0 runc run tst
+	assert_output --partial 'security.selinux="system_u:object_r:proc_t:s0"'
+}
+
 @test "runc run (session keyring security label)" {
 	run_check_label
 }
