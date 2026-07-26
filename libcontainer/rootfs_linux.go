@@ -560,7 +560,10 @@ func mountToRootfs(c *mountConfig, m *mountEntry) error {
 		return err
 	case "bind":
 		// open_tree()-related shenanigans are all handled in mountViaFds.
-		if err := m.mountPropagate(c.root, mountLabel); err != nil {
+		// As documented in mount(2): if MS_BIND is included in mountflags,
+		// the filesystem type and mount data arguments are ignored.
+		// Therefore, keep mountLabel empty for bind mounts.
+		if err := m.mountPropagate(c.root, ""); err != nil {
 			return err
 		}
 
