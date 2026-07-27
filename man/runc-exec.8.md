@@ -42,6 +42,19 @@ specification as defined by the
 **--pid-file** _path_
 : Specify the file to write the container process' PID to.
 
+**--exec-wait-fifo** _path_
+: Path to a caller-created and caller-owned FIFO. When set, the exec process
+completes its normal setup but blocks opening the FIFO for writing, just before
+the final **execve**(2), until an external reader opens the read end. It then
+writes a single byte and proceeds to execute the requested program. The reader
+must consume that byte before closing the FIFO: opening the read end and closing
+it without reading races with the write and makes the exec fail with a broken
+pipe. This is a single opt-in synchronization point — analogous to the FIFO
+handshake that gates the start of a **runc-create**(8)d container — that lets a
+supervisor register a detached exec process — for example one identified via
+**--pidfd-socket** — before its program runs. Intended for use with
+**--detach**.
+
 **--process-label** _label_
 : Set the asm process label for the process commonly used with **selinux**(7).
 

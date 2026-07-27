@@ -213,6 +213,7 @@ type runner struct {
 	pidFile         string
 	consoleSocket   string
 	pidfdSocket     string
+	execWaitFifo    string
 	container       *libcontainer.Container
 	action          CtAct
 	notifySocket    *notifySocket
@@ -283,6 +284,14 @@ func (r *runner) run(config *specs.Process) (_ int, retErr error) {
 			return -1, err
 		}
 		defer connClose()
+	}
+
+	if r.execWaitFifo != "" {
+		fifoClose, err := setupExecWaitFifo(process, r.execWaitFifo)
+		if err != nil {
+			return -1, err
+		}
+		defer fifoClose()
 	}
 
 	switch r.action {
@@ -455,6 +464,31 @@ func setupPidfdSocket(process *libcontainer.Process, sockpath string) (_clean fu
 	process.PidfdSocket = socket
 	return func() {
 		conn.Close()
+	}, nil
+}
+
+// setupExecWaitFifo opens the caller-provided FIFO as an O_PATH fd and attaches
+// it to the process. The setns init process re-opens it for writing right
+// before execve, blocking until an external reader opens the read end. The fd
+// is O_PATH so opening it here neither blocks nor counts as a writer.
+func setupExecWaitFifo(process *libcontainer.Process, path string) (_clean func(), _ error) {
+	fifo, err := os.OpenFile(path, unix.O_PATH|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open exec wait fifo: %w", err)
+	}
+	fi, err := fifo.Stat()
+	if err != nil {
+		fifo.Close()
+		return nil, err
+	}
+	if fi.Mode()&os.ModeNamedPipe == 0 {
+		fifo.Close()
+		return nil, fmt.Errorf("exec wait fifo %q is not a fifo", path)
+	}
+
+	process.ExecWaitFifo = fifo
+	return func() {
+		fifo.Close()
 	}, nil
 }
 

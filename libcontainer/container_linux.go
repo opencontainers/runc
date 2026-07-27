@@ -619,6 +619,13 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 		)
 	}
 
+	if p.ExecWaitFifo != nil {
+		cmd.ExtraFiles = append(cmd.ExtraFiles, p.ExecWaitFifo)
+		cmd.Env = append(cmd.Env,
+			"_LIBCONTAINER_EXECWAITFD="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1),
+		)
+	}
+
 	// TODO: After https://go-review.googlesource.com/c/go/+/515799 included
 	// in go versions supported by us, we can remove this logic.
 	if safeExe != nil {

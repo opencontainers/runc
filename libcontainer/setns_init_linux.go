@@ -26,6 +26,7 @@ type linuxSetnsInit struct {
 	pidfdSocket   *os.File
 	config        *initConfig
 	logPipe       *os.File
+	execWaitFifo  *os.File
 }
 
 func (l *linuxSetnsInit) getSessionRingName() string {
@@ -149,6 +150,19 @@ func (l *linuxSetnsInit) Init() error {
 	logrus.Debugf("setns_init: about to exec")
 	if err := l.logPipe.Close(); err != nil {
 		return fmt.Errorf("close log pipe: %w", err)
+	}
+
+	// If an exec-wait FIFO was provided, block until an external reader opens
+	// it before running the user process. This gives a supervisor a chance to
+	// register the (already-created) process before its program starts. See
+	// the --exec-wait-fifo flag of "runc exec".
+	if l.execWaitFifo != nil {
+		if err := awaitExecFifo(l.execWaitFifo); err != nil {
+			return err
+		}
+		// Close the O_PATH fd before execve, for the same reason as the exec
+		// fifo on the create/start path (CVE-2016-9962 on older kernels).
+		_ = l.execWaitFifo.Close()
 	}
 
 	// Close all file descriptors we are not passing to the container. This is

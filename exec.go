@@ -45,6 +45,10 @@ following will output a list of processes running in the container:
 			Usage: "path to an AF_UNIX socket which will receive a file descriptor referencing the exec process",
 		},
 		&cli.StringFlag{
+			Name:  "exec-wait-fifo",
+			Usage: "path to a caller-owned FIFO; the exec process blocks opening it for writing just before execve, until an external reader opens the read end and reads the acknowledgment byte",
+		},
+		&cli.StringFlag{
 			Name:  "cwd",
 			Usage: "current working directory in the container",
 		},
@@ -196,6 +200,7 @@ func execProcess(cmd *cli.Command) (int, error) {
 		container:       container,
 		consoleSocket:   cmd.String("console-socket"),
 		pidfdSocket:     cmd.String("pidfd-socket"),
+		execWaitFifo:    cmd.String("exec-wait-fifo"),
 		detach:          cmd.Bool("detach"),
 		pidFile:         cmd.String("pid-file"),
 		action:          CT_ACT_RUN,
