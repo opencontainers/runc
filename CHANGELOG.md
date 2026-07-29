@@ -6,12 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### libcontainer API ###
+- `configs.ToCPUSet` now returns a `unix.CPUSetDynamic` instead of a
+  `*unix.CPUSet`, and the `Initial`/`Final` fields of `configs.CPUAffinity` and
+  the `Nodes` field of `configs.LinuxMemoryPolicy` have changed type
+  accordingly. This lifts the previous 1024 CPUs/nodes limit. (#5343)
+
 ### Fixed ###
 - The poststart hooks are now executed after starting the user-specified
   process, fixing a runtime-spec conformance issue. (#4347, #5186)
 
 ### Changed ###
 - Updated builds to libseccomp v2.6.1. (#5376)
+- The `cpuAffinity` and NUMA `memoryPolicy` settings are no longer limited
+  to 1024 CPUs/nodes, as runc now uses a dynamically-sized CPU mask. (#5343)
 
 ## [1.5.0] - 2026-06-19
 
