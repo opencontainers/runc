@@ -48,7 +48,7 @@ jobs:
 
     steps:
     - name: checkout
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: Show host info
       run: |
@@ -111,7 +111,7 @@ jobs:
         criu --version
 
     - name: install go ${{ matrix.go-version }}
-      uses: actions/setup-go@v7
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version: ${{ matrix.go-version }}
         check-latest: true
@@ -120,7 +120,7 @@ jobs:
       run: sudo -E PATH="$PATH" make EXTRA_FLAGS="${{ matrix.race }}" all
 
     - name: Setup Bats and bats libs
-      uses: bats-core/bats-action@4.0.0
+      uses: bats-core/bats-action@77d6fb60505b4d0d1d73e48bd035b55074bbfb43 # 4.0.0
       with:
         bats-version: 1.12.0 # Known as BATS_VERSION in other places.
         support-install: false
@@ -171,7 +171,7 @@ jobs:
     steps:
 
     - name: checkout
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: install deps
       run: |
@@ -199,7 +199,7 @@ jobs:
         sudo ldconfig /usr/386/lib
 
     - name: install go
-      uses: actions/setup-go@v7
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version: 1.x # Latest stable
         check-latest: true
@@ -219,12 +219,12 @@ jobs:
         template: [almalinux-8, almalinux-9, centos-stream-10, fedora, experimental/fedora-rawhide]
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v7
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-    - uses: lima-vm/lima-actions/setup@v1
+    - uses: lima-vm/lima-actions/setup@55627e31b78637bf254a8b2a14da8ea7d12564e5 # v1.1.0
       id: lima-actions-setup
 
-    - uses: actions/cache@v6
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/.cache/lima
         key: lima-${{ steps.lima-actions-setup.outputs.version }}-${{ matrix.template }}
