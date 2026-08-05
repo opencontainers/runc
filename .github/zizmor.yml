@@ -1,0 +1,26 @@
+# Configuration for zizmor (https://docs.zizmor.sh/), run by the zizmor job
+# in .github/workflows/validate.yml.
+
+rules:
+  cache-poisoning:
+    # The audit fires because both workflows are also triggered by pushing a
+    # v* tag, so anything they cache is, in zizmor's view, a possible input to
+    # a release build. That does not hold here:
+    #
+    #  - The only job producing release artifacts (release, in validate.yml)
+    #    builds everything inside the runcimage container via "make releaseall",
+    #    and uses neither actions/setup-go nor actions/cache.
+    #
+    #  - GitHub scopes caches per branch: a pull request can read the default
+    #    branch's cache, but cannot write to it. So a pull request cannot plant
+    #    an entry that a later push or tag build would restore.
+    #
+    # The alternative (cache: false everywhere) makes every Go job re-download
+    # modules and start from a cold build cache, which is a real slowdown for
+    # no gain.
+    #
+    # Revisit this if a job ever starts publishing artifacts built outside of
+    # the runcimage container.
+    ignore:
+      - test.yml
+      - validate.yml
