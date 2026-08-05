@@ -132,7 +132,9 @@ jobs:
           sudo rm -f /usr/bin/shellcheck
           # Add ~/bin to $PATH.
           echo ~/bin >> "$GITHUB_PATH"
-      - uses: lumaxis/shellcheck-problem-matchers@bf6e0860fd06e4910738c6160dcd2889146ce824 # v2.3.1
+      - name: add problem matcher
+        # Show shellcheck (tty format) findings as annotations.
+        run: echo "::add-matcher::.github/shellcheck-tty.json"
       - name: run
         run: make shellcheck
       - name: check-config.sh
