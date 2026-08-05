@@ -1,0 +1,29 @@
+# This is deliberately a separate workflow -- so that it still runs when
+# another workflow file is broken.
+name: actionlint
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - main
+      - release-*
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: devops-actions/actionlint@9fb9c192862f19e684586ca84b500461bcd8a541 # v0.1.12
+
+  all-done:
+    needs:
+    - actionlint
+    runs-on: ubuntu-24.04
+    steps:
+    - run: echo "All jobs completed"
