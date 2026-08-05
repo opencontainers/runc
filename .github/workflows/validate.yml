@@ -171,27 +171,42 @@ jobs:
   commit:
     permissions:
       contents: read
-      pull-requests: read # Needed by get-pr-commits to list the PR's commits.
+      pull-requests: read # Needed to list the PR's commits.
     runs-on: ubuntu-24.04
     steps:
-      - name: get pr commits
-        if: github.event_name == 'pull_request' # Only check commits on pull requests.
-        id: 'get-pr-commits'
-        uses: tim-actions/get-pr-commits@198af03565609bb4ed924d1260247b4881f09e7d # v1.3.1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: check commit subject line length
+        # Only check commits on pull requests. For other events, the step is
+        # skipped and the job succeeds (so that all-done can succeed, too).
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Save to a file first, so that a gh failure fails the step (rather
+          # than being masked by jq succeeding on empty input).
+          gh api --paginate --slurp \
+            "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/commits" \
+            > "$RUNNER_TEMP/commits.json"
 
-      - name: check subject line length
-        if: github.event_name == 'pull_request' # Only check commits on pull requests.
-        uses: tim-actions/commit-message-checker-with-regex@094fc16ff83d04e2ec73edb5eaf6aa267db33791 # v0.3.2
-        with:
-          commits: ${{ steps.get-pr-commits.outputs.commits }}
-          pattern: '^.{0,72}(\n.*)*$'
-          error: 'Subject too long (max 72)'
+          # A page is an array, and --slurp gives an array of pages, thus
+          # the double iteration. Merge commits are skipped.
+          long=$(jq -r '
+              .[][]
+              | select(.parents | length <= 1)
+              | (.commit.message | split("\n")[0]) as $subject
+              | select(($subject | length) > 72)
+              | "\(.sha[0:12]) \($subject)"
+            ' "$RUNNER_TEMP/commits.json")
 
-      - name: succeed (not a PR) # Allow all-done to succeed for non-PRs.
-        if: github.event_name != 'pull_request'
-        run: echo "Nothing to check here."
+          if [ -z "$long" ]; then
+            echo "All commit subject lines are 72 characters or less."
+            exit 0
+          fi
+
+          while read -r commit; do
+            echo "::error::subject line too long (max 72 characters): $commit"
+          done <<<"$long"
+          exit 1
 
   cfmt:
     runs-on: ubuntu-24.04
