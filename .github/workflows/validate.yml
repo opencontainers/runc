@@ -52,6 +52,11 @@ jobs:
         run: |
           golangci-lint run --config .golangci-extra.yml --new-from-rev=HEAD~1
 
+  govulncheck:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: golang/govulncheck-action@v1
+
   compile-buildtags:
     runs-on: ubuntu-24.04
     env:
@@ -304,6 +309,7 @@ jobs:
       - conmon
       - deps
       - get-images
+      - govulncheck
       - keyring
       - lint
       - release
