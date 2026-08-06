@@ -10,6 +10,14 @@ on:
     # Runs at 00:00 UTC every Sunday, Tuesday, Thursday.
     - cron: '0 0 * * 0,2,4'
   workflow_dispatch:
+
+# There is no point in triggering the downstream workflows twice. Note this
+# does not cancel a run that is already in progress: doing so could leave part
+# of the matrix (i.e. some of the branches) without a trigger.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
