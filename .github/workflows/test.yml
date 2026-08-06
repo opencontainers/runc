@@ -11,6 +11,14 @@ on:
       - release-*
   pull_request:
   workflow_dispatch:
+
+# Cancel superseded runs of the same pull request. For everything else
+# (in particular, pushes to a branch or a tag) there is no PR number, so
+# the group falls back to the unique run_id and nothing is cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
