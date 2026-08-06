@@ -37,7 +37,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-      pull-requests: read
       checks: write # to allow the action to annotate code in the PR.
     runs-on: ubuntu-24.04
     steps:
@@ -172,7 +171,7 @@ jobs:
   commit:
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: read # Needed by get-pr-commits to list the PR's commits.
     runs-on: ubuntu-24.04
     steps:
       - name: get pr commits
