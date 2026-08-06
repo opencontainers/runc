@@ -10,6 +10,11 @@ on:
     # Runs at 00:00 UTC every Sunday, Tuesday, Thursday.
     - cron: '0 0 * * 0,2,4'
   workflow_dispatch:
+# There is no point in triggering the downstream workflows twice.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
