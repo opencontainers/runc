@@ -202,7 +202,7 @@ func tryResetCPUAffinity(pid int) {
 	// /sys/devices/system/cpu/possible and kernel_max.
 	// Instead, we use a huge buffer similarly to go 1.25 runtime in
 	// getCPUCount().
-	buf := unix.NewCPUSet(configs.MaxCPU)
+	buf := unix.NewCPUSet(configs.MaxCPU + 1)
 	buf.Fill()
 	if err := linux.SchedSetaffinity(pid, buf); err != nil {
 		logrus.WithError(err).Warnf("resetting the CPU affinity of pid %d failed -- the container process may inherit runc's CPU affinity", pid)
