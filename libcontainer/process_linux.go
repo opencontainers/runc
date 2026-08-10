@@ -507,7 +507,7 @@ func (p *setnsProcess) start() (retErr error) {
 	}
 
 	var seenProcReady bool
-	ierr := parseSync(p.comm.syncSockParent, func(sync *syncT) error {
+	ierr := parseSync(p.comm.syncSockParent, p.pid(), func(sync *syncT) error {
 		switch sync.Type {
 		case procReady:
 			seenProcReady = true
@@ -904,7 +904,7 @@ func (p *initProcess) start() (retErr error) {
 	}
 
 	var seenProcReady bool
-	ierr := parseSync(p.comm.syncSockParent, func(sync *syncT) error {
+	ierr := parseSync(p.comm.syncSockParent, p.pid(), func(sync *syncT) error {
 		switch sync.Type {
 		case procMountPlease:
 			if mountRequest == nil {
