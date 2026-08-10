@@ -307,9 +307,10 @@ type CPUAffinity struct {
 	Initial, Final unix.CPUSetDynamic
 }
 
-// MaxCPU is the highest CPU/NUMA node ID that [ToCPUSet] accepts.
-// It is an arbitrary sanity limit, used to avoid allocating
-// an unreasonably large mask for a bogus input.
+// MaxCPU is one past the highest CPU/NUMA node ID that [ToCPUSet] accepts,
+// i.e. the number of CPUs/nodes a mask can represent. It is an arbitrary
+// sanity limit, used to avoid allocating an unreasonably large mask for a
+// bogus input. It is exclusive, to match [unix.NewCPUSet].
 const MaxCPU = 64 * 1024
 
 // ToCPUSet parses a string in list format (e.g. "0-3,5,7-9")
@@ -349,8 +350,8 @@ func cpuStrToRanges(str string) (maxID int, ranges []cpuRange, _ error) {
 		if err != nil {
 			return 0, err
 		}
-		if ret > MaxCPU {
-			return 0, fmt.Errorf("values larger than %d are not supported", MaxCPU)
+		if ret >= MaxCPU {
+			return 0, fmt.Errorf("values larger than %d are not supported", MaxCPU-1)
 		}
 		return int(ret), nil
 	}
