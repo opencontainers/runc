@@ -82,12 +82,20 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cgConfig := &cgroups.Cgroup{
-		Resources: &cgroups.Resources{
-			Memory: 1024,
-		},
+	// NOTE in real life the cgroup manager and the container config share the
+	// same *cgroups.Cgroup. Here they are deliberately separate (yet equal)
+	// instances, so that the checks below can tell whether Set actually
+	// updated the container config (rather than the manager doing it as a
+	// side effect of Manager.Set, which stores the new Resources into its own
+	// config).
+	newCgConfig := func() *cgroups.Cgroup {
+		return &cgroups.Cgroup{
+			Resources: &cgroups.Resources{
+				Memory: 1024,
+			},
+		}
 	}
-	cgManager, cgDir := newFakeCgroupManager(t, cgConfig)
+	cgManager, cgDir := newFakeCgroupManager(t, newCgConfig())
 
 	container := &Container{
 		stateDir: t.TempDir(),
@@ -100,7 +108,7 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
 				{Type: configs.NEWUTS},
 				{Type: configs.NEWIPC},
 			},
-			Cgroups: cgConfig,
+			Cgroups: newCgConfig(),
 		},
 		initProcess: &mockProcess{
 			_pid:    pid,
@@ -129,8 +137,15 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
 	// Set initProcessStartTime so we fake to be running
 	container.initProcessStartTime = state.InitProcessStartTime
 	container.state = &runningState{c: container}
+	// NOTE Config returns a shallow copy, so a new Cgroups struct has to be
+	// assigned -- otherwise we'd modify the very config the container uses,
+	// and the checks below would pass even if Set did nothing.
 	newConfig := container.Config()
-	newConfig.Cgroups.Resources.Memory = 2048
+	newConfig.Cgroups = &cgroups.Cgroup{
+		Resources: &cgroups.Resources{
+			Memory: 2048,
+		},
+	}
 	if err := container.Set(newConfig); err != nil {
 		t.Fatal(err)
 	}
@@ -148,5 +163,13 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
 	}
 	if string(data) != "2048" {
 		t.Fatalf("expected memory.max to be 2048 but received %q", data)
+	}
+	// Check the new value was persisted to state.json by Set -> updateState.
+	saved, err := loadState(container.stateDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.Config.Cgroups.Resources.Memory != 2048 {
+		t.Fatalf("expected saved Memory to be 2048 but received %d", saved.Config.Cgroups.Resources.Memory)
 	}
 }
