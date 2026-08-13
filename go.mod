@@ -16,7 +16,7 @@ require (
 	github.com/moby/sys/user v0.4.1
 	github.com/moby/sys/userns v0.2.0
 	github.com/mrunalp/fileutils v0.5.1
-	github.com/opencontainers/cgroups v0.0.8
+	github.com/opencontainers/cgroups v0.0.9
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/opencontainers/selinux v1.15.1
 	github.com/seccomp/libseccomp-golang v0.11.1

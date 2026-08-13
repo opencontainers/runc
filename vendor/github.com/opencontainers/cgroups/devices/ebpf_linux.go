@@ -23,6 +23,15 @@ func findAttachedCgroupDeviceFilters(dirFd int) (_ []*ebpf.Program, retErr error
 		AttachFlags uint32
 		ProgIds     uint64 // __aligned_u64
 		ProgCnt     uint32
+		// Kernels v6.17+ have a bug: they write the Revision field no matter
+		// what size is provided to bpf(2). This was fixed in kernel v7.2
+		// (commit 21c4b99b27f3). None of the fields below are used here,
+		// but they must be declared to work around the kernel bug.
+		_               uint32 // padding
+		ProgAttachFlags uint64 // __aligned_u64
+		LinkIDs         uint64 // __aligned_u64
+		LinkAttachFlags uint64 // __aligned_u64
+		Revision        uint64
 	}
 
 	// Currently you can only have 64 eBPF programs attached to a cgroup.
