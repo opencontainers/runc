@@ -74,6 +74,11 @@ jobs:
           go run golang.org/x/tools/go/analysis/passes/modernize/cmd/modernize@latest -fix ./...
           git diff --exit-code
 
+  govulncheck:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: golang/govulncheck-action@v1
+
   compile-buildtags:
     runs-on: ubuntu-24.04
     env:
@@ -326,6 +331,7 @@ jobs:
       - conmon
       - deps
       - get-images
+      - govulncheck
       - keyring
       - lint
       - modernize
