@@ -59,7 +59,7 @@ func setV2(dirPath string, r *cgroups.Resources) error {
 	if err != nil {
 		return err
 	}
-	dirFD, err := unix.Open(dirPath, unix.O_DIRECTORY|unix.O_RDONLY, 0o600)
+	dirFD, err := unix.Open(dirPath, unix.O_DIRECTORY|unix.O_RDONLY|unix.O_CLOEXEC, 0o600)
 	if err != nil {
 		return fmt.Errorf("cannot get dir FD for %s", dirPath)
 	}
