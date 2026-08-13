@@ -295,7 +295,11 @@ jobs:
       with:
         repository: containers/conmon
         path: conmon
-        ref: v2.2.1
+        # XXX: this is conmon main with https://github.com/containers/conmon/pull/668,
+        # which makes the tests fail, rather than silently skip, and fixes a
+        # few other things. Switch to a released version once one is out
+        # (> v2.2.1).
+        ref: 9a6672b20dd63d2907732b380628b675c1008795
 
     - name: build conmon
       run: cd conmon && make
