@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed ###
+- Worked around a Linux kernel bug (present since kernel v6.17, fixed in v7.2)
+  which caused the kernel to write past the end of the structure
+  provided by userspace (runc). This resulted in memory corruption inside runc
+  (manifesting as random crashes) when configuring device rules on cgroup v2
+  systems. (#5403, #5428)
+- Fixed a missing `O_CLOEXEC` when opening the cgroup v2 directory to set up
+  device rules. (#5403, #5428)
+
+### Changed ###
+- Switched to opencontainers/cgroups v0.1.0, which no longer uses the
+  high-level cilium/ebpf API to manage cgroup v2 device rules. As a result,
+  the runc binary shrunk by about 1 MiB (7.5%) on amd64. (#5403, #5428)
+
 ## [1.5.1] - 2026-07-14
 
 > El lujo es vulgaridad, dijo, y me conquistó.
