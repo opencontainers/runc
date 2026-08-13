@@ -290,7 +290,7 @@ jobs:
       with:
         repository: containers/conmon
         path: conmon
-        ref: v2.2.1
+        ref: b074dcd448585a2f6de844d7cf3e74e721f53f57 # https://github.com/containers/conmon/pull/645
 
     - name: build conmon
       run: cd conmon && make
