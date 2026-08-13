@@ -300,6 +300,24 @@ jobs:
     - name: build conmon
       run: cd conmon && make
 
+    # [debug] runc create fails with EPERM on "unshare remaining namespaces"
+    # right after the userns is created and mapped -- check whether the runner
+    # restricts unprivileged userns (Ubuntu 24.04 AppArmor), and whether the
+    # rootfs image pull (which makes the tests skip when it fails) worked.
+    - name: dump userns environment
+      run: |
+        set -x
+        sysctl kernel.apparmor_restrict_unprivileged_userns || true
+        sysctl kernel.unprivileged_userns_clone || true
+        cat /proc/sys/user/max_user_namespaces
+        cat /proc/self/uid_map
+        sudo aa-status | head -30 || true
+        # Same syscall sequence as nsexec: userns + mapping, then the rest.
+        unshare -Ur sh -c 'unshare -m true' \
+            && echo "NESTED-UNSHARE: ok" || echo "NESTED-UNSHARE: FAILED"
+        podman pull --policy=newer registry.access.redhat.com/ubi10/ubi-micro:latest \
+            && echo "PULL: ok" || echo "PULL: FAILED"
+
     - name: run conmon tests
       run: |
         # [debug] wrap runc to capture argv, timing, exit code and debug log
@@ -329,6 +347,10 @@ jobs:
         echo "::group::conmon journal (grep)"
         grep -E 'runtime stderr|Failed to create container' \
             /tmp/runc-logs/conmon-journal*.txt || true
+        echo "::endgroup::"
+        sudo dmesg > /tmp/runc-logs/dmesg.txt || true
+        echo "::group::apparmor denials"
+        grep -iE 'apparmor|DENIED|userns' /tmp/runc-logs/dmesg.txt | tail -50 || true
         echo "::endgroup::"
 
     - name: upload debug logs
