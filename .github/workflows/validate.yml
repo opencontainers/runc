@@ -254,6 +254,11 @@ jobs:
 
   conmon:
     runs-on: ubuntu-24.04
+    # [debug] run many times to catch the ~20% flake (see #5399).
+    strategy:
+      fail-fast: false
+      matrix:
+        attempt: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     steps:
     - name: checkout
       uses: actions/checkout@v7
@@ -297,7 +302,41 @@ jobs:
 
     - name: run conmon tests
       run: |
-        RUNTIME_BINARY=$(pwd)/runc ./conmon/test/run-tests.sh -j $(nproc)
+        # [debug] wrap runc to capture argv, timing, exit code and debug log
+        # of every runtime invocation (conmon swallows the runtime's stderr).
+        mkdir -p /tmp/runc-logs
+        cat > /tmp/runc-wrap <<'EOF'
+        #!/bin/bash
+        f=/tmp/runc-logs/$$-$RANDOM
+        echo "$(date -Ins) start: $*" >> "$f.args"
+        "$GITHUB_WORKSPACE/runc" --debug --log "$f.json" --log-format json "$@"
+        st=$?
+        echo "$(date -Ins) exit: $st" >> "$f.args"
+        exit $st
+        EOF
+        chmod +x /tmp/runc-wrap
+        RUNTIME_BINARY=/tmp/runc-wrap ./conmon/test/run-tests.sh -j $(nproc)
+
+    # [debug] conmon runs with --syslog --log-level trace, and logs the failing
+    # runtime's stderr ("runtime stderr: ...", "Failed to create container").
+    - name: dump conmon journal
+      if: always()
+      run: |
+        sudo journalctl --no-pager -o short-precise -t conmon \
+            > /tmp/runc-logs/conmon-journal.txt || true
+        sudo journalctl --no-pager -o short-precise _COMM=conmon \
+            > /tmp/runc-logs/conmon-journal-comm.txt || true
+        echo "::group::conmon journal (grep)"
+        grep -E 'runtime stderr|Failed to create container' \
+            /tmp/runc-logs/conmon-journal*.txt || true
+        echo "::endgroup::"
+
+    - name: upload debug logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: conmon-debug-logs-${{ matrix.attempt }}
+        path: /tmp/runc-logs
 
   all-done:
     needs:
