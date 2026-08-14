@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   provided by userspace (runc). This resulted in memory corruption inside runc
   (manifesting as random crashes) when configuring device rules on cgroup v2
   systems. (#5403)
+- `runc exec --cgroup` (and the equivalent libcontainer `Process.SubCgroupPaths`
+  API) no longer accepts a sub-cgroup path that escapes the container's cgroup
+  into a sibling cgroup sharing the same name prefix. Note that using
+  `--cgroup` requires the same privileges as running `runc exec` itself, so
+  this is a correctness rather than a security fix. (#5403)
 - Fixed a missing `O_CLOEXEC` when opening the cgroup v2 directory to set up
   device rules. (#5403)
 
