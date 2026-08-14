@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -108,6 +109,53 @@ func (c *Container) checkCriuVersion(minVersion int) error {
 }
 
 const descriptorsFilename = "descriptors.json"
+
+// maxRegularFileSize bounds reads of checkpoint metadata files, which are
+// expected to be small, so a maliciously large file can not cause unbounded
+// allocations.
+const maxRegularFileSize = 1 << 20 // 1 MiB
+
+// readRegularFileAt opens and reads name (relative to dir), ensuring it is a
+// regular file. Symlinks are rejected rather than followed, and special files
+// such as FIFOs are rejected without blocking (the initial open uses O_PATH,
+// which never blocks, and the fd is reopened only after the file type check,
+// so the checked inode is the one that is read). Reads are limited to
+// maxRegularFileSize.
+func readRegularFileAt(dir *os.File, name string) ([]byte, error) {
+	path := filepath.Join(dir.Name(), name)
+	handle, err := utils.Openat(dir, name, unix.O_PATH|unix.O_NOFOLLOW, 0)
+	if err != nil {
+		return nil, err
+	}
+	defer handle.Close()
+
+	info, err := handle.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s is not a regular file", path)
+	}
+	if info.Size() > maxRegularFileSize {
+		return nil, fmt.Errorf("%s exceeds the %d-byte limit", path, maxRegularFileSize)
+	}
+
+	f, err := pathrs.Reopen(handle, unix.O_RDONLY)
+	if err != nil {
+		return nil, fmt.Errorf("reopen %s: %w", path, err)
+	}
+	defer f.Close()
+
+	// Limit the read as well in case the file grew after the stat above.
+	data, err := io.ReadAll(io.LimitReader(f, maxRegularFileSize+1))
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", path, err)
+	}
+	if len(data) > maxRegularFileSize {
+		return nil, fmt.Errorf("%s exceeds the %d-byte limit", path, maxRegularFileSize)
+	}
+	return data, nil
+}
 
 // TODO: replace with new(v) once Go < 1.26 is not supported.
 func mkPtr[T any](v T) *T { return &v }
@@ -788,7 +836,7 @@ func (c *Container) Restore(process *Process, criuOpts *CriuOpts) error {
 		fds    []string
 		fdJSON []byte
 	)
-	if fdJSON, err = os.ReadFile(filepath.Join(criuOpts.ImagesDirectory, descriptorsFilename)); err != nil {
+	if fdJSON, err = readRegularFileAt(imageDir, descriptorsFilename); err != nil {
 		return err
 	}
 
