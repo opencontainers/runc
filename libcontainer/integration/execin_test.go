@@ -421,6 +421,7 @@ func TestExecinPassExtraFiles(t *testing.T) {
 		ExtraFiles: []*os.File{pipein1, pipein2},
 		Stdin:      nil,
 		Stdout:     &stdout,
+		Stderr:     new(strings.Builder),
 	}
 	err = container.Run(inprocess)
 	ok(t, err)
