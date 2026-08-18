@@ -108,13 +108,13 @@ jobs:
           SHA256: 4da528ddb3a4d1b7b24a59d4e16eb2f5fd960f4bd9a3708a15baddbdf1d5a55b
         run: |
           mkdir ~/bin
-          curl -sSfL --retry 5 $BASEURL/$VERSION/shellcheck-$VERSION.linux.x86_64.tar.xz |
-            tar xfJ - -C ~/bin --strip 1 shellcheck-$VERSION/shellcheck
+          curl -sSfL --retry 5 "$BASEURL/$VERSION/shellcheck-$VERSION.linux.x86_64.tar.xz" |
+            tar xfJ - -C ~/bin --strip 1 "shellcheck-$VERSION/shellcheck"
           sha256sum --strict --check - <<<"$SHA256 *$HOME/bin/shellcheck"
           # make sure to remove the old version
           sudo rm -f /usr/bin/shellcheck
           # Add ~/bin to $PATH.
-          echo ~/bin >> $GITHUB_PATH
+          echo ~/bin >> "$GITHUB_PATH"
       - uses: lumaxis/shellcheck-problem-matchers@v2
       - name: run
         run: make shellcheck
@@ -195,9 +195,9 @@ jobs:
         GO_VER=$(awk -F= '/^ARG\s+GO_VERSION=/ {print $2; quit}' Dockerfile)
         echo "Go version used in Dockerfile: $GO_VER"
         echo -n "Checking if Go $GO_VER is supported ... "
-        curl -fsSL https://go.dev/dl/?mode=json | jq -e 'any(.[]; .version | startswith("go'$GO_VER'"))'
+        curl -fsSL https://go.dev/dl/?mode=json | jq -e 'any(.[]; .version | startswith("go'"$GO_VER"'"))'
         echo -n "Checking if Go $GO_VER is tested against ... "
-        yq -e '.jobs.test.strategy.matrix.go-version | contains(["'$GO_VER'.x"])' .github/workflows/test.yml
+        yq -e '.jobs.test.strategy.matrix.go-version | contains(["'"$GO_VER"'.x"])' .github/workflows/test.yml
 
   release:
     timeout-minutes: 30
@@ -241,11 +241,11 @@ jobs:
       run: |
         mkdir ~/bin
         curl -sSfL --retry 5 -o ~/bin/bashbrew \
-          $BASEURL/$VERSION/bashbrew-amd64
+          "$BASEURL/$VERSION/bashbrew-amd64"
         sha256sum --strict --check - <<<"$SHA256 *$HOME/bin/bashbrew"
         chmod a+x ~/bin/bashbrew
         # Add ~/bin to $PATH.
-        echo ~/bin >> $GITHUB_PATH
+        echo ~/bin >> "$GITHUB_PATH"
     - name: check that get-images.sh is up to date
       run: |
         cd tests/integration
@@ -306,7 +306,7 @@ jobs:
 
     - name: run conmon tests
       run: |
-        RUNTIME_BINARY=$(pwd)/runc ./conmon/test/run-tests.sh -j $(nproc)
+        RUNTIME_BINARY="$(pwd)/runc" ./conmon/test/run-tests.sh -j "$(nproc)"
 
   all-done:
     needs:

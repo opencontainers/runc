@@ -67,7 +67,7 @@ jobs:
         if [ -e /sys/fs/cgroup/cgroup.controllers ]; then
           cat /sys/fs/cgroup/cgroup.controllers
           cat /sys/fs/cgroup/cgroup.subtree_control
-          ls -F /sys/fs/cgroup$(grep -oP '0::\K.*' /proc/self/cgroup)
+          ls -F /sys/fs/cgroup"$(grep -oP '0::\K.*' /proc/self/cgroup)"
         fi
         # kernel config
         script/check-config.sh
@@ -93,7 +93,7 @@ jobs:
         PREFIX: https://download.opensuse.org/repositories/devel:/tools:/criu/xUbuntu
       run: |
         REPO=${PREFIX}_$(. /etc/os-release && echo $VERSION_ID)
-        curl -fSsLl $REPO/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_tools_criu.gpg > /dev/null
+        curl -fSsLl "$REPO/Release.key" | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_tools_criu.gpg > /dev/null
         echo "deb $REPO/ /" | sudo tee /etc/apt/sources.list.d/criu.list
         sudo apt update
         sudo apt -y install criu
@@ -106,7 +106,7 @@ jobs:
           libprotobuf-c-dev libprotobuf-dev protobuf-c-compiler protobuf-compiler
         git clone --depth 1 --branch ${{ matrix.criu }} --single-branch \
           https://github.com/checkpoint-restore/criu.git ~/criu
-        (cd ~/criu && sudo make -j $(nproc) install-criu)
+        (cd ~/criu && sudo make -j "$(nproc)" install-criu)
         rm -rf ~/criu
         criu --version
 
@@ -142,7 +142,7 @@ jobs:
       if: matrix.rootless == 'rootless'
       run: |
         ./script/setup_rootless.sh
-        sudo chmod a+X $HOME # for Ubuntu 22.04 and later
+        sudo chmod a+X "$HOME" # for Ubuntu 22.04 and later
 
     - name: integration test (fs driver)
       continue-on-error: ${{ matrix.criu != '' }} # Don't let criu-dev errors fail CI.
@@ -184,7 +184,7 @@ jobs:
         sudo apt -qy install \
           lld criu \
           libseccomp-dev libseccomp-dev:i386 \
-          libc-dev:i386 libgcc-s1:i386 libgcc-${GCC_VERSION}-dev:i386 gcc-i686-linux-gnu
+          libc-dev:i386 libgcc-s1:i386 "libgcc-${GCC_VERSION}-dev:i386" gcc-i686-linux-gnu
 
         # When cross-compiling, GCC 13 and earlier will look for a linker that
         # is marked for cross-compilation, which the Ubuntu lld package doesn't
