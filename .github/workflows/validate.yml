@@ -273,6 +273,11 @@ jobs:
     - name: build runc
       run: make
 
+    - name: Allow userns for runc
+      # https://discourse.ubuntu.com/t/ubuntu-24-04-lts-noble-numbat-release-notes/39890#unprivileged-user-namespace-restrictions-15
+      run: |
+        sed "s;^profile runc /usr/sbin/;profile runc-test $PWD/;" < /etc/apparmor.d/runc | sudo apparmor_parser
+
     - name: setup bats
       uses: bats-core/bats-action@4.0.0
       with:
@@ -287,7 +292,11 @@ jobs:
       with:
         repository: containers/conmon
         path: conmon
-        ref: v2.2.1
+        # XXX: this is conmon main with https://github.com/containers/conmon/pull/668,
+        # which makes the tests fail, rather than silently skip, and fixes a
+        # few other things. Switch to a released version once one is out
+        # (> v2.2.1).
+        ref: 9a6672b20dd63d2907732b380628b675c1008795
 
     - name: build conmon
       run: cd conmon && make
