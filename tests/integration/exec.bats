@@ -7,6 +7,13 @@ function setup() {
 }
 
 function teardown() {
+	# Remove the sibling cgroup created by "runc exec --cgroup" tests, if any.
+	# It has to be removed before teardown_bundle, as the latter removes the
+	# parent cgroup, which can't be done while it has any children.
+	if [ -v SIBLING_CGROUP ]; then
+		rmdir "$SIBLING_CGROUP"
+		unset SIBLING_CGROUP
+	fi
 	teardown_bundle
 }
 
@@ -218,6 +225,22 @@ function check_exec_debug() {
 	[ "$status" -ne 0 ]
 	[[ "$output" == *"bad sub cgroup path"* ]]
 
+	# Check we can't join a sibling cgroup sharing our name prefix.
+	local cpu_path sibling
+	cpu_path=$(get_cgroup_path cpu)
+	sibling="$(basename "$cpu_path")-sibling"
+	# SIBLING_CGROUP is removed by teardown.
+	SIBLING_CGROUP="$(dirname "$cpu_path")/$sibling"
+	mkdir "$SIBLING_CGROUP"
+	runc exec --cgroup "../$sibling" test_busybox cat /proc/self/cgroup
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"bad sub cgroup path"* ]]
+
+	# Same as above, for a particular controller.
+	runc exec --cgroup "cpu:../$sibling" test_busybox cat /proc/self/cgroup
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"bad sub cgroup path"* ]]
+
 	# Check we can't join non-existing subcgroup.
 	runc exec --cgroup nonexistent test_busybox cat /proc/self/cgroup
 	[ "$status" -ne 0 ]
@@ -266,6 +289,16 @@ function check_exec_debug() {
 
 	# Check we can't join parent cgroup.
 	runc exec --cgroup ".." test_busybox cat /proc/self/cgroup
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"bad sub cgroup path"* ]]
+
+	# Check we can't join a sibling cgroup sharing our name prefix.
+	local sibling
+	sibling="$(basename "$CGROUP_V2_PATH")-sibling"
+	# SIBLING_CGROUP is removed by teardown.
+	SIBLING_CGROUP="$(dirname "$CGROUP_V2_PATH")/$sibling"
+	mkdir "$SIBLING_CGROUP"
+	runc exec --cgroup "../$sibling" test_busybox cat /proc/self/cgroup
 	[ "$status" -ne 0 ]
 	[[ "$output" == *"bad sub cgroup path"* ]]
 
