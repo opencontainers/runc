@@ -18,9 +18,6 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-// TODO: replace with new(v) once Go < 1.26 is not supported.
-func mkPtr[T any](v T) *T { return &v }
-
 var updateCommand = &cli.Command{
 	Name:      "update",
 	Usage:     "update container resource constraints",
@@ -149,9 +146,9 @@ other options are ignored.
 		}
 
 		r := specs.LinuxResources{
-			// nil and mkPtr(0) are not interchangeable
+			// nil and new(0) are not interchangeable
 			Memory: &specs.LinuxMemory{
-				CheckBeforeUpdate: mkPtr(false), // constant
+				CheckBeforeUpdate: new(false), // constant
 			},
 			CPU:     &specs.LinuxCPU{},
 			BlockIO: &specs.LinuxBlockIO{},
@@ -181,7 +178,7 @@ other options are ignored.
 			}
 		} else {
 			if val := cmd.Int("blkio-weight"); val != 0 {
-				r.BlockIO.Weight = mkPtr(uint16(val))
+				r.BlockIO.Weight = new(uint16(val))
 			}
 			if val := cmd.String("cpuset-cpus"); val != "" {
 				r.CPU.Cpus = val
@@ -194,7 +191,7 @@ other options are ignored.
 				if err != nil {
 					return fmt.Errorf("invalid value for cpu-idle: %w", err)
 				}
-				r.CPU.Idle = mkPtr(idle)
+				r.CPU.Idle = new(idle)
 			}
 
 			for _, pair := range []struct {
@@ -255,18 +252,18 @@ other options are ignored.
 			}
 
 			if cmd.IsSet("pids-limit") {
-				r.Pids.Limit = mkPtr(int64(cmd.Int("pids-limit")))
+				r.Pids.Limit = new(int64(cmd.Int("pids-limit")))
 			}
 		}
 
 		// Fix up values
 		if r.Memory.Limit != nil && *r.Memory.Limit == -1 && r.Memory.Swap == nil {
 			// To avoid error "unable to set swap limit without memory limit"
-			r.Memory.Swap = mkPtr[int64](0)
+			r.Memory.Swap = new(int64(0))
 		}
 		if r.CPU.Idle != nil && r.CPU.Shares == nil {
 			// To avoid error "failed to write \"4\": write /sys/fs/cgroup/runc-cgroups-integration-test/test-cgroup-7341/cpu.weight: invalid argument"
-			r.CPU.Shares = mkPtr[uint64](0)
+			r.CPU.Shares = new(uint64(0))
 		}
 
 		if (r.Memory.Kernel != nil) || (r.Memory.KernelTCP != nil) { //nolint:staticcheck // Ignore SA1019. Need to keep deprecated package for compatibility.

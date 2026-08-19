@@ -42,8 +42,7 @@ func testTransitions(t *testing.T, initialState containerState, valid []containe
 			if err == nil {
 				t.Fatal("transition should fail")
 			}
-			var stErr *stateTransitionError
-			if !errors.As(err, &stErr) {
+			if _, ok := errors.AsType[*stateTransitionError](err); !ok {
 				t.Fatal("expected stateTransitionError")
 			}
 		})

@@ -49,13 +49,19 @@ func (p *restoredProcess) wait() (*os.ProcessState, error) {
 	// maybe use --exec-cmd in criu
 	err := p.cmd.Wait()
 	if err != nil {
-		var exitErr *exec.ExitError
-		if !errors.As(err, &exitErr) {
+		if _, ok := errors.AsType[*exec.ExitError](err); !ok {
 			return nil, err
 		}
 	}
 	st := p.cmd.ProcessState
 	return st, nil
+}
+
+func (p *restoredProcess) withHandle(fn func(handle uintptr)) error {
+	if p.cmd.Process == nil {
+		return os.ErrNoHandle
+	}
+	return p.cmd.Process.WithHandle(fn)
 }
 
 func (p *restoredProcess) startTime() (uint64, error) {
@@ -101,6 +107,19 @@ func (p *nonChildProcess) terminate() error {
 
 func (p *nonChildProcess) wait() (*os.ProcessState, error) {
 	return nil, errors.New("restored process cannot be waited on")
+}
+
+// withHandle implements [parentProcess.withHandle]. As we are not the parent
+// of the process, we have to look it up by its pid first, which is inherently
+// racy (the pid could have been reused).
+func (p *nonChildProcess) withHandle(fn func(handle uintptr)) error {
+	proc, err := os.FindProcess(p.processPid)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = proc.Release() }()
+
+	return proc.WithHandle(fn)
 }
 
 func (p *nonChildProcess) startTime() (uint64, error) {

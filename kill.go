@@ -26,7 +26,7 @@ signal to the init process of the "ubuntu01" container:
 
        # runc kill ubuntu01 KILL`,
 	// Stop parsing flags after the first positional argument (container ID).
-	StopOnNthArg: mkPtr(1),
+	StopOnNthArg: new(1),
 	// Disable comma as separator for slice flags.
 	DisableSliceFlagSeparator: true,
 	Flags: []cli.Flag{

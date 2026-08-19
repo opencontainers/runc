@@ -232,7 +232,7 @@ func (c *Container) Exec() error {
 
 func (c *Container) exec() error {
 	path := filepath.Join(c.stateDir, execFifoFilename)
-	if err := handleFifo(path, c.initProcess.pid()); err != nil {
+	if err := handleFifo(path, c.initProcess); err != nil {
 		return err
 	}
 
@@ -240,18 +240,18 @@ func (c *Container) exec() error {
 }
 
 // handleFifo listens for either a byte written to the FIFO file or
-// the init process exiting. On kernels supporting pidfd_open(2)
-// (>= 5.3), it uses a single poll(2) for efficiency. On older kernels,
-// it falls back to a polling loop that periodically checks the init
-// process's liveness. This function is blocking.
-func handleFifo(path string, pid int) error {
+// the init process exiting. When a handle (pidfd) for init is available,
+// it uses a single poll(2) for efficiency. Otherwise, it falls back to a
+// polling loop that periodically checks the init process's liveness.
+// This function is blocking.
+func handleFifo(path string, init parentProcess) error {
 	f, err := os.OpenFile(path, os.O_RDONLY|unix.O_NONBLOCK, 0)
 	if err != nil {
 		return fmt.Errorf("exec fifo: %w", err)
 	}
 	defer f.Close()
 
-	if err := waitForFifoReady(f, pid); err != nil {
+	if err := waitForFifoReady(f, init); err != nil {
 		return err
 	}
 
@@ -268,15 +268,17 @@ func handleFifo(path string, pid int) error {
 // waitForFifoReady blocks until either the FIFO has data available to read,
 // or the init process has exited. It does not consume the data — it only
 // returns once a subsequent read on f will not block indefinitely.
-func waitForFifoReady(f *os.File, pid int) error {
-	// TODO: switch to os.Process.WithHandle once go < 1.26 is no longer supported.
-	pidFd, err := unix.PidfdOpen(pid, 0)
-	if err == nil {
-		defer unix.Close(pidFd)
-		return waitForFifoReadyPidfd(f, pidFd)
+func waitForFifoReady(f *os.File, init parentProcess) error {
+	// The handle is only valid while the callback is running, so the whole
+	// poll(2) has to happen inside it.
+	var pollErr error
+	if err := init.withHandle(func(handle uintptr) {
+		pollErr = waitForFifoReadyPidfd(f, int(handle))
+	}); err != nil {
+		// No handle available; fall back to the polling path.
+		return waitForFifoReadyPolling(f, init.pid())
 	}
-	// fall through to the polling path.
-	return waitForFifoReadyPolling(f, pid)
+	return pollErr
 }
 
 // fast path: a single poll(2) on both the
@@ -1214,8 +1216,7 @@ func ignoreTerminateErrors(err error) error {
 	// The (*Cmd).Wait documentation says: "If the command fails to run
 	// or doesn't complete successfully, the error is of type *ExitError".
 	// Filter out such errors (like "exit status 1" or "signal: killed").
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
+	if _, ok := errors.AsType[*exec.ExitError](err); ok {
 		return nil
 	}
 	if errors.Is(err, os.ErrProcessDone) {
