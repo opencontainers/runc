@@ -186,8 +186,26 @@ func readSync(pipe *syncSocket, expected syncType) error {
 
 // parseSync runs the given callback function on each syncT received from the
 // child. It will return once io.EOF is returned from the given pipe.
-func parseSync(pipe *syncSocket, fn func(*syncT) error) error {
+//
+// pid is the pid of the child process on the other end of pipe. Before each
+// read, parseSync waits until the pipe is actually ready or the child has
+// exited (see waitForSyncReady), so a child that dies mid-handshake (e.g.
+// killed by seccomp) without cleanly closing its socket can't leave us
+// blocked forever.
+func parseSync(pipe *syncSocket, pid int, fn func(*syncT) error) error {
 	for {
+		ready, err := waitForSyncReady(pipe.File(), pid)
+		if err != nil {
+			return fmt.Errorf("waiting for sync socket: %w", err)
+		}
+		if !ready {
+			// A successful run always ends via the child voluntarily
+			// closing its own end of the socket (a real io.EOF below), so
+			// this always means the child died mid-protocol -- regardless
+			// of which sync stages we'd already seen -- and must be
+			// reported as an error rather than treated as a clean exit.
+			return fmt.Errorf("sync socket: process %d exited before completing sync handshake", pid)
+		}
 		sync, err := doReadSync(pipe)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
