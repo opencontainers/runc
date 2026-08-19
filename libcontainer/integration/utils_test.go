@@ -48,10 +48,6 @@ func init() {
 	}
 }
 
-func ptrInt(v int) *int {
-	return &v
-}
-
 func newStdBuffers() *stdBuffers {
 	return &stdBuffers{
 		Stdout: new(strings.Builder),
