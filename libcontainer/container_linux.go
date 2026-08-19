@@ -1214,8 +1214,7 @@ func ignoreTerminateErrors(err error) error {
 	// The (*Cmd).Wait documentation says: "If the command fails to run
 	// or doesn't complete successfully, the error is of type *ExitError".
 	// Filter out such errors (like "exit status 1" or "signal: killed").
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
+	if _, ok := errors.AsType[*exec.ExitError](err); ok {
 		return nil
 	}
 	if errors.Is(err, os.ErrProcessDone) {
