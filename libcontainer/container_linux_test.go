@@ -275,7 +275,7 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
 		t.Fatalf("expected process start time %d but received %d", stat.StartTime, state.InitProcessStartTime)
 	}
 	if state.Config.Cgroups.Resources.Memory != 1024 {
-		t.Fatalf("expected Memory to be 1024 but received %q", state.Config.Cgroups.Memory)
+		t.Fatalf("expected Memory to be 1024 but received %d", state.Config.Cgroups.Memory)
 	}
 
 	// Set initProcessStartTime so we fake to be running
@@ -291,6 +291,6 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if state.Config.Cgroups.Resources.Memory != 2048 {
-		t.Fatalf("expected Memory to be 2048 but received %q", state.Config.Cgroups.Memory)
+		t.Fatalf("expected Memory to be 2048 but received %d", state.Config.Cgroups.Memory)
 	}
 }

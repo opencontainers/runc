@@ -20,7 +20,7 @@ var psCommand = &cli.Command{
 	ArgsUsage: `<container-id> [ps options]`,
 	// Stop parsing flags after the first positional argument (the container ID).
 	// This allows passing flags like -aux to the underlying ps command.
-	StopOnNthArg: mkPtr(1),
+	StopOnNthArg: new(1),
 	// Disable comma as separator for slice flags.
 	DisableSliceFlagSeparator: true,
 	Flags: []cli.Flag{

@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   process, fixing a runtime-spec conformance issue. (#4347, #5186)
 
 ### Changed ###
+- runc now requires Go 1.26+ to build. (#5413)
 - Updated builds to libseccomp v2.6.1. (#5376)
 - The `cpuAffinity` and NUMA `memoryPolicy` settings are no longer limited
   to 1024 CPUs/nodes, as runc now uses a dynamically-sized CPU mask. (#5343)
