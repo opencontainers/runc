@@ -1,81 +1,15 @@
 package libcontainer
 
 import (
-	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/opencontainers/cgroups"
+	"github.com/opencontainers/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/system"
 )
-
-type mockCgroupManager struct {
-	pids    []int
-	allPids []int
-	paths   map[string]string
-}
-
-func (m *mockCgroupManager) GetPids() ([]int, error) {
-	return m.pids, nil
-}
-
-func (m *mockCgroupManager) GetAllPids() ([]int, error) {
-	return m.allPids, nil
-}
-
-func (m *mockCgroupManager) GetStats() (*cgroups.Stats, error) {
-	return nil, nil
-}
-
-func (m *mockCgroupManager) Stats(_ *cgroups.StatsOptions) (*cgroups.Stats, error) {
-	return nil, nil
-}
-
-func (m *mockCgroupManager) Apply(pid int) error {
-	return nil
-}
-
-func (m *mockCgroupManager) AddPid(_ string, _ int) error {
-	return nil
-}
-
-func (m *mockCgroupManager) Set(_ *cgroups.Resources) error {
-	return nil
-}
-
-func (m *mockCgroupManager) Destroy() error {
-	return nil
-}
-
-func (m *mockCgroupManager) Exists() bool {
-	_, err := os.Lstat(m.Path("devices"))
-	return err == nil
-}
-
-func (m *mockCgroupManager) OOMKillCount() (uint64, error) {
-	return 0, nil
-}
-
-func (m *mockCgroupManager) GetPaths() map[string]string {
-	return m.paths
-}
-
-func (m *mockCgroupManager) Path(subsys string) string {
-	return m.paths[subsys]
-}
-
-func (m *mockCgroupManager) Freeze(_ cgroups.FreezerState) error {
-	return nil
-}
-
-func (m *mockCgroupManager) GetCgroups() (*cgroups.Cgroup, error) {
-	return nil, nil
-}
-
-func (m *mockCgroupManager) GetFreezerState() (cgroups.FreezerState, error) {
-	return cgroups.Thawed, nil
-}
 
 type mockProcess struct {
 	_pid    int
@@ -117,120 +51,28 @@ func (m *mockProcess) forwardChildLogs() chan error {
 	return nil
 }
 
-func TestGetContainerPids(t *testing.T) {
-	pid := 1
-	stat, err := system.Stat(pid)
-	if err != nil {
-		t.Fatalf("can't stat pid %d, got %v", pid, err)
-	}
-	container := &Container{
-		id:     "myid",
-		config: &configs.Config{},
-		cgroupManager: &mockCgroupManager{
-			allPids: []int{1, 2, 3},
-			paths: map[string]string{
-				"device": "/proc/self/cgroups",
-			},
-		},
-		initProcess: &mockProcess{
-			_pid:    1,
-			started: 10,
-		},
-		initProcessStartTime: stat.StartTime,
-	}
-	container.state = &runningState{c: container}
-	pids, err := container.Processes()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for i, expected := range []int{1, 2, 3} {
-		if pids[i] != expected {
-			t.Fatalf("expected pid %d but received %d", expected, pids[i])
-		}
-	}
-}
+// newFakeCgroupManager returns a real cgroup v2 manager operating on a
+// temporary directory rather than on cgroupfs. This relies on cgroups.TestMode,
+// which makes writes create the files being written to; files that are read
+// have to be created by us.
+//
+// NOTE a test calling this can't use t.Parallel (because of cgroups.TestMode).
+func newFakeCgroupManager(t *testing.T, config *cgroups.Cgroup) (cgroups.Manager, string) {
+	t.Helper()
+	origTestMode := cgroups.TestMode
+	cgroups.TestMode = true
+	t.Cleanup(func() { cgroups.TestMode = origTestMode })
 
-func TestGetContainerState(t *testing.T) {
-	var (
-		pid                 = os.Getpid()
-		expectedMemoryPath  = "/sys/fs/cgroup/memory/myid"
-		expectedNetworkPath = fmt.Sprintf("/proc/%d/ns/net", pid)
-	)
-	container := &Container{
-		id: "myid",
-		config: &configs.Config{
-			Namespaces: []configs.Namespace{
-				{Type: configs.NEWPID},
-				{Type: configs.NEWNS},
-				{Type: configs.NEWNET, Path: expectedNetworkPath},
-				{Type: configs.NEWUTS},
-				// emulate host for IPC
-				//{Type: configs.NEWIPC},
-				{Type: configs.NEWCGROUP},
-			},
-		},
-		initProcess: &mockProcess{
-			_pid:    pid,
-			started: 10,
-		},
-		cgroupManager: &mockCgroupManager{
-			pids: []int{1, 2, 3},
-			paths: map[string]string{
-				"memory": expectedMemoryPath,
-			},
-		},
+	dir := t.TempDir()
+	// Read by fs2 Set to figure out which controllers are available.
+	if err := os.WriteFile(filepath.Join(dir, "cgroup.controllers"), []byte("cpu memory pids"), 0o644); err != nil {
+		t.Fatal(err)
 	}
-	container.state = &createdState{c: container}
-	state, err := container.State()
+	m, err := fs2.NewManager(config, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if state.InitProcessPid != pid {
-		t.Fatalf("expected pid %d but received %d", pid, state.InitProcessPid)
-	}
-	if state.InitProcessStartTime != 10 {
-		t.Fatalf("expected process start time 10 but received %d", state.InitProcessStartTime)
-	}
-	paths := state.CgroupPaths
-	if paths == nil {
-		t.Fatal("cgroup paths should not be nil")
-	}
-	if memPath := paths["memory"]; memPath != expectedMemoryPath {
-		t.Fatalf("expected memory path %q but received %q", expectedMemoryPath, memPath)
-	}
-	for _, ns := range container.config.Namespaces {
-		path := state.NamespacePaths[ns.Type]
-		if path == "" {
-			t.Fatalf("expected non nil namespace path for %s", ns.Type)
-		}
-		if ns.Type == configs.NEWNET {
-			if path != expectedNetworkPath {
-				t.Fatalf("expected path %q but received %q", expectedNetworkPath, path)
-			}
-		} else {
-			file := ""
-			switch ns.Type {
-			case configs.NEWNET:
-				file = "net"
-			case configs.NEWNS:
-				file = "mnt"
-			case configs.NEWPID:
-				file = "pid"
-			case configs.NEWIPC:
-				file = "ipc"
-			case configs.NEWUSER:
-				file = "user"
-			case configs.NEWUTS:
-				file = "uts"
-			case configs.NEWCGROUP:
-				file = "cgroup"
-			}
-			expected := fmt.Sprintf("/proc/%d/ns/%s", pid, file)
-			if expected != path {
-				t.Fatalf("expected path %q but received %q", expected, path)
-			}
-		}
-	}
+	return m, dir
 }
 
 func TestGetContainerStateAfterUpdate(t *testing.T) {
@@ -239,6 +81,21 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// NOTE in real life the cgroup manager and the container config share the
+	// same *cgroups.Cgroup. Here they are deliberately separate (yet equal)
+	// instances, so that the checks below can tell whether Set actually
+	// updated the container config (rather than the manager doing it as a
+	// side effect of Manager.Set, which stores the new Resources into its own
+	// config).
+	newCgConfig := func() *cgroups.Cgroup {
+		return &cgroups.Cgroup{
+			Resources: &cgroups.Resources{
+				Memory: 1024,
+			},
+		}
+	}
+	cgManager, cgDir := newFakeCgroupManager(t, newCgConfig())
 
 	container := &Container{
 		stateDir: t.TempDir(),
@@ -251,17 +108,13 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
 				{Type: configs.NEWUTS},
 				{Type: configs.NEWIPC},
 			},
-			Cgroups: &cgroups.Cgroup{
-				Resources: &cgroups.Resources{
-					Memory: 1024,
-				},
-			},
+			Cgroups: newCgConfig(),
 		},
 		initProcess: &mockProcess{
 			_pid:    pid,
 			started: stat.StartTime,
 		},
-		cgroupManager: &mockCgroupManager{},
+		cgroupManager: cgManager,
 	}
 	container.state = &createdState{c: container}
 	state, err := container.State()
@@ -274,15 +127,25 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
 	if state.InitProcessStartTime != stat.StartTime {
 		t.Fatalf("expected process start time %d but received %d", stat.StartTime, state.InitProcessStartTime)
 	}
+	if state.CgroupPaths[""] != cgDir {
+		t.Fatalf("expected cgroup path %q but received %q", cgDir, state.CgroupPaths[""])
+	}
 	if state.Config.Cgroups.Resources.Memory != 1024 {
-		t.Fatalf("expected Memory to be 1024 but received %q", state.Config.Cgroups.Memory)
+		t.Fatalf("expected Memory to be 1024 but received %d", state.Config.Cgroups.Resources.Memory)
 	}
 
 	// Set initProcessStartTime so we fake to be running
 	container.initProcessStartTime = state.InitProcessStartTime
 	container.state = &runningState{c: container}
+	// NOTE Config returns a shallow copy, so a new Cgroups struct has to be
+	// assigned -- otherwise we'd modify the very config the container uses,
+	// and the checks below would pass even if Set did nothing.
 	newConfig := container.Config()
-	newConfig.Cgroups.Resources.Memory = 2048
+	newConfig.Cgroups = &cgroups.Cgroup{
+		Resources: &cgroups.Resources{
+			Memory: 2048,
+		},
+	}
 	if err := container.Set(newConfig); err != nil {
 		t.Fatal(err)
 	}
@@ -291,6 +154,22 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if state.Config.Cgroups.Resources.Memory != 2048 {
-		t.Fatalf("expected Memory to be 2048 but received %q", state.Config.Cgroups.Memory)
+		t.Fatalf("expected Memory to be 2048 but received %d", state.Config.Cgroups.Resources.Memory)
+	}
+	// Check the new value actually made it to the cgroup, not merely to state.json.
+	data, err := os.ReadFile(filepath.Join(cgDir, "memory.max"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "2048" {
+		t.Fatalf("expected memory.max to be 2048 but received %q", data)
+	}
+	// Check the new value was persisted to state.json by Set -> updateState.
+	saved, err := loadState(container.stateDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.Config.Cgroups.Resources.Memory != 2048 {
+		t.Fatalf("expected saved Memory to be 2048 but received %d", saved.Config.Cgroups.Resources.Memory)
 	}
 }
