@@ -16,6 +16,7 @@ import (
 
 	"github.com/containerd/console"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/opencontainers/selinux/go-selinux"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
@@ -24,6 +25,7 @@ import (
 	"github.com/opencontainers/runc/internal/cmsg"
 	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/internal/pathrs"
+	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/capabilities"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/system"
@@ -734,4 +736,26 @@ func setupPidfd(socket *os.File, initType string) error {
 		return fmt.Errorf("failed to send pidfd on socket: %w", err)
 	}
 	return unix.Close(pidFd)
+}
+
+// applyMACLabels configures the SELinux exec label and AppArmor profile to be
+// applied on the next execve.
+func applyMACLabels(config *initConfig) (closer func(), err error) {
+	// initialises the labeling system
+	selinux.GetEnabled()
+
+	if config.ProcessLabel != "" {
+		if err := selinux.SetExecLabel(config.ProcessLabel); err != nil {
+			return nil, fmt.Errorf("can't set process label: %w", err)
+		}
+		closer = func() {
+			selinux.SetExecLabel("") //nolint: errcheck
+		}
+	}
+
+	if err := apparmor.ApplyProfile(config.AppArmorProfile); err != nil {
+		return closer, fmt.Errorf("unable to apply apparmor profile: %w", err)
+	}
+
+	return closer, nil
 }

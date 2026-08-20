@@ -11,7 +11,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/internal/linux"
-	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/keys"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
@@ -49,6 +48,14 @@ func (l *linuxSetnsInit) Init() error {
 				return fmt.Errorf("unable to join session keyring: %w", err)
 			}
 		}
+	}
+
+	closer, err := applyMACLabels(l.config)
+	if closer != nil {
+		defer closer()
+	}
+	if err != nil {
+		return err
 	}
 
 	if l.config.CreateConsole {
@@ -98,12 +105,7 @@ func (l *linuxSetnsInit) Init() error {
 	if err := syncParentReady(l.pipe); err != nil {
 		return fmt.Errorf("sync ready: %w", err)
 	}
-	if l.config.ProcessLabel != "" {
-		if err := selinux.SetExecLabel(l.config.ProcessLabel); err != nil {
-			return err
-		}
-		defer selinux.SetExecLabel("") //nolint: errcheck
-	}
+
 	// Without NoNewPrivileges seccomp is a privileged operation, so we need to
 	// do this before dropping capabilities; otherwise do it as late as possible
 	// just before execve so as few syscalls take place after it as possible.
@@ -119,9 +121,7 @@ func (l *linuxSetnsInit) Init() error {
 	if err := finalizeNamespace(l.config); err != nil {
 		return err
 	}
-	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
-		return err
-	}
+
 	// Check for the arg early to make sure it exists.
 	name, err := exec.LookPath(l.config.Args[0])
 	if err != nil {
