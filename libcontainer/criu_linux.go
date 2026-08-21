@@ -24,6 +24,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/cgroups"
+	"github.com/opencontainers/cgroups/fs2"
 	"github.com/opencontainers/runc/internal/cmsg"
 	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -863,15 +864,66 @@ func logCriuErrors(dir, file string) {
 	}
 }
 
+func (c *Container) needsCriuCgroupns(req *criurpc.CriuReq) bool {
+	return req.GetType() == criurpc.CriuReqType_RESTORE &&
+		req.GetOpts().GetManageCgroupsMode() == criurpc.CriuCgMode_IGNORE &&
+		c.config.Namespaces.IsPrivate(configs.NEWCGROUP) &&
+		cgroups.IsCgroup2UnifiedMode()
+}
+
+func (c *Container) startCriu(cmd *exec.Cmd, req *criurpc.CriuReq) error {
+	if !c.needsCriuCgroupns(req) {
+		return cmd.Start()
+	}
+
+	paths, err := cgroups.ParseCgroupFile("/proc/self/cgroup")
+	if err != nil {
+		return fmt.Errorf("read runc cgroup: %w", err)
+	}
+	runcCgroup, ok := paths[""]
+	if !ok {
+		return errors.New("read runc cgroup: unified path is missing")
+	}
+	runcCgroup = filepath.Join(fs2.UnifiedMountpoint, runcCgroup)
+
+	if cmd.SysProcAttr == nil {
+		cmd.SysProcAttr = &unix.SysProcAttr{}
+	}
+	cmd.SysProcAttr.Cloneflags |= unix.CLONE_NEWCGROUP
+
+	// Move runc first so CRIU inherits the cgroup; systemd scopes need a live process.
+	if err := c.cgroupManager.Apply(os.Getpid()); err != nil {
+		restoreErr := cgroups.WriteCgroupProc(runcCgroup, os.Getpid())
+		if restoreErr != nil {
+			return fmt.Errorf("%w; restore runc cgroup: %w", err, restoreErr)
+		}
+		return err
+	}
+
+	startErr := cmd.Start()
+	if restoreErr := cgroups.WriteCgroupProc(runcCgroup, os.Getpid()); restoreErr != nil {
+		if startErr != nil {
+			return fmt.Errorf("%w; restore runc cgroup: %w", startErr, restoreErr)
+		}
+		_ = cmd.Process.Kill()
+		_, _ = cmd.Process.Wait()
+		return fmt.Errorf("restore runc cgroup: %w", restoreErr)
+	}
+	return startErr
+}
+
 func (c *Container) criuApplyCgroups(pid int, req *criurpc.CriuReq) error {
 	// need to apply cgroups only on restore
 	if req.GetType() != criurpc.CriuReqType_RESTORE {
 		return nil
 	}
 
-	// XXX: Do we need to deal with this case? AFAIK criu still requires root.
-	if err := c.cgroupManager.Apply(pid); err != nil {
-		return err
+	// CRIU already inherited the cgroup from runc in this case.
+	if !c.needsCriuCgroupns(req) {
+		// XXX: Do we need to deal with this case? AFAIK criu still requires root.
+		if err := c.cgroupManager.Apply(pid); err != nil {
+			return err
+		}
 	}
 
 	if err := c.cgroupManager.Set(c.config.Cgroups.Resources); err != nil {
@@ -932,7 +984,7 @@ func (c *Container) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuO
 		cmd.ExtraFiles = append(cmd.ExtraFiles, extraFiles...)
 	}
 
-	if err := cmd.Start(); err != nil {
+	if err := c.startCriu(cmd, req); err != nil {
 		return err
 	}
 	// we close criuServer so that even if CRIU crashes or unexpectedly exits, runc will not hang.
