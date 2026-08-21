@@ -1174,9 +1174,12 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 			c.config.Namespaces = append(c.config.Namespaces,
 				configs.Namespace{Type: configs.NEWTIME})
 		}
-		if _, err := c.updateState(r); err != nil {
+		state, err := c.updateState(r)
+		if err != nil {
 			return err
 		}
+		// Mirror create: hasInit() needs initProcessStartTime for Status() after restore.
+		c.initProcessStartTime = state.InitProcessStartTime
 		if err := os.Remove(filepath.Join(c.stateDir, "checkpoint")); err != nil {
 			if !errors.Is(err, os.ErrNotExist) {
 				logrus.Error(err)
