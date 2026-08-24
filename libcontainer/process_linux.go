@@ -275,7 +275,8 @@ func (p *setnsProcess) addIntoCgroupV1() error {
 			return fmt.Errorf("unknown controller %s in SubCgroupPaths", ctrl)
 		}
 		cgPath := path.Join(base, sub)
-		if !strings.HasPrefix(cgPath, base) {
+		// Make sure cgPath is either base itself or below it.
+		if cgPath != base && !strings.HasPrefix(cgPath, base+"/") {
 			return fmt.Errorf("bad sub cgroup path: %s", sub)
 		}
 		paths[ctrl] = cgPath
@@ -383,7 +384,8 @@ func (p *setnsProcess) prepareCgroupFD() (*os.File, error) {
 		sub = p.process.SubCgroupPaths[""]
 	}
 	cgroup := path.Join(base, sub)
-	if !strings.HasPrefix(cgroup, base) {
+	// Make sure cgroup is either base itself or below it.
+	if cgroup != base && !strings.HasPrefix(cgroup, base+"/") {
 		return nil, fmt.Errorf("bad sub cgroup path: %s", sub)
 	}
 

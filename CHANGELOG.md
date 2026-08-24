@@ -15,10 +15,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed ###
 - The poststart hooks are now executed after starting the user-specified
   process, fixing a runtime-spec conformance issue. (#4347, #5186)
+- Worked around a Linux kernel bug (present since kernel v6.17, fixed in v7.2)
+  which caused the kernel to write past the end of the structure
+  provided by userspace (runc). This resulted in memory corruption inside runc
+  (manifesting as random crashes) when configuring device rules on cgroup v2
+  systems. (#5403)
+- `runc exec --cgroup` (and the equivalent libcontainer `Process.SubCgroupPaths`
+  API) no longer accepts a sub-cgroup path that escapes the container's cgroup
+  into a sibling cgroup sharing the same name prefix. Note that using
+  `--cgroup` requires the same privileges as running `runc exec` itself, so
+  this is a correctness rather than a security fix. (#5403)
+- Fixed a missing `O_CLOEXEC` when opening the cgroup v2 directory to set up
+  device rules. (#5403)
 
 ### Changed ###
 - runc now requires Go 1.26+ to build. (#5413)
 - Updated builds to libseccomp v2.6.1. (#5376)
+- Switched to opencontainers/cgroups v0.1.0, which no longer uses the
+  high-level cilium/ebpf API to manage cgroup v2 device rules. As a result,
+  the runc binary shrunk by about 1 MiB (7.5%) on amd64. (#5403)
 - The `cpuAffinity` and NUMA `memoryPolicy` settings are no longer limited
   to 1024 CPUs/nodes, as runc now uses a dynamically-sized CPU mask. (#5343)
 
