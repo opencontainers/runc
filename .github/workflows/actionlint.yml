@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - uses: devops-actions/actionlint@9fb9c192862f19e684586ca84b500461bcd8a541 # v0.1.12
+      - uses: devops-actions/actionlint@ec02b36684b2f574f1d219ad0a43b082e46bf3e4 # v0.1.13
 
   all-done:
     needs:
