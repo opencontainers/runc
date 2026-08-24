@@ -48,6 +48,15 @@ type parentProcess interface {
 	// wait waits on the process returning the process state.
 	wait() (*os.ProcessState, error)
 
+	// withHandle calls fn with a handle (a pidfd on Linux) that is
+	// guaranteed to refer to the process for the duration of the call,
+	// even if the process exits meanwhile. If no usable handle is
+	// available, fn is not called and an error is returned: [os.ErrNoHandle]
+	// if the process never had one (e.g. the kernel is too old), or
+	// [os.ErrProcessDone] if it had one but the process was already waited
+	// for.
+	withHandle(fn func(handle uintptr)) error
+
 	// startTime returns the process start time.
 	startTime() (uint64, error)
 	signal(os.Signal) error
@@ -169,6 +178,13 @@ func (p *containerProcess) wait() (*os.ProcessState, error) { //nolint:unparam
 
 	// Return actual ProcessState even on Wait error
 	return p.cmd.ProcessState, err
+}
+
+func (p *containerProcess) withHandle(fn func(handle uintptr)) error {
+	if p.cmd.Process == nil {
+		return os.ErrNoHandle
+	}
+	return p.cmd.Process.WithHandle(fn)
 }
 
 type setnsProcess struct {
