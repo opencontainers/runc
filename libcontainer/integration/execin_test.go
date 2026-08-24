@@ -456,7 +456,7 @@ func TestExecInOomScoreAdj(t *testing.T) {
 		return
 	}
 	config := newTemplateConfig(t, nil)
-	config.OomScoreAdj = ptrInt(200)
+	config.OomScoreAdj = new(200)
 	container, err := newContainer(t, config)
 	ok(t, err)
 	defer destroyContainer(container)

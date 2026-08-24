@@ -31,7 +31,7 @@ following will output a list of processes running in the container:
        # runc exec <container-id> ps`,
 	// Stop parsing flags after the first positional argument (command).
 	// This allows passing flags like -c to the command being executed.
-	StopOnNthArg: mkPtr(1),
+	StopOnNthArg: new(1),
 	// Disable comma as separator for slice flags.
 	// This allows cgroup controller lists like "cpu,cpuacct:subcpu".
 	DisableSliceFlagSeparator: true,

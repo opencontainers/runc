@@ -49,8 +49,7 @@ func (p *restoredProcess) wait() (*os.ProcessState, error) {
 	// maybe use --exec-cmd in criu
 	err := p.cmd.Wait()
 	if err != nil {
-		var exitErr *exec.ExitError
-		if !errors.As(err, &exitErr) {
+		if _, ok := errors.AsType[*exec.ExitError](err); !ok {
 			return nil, err
 		}
 	}
