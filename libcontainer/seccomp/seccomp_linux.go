@@ -180,15 +180,13 @@ func FlagSupported(flag specs.LinuxSeccompFlag) error {
 	err := setFlag(filter, flag)
 
 	// For flags we don't know, setFlag returns unknownFlagError.
-	var uf *unknownFlagError
-	if errors.As(err, &uf) {
+	if _, ok := errors.AsType[*unknownFlagError](err); ok {
 		return err
 	}
 	// For flags that are known to runc and libseccomp-golang but can not
 	// be applied because either libseccomp or the kernel is too old,
 	// seccomp.VersionError is returned.
-	var verErr *libseccomp.VersionError
-	if errors.As(err, &verErr) {
+	if _, ok := errors.AsType[*libseccomp.VersionError](err); ok {
 		// Not supported by libseccomp or the kernel.
 		return err
 	}
