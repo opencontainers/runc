@@ -318,8 +318,12 @@ jobs:
       run: cd conmon && make
 
     - name: run conmon tests
+      # --strict turns a skipped test into a failure. We do not want any of
+      # these tests to be silently skipped here (that is how the breakage
+      # fixed by #5401 went unnoticed for a while), and none of them are
+      # expected to skip in this environment.
       run: |
-        RUNTIME_BINARY=$(pwd)/runc ./conmon/test/run-tests.sh -j $(nproc)
+        RUNTIME_BINARY=$(pwd)/runc ./conmon/test/run-tests.sh --strict -j $(nproc)
 
   all-done:
     needs:
