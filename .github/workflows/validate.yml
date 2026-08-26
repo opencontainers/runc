@@ -273,6 +273,11 @@ jobs:
     - name: build runc
       run: make
 
+    - name: Allow userns for runc
+      # https://discourse.ubuntu.com/t/ubuntu-24-04-lts-noble-numbat-release-notes/39890#unprivileged-user-namespace-restrictions-15
+      run: |
+        sed "s;^profile runc /usr/sbin/;profile runc-test $PWD/;" < /etc/apparmor.d/runc | sudo apparmor_parser
+
     - name: setup bats
       uses: bats-core/bats-action@4.0.0
       with:
@@ -287,14 +292,22 @@ jobs:
       with:
         repository: containers/conmon
         path: conmon
-        ref: v2.2.1
+        # XXX: this is conmon main, which has a lot of test fixes (including
+        # making the tests fail, rather than silently skip, when the test
+        # image can not be pulled) that are not in any release yet. Switch to
+        # a released version once one is out (> v2.2.1).
+        ref: f4cefcd7a33932131ab1a0130ae0b0175368025a
 
     - name: build conmon
       run: cd conmon && make
 
     - name: run conmon tests
+      # --strict turns a skipped test into a failure. We do not want any of
+      # these tests to be silently skipped here (that is how the breakage
+      # fixed by #5401 went unnoticed for a while), and none of them are
+      # expected to skip in this environment.
       run: |
-        RUNTIME_BINARY=$(pwd)/runc ./conmon/test/run-tests.sh -j $(nproc)
+        RUNTIME_BINARY=$(pwd)/runc ./conmon/test/run-tests.sh --strict -j $(nproc)
 
   all-done:
     needs:
