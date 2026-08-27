@@ -295,18 +295,22 @@ jobs:
       with:
         repository: containers/conmon
         path: conmon
-        # XXX: this is conmon main with https://github.com/containers/conmon/pull/668,
-        # which makes the tests fail, rather than silently skip, and fixes a
-        # few other things. Switch to a released version once one is out
-        # (> v2.2.1).
-        ref: 9a6672b20dd63d2907732b380628b675c1008795
+        # XXX: this is conmon main, which has a lot of test fixes (including
+        # making the tests fail, rather than silently skip, when the test
+        # image can not be pulled) that are not in any release yet. Switch to
+        # a released version once one is out (> v2.2.1).
+        ref: f4cefcd7a33932131ab1a0130ae0b0175368025a
 
     - name: build conmon
       run: cd conmon && make
 
     - name: run conmon tests
+      # --strict turns a skipped test into a failure. We do not want any of
+      # these tests to be silently skipped here (that is how the breakage
+      # fixed by #5401 went unnoticed for a while), and none of them are
+      # expected to skip in this environment.
       run: |
-        RUNTIME_BINARY="$(pwd)/runc" ./conmon/test/run-tests.sh -j "$(nproc)"
+        RUNTIME_BINARY="$(pwd)/runc" ./conmon/test/run-tests.sh --strict -j "$(nproc)"
 
   all-done:
     needs:
