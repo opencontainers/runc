@@ -113,7 +113,7 @@ function setup() {
 	[[ ${lines[0]} = "0::/foo" ]]
 
 	# teardown: remove "/foo"
-	cat <<'EOF' | runc exec test_cgroups_group sh -eux
+	runc exec test_cgroups_group sh -eux <<'EOF'
 echo -memory > /sys/fs/cgroup/cgroup.subtree_control
 for pid in $(cat /sys/fs/cgroup/foo/cgroup.procs); do
 	echo $pid > /sys/fs/cgroup/cgroup.procs || true
