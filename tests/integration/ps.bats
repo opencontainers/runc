@@ -21,19 +21,19 @@ function teardown() {
 
 @test "ps" {
 	run -0 runc ps test_busybox
-	[[ "$output" =~ UID\ +PID\ +PPID\ +C\ +STIME\ +TTY\ +TIME\ +CMD+ ]]
-	[[ "$output" == *"$(id -un 2>/dev/null)"*[0-9]* ]]
+	assert_output --regexp 'UID +PID +PPID +C +STIME +TTY +TIME +CMD+'
+	assert_output --regexp "$(id -un 2>/dev/null).*[0-9]"
 }
 
 @test "ps -f json" {
 	run -0 runc ps -f json test_busybox
-	[[ "$output" =~ [0-9]+ ]]
+	assert_output --regexp '[0-9]+'
 }
 
 @test "ps -e -x" {
 	run -0 runc ps test_busybox -e -x
-	[[ "$output" =~ \ +PID\ +TTY\ +STAT\ +TIME\ +COMMAND+ ]]
-	[[ "$output" =~ [0-9]+ ]]
+	assert_output --regexp ' +PID +TTY +STAT +TIME +COMMAND+'
+	assert_output --regexp '[0-9]+'
 }
 
 @test "ps after the container stopped" {

@@ -74,7 +74,7 @@ function scmp_act_notify_template() {
 	#  8: SECCOMP_FILTER_FLAG_NEW_LISTENER
 	exp='"seccomp filter flags: 40"'
 	echo "expecting $exp"
-	[[ "$output" == *"$exp"* ]]
+	assert_output --partial "$exp"
 }
 
 # Test actions not-handled by the agent work fine. noNewPrivileges FALSE.
@@ -156,7 +156,7 @@ function scmp_act_notify_template() {
 
 	sleep 2 && teardown_seccompagent &
 	run ! runc run test_busybox
-	[[ "$output" == *"mkdir:"*"/dev/shm/foo"*"Function not implemented"* ]]
+	assert_output --regexp 'mkdir:.*/dev/shm/foo.*Function not implemented'
 }
 
 # Check that starting with no seccomp agent running fails with a clear error.
@@ -166,7 +166,7 @@ function scmp_act_notify_template() {
 	scmp_act_notify_template "/bin/true" false '"mkdir"'
 
 	run ! runc run test_busybox
-	[[ "$output" == *"failed to connect with seccomp agent"* ]]
+	assert_output --partial "failed to connect with seccomp agent"
 }
 
 # Check that agent-returned error for the syscall works.
@@ -174,7 +174,7 @@ function scmp_act_notify_template() {
 	scmp_act_notify_template "touch /dev/shm/foo && chmod 777 /dev/shm/foo" false '"chmod", "fchmod", "fchmodat"'
 
 	run ! runc run test_busybox
-	[[ "$output" == *"chmod:"*"/dev/shm/foo"*"No medium found"* ]]
+	assert_output --regexp 'chmod:.*/dev/shm/foo.*No medium found'
 }
 
 # check that trying to use SCMP_ACT_NOTIFY with write() gives a meaningful error.
@@ -182,7 +182,7 @@ function scmp_act_notify_template() {
 	scmp_act_notify_template "/bin/true" false '"write"'
 
 	run ! runc run test_busybox
-	[[ "$output" == *"SCMP_ACT_NOTIFY cannot be used for the write syscall"* ]]
+	assert_output --partial "SCMP_ACT_NOTIFY cannot be used for the write syscall"
 }
 
 # check that a startContainer hook doesn't get any extra file descriptor.
@@ -226,5 +226,5 @@ function scmp_act_notify_template() {
 	update_config '.linux.seccomp.listenerPath = "'"$SECCCOMP_AGENT_SOCKET"'"'
 
 	run -0 runc run test_busybox
-	[[ "$output" == *"chmod:"*"test-file"*"No medium found"* ]]
+	assert_output --regexp 'chmod:.*test-file.*No medium found'
 }

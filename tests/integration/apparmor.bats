@@ -14,5 +14,5 @@ function teardown() {
 @test "runc run [unloaded apparmor profile]" {
 	update_config '	  .process.apparmorProfile = "runc-test-definitely-not-loaded"'
 	run ! runc run test_apparmor
-	[[ "$output" == *"apparmor profile "*"runc-test-definitely-not-loaded"*"profile not loaded"* ]]
+	assert_output --regexp 'apparmor profile .*runc-test-definitely-not-loaded.*profile not loaded'
 }

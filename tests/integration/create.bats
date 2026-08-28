@@ -152,8 +152,8 @@ is_allowed_fdtarget() {
 	exp="Such configuration is strongly discouraged"
 	run -0 runc create --console-socket "$CONSOLE_SOCKET" test
 	if [ $EUID -ne 0 ] && ! rootless_cgroup; then
-		[[ "$output" = *"$exp"* ]]
+		assert_output --partial "$exp"
 	else
-		[[ "$output" != *"$exp"* ]]
+		refute_output --partial "$exp"
 	fi
 }

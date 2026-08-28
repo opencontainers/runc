@@ -14,7 +14,7 @@ function teardown() {
 	update_config '.hooks |= {"createRuntime": [{"path": "/bin/true"}, {"path": "/bin/false"}]}'
 
 	run ! runc create --console-socket "$CONSOLE_SOCKET" test_hooks
-	[[ "$output" == *"error running createRuntime hook #1:"* ]]
+	assert_output --partial "error running createRuntime hook #1:"
 }
 
 @test "runc create [hook fails]" {
@@ -22,7 +22,7 @@ function teardown() {
 		echo "testing hook $hook"
 		update_config '.hooks |= {"'$hook'": [{"path": "/bin/true"}, {"path": "/bin/false"}]}'
 		run ! runc create --console-socket "$CONSOLE_SOCKET" test_hooks
-		[[ "$output" == *"error running $hook hook #1:"* ]]
+		assert_output --partial "error running $hook hook #1:"
 	done
 }
 
@@ -38,7 +38,7 @@ function teardown() {
 		if [ "$hook" != "poststart" ]; then
 			refute_output "Hello World"
 		fi
-		[[ "$output" == *"error running $hook hook #1:"* ]]
+		assert_output --partial "error running $hook hook #1:"
 	done
 }
 
@@ -68,11 +68,11 @@ function teardown() {
 	# exactly as set in config.json.
 	update_config '.hooks |= {"startContainer": [{"path": "/bin/busybox", "args": ["cat", "/nosuchfile"]}]}'
 	run ! runc run ct1
-	[[ "$output" == *"cat: can't open"*"/nosuchfile"* ]]
+	assert_output --regexp "cat: can't open.*/nosuchfile"
 
 	# Busybox also accepts commands where argv[0] is "busybox",
 	# and argv[1] is applet name. Test this as well.
 	update_config '.hooks |= {"startContainer": [{"path": "/bin/busybox", "args": ["busybox", "cat", "/nosuchfile"]}]}'
 	run ! runc run ct1
-	[[ "$output" == *"cat: can't open"*"/nosuchfile"* ]]
+	assert_output --regexp "cat: can't open.*/nosuchfile"
 }
