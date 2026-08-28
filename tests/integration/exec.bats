@@ -49,7 +49,7 @@ function teardown() {
 	[ -e pid.txt ]
 	output=$(cat pid.txt)
 	[[ "$output" =~ [0-9]+ ]]
-	[[ "$output" != $(runc state test_busybox | jq '.pid') ]]
+	refute_output "$(runc state test_busybox | jq '.pid')"
 }
 
 @test "runc exec --pid-file with new CWD" {
@@ -66,7 +66,7 @@ function teardown() {
 	[ -e pid.txt ]
 	output=$(cat pid.txt)
 	[[ "$output" =~ [0-9]+ ]]
-	[[ "$output" != $(runc state test_busybox | jq '.pid') ]]
+	refute_output "$(runc state test_busybox | jq '.pid')"
 }
 
 @test "runc exec ls -la" {
@@ -115,7 +115,7 @@ function teardown() {
 
 	# shellcheck disable=SC2016
 	run -0 runc exec --user 1000 test_busybox sh -u -c 'echo $HOME'
-	[[ "$output" = "/" ]]
+	assert_output "/"
 }
 
 # https://github.com/opencontainers/runc/issues/3674.
@@ -141,7 +141,7 @@ function teardown() {
 	wait_for_container 15 1 test_busybox
 
 	run -0 runc exec --user 1000:1000 --additional-gids 100 --additional-gids 65534 test_busybox id -G
-	[ "$output" = "1000 100 65534" ]
+	assert_output "1000 100 65534"
 }
 
 @test "runc exec --preserve-fds" {
@@ -151,7 +151,7 @@ function teardown() {
 	# fd 3 is used by bats, so we use 4
 	exec 4<preserve-fds.test
 	run -0 runc exec --preserve-fds=2 test_busybox cat /proc/self/fd/4
-	[ "${output}" = "hello" ]
+	assert_output "hello"
 }
 
 function check_exec_debug() {
@@ -331,7 +331,7 @@ function check_exec_debug() {
 	# Test that runc exec is able to fallback to container's init cgroup
 	# even if the original cgroup is gone.
 	run -0 runc exec test_busybox cat /proc/self/cgroup
-	[ "$output" = "0::$NEW_CGROUP_REL" ]
+	assert_output "0::$NEW_CGROUP_REL"
 
 	# Cleanup.
 	run -0 runc delete -f test_busybox
@@ -364,5 +364,5 @@ EOF
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test
 
 	run -0 runc exec -u 2000 test sh -c "echo \$HOME"
-	[ "${lines[0]}" = "/home/tempuser" ]
+	assert_line --index 0 "/home/tempuser"
 }

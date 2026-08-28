@@ -104,7 +104,7 @@ function test_runc_delete_host_pidns() {
 	run ! runc state testbusyboxdelete
 
 	output=$(find /sys/fs/cgroup -name testbusyboxdelete -o -name \*-testbusyboxdelete.scope 2>/dev/null || true)
-	[ "$output" = "" ] || fail "cgroup not cleaned up correctly: $output"
+	assert_output ""
 }
 
 @test "runc delete --force" {
@@ -190,7 +190,7 @@ EOF
 	run ! runc state test_busybox
 
 	output=$(find /sys/fs/cgroup -wholename '*testbusyboxdelete*' -type d 2>/dev/null || true)
-	[ "$output" = "" ] || fail "cgroup not cleaned up correctly: $output"
+	assert_output ""
 }
 
 @test "runc delete --force in cgroupv2 with subcgroups" {
