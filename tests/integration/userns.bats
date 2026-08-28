@@ -220,10 +220,10 @@ function teardown() {
 	netns_id="net:[$(stat -c "%i" "$netns_path")]"
 
 	run -0 runc exec ctr readlink /proc/self/ns/user
-	[[ "$output" == "$userns_id" ]]
+	assert_output "$userns_id"
 
 	run -0 runc exec ctr readlink /proc/self/ns/net
-	[[ "$output" == "$netns_id" ]]
+	assert_output "$netns_id"
 }
 
 @test "userns with network interface" {

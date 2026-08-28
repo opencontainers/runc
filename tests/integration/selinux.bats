@@ -43,7 +43,7 @@ function run_check_label() {
 	run -0 runc run tst
 	# Key name is _ses.$CONTAINER_NAME.
 	KEY=_ses.tst
-	[ "$output" == "$KEY $LABEL" ]
+	assert_output "$KEY $LABEL"
 }
 
 # This needs to be placed at the top of the bats file to work around
@@ -60,7 +60,7 @@ function exec_check_label() {
 	run -0 runc exec tst "/bin/$HELPER"
 	# Key name is _ses.$CONTAINER_NAME.
 	KEY=_ses.tst
-	[ "$output" == "$KEY $LABEL" ]
+	assert_output "$KEY $LABEL"
 }
 
 function enable_userns() {
@@ -113,5 +113,5 @@ function enable_userns() {
 			| .process.args = ["/run.sh"]'
 	run ! runc run tst
 	[ ${#lines[@]} -eq 1 ]
-	[[ "${lines[0]}" = "exec /run.sh: no such file or directory" ]]
+	assert_line --index 0 "exec /run.sh: no such file or directory"
 }

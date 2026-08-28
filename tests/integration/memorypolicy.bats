@@ -18,7 +18,7 @@ function teardown() {
 		"nodes": "0"
 	}'
 	run -0 runc run test_busybox
-	[[ "${lines[0]}" == "interleave:0" ]]
+	assert_line --index 0 "interleave:0"
 }
 
 @test "runc run memory policy bind static" {

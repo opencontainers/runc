@@ -77,7 +77,7 @@ function teardown() {
 	update_config '.mounts += [{"destination": "/tmp", "type": "tmpfs", "source": "tmpfs", "options":["noexec","nosuid","nodev","rprivate"]}]'
 
 	run -0 runc run test_tmpfs
-	[ "${lines[0]}" = "$mode" ]
+	assert_line --index 0 "$mode"
 }
 
 @test "runc run with tmpfs perms" {
@@ -86,25 +86,25 @@ function teardown() {
 
 	# Directory is to be created by runc.
 	run -0 runc run test_tmpfs
-	[ "${lines[0]}" = "444" ]
+	assert_line --index 0 "444"
 
 	# Run a 2nd time with the pre-existing directory.
 	# Ref: https://github.com/opencontainers/runc/issues/3911
 	run -0 runc run test_tmpfs
-	[ "${lines[0]}" = "444" ]
+	assert_line --index 0 "444"
 
 	# Existing directory, custom perms, no mode on the mount,
 	# so it should use the directory's perms.
 	update_config '.mounts[-1].options = []'
 	chmod 0710 rootfs/tmp/test
 	run -0 runc run test_tmpfs
-	[ "${lines[0]}" = "710" ]
+	assert_line --index 0 "710"
 
 	# Add back the mode on the mount, and it should use that instead.
 	# Just for fun, use different perms than was used earlier.
 	update_config '.mounts[-1].options = ["mode=0410"]'
 	run -0 runc run test_tmpfs
-	[ "${lines[0]}" = "410" ]
+	assert_line --index 0 "410"
 }
 
 @test "runc run [/proc/self/exe clone]" {
@@ -194,7 +194,7 @@ EOF
 	# After the sync socket closed, we should not send error to parent
 	# process, or else we will get a unnecessary error log(#4171).
 	[ ${#lines[@]} -eq 1 ]
-	[[ ${lines[0]} = "exec /run.sh: no such file or directory" ]]
+	assert_line --index 0 "exec /run.sh: no such file or directory"
 }
 
 # https://github.com/opencontainers/runc/issues/4688
@@ -209,5 +209,5 @@ EOF
 			| .process.args |= ["sh", "-c", "echo $HOME"]'
 
 	run -0 runc run test_busybox
-	[ "${lines[0]}" = "/home/tempuser" ]
+	assert_line --index 0 "/home/tempuser"
 }

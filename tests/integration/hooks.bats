@@ -36,7 +36,7 @@ function teardown() {
 		# Failed poststart hooks results in container being killed,
 		# but only after it has started, so output may or may not appear.
 		if [ "$hook" != "poststart" ]; then
-			[[ "$output" != "Hello World" ]]
+			refute_output "Hello World"
 		fi
 		[[ "$output" == *"error running $hook hook #1:"* ]]
 	done

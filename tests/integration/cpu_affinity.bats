@@ -108,8 +108,8 @@ function cpus_to_mask() {
 	update_config '.process.args = [ "/bin/grep", "-F", "Cpus_allowed_list:", "/proc/self/status" ]'
 	update_config 'del(.linux.resources.cpu)'
 	run -0 taskset -c "$first" runc run ctr
-	[[ "$output" != $'Cpus_allowed_list:\t'"$first" ]]
-	[[ "$output" == $'Cpus_allowed_list:\t'"$INITIAL_CPU_MASK" ]]
+	refute_output $'Cpus_allowed_list:\t'"$first"
+	assert_output $'Cpus_allowed_list:\t'"$INITIAL_CPU_MASK"
 }
 
 @test "runc run [CPU affinity should reset to cgroup cpuset]" {
@@ -123,7 +123,7 @@ function cpus_to_mask() {
 	update_config '.process.args = [ "/bin/grep", "-F", "Cpus_allowed_list:", "/proc/self/status" ]'
 	update_config '.linux.resources.cpu = {"mems": "0", "cpus": "'"$first-$second"'"}'
 	run -0 taskset -c "$first" runc run ctr
-	[[ "$output" != $'Cpus_allowed_list:\t'"$first" ]]
+	refute_output $'Cpus_allowed_list:\t'"$first"
 	# XXX: For some reason, systemd-cgroup leads to us using the all-set
 	#      cpumask rather than the cpuset we configured?
 	[ -v RUNC_USE_SYSTEMD ] || [[ "$output" == $'Cpus_allowed_list:\t'"$first-$second" ]]
@@ -131,7 +131,7 @@ function cpus_to_mask() {
 	# Ditto for a cpuset that has no overlap with the original cpumask.
 	update_config '.linux.resources.cpu = {"mems": "0", "cpus": "'"$second"'"}'
 	run -0 taskset -c "$first" runc run ctr
-	[[ "$output" != $'Cpus_allowed_list:\t'"$first" ]]
+	refute_output $'Cpus_allowed_list:\t'"$first"
 	# XXX: For some reason, systemd-cgroup leads to us using the all-set
 	#      cpumask rather than the cpuset we configured?
 	[ -v RUNC_USE_SYSTEMD ] || [[ "$output" == $'Cpus_allowed_list:\t'"$second" ]]
@@ -145,8 +145,8 @@ function cpus_to_mask() {
 	update_config 'del(.linux.resources.cpu)'
 	run -0 taskset -c "$first" runc run -d --console-socket "$CONSOLE_SOCKET" ctr3
 	run -0 taskset -c "$first" runc exec ctr3 grep -F Cpus_allowed_list: /proc/self/status
-	[[ "$output" != $'Cpus_allowed_list:\t'"$first" ]]
-	[[ "$output" == $'Cpus_allowed_list:\t'"$INITIAL_CPU_MASK" ]]
+	refute_output $'Cpus_allowed_list:\t'"$first"
+	assert_output $'Cpus_allowed_list:\t'"$INITIAL_CPU_MASK"
 }
 
 @test "runc exec [default CPU affinity should reset to cgroup cpuset]" {
@@ -161,7 +161,7 @@ function cpus_to_mask() {
 	update_config '.linux.resources.cpu = {"mems": "0", "cpus": "'"$first-$second"'"}'
 	run -0 taskset -c "$first" runc run -d --console-socket "$CONSOLE_SOCKET" ctr
 	run -0 taskset -c "$first" runc exec ctr grep -F Cpus_allowed_list: /proc/self/status
-	[[ "$output" != $'Cpus_allowed_list:\t'"$first" ]]
+	refute_output $'Cpus_allowed_list:\t'"$first"
 	# XXX: For some reason, systemd-cgroup leads to us using the all-set
 	#      cpumask rather than the cpuset we configured?
 	[ -v RUNC_USE_SYSTEMD ] || [[ "$output" == $'Cpus_allowed_list:\t'"$first-$second" ]]
@@ -173,7 +173,7 @@ function cpus_to_mask() {
 	update_config '.linux.resources.cpu = {"mems": "0", "cpus": "'"$second"'"}'
 	run -0 taskset -c "$first" runc run -d --console-socket "$CONSOLE_SOCKET" ctr
 	run -0 taskset -c "$first" runc exec ctr grep -F Cpus_allowed_list: /proc/self/status
-	[[ "$output" != $'Cpus_allowed_list:\t'"$first" ]]
+	refute_output $'Cpus_allowed_list:\t'"$first"
 	# XXX: For some reason, systemd-cgroup leads to us using the all-set
 	#      cpumask rather than the cpuset we configured?
 	[ -v RUNC_USE_SYSTEMD ] || [[ "$output" == $'Cpus_allowed_list:\t'"$second" ]]

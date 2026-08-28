@@ -79,7 +79,7 @@ function setup() {
 	[[ ${lines[0]} == *"memory"* ]]
 
 	run -0 runc exec test_cgroups_group cat /proc/self/cgroup
-	[[ ${lines[0]} = "0::/" ]]
+	assert_line --index 0 "0::/"
 
 	run -0 runc exec test_cgroups_group mkdir /sys/fs/cgroup/foo
 
@@ -88,7 +88,7 @@ function setup() {
 	# the init process is now in "/foo", but an exec process can still join "/"
 	# because we haven't enabled any domain controller.
 	run -0 runc exec test_cgroups_group cat /proc/self/cgroup
-	[[ ${lines[0]} = "0::/" ]]
+	assert_line --index 0 "0::/"
 
 	# turn on a domain controller (memory)
 	run -0 runc exec test_cgroups_group sh -euxc 'echo $$ > /sys/fs/cgroup/foo/cgroup.procs; echo +memory > /sys/fs/cgroup/cgroup.subtree_control'
@@ -96,7 +96,7 @@ function setup() {
 	# an exec process can no longer join "/" after turning on a domain controller.
 	# falls back to "/foo".
 	run -0 runc exec test_cgroups_group cat /proc/self/cgroup
-	[[ ${lines[0]} = "0::/foo" ]]
+	assert_line --index 0 "0::/foo"
 
 	# teardown: remove "/foo"
 	run -0 runc exec test_cgroups_group sh -eux <<'EOF'
@@ -131,10 +131,10 @@ EOF
 
 	run runc exec test_cgroups_unified sh -c 'cat /sys/fs/cgroup/io.bfq.weight'
 	if [[ "$status" -eq 0 ]]; then
-		[ "$output" = 'default 750' ]
+		assert_output 'default 750'
 	else
 		run -0 runc exec test_cgroups_unified sh -c 'cat /sys/fs/cgroup/io.weight'
-		[ "$output" = 'default 7475' ]
+		assert_output 'default 7475'
 	fi
 }
 
@@ -410,13 +410,13 @@ convert_hugetlb_size() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
 
 	run -0 runc exec test_cgroups_unified cat /sys/fs/cgroup/memory.min
-	[ "$output" = '131072' ]
+	assert_output '131072'
 
 	run -0 runc exec test_cgroups_unified cat /sys/fs/cgroup/memory.max
-	[ "$output" = '41943040' ]
+	assert_output '41943040'
 
 	run -0 runc exec test_cgroups_unified cat /sys/fs/cgroup/pids.max
-	[ "$output" = '42' ]
+	assert_output '42'
 	check_systemd_value "TasksMax" 42
 
 	check_cpu_quota 5000 50000
@@ -487,7 +487,7 @@ convert_hugetlb_size() {
 
 	# Exec should succeed (once the container is resumed).
 	run -0 runc exec --ignore-paused ct1 echo ok
-	[ "$output" = "ok" ]
+	assert_output "ok"
 }
 
 @test "runc run/create should error for a non-empty cgroup" {

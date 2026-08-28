@@ -51,10 +51,10 @@ function teardown() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	run -0 runc exec test_busybox sh -c "mount | grep /testdir -c"
-	[[ "${output}" == "1" ]]
+	assert_output "1"
 
 	run -0 runc exec test_busybox sh -c "mount | grep /testfile -c"
-	[[ "${output}" == "1" ]]
+	assert_output "1"
 }
 
 @test "mask paths [prohibit symlink /proc]" {
