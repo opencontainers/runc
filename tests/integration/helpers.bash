@@ -13,6 +13,20 @@ eval "$IMAGES"
 unset IMAGES
 
 : "${RUNC:="${INTEGRATION_ROOT}/../../runc"}"
+export RUNC
+
+# Directory with the runc wrapper (see bin/runc). Must be in PATH so that runc
+# can be used from bats' run helper, and after commands like taskset.
+if [[ ":$PATH:" != *":${INTEGRATION_ROOT}/bin:"* ]]; then
+	PATH="${INTEGRATION_ROOT}/bin:$PATH"
+	export PATH
+fi
+
+# The runc wrapper is a separate process, so this has to be exported
+# (unlike with the shell function it replaced).
+if [ -v RUNC_USE_SYSTEMD ]; then
+	export RUNC_USE_SYSTEMD
+fi
 
 # Path to binaries compiled from packages in tests/cmd by "make test-binaries").
 TESTBINDIR=${INTEGRATION_ROOT}/../cmd/_bin
@@ -57,17 +71,9 @@ function runc() {
 	CMDNAME="$(basename "$RUNC")" sane_run __runc "$@"
 }
 
-function setup_runc_cmdline() {
-	RUNC_CMDLINE=("$RUNC")
-	[[ -v RUNC_USE_SYSTEMD ]] && RUNC_CMDLINE+=("--systemd-cgroup")
-	[[ -n "${ROOT:-}" ]] && RUNC_CMDLINE+=("--root" "$ROOT/state")
-	export RUNC_CMDLINE
-}
-
-# Raw wrapper for runc.
+# Raw wrapper for runc (i.e. one that does not use bats' run helper).
 function __runc() {
-	setup_runc_cmdline
-	"${RUNC_CMDLINE[@]}" "$@"
+	"${INTEGRATION_ROOT}/bin/runc" "$@"
 }
 
 # Wrapper for runc spec.
@@ -841,6 +847,7 @@ function setup_bundle() {
 
 	# Root for various container directories (state, tty, bundle).
 	ROOT=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
+	export ROOT
 	mkdir -p "$ROOT/state" "$ROOT/bundle/rootfs"
 
 	# Directories created by mktemp -d have 0700 permission bits. Tests
