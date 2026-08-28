@@ -37,7 +37,7 @@ function teardown() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_rbind_ro
 
 	run -1 runc exec test_rbind_ro touch /mnt/foo
-	[[ "${output}" == *"Read-only file system"* ]]
+	assert_output --partial "Read-only file system"
 
 	run -0 runc exec test_rbind_ro touch /mnt/subvol/bar
 }
@@ -49,10 +49,10 @@ function teardown() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_rbind_rro
 
 	run -1 runc exec test_rbind_rro touch /mnt/foo
-	[[ "${output}" == *"Read-only file system"* ]]
+	assert_output --partial "Read-only file system"
 
 	run -1 runc exec test_rbind_rro touch /mnt/subvol/bar
-	[[ "${output}" == *"Read-only file system"* ]]
+	assert_output --partial "Read-only file system"
 }
 
 @test "runc run [rbind,ro,rro mount is recursively read-only too]" {
@@ -62,10 +62,10 @@ function teardown() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_rbind_ro_rro
 
 	run -1 runc exec test_rbind_ro_rro touch /mnt/foo
-	[[ "${output}" == *"Read-only file system"* ]]
+	assert_output --partial "Read-only file system"
 
 	run -1 runc exec test_rbind_ro_rro touch /mnt/subvol/bar
-	[[ "${output}" == *"Read-only file system"* ]]
+	assert_output --partial "Read-only file system"
 }
 
 # https://github.com/opencontainers/runc/issues/5095
@@ -81,38 +81,38 @@ function teardown() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_rbind_ratime
 
 	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt1
-	[[ "${output}" == "rw,relatime,"* ]]
+	assert_output --regexp '^rw,relatime,'
 
 	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt1/subvol
-	[[ "${output}" == "rw,relatime,"* ]]
+	assert_output --regexp '^rw,relatime,'
 
 	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt2
-	[[ "${output}" == "rw,noatime,"* ]]
+	assert_output --regexp '^rw,noatime,'
 
 	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt2/subvol
-	[[ "${output}" == "rw,noatime,"* ]]
+	assert_output --regexp '^rw,noatime,'
 
 	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt3
-	[[ "${output}" == "rw,"* ]]
+	assert_output --regexp '^rw,'
 
 	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt3/subvol
-	[[ "${output}" == "rw,"* ]]
+	assert_output --regexp '^rw,'
 
 	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt4
-	[[ "${output}" == "rw,relatime,"* ]]
+	assert_output --regexp '^rw,relatime,'
 
 	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt4/subvol
-	[[ "${output}" == "rw,relatime,"* ]]
+	assert_output --regexp '^rw,relatime,'
 
 	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt5
-	[[ "${output}" == "rw,relatime,"* ]]
+	assert_output --regexp '^rw,relatime,'
 
 	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt5/subvol
-	[[ "${output}" == "rw,relatime,"* ]]
+	assert_output --regexp '^rw,relatime,'
 
 	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt6
-	[[ "${output}" == "rw,relatime,"* ]]
+	assert_output --regexp '^rw,relatime,'
 
 	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt6/subvol
-	[[ "${output}" == "rw,relatime,"* ]]
+	assert_output --regexp '^rw,relatime,'
 }

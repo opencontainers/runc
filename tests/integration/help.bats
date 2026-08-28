@@ -11,12 +11,12 @@ function setup() {
 
 @test "runc -h" {
 	run -0 runc -h
-	[[ ${lines[0]} =~ NAME:+ ]]
-	[[ ${lines[1]} =~ runc\ '-'\ Open\ Container\ Initiative\ runtime+ ]]
+	assert_line --index 0 --regexp 'NAME:+'
+	assert_line --index 1 --regexp 'runc - Open Container Initiative runtime+'
 
 	run -0 runc --help
-	[[ ${lines[0]} =~ NAME:+ ]]
-	[[ ${lines[1]} =~ runc\ '-'\ Open\ Container\ Initiative\ runtime+ ]]
+	assert_line --index 0 --regexp 'NAME:+'
+	assert_line --index 1 --regexp 'runc - Open Container Initiative runtime+'
 }
 
 @test "runc command -h" {
@@ -45,13 +45,13 @@ function setup() {
 	for cmd in "${cmds[@]}"; do
 		for arg in "-h" "--help"; do
 			run -0 runc "$cmd" "$arg"
-			[[ ${lines[0]} =~ NAME:+ ]]
-			[[ ${lines[1]} =~ $bin\ $cmd+ ]]
+			assert_line --index 0 --regexp 'NAME:+'
+			assert_line --index 1 --regexp "$bin $cmd+"
 		done
 	done
 }
 
 @test "runc foo -h" {
 	run ! runc foo -h
-	[[ "${output}" == *"No help topic for 'foo'"* ]]
+	assert_output --partial "No help topic for 'foo'"
 }

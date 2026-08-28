@@ -14,18 +14,18 @@ function teardown() {
 @test "runc run no capability" {
 	run -0 runc run test_no_caps
 
-	[[ "${output}" == *"CapInh:	0000000000000000"* ]]
-	[[ "${output}" == *"CapAmb:	0000000000000000"* ]]
-	[[ "${output}" == *"NoNewPrivs:	1"* ]]
+	assert_output --partial "CapInh:	0000000000000000"
+	assert_output --partial "CapAmb:	0000000000000000"
+	assert_output --partial "NoNewPrivs:	1"
 }
 
 @test "runc run with unknown capability" {
 	update_config '.process.capabilities.bounding = ["CAP_UNKNOWN", "UNKNOWN_CAP"]'
 	run -0 runc run test_unknown_caps
 
-	[[ "${output}" == *"CapInh:	0000000000000000"* ]]
-	[[ "${output}" == *"CapAmb:	0000000000000000"* ]]
-	[[ "${output}" == *"NoNewPrivs:	1"* ]]
+	assert_output --partial "CapInh:	0000000000000000"
+	assert_output --partial "CapAmb:	0000000000000000"
+	assert_output --partial "NoNewPrivs:	1"
 }
 
 @test "runc run with new privileges" {
@@ -35,9 +35,9 @@ function teardown() {
 	update_config '.process.noNewPrivileges = false'
 	run -0 runc run test_new_privileges
 
-	[[ "${output}" == *"CapInh:	0000000000000000"* ]]
-	[[ "${output}" == *"CapAmb:	0000000000000000"* ]]
-	[[ "${output}" == *"NoNewPrivs:	0"* ]]
+	assert_output --partial "CapInh:	0000000000000000"
+	assert_output --partial "CapAmb:	0000000000000000"
+	assert_output --partial "NoNewPrivs:	0"
 }
 
 @test "runc run with some capabilities" {
@@ -46,11 +46,11 @@ function teardown() {
 	update_config '.process.capabilities.permitted = ["CAP_SYS_ADMIN", "CAP_AUDIT_WRITE", "CAP_KILL", "CAP_NET_BIND_SERVICE"]'
 	run -0 runc run test_some_caps
 
-	[[ "${output}" == *"CapInh:	0000000000000000"* ]]
-	[[ "${output}" == *"CapBnd:	0000000000200000"* ]]
-	[[ "${output}" == *"CapEff:	0000000000200000"* ]]
-	[[ "${output}" == *"CapPrm:	0000000000200000"* ]]
-	[[ "${output}" == *"NoNewPrivs:	1"* ]]
+	assert_output --partial "CapInh:	0000000000000000"
+	assert_output --partial "CapBnd:	0000000000200000"
+	assert_output --partial "CapEff:	0000000000200000"
+	assert_output --partial "CapPrm:	0000000000200000"
+	assert_output --partial "NoNewPrivs:	1"
 }
 
 @test "runc exec --cap" {
@@ -60,11 +60,11 @@ function teardown() {
 
 	run -0 runc exec test_exec_cap cat /proc/self/status
 	# Check no capabilities are set.
-	[[ "${output}" == *"CapInh:	0000000000000000"* ]]
-	[[ "${output}" == *"CapPrm:	0000000000000000"* ]]
-	[[ "${output}" == *"CapEff:	0000000000000000"* ]]
-	[[ "${output}" == *"CapBnd:	0000000000000000"* ]]
-	[[ "${output}" == *"CapAmb:	0000000000000000"* ]]
+	assert_output --partial "CapInh:	0000000000000000"
+	assert_output --partial "CapPrm:	0000000000000000"
+	assert_output --partial "CapEff:	0000000000000000"
+	assert_output --partial "CapBnd:	0000000000000000"
+	assert_output --partial "CapAmb:	0000000000000000"
 
 	run -0 runc exec --cap CAP_KILL --cap CAP_AUDIT_WRITE test_exec_cap cat /proc/self/status
 	# Check capabilities are added into bounding/effective/permitted only,
@@ -72,11 +72,11 @@ function teardown() {
 	#
 	# CAP_KILL is 5, the bit mask is 0x20 (1 << 5).
 	# CAP_AUDIT_WRITE is 26, the bit mask is 0x20000000 (1 << 26).
-	[[ "${output}" == *"CapInh:	0000000000000000"* ]]
-	[[ "${output}" == *"CapPrm:	0000000020000020"* ]]
-	[[ "${output}" == *"CapEff:	0000000020000020"* ]]
-	[[ "${output}" == *"CapBnd:	0000000020000020"* ]]
-	[[ "${output}" == *"CapAmb:	0000000000000000"* ]]
+	assert_output --partial "CapInh:	0000000000000000"
+	assert_output --partial "CapPrm:	0000000020000020"
+	assert_output --partial "CapEff:	0000000020000020"
+	assert_output --partial "CapBnd:	0000000020000020"
+	assert_output --partial "CapAmb:	0000000000000000"
 }
 
 @test "runc exec --cap [ambient is set from spec]" {
@@ -94,20 +94,20 @@ function teardown() {
 	# CAP_CHOWN is 0, the bit mask is 0x1 (1 << 0)
 	# CAP_KILL is 5, the bit mask is 0x20 (1 << 5).
 	# CAP_SYSLOG is 34, the bit mask is 0x400000000 (1 << 34).
-	[[ "${output}" == *"CapInh:	0000000400000001"* ]]
-	[[ "${output}" == *"CapPrm:	0000000000000021"* ]]
-	[[ "${output}" == *"CapEff:	0000000000000021"* ]]
-	[[ "${output}" == *"CapBnd:	0000000400000021"* ]]
-	[[ "${output}" == *"CapAmb:	0000000000000001"* ]]
+	assert_output --partial "CapInh:	0000000400000001"
+	assert_output --partial "CapPrm:	0000000000000021"
+	assert_output --partial "CapEff:	0000000000000021"
+	assert_output --partial "CapBnd:	0000000400000021"
+	assert_output --partial "CapAmb:	0000000000000001"
 
 	# Check that if config.json has an inheritable capability set,
 	# runc exec --cap adds ambient capabilities.
 	run -0 runc exec --cap CAP_SYSLOG test_some_caps cat /proc/self/status
-	[[ "${output}" == *"CapInh:	0000000400000001"* ]]
-	[[ "${output}" == *"CapPrm:	0000000400000021"* ]]
-	[[ "${output}" == *"CapEff:	0000000400000021"* ]]
-	[[ "${output}" == *"CapBnd:	0000000400000021"* ]]
-	[[ "${output}" == *"CapAmb:	0000000400000001"* ]]
+	assert_output --partial "CapInh:	0000000400000001"
+	assert_output --partial "CapPrm:	0000000400000021"
+	assert_output --partial "CapEff:	0000000400000021"
+	assert_output --partial "CapBnd:	0000000400000021"
+	assert_output --partial "CapAmb:	0000000400000001"
 }
 
 @test "runc run [ambient caps not set in inheritable result in a warning]" {
@@ -119,6 +119,6 @@ function teardown() {
 	#
 	# CAP_CHOWN is 0, the bit mask is 0x1 (1 << 0)
 	# CAP_KILL is 5, the bit mask is 0x20 (1 << 5).
-	[[ "$output" == *"can't raise ambient capability CAP_CHOWN: "* ]]
-	[[ "${output}" == *"CapAmb:	0000000000000020"* ]]
+	assert_output --partial "can't raise ambient capability CAP_CHOWN: "
+	assert_output --partial "CapAmb:	0000000000000020"
 }

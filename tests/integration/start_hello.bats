@@ -13,7 +13,7 @@ function teardown() {
 
 @test "runc run" {
 	run -0 runc run test_hello
-	[[ "${output}" == *"Hello"* ]]
+	assert_output --partial "Hello"
 }
 
 @test "runc run ({u,g}id != 0)" {
@@ -26,7 +26,7 @@ function teardown() {
 		| (.. | select(.gid? == 0)) .gid |= 100'
 
 	run -0 runc run test_hello
-	[[ "${output}" == *"Hello"* ]]
+	assert_output --partial "Hello"
 }
 
 # https://github.com/opencontainers/runc/issues/3715.
@@ -63,12 +63,12 @@ function teardown() {
 	update_config '(.. | select(. == "rootfs")) |= "."'
 
 	run -0 runc run test_hello
-	[[ "${output}" == *"Hello"* ]]
+	assert_output --partial "Hello"
 }
 
 @test "runc run --pid-file" {
 	run -0 runc run --pid-file pid.txt test_hello
-	[[ "${output}" == *"Hello"* ]]
+	assert_output --partial "Hello"
 
 	[ -e pid.txt ]
 	[[ "$(cat pid.txt)" =~ [0-9]+ ]]

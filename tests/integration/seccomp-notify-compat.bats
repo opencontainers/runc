@@ -30,5 +30,5 @@ function teardown() {
 			}'
 
 	run ! runc run test_busybox
-	[[ "$output" == *"seccomp notify unsupported:"* ]]
+	assert_output --partial "seccomp notify unsupported:"
 }

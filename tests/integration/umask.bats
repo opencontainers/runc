@@ -17,9 +17,9 @@ function teardown() {
 
 	run -0 runc exec test_busybox grep '^Umask:' "/proc/1/status"
 	# umask 63 decimal = umask 77 octal
-	[[ "${output}" == *"77"* ]]
+	assert_output --partial "77"
 
 	run -0 runc exec test_busybox grep '^Umask:' "/proc/self/status"
 	# umask 63 decimal = umask 77 octal
-	[[ "${output}" == *"77"* ]]
+	assert_output --partial "77"
 }

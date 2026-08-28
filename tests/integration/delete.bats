@@ -176,7 +176,7 @@ for s in ${subsystems}; do
   cat tasks
 done
 EOF
-	[[ "$output" =~ [0-9]+ ]]
+	assert_output --regexp '[0-9]+'
 
 	for s in ${subsystems}; do
 		name=CGROUP_${s^^}_BASE_PATH
@@ -221,7 +221,7 @@ EOF
   cat cgroup.threads
 EOF
 	run -0 runc exec test_busybox sh <nest.sh
-	[[ "$output" =~ [0-9]+ ]]
+	assert_output --regexp '[0-9]+'
 
 	# check create subcgroups success
 	[ -d "$CGROUP_V2_PATH"/foo ]

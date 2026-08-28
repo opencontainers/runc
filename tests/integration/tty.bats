@@ -23,9 +23,9 @@ function teardown() {
 	update_config '(.. | select(.[]? == "sh")) += ["-c", "for file in /proc/self/fd/[012]; do readlink $file; done"]'
 
 	run -0 runc run test_busybox
-	[[ ${lines[0]} =~ /dev/pts/+ ]]
-	[[ ${lines[1]} =~ /dev/pts/+ ]]
-	[[ ${lines[2]} =~ /dev/pts/+ ]]
+	assert_line --index 0 --regexp '/dev/pts/+'
+	assert_line --index 1 --regexp '/dev/pts/+'
+	assert_line --index 2 --regexp '/dev/pts/+'
 }
 
 @test "runc run [tty owner]" {
@@ -38,9 +38,9 @@ function teardown() {
 	update_config '(.. | select(.[]? == "sh")) += ["-c", "stat -c %u:%g $(tty) | tr : \\\\n"]'
 
 	run -0 runc run test_busybox
-	[[ ${lines[0]} =~ 0 ]]
+	assert_line --index 0 --regexp '0'
 	# This is set by the default config.json (it corresponds to the standard tty group).
-	[[ ${lines[1]} =~ 5 ]]
+	assert_line --index 1 --regexp '5'
 }
 
 @test "runc run [tty owner] ({u,g}id != 0)" {
@@ -56,9 +56,9 @@ function teardown() {
 			| (.. | select(.[]? == "sh")) += ["-c", "stat -c %u:%g $(tty) | tr : \\\\n"]'
 
 	run -0 runc run test_busybox
-	[[ ${lines[0]} =~ 1000 ]]
+	assert_line --index 0 --regexp '1000'
 	# This is set by the default config.json (it corresponds to the standard tty group).
-	[[ ${lines[1]} =~ 5 ]]
+	assert_line --index 1 --regexp '5'
 }
 
 @test "runc exec [stdin not a tty]" {
@@ -77,9 +77,9 @@ function teardown() {
 
 	# shellcheck disable=SC2016
 	run -0 runc exec -t test_busybox sh -c 'for file in /proc/self/fd/[012]; do readlink $file; done'
-	[[ ${lines[0]} =~ /dev/pts/+ ]]
-	[[ ${lines[1]} =~ /dev/pts/+ ]]
-	[[ ${lines[2]} =~ /dev/pts/+ ]]
+	assert_line --index 0 --regexp '/dev/pts/+'
+	assert_line --index 1 --regexp '/dev/pts/+'
+	assert_line --index 2 --regexp '/dev/pts/+'
 }
 
 @test "runc exec [tty owner]" {
@@ -93,8 +93,8 @@ function teardown() {
 
 	# shellcheck disable=SC2016
 	run -0 runc exec -t test_busybox sh -c 'stat -c %u:%g $(tty) | tr : \\n'
-	[[ ${lines[0]} =~ 0 ]]
-	[[ ${lines[1]} =~ 5 ]]
+	assert_line --index 0 --regexp '0'
+	assert_line --index 1 --regexp '5'
 }
 
 @test "runc exec [tty owner] ({u,g}id != 0)" {
@@ -112,8 +112,8 @@ function teardown() {
 
 	# shellcheck disable=SC2016
 	run -0 runc exec -t test_busybox sh -c 'stat -c %u:%g $(tty) | tr : \\n'
-	[[ ${lines[0]} =~ 1000 ]]
-	[[ ${lines[1]} =~ 5 ]]
+	assert_line --index 0 --regexp '1000'
+	assert_line --index 1 --regexp '5'
 }
 
 @test "runc exec [tty consolesize]" {
@@ -158,7 +158,7 @@ function teardown() {
 	run -0 runc exec -t -p <(echo "$tty_info") test_busybox
 
 	# test tty width and height against original process.json
-	[[ ${lines[0]} =~ "rows 10; columns 110" ]]
+	assert_line --index 0 --regexp 'rows 10; columns 110'
 }
 
 @test "runc create [terminal=false]" {
