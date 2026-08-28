@@ -2,7 +2,7 @@
 
 set -u
 
-bats_require_minimum_version 1.5.0
+bats_require_minimum_version 1.7.0
 
 # Root directory of integration tests.
 INTEGRATION_ROOT=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
