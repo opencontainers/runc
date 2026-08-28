@@ -99,7 +99,7 @@ function setup() {
 	[[ ${lines[0]} = "0::/foo" ]]
 
 	# teardown: remove "/foo"
-	run runc exec test_cgroups_group sh -eux <<'EOF'
+	run -0 runc exec test_cgroups_group sh -eux <<'EOF'
 echo -memory > /sys/fs/cgroup/cgroup.subtree_control
 for pid in $(cat /sys/fs/cgroup/foo/cgroup.procs); do
 	echo $pid > /sys/fs/cgroup/cgroup.procs || true
@@ -133,7 +133,7 @@ EOF
 	if [[ "$status" -eq 0 ]]; then
 		[ "$output" = 'default 750' ]
 	else
-		run runc exec test_cgroups_unified sh -c 'cat /sys/fs/cgroup/io.weight'
+		run -0 runc exec test_cgroups_unified sh -c 'cat /sys/fs/cgroup/io.weight'
 		[ "$output" = 'default 7475' ]
 	fi
 }
@@ -181,7 +181,7 @@ EOF
 	weights1=$(get_cgroup_value $file)
 
 	# Check that runc update works.
-	run runc update -r - test_dev_weight <<EOF
+	run -0 runc update -r - test_dev_weight <<EOF
 {
   "blockIO": {
     "weight": 111,

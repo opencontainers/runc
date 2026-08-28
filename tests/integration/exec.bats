@@ -171,7 +171,7 @@ function check_exec_debug() {
 @test "runc --debug --log exec" {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test
 
-	run runc --debug --log log.out exec test true
+	run -0 runc --debug --log log.out exec test true
 	# check output does not include debug info
 	[[ "${output}" != *"level=debug"* ]]
 
@@ -334,7 +334,7 @@ function check_exec_debug() {
 	[ "$output" = "0::$NEW_CGROUP_REL" ]
 
 	# Cleanup.
-	run runc delete -f test_busybox
+	run -0 runc delete -f test_busybox
 	rmdir "$NEW_CGROUP"
 }
 
@@ -344,7 +344,7 @@ function check_exec_debug() {
 sh
 EOF
 	chmod +x rootfs/run.sh
-	run runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	run ! runc exec -t test_busybox /run.sh
 
 	# After the sync socket closed, we should not send error to parent
