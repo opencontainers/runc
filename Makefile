@@ -174,7 +174,7 @@ integration: runcimage
 
 .PHONY: localintegration
 localintegration: runc test-binaries
-	bats -t tests/integration$(TESTPATH)
+	bats -t --print-output-on-failure tests/integration$(TESTPATH)
 
 .PHONY: rootlessintegration
 rootlessintegration: runcimage
