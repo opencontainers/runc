@@ -36,8 +36,7 @@ function teardown_isolated_mount_namespace() {
 }
 
 function __runc_in_mount_namespace() {
-	setup_runc_cmdline
-	in_mount_namespace "${RUNC_CMDLINE[@]}" "$@"
+	in_mount_namespace runc "$@"
 }
 
 function make_rootfs_shared() {
