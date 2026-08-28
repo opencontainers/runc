@@ -1,0 +1,17 @@
+#!/bin/bash
+# Wrapper for the runc binary under test.
+#
+# It adds the flags every test invocation needs, and, unlike a shell function,
+# can be used from bats' run helper, as well as after commands that require a
+# real binary, such as taskset or timeout.
+#
+# The directory containing this script is prepended to PATH by helpers.bash,
+# which also exports the variables used below.
+
+set -u
+
+opts=()
+[ -v RUNC_USE_SYSTEMD ] && opts+=("--systemd-cgroup")
+[ -n "${ROOT:-}" ] && opts+=("--root" "$ROOT/state")
+
+exec "$RUNC" "${opts[@]}" "$@"
