@@ -22,9 +22,8 @@ function setup() {
 }
 
 @test "runc command -h" {
-	local runc
-	# shellcheck disable=SC2153
-	runc="$(basename "$RUNC")"
+	local bin
+	bin=$(basename "$RUNC")
 	local cmds=(
 		checkpoint
 		create
@@ -50,7 +49,7 @@ function setup() {
 			runc "$cmd" "$arg"
 			[ "$status" -eq 0 ]
 			[[ ${lines[0]} =~ NAME:+ ]]
-			[[ ${lines[1]} =~ $runc\ $cmd+ ]]
+			[[ ${lines[1]} =~ $bin\ $cmd+ ]]
 		done
 	done
 }
