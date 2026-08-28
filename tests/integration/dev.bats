@@ -17,9 +17,9 @@ function teardown() {
 	run -0 runc run test_dev
 
 	if [ $EUID -ne 0 ]; then
-		[[ "${lines[0]}" =~ "crw-rw-rw".+"1".+"65534".+"65534".+"5,".+"0".+"/dev/tty" ]]
+		assert_line --index 0 --regexp 'crw-rw-rw.+1.+65534.+65534.+5,.+0.+/dev/tty'
 	else
-		[[ "${lines[0]}" =~ "crw-rw-rw".+"1".+"0".+"0".+"5,".+"0".+"/dev/tty" ]]
+		assert_line --index 0 --regexp 'crw-rw-rw.+1.+0.+0.+5,.+0.+/dev/tty'
 	fi
 }
 
@@ -28,7 +28,7 @@ function teardown() {
 		      | .process.args |= ["ls", "-lLn", "/dev/ptmx"]'
 
 	run -0 runc run test_dev
-	[[ "${lines[0]}" =~ "crw-rw-rw".+"1".+"0".+"0".+"5,".+"2".+"/dev/ptmx" ]]
+	assert_line --index 0 --regexp 'crw-rw-rw.+1.+0.+0.+5,.+2.+/dev/ptmx'
 }
 
 @test "runc run/update [device cgroup deny]" {
@@ -45,21 +45,21 @@ function teardown() {
 
 	# test write
 	run -1 runc exec test_deny sh -c 'hostname | tee /dev/kmsg'
-	[[ "${output}" == *'Operation not permitted'* ]]
+	assert_output --partial 'Operation not permitted'
 
 	# test read
 	run -1 runc exec test_deny sh -c 'head -n 1 /dev/kmsg'
-	[[ "${output}" == *'Operation not permitted'* ]]
+	assert_output --partial 'Operation not permitted'
 
 	run -0 runc update test_deny --pids-limit 42
 
 	# test write
 	run -1 runc exec test_deny sh -c 'hostname | tee /dev/kmsg'
-	[[ "${output}" == *'Operation not permitted'* ]]
+	assert_output --partial 'Operation not permitted'
 
 	# test read
 	run -1 runc exec test_deny sh -c 'head -n 1 /dev/kmsg'
-	[[ "${output}" == *'Operation not permitted'* ]]
+	assert_output --partial 'Operation not permitted'
 }
 
 @test "runc run [device cgroup allow rw char device]" {
@@ -77,7 +77,7 @@ function teardown() {
 
 	# test write
 	run -0 runc exec test_allow_char sh -c 'hostname | tee /dev/kmsg'
-	[[ "${lines[0]}" == *'myhostname'* ]]
+	assert_line --index 0 --partial 'myhostname'
 
 	# test read
 	run -0 runc exec test_allow_char sh -c 'head -n 1 /dev/kmsg'

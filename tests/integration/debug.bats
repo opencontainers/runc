@@ -21,7 +21,7 @@ function check_debug() {
 	run -0 runc --debug run test_hello
 
 	# check expected debug output was sent to stderr
-	[[ "${output}" == *"level=debug"* ]]
+	assert_output --partial "level=debug"
 	check_debug "$output"
 }
 
@@ -29,12 +29,12 @@ function check_debug() {
 	run -0 runc --log log.out --debug run test_hello
 
 	# check output does not include debug info
-	[[ "${output}" != *"level=debug"* ]]
+	refute_output --partial "level=debug"
 
 	cat log.out >&2
 	# check expected debug output was sent to log.out
 	output=$(cat log.out)
-	[[ "${output}" == *"level=debug"* ]]
+	assert_output --partial "level=debug"
 	check_debug "$output"
 }
 
@@ -42,12 +42,12 @@ function check_debug() {
 	run -0 runc --log log.out --log-format "text" --debug run test_hello
 
 	# check output does not include debug info
-	[[ "${output}" != *"level=debug"* ]]
+	refute_output --partial "level=debug"
 
 	cat log.out >&2
 	# check expected debug output was sent to log.out
 	output=$(cat log.out)
-	[[ "${output}" == *"level=debug"* ]]
+	assert_output --partial "level=debug"
 	check_debug "$output"
 }
 
@@ -55,11 +55,11 @@ function check_debug() {
 	run -0 runc --log log.out --log-format "json" --debug run test_hello
 
 	# check output does not include debug info
-	[[ "${output}" != *"level=debug"* ]]
+	refute_output --partial "level=debug"
 
 	cat log.out >&2
 	# check expected debug output was sent to log.out
 	output=$(cat log.out)
-	[[ "${output}" == *'"level":"debug"'* ]]
+	assert_output --partial '"level":"debug"'
 	check_debug "$output"
 }

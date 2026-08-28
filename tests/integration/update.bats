@@ -484,7 +484,7 @@ EOF
 
 	# If cpu-idle is set, cpu-share (converted to CPUWeight) can't be set via systemd.
 	run -1 runc update --cpu-share 200 --cpu-idle 1 test_update
-	[[ "$output" == *"unable to apply both"* ]]
+	assert_output --partial "unable to apply both"
 	check_cgroup_value "cpu.idle" "1"
 
 	# Changing cpu-shares (converted to CPU weight) resets cpu.idle to 0.
@@ -502,7 +502,7 @@ EOF
   }
 }
 EOF
-	[[ "$output" == *"unable to apply both"* ]]
+	assert_output --partial "unable to apply both"
 	check_cgroup_value "cpu.idle" "1"
 
 	# Setting any cpu.weight should reset cpu.idle to 0.
@@ -824,7 +824,7 @@ EOF
   }
 }
 EOF
-	[[ "$output" == *"rejecting memory limit"* ]]
+	assert_output --partial "rejecting memory limit"
 	testcontainer test_update running
 
 	# Setting memory+swap to low value with checkBeforeUpdate=true should fail.
@@ -837,7 +837,7 @@ EOF
   }
 }
 EOF
-	[[ "$output" == *"rejecting memory+swap limit"* ]]
+	assert_output --partial "rejecting memory+swap limit"
 	testcontainer test_update running
 
 	# The container will be OOM killed, and runc might either succeed

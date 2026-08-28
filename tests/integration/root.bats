@@ -22,10 +22,10 @@ function teardown() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	run -0 runc state test_busybox
-	[[ "${output}" == *"running"* ]]
+	assert_output --partial "running"
 
 	ROOT=$ALT_ROOT run -0 runc state test_dotbox
-	[[ "${output}" == *"running"* ]]
+	assert_output --partial "running"
 
 	ROOT=$ALT_ROOT run ! runc state test_busybox
 

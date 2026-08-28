@@ -18,5 +18,5 @@ function teardown() {
 			| .process.capabilities.permitted += ["CAP_SETFCAP"]'
 
 	run -1 runc run --no-pivot test_no_pivot
-	[[ "$output" == *"mount: permission denied"* ]]
+	assert_output --partial "mount: permission denied"
 }

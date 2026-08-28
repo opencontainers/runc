@@ -59,11 +59,11 @@ function teardown() {
 
 	# test hostname
 	run -0 runc exec test_utc hostname
-	[[ "${lines[0]}" == *'myhostname'* ]]
+	assert_line --index 0 --partial 'myhostname'
 
 	# test domainname
 	run -0 runc exec test_utc cat /proc/sys/kernel/domainname
-	[[ "${lines[0]}" == *'mydomainname'* ]]
+	assert_line --index 0 --partial 'mydomainname'
 }
 
 # https://github.com/opencontainers/runc/issues/3952
@@ -109,11 +109,11 @@ function teardown() {
 
 @test "runc run [/proc/self/exe clone]" {
 	run -0 runc --debug run test_hello
-	[[ "$output" = *"Hello World"* ]]
-	[[ "$output" = *"runc exeseal: using /proc/self/exe clone"* ]]
+	assert_output --partial "Hello World"
+	assert_output --partial "runc exeseal: using /proc/self/exe clone"
 	# runc will use fsopen("overlay") if it can.
 	if can_fsopen overlay; then
-		[[ "$output" = *"runc exeseal: using overlayfs for sealed /proc/self/exe"* ]]
+		assert_output --partial "runc exeseal: using overlayfs for sealed /proc/self/exe"
 	fi
 }
 

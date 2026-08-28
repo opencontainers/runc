@@ -110,12 +110,12 @@ _EOF_
 
 	run -0 runc exec -p process.json test_busybox
 	# Env should have entries from process.json.
-	[[ "$output" == *'FOO=bar'* ]]
+	assert_output --partial 'FOO=bar'
 	# ...and HOME set from container's /etc/passwd.
-	[[ "$output" == *'HOME=/root'* ]]
+	assert_output --partial 'HOME=/root'
 	# Env should NOT contain entries from config.json.
-	[[ "$output" != *'TERM='* ]]
-	[[ "$output" != *'PATH='* ]]
+	refute_output --partial 'TERM='
+	refute_output --partial 'PATH='
 }
 
 @test "env HOME is set for runc exec -p with no process.env" {
@@ -130,5 +130,5 @@ _EOF_
 _EOF_
 	run -0 runc exec -p process.json test_busybox
 	# Env should have HOME set from container's /etc/passwd.
-	[[ "$output" == *'HOME=/root'* ]]
+	assert_output --partial 'HOME=/root'
 }

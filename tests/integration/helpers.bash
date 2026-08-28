@@ -729,7 +729,7 @@ function testcontainer() {
 		return
 	fi
 	[ "$status" -eq 0 ]
-	[[ "${output}" == *"$2"* ]]
+	assert_output --partial "$2"
 }
 
 # Check that all the listed processes are gone. Use after kill/stop etc.

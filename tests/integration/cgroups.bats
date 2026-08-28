@@ -21,7 +21,7 @@ function setup() {
 	set_cgroups_path
 
 	run -1 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
-	[[ "$output" == *"unable to apply cgroup configuration"*"permission denied"* ]]
+	assert_output --regexp 'unable to apply cgroup configuration.*permission denied'
 }
 
 @test "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error" {
@@ -31,7 +31,7 @@ function setup() {
 
 	run -1 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
 	[[ "$output" == *"rootless needs no limits + no cgrouppath when no permission is granted for cgroups"* ]] ||
-		[[ "$output" == *"cannot set pids limit: container could not join or create cgroup"* ]]
+		assert_output --partial "cannot set pids limit: container could not join or create cgroup"
 }
 
 @test "runc create (limits + cgrouppath + permission on the cgroup dir) succeeds" {
@@ -64,7 +64,7 @@ function setup() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
 
 	run -0 runc exec test_cgroups_permissions echo "cgroups_exec"
-	[[ ${lines[0]} == *"cgroups_exec"* ]]
+	assert_line --index 0 --partial "cgroups_exec"
 }
 
 @test "runc exec (cgroup v2 + init process in non-root cgroup) succeeds" {
@@ -76,7 +76,7 @@ function setup() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_group
 
 	run -0 runc exec test_cgroups_group cat /sys/fs/cgroup/cgroup.controllers
-	[[ ${lines[0]} == *"memory"* ]]
+	assert_line --index 0 --partial "memory"
 
 	run -0 runc exec test_cgroups_group cat /proc/self/cgroup
 	assert_line --index 0 "0::/"
@@ -117,7 +117,7 @@ EOF
 	update_config '.linux.resources.unified |= {"memory.min": "131072"}'
 
 	run ! runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
-	[[ "$output" == *'invalid configuration'* ]]
+	assert_output --partial 'invalid configuration'
 }
 
 @test "runc run (blkio weight)" {
@@ -467,7 +467,7 @@ convert_hugetlb_size() {
 
 	# Exec should not timeout or succeed.
 	run -255 runc exec ct1 echo ok
-	[[ "$output" == *"cannot exec in a paused container"* ]]
+	assert_output --partial "cannot exec in a paused container"
 }
 
 @test "runc exec --ignore-paused" {
@@ -499,11 +499,11 @@ convert_hugetlb_size() {
 
 	# Run a second container sharing the cgroup with the first one.
 	run ! runc --debug run -d --console-socket "$CONSOLE_SOCKET" ct2
-	[[ "$output" == *"container's cgroup is not empty"* ]]
+	assert_output --partial "container's cgroup is not empty"
 
 	# Same but using runc create.
 	run ! runc create --console-socket "$CONSOLE_SOCKET" ct3
-	[[ "$output" == *"container's cgroup is not empty"* ]]
+	assert_output --partial "container's cgroup is not empty"
 }
 
 @test "runc run/create should refuse pre-existing frozen cgroup" {
@@ -529,12 +529,12 @@ convert_hugetlb_size() {
 	# Start a container.
 	run -1 runc run -d --console-socket "$CONSOLE_SOCKET" ct1
 	# A warning should be printed.
-	[[ "$output" == *"container's cgroup unexpectedly frozen"* ]]
+	assert_output --partial "container's cgroup unexpectedly frozen"
 
 	# Same check for runc create.
 	run -1 runc create --console-socket "$CONSOLE_SOCKET" ct2
 	# A warning should be printed.
-	[[ "$output" == *"container's cgroup unexpectedly frozen"* ]]
+	assert_output --partial "container's cgroup unexpectedly frozen"
 
 	# Cleanup.
 	rmdir "$FREEZER_DIR"

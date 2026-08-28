@@ -24,10 +24,10 @@ function teardown() {
 	[ -z "$output" ]
 
 	run -1 runc exec test_busybox rm -f /testfile
-	[[ "${output}" == *"Read-only file system"* ]]
+	assert_output --partial "Read-only file system"
 
 	run -1 runc exec test_busybox umount /testfile
-	[[ "${output}" == *"Operation not permitted"* ]]
+	assert_output --partial "Operation not permitted"
 }
 
 @test "mask paths [directory]" {
@@ -37,13 +37,13 @@ function teardown() {
 	[ -z "$output" ]
 
 	run -1 runc exec test_busybox touch /testdir/foo
-	[[ "${output}" == *"Read-only file system"* ]]
+	assert_output --partial "Read-only file system"
 
 	run -1 runc exec test_busybox rm -rf /testdir
-	[[ "${output}" == *"Read-only file system"* ]]
+	assert_output --partial "Read-only file system"
 
 	run -1 runc exec test_busybox umount /testdir
-	[[ "${output}" == *"Operation not permitted"* ]]
+	assert_output --partial "Operation not permitted"
 }
 
 @test "mask paths [duplicate paths]" {
@@ -60,7 +60,7 @@ function teardown() {
 @test "mask paths [prohibit symlink /proc]" {
 	ln -s /symlink rootfs/proc
 	run -1 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[[ "${output}" == *"must be mounted on ordinary directory"* ]]
+	assert_output --partial "must be mounted on ordinary directory"
 }
 
 @test "mask paths [prohibit symlink /sys]" {
@@ -86,7 +86,7 @@ function teardown() {
 	'
 
 	run -1 runc exec test_busybox touch /testdir2/foo
-	[[ "${output}" == *"Read-only file system"* ]]
+	assert_output --partial "Read-only file system"
 }
 
 @test "mask paths [directory with read-only rootfs]" {

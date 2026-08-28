@@ -22,7 +22,7 @@ function teardown() {
 
 	run -0 runc exec test_busybox echo Hello from exec
 	echo text echoed = "'""${output}""'"
-	[[ "${output}" == *"Hello from exec"* ]]
+	assert_output --partial "Hello from exec"
 }
 
 @test "runc exec [exit codes]" {
@@ -44,11 +44,11 @@ function teardown() {
 
 	run -0 runc exec --pid-file pid.txt test_busybox echo Hello from exec
 	echo text echoed = "'""${output}""'"
-	[[ "${output}" == *"Hello from exec"* ]]
+	assert_output --partial "Hello from exec"
 
 	[ -e pid.txt ]
 	output=$(cat pid.txt)
-	[[ "$output" =~ [0-9]+ ]]
+	assert_output --regexp '[0-9]+'
 	refute_output "$(runc state test_busybox | jq '.pid')"
 }
 
@@ -61,11 +61,11 @@ function teardown() {
 
 	run -0 runc exec --pid-file pid.txt test_busybox echo Hello from exec
 	echo text echoed = "'""${output}""'"
-	[[ "${output}" == *"Hello from exec"* ]]
+	assert_output --partial "Hello from exec"
 
 	[ -e pid.txt ]
 	output=$(cat pid.txt)
-	[[ "$output" =~ [0-9]+ ]]
+	assert_output --regexp '[0-9]+'
 	refute_output "$(runc state test_busybox | jq '.pid')"
 }
 
@@ -73,28 +73,28 @@ function teardown() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	run -0 runc exec test_busybox ls -la
-	[[ ${lines[0]} == *"total"* ]]
-	[[ ${lines[1]} == *"."* ]]
-	[[ ${lines[2]} == *".."* ]]
+	assert_line --index 0 --partial "total"
+	assert_line --index 1 --partial "."
+	assert_line --index 2 --partial ".."
 }
 
 @test "runc exec ls -la with --cwd" {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	run -0 runc exec --cwd /bin test_busybox pwd
-	[[ ${output} == "/bin"* ]]
+	assert_output --regexp '^/bin'
 }
 
 @test "runc exec --env" {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	run -0 runc exec --env RUNC_EXEC_TEST=true test_busybox env
-	[[ "$output" == *"RUNC_EXEC_TEST=true"* ]]
+	assert_output --partial "RUNC_EXEC_TEST=true"
 	# Env should inherit what's in config.json.
-	[[ "$output" == *'PATH='* ]]
-	[[ "$output" == *'TERM='* ]]
+	assert_output --partial 'PATH='
+	assert_output --partial 'TERM='
 	# Env should have HOME set from container's /etc/passwd.
-	[[ "$output" == *'HOME='* ]]
+	assert_output --partial 'HOME='
 }
 
 @test "runc exec --user" {
@@ -104,7 +104,7 @@ function teardown() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	run -0 runc exec --user 1000:1000 test_busybox id
-	[[ "${output}" == "uid=1000 gid=1000"* ]]
+	assert_output --regexp '^uid=1000 gid=1000'
 
 	# Check the default value of HOME ("/") is set even in case when
 	#  - HOME is not set in process.Env, and
@@ -164,7 +164,7 @@ function check_exec_debug() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test
 
 	run -0 runc --debug exec test true
-	[[ "${output}" == *"level=debug"* ]]
+	assert_output --partial "level=debug"
 	check_exec_debug "$output"
 }
 
@@ -173,12 +173,12 @@ function check_exec_debug() {
 
 	run -0 runc --debug --log log.out exec test true
 	# check output does not include debug info
-	[[ "${output}" != *"level=debug"* ]]
+	refute_output --partial "level=debug"
 
 	cat log.out >&2
 	# check expected debug output was sent to log.out
 	output=$(cat log.out)
-	[[ "${output}" == *"level=debug"* ]]
+	assert_output --partial "level=debug"
 	check_exec_debug "$output"
 }
 
@@ -193,7 +193,7 @@ function check_exec_debug() {
 
 	# Check we can't join parent cgroup.
 	run ! runc exec --cgroup ".." test_busybox cat /proc/self/cgroup
-	[[ "$output" == *"bad sub cgroup path"* ]]
+	assert_output --partial "bad sub cgroup path"
 
 	# Check we can't join a sibling cgroup sharing our name prefix.
 	local cpu_path sibling
@@ -203,23 +203,23 @@ function check_exec_debug() {
 	SIBLING_CGROUP="$(dirname "$cpu_path")/$sibling"
 	mkdir "$SIBLING_CGROUP"
 	run ! runc exec --cgroup "../$sibling" test_busybox cat /proc/self/cgroup
-	[[ "$output" == *"bad sub cgroup path"* ]]
+	assert_output --partial "bad sub cgroup path"
 
 	# Same as above, for a particular controller.
 	run ! runc exec --cgroup "cpu:../$sibling" test_busybox cat /proc/self/cgroup
-	[[ "$output" == *"bad sub cgroup path"* ]]
+	assert_output --partial "bad sub cgroup path"
 
 	# Check we can't join non-existing subcgroup.
 	run ! runc exec --cgroup nonexistent test_busybox cat /proc/self/cgroup
-	[[ "$output" == *" adding pid "*"o such file or directory"* ]]
+	assert_output --regexp ' adding pid .*o such file or directory'
 
 	# Check we can't join non-existing subcgroup (for a particular controller).
 	run ! runc exec --cgroup cpu:nonexistent test_busybox cat /proc/self/cgroup
-	[[ "$output" == *" adding pid "*"o such file or directory"* ]]
+	assert_output --regexp ' adding pid .*o such file or directory'
 
 	# Check we can't specify non-existent controller.
 	run ! runc exec --cgroup whaaat:/ test_busybox true
-	[[ "$output" == *"unknown controller "* ]]
+	assert_output --partial "unknown controller "
 
 	# Check we can join top-level cgroup (implicit).
 	run -0 runc exec test_busybox cat /proc/self/cgroup
@@ -235,8 +235,8 @@ function check_exec_debug() {
 
 	# Check that explicit --cgroup works.
 	run -0 runc exec --cgroup memory:submem --cgroup cpu,cpuacct:subcpu test_busybox cat /proc/self/cgroup
-	[[ "$output" == *":memory:$REL_CGROUPS_PATH/submem"* ]]
-	[[ "$output" == *":cpu"*":$REL_CGROUPS_PATH/subcpu"* ]]
+	assert_output --partial ":memory:$REL_CGROUPS_PATH/submem"
+	assert_output --regexp ":cpu.*:$REL_CGROUPS_PATH/subcpu"
 }
 
 @test "runc exec --cgroup subcgroup [v2]" {
@@ -250,7 +250,7 @@ function check_exec_debug() {
 
 	# Check we can't join parent cgroup.
 	run ! runc exec --cgroup ".." test_busybox cat /proc/self/cgroup
-	[[ "$output" == *"bad sub cgroup path"* ]]
+	assert_output --partial "bad sub cgroup path"
 
 	# Check we can't join a sibling cgroup sharing our name prefix.
 	local sibling
@@ -259,11 +259,11 @@ function check_exec_debug() {
 	SIBLING_CGROUP="$(dirname "$CGROUP_V2_PATH")/$sibling"
 	mkdir "$SIBLING_CGROUP"
 	run ! runc exec --cgroup "../$sibling" test_busybox cat /proc/self/cgroup
-	[[ "$output" == *"bad sub cgroup path"* ]]
+	assert_output --partial "bad sub cgroup path"
 
 	# Check we can't join non-existing subcgroup.
 	run ! runc exec --cgroup nonexistent test_busybox cat /proc/self/cgroup
-	[[ "$output" == *" cgroup"*"o such file or directory"* ]]
+	assert_output --regexp ' cgroup.*o such file or directory'
 
 	# Check we can join top-level cgroup (implicit).
 	run -0 runc exec test_busybox grep '^0::/$' /proc/self/cgroup
@@ -292,7 +292,7 @@ function check_exec_debug() {
 
 	# Check that --cgroup / disables the init cgroup fallback.
 	run ! runc exec --cgroup / test_busybox true
-	[[ "$output" == *" adding pid "*" to cgroups"*"evice or resource busy"* ]]
+	assert_output --regexp ' adding pid .* to cgroups.*evice or resource busy'
 
 	# Check that explicit --cgroup foobar works.
 	run -0 runc exec --cgroup foobar test_busybox grep '^0::/foobar$' /proc/self/cgroup
@@ -352,7 +352,7 @@ EOF
 	# Although we never close the sync socket when doing exec,
 	# but we need to keep this test to ensure this behavior is always right.
 	[ ${#lines[@]} -eq 1 ]
-	[[ ${lines[0]} = *"exec /run.sh: no such file or directory"* ]]
+	assert_line --index 0 --partial "exec /run.sh: no such file or directory"
 }
 
 # https://github.com/opencontainers/runc/issues/4688

@@ -45,7 +45,7 @@ function teardown() {
 			}'
 
 	run ! runc run test_busybox
-	[[ "$output" == *"mkdir:"*"/dev/shm/foo"*"Operation not permitted"* ]]
+	assert_output --regexp 'mkdir:.*/dev/shm/foo.*Operation not permitted'
 }
 
 @test "runc run [seccomp] (SCMP_ACT_ERRNO explicit errno)" {
@@ -57,7 +57,7 @@ function teardown() {
 			}'
 
 	run ! runc run test_busybox
-	[[ "$output" == *"Network is down"* ]]
+	assert_output --partial "Network is down"
 }
 
 # Prints the numeric value of provided seccomp flags combination.
@@ -138,12 +138,12 @@ function flags_value() {
 		esac
 
 		run ! runc --debug run test_busybox
-		[[ "$output" == *"mkdir:"*"/dev/shm/foo"*"Operation not permitted"* ]]
+		assert_output --regexp 'mkdir:.*/dev/shm/foo.*Operation not permitted'
 
 		# Check the numeric flags value, as printed in the debug log, is as expected.
 		exp="\"seccomp filter flags: ${TEST_CASES[$key]}\""
 		echo "flags $key, expecting $exp"
-		[[ "$output" == *"$exp"* ]]
+		assert_output --partial "$exp"
 	done
 }
 
@@ -175,8 +175,8 @@ function flags_value() {
 			}'
 
 	run ! runc run test_busybox
-	[[ "$output" == *"error running startContainer hook"* ]]
-	[[ "$output" == *"bad system call"* ]]
+	assert_output --partial "error running startContainer hook"
+	assert_output --partial "bad system call"
 }
 
 @test "runc run [seccomp] (verify syscall compatibility after seccomp enforcement)" {

@@ -122,7 +122,7 @@ function test_mount_order() {
 	# expected order.
 	update_config '.process.args = ["cat", "/final/x/y/z/z/x/y/z/x/file"]'
 	run -0 runc run test_busybox
-	[[ "$output" == *"a/x"* ]] # the final "file" was from a/x.
+	assert_output --partial "a/x" # the final "file" was from a/x.
 }
 
 # This needs to be placed at the top of the bats file to work around
@@ -153,7 +153,7 @@ test_mount_target() {
 	# shellcheck disable=SC2016
 	update_config '.process.args = ["awk", "-F", "PATH='"$real_dst"'", "$2 == PATH", "/proc/self/mounts"]'
 	run -0 runc run test_busybox
-	[[ "$output" == *"$real_dst"* ]]
+	assert_output --partial "$real_dst"
 
 	# Switch back the old config so this function can be called multiple times.
 	mv "$old_config" "./config.json"
@@ -173,7 +173,7 @@ test_mount_target() {
 
 	umask 022
 	run -0 runc run test_busybox
-	[[ "${lines[0]}" == *'drwxrwxrwx'* ]]
+	assert_line --index 0 --partial 'drwxrwxrwx'
 }
 
 @test "runc run [bind mount]" {
@@ -185,7 +185,7 @@ test_mount_target() {
 			| .process.args |= ["ls", "/tmp/bind/config.json"]'
 
 	run -0 runc run test_busybox
-	[[ "${lines[0]}" == *'/tmp/bind/config.json'* ]]
+	assert_line --index 0 --partial '/tmp/bind/config.json'
 }
 
 # https://github.com/opencontainers/runc/issues/2246
@@ -199,7 +199,7 @@ test_mount_target() {
 			| .process.args |= ["grep", "^tmpfs /mnt", "/proc/mounts"]'
 
 	run -0 runc run test_busybox
-	[[ "${lines[0]}" == *'ro,'* ]]
+	assert_line --index 0 --partial 'ro,'
 }
 
 # https://github.com/opencontainers/runc/issues/3248
@@ -208,7 +208,7 @@ test_mount_target() {
 			| .process.args |= ["grep", "^tmpfs /dev", "/proc/mounts"]'
 
 	run -0 runc run test_busybox
-	[[ "${lines[0]}" == *'ro,'* ]]
+	assert_line --index 0 --partial 'ro,'
 }
 
 # https://github.com/opencontainers/runc/issues/2683
@@ -234,7 +234,7 @@ test_mount_target() {
 	ln -sf /bad-proc rootfs/proc
 	# This should fail.
 	run ! runc run test_busybox
-	[[ "$output" == *"must be mounted on ordinary directory"* ]]
+	assert_output --partial "must be mounted on ordinary directory"
 }
 
 # https://github.com/opencontainers/runc/issues/4401

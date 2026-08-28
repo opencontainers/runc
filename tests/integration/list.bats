@@ -23,10 +23,10 @@ function teardown() {
 	ROOT=$ALT_ROOT run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_box3
 
 	ROOT=$ALT_ROOT run -0 runc list
-	[[ ${lines[0]} =~ ID\ +PID\ +STATUS\ +BUNDLE\ +CREATED+ ]]
-	[[ "${lines[1]}" == *"test_box1"*[0-9]*"running"*$bundle*[0-9]* ]]
-	[[ "${lines[2]}" == *"test_box2"*[0-9]*"running"*$bundle*[0-9]* ]]
-	[[ "${lines[3]}" == *"test_box3"*[0-9]*"running"*$bundle*[0-9]* ]]
+	assert_line --index 0 --regexp 'ID +PID +STATUS +BUNDLE +CREATED+'
+	assert_line --index 1 --regexp "test_box1.*[0-9].*running.*$bundle.*[0-9]"
+	assert_line --index 2 --regexp "test_box2.*[0-9].*running.*$bundle.*[0-9]"
+	assert_line --index 3 --regexp "test_box3.*[0-9].*running.*$bundle.*[0-9]"
 
 	ROOT=$ALT_ROOT run -0 runc list -q
 	assert_line --index 0 "test_box1"
@@ -34,15 +34,15 @@ function teardown() {
 	assert_line --index 2 "test_box3"
 
 	ROOT=$ALT_ROOT run -0 runc list --format table
-	[[ ${lines[0]} =~ ID\ +PID\ +STATUS\ +BUNDLE\ +CREATED+ ]]
-	[[ "${lines[1]}" == *"test_box1"*[0-9]*"running"*$bundle*[0-9]* ]]
-	[[ "${lines[2]}" == *"test_box2"*[0-9]*"running"*$bundle*[0-9]* ]]
-	[[ "${lines[3]}" == *"test_box3"*[0-9]*"running"*$bundle*[0-9]* ]]
+	assert_line --index 0 --regexp 'ID +PID +STATUS +BUNDLE +CREATED+'
+	assert_line --index 1 --regexp "test_box1.*[0-9].*running.*$bundle.*[0-9]"
+	assert_line --index 2 --regexp "test_box2.*[0-9].*running.*$bundle.*[0-9]"
+	assert_line --index 3 --regexp "test_box3.*[0-9].*running.*$bundle.*[0-9]"
 
 	ROOT=$ALT_ROOT run -0 runc list --format json
-	[[ "${lines[0]}" == [\[][\{]"\"ociVersion\""[:]"\""*[0-9][\.]*[0-9][\.]*[0-9]*"\""[,]"\"id\""[:]"\"test_box1\""[,]"\"pid\""[:]*[0-9][,]"\"status\""[:]*"\"running\""[,]"\"bundle\""[:]*$bundle*[,]"\"rootfs\""[:]"\""*"\""[,]"\"created\""[:]*[0-9]*[\}]* ]]
-	[[ "${lines[0]}" == *[,][\{]"\"ociVersion\""[:]"\""*[0-9][\.]*[0-9][\.]*[0-9]*"\""[,]"\"id\""[:]"\"test_box2\""[,]"\"pid\""[:]*[0-9][,]"\"status\""[:]*"\"running\""[,]"\"bundle\""[:]*$bundle*[,]"\"rootfs\""[:]"\""*"\""[,]"\"created\""[:]*[0-9]*[\}]* ]]
-	[[ "${lines[0]}" == *[,][\{]"\"ociVersion\""[:]"\""*[0-9][\.]*[0-9][\.]*[0-9]*"\""[,]"\"id\""[:]"\"test_box3\""[,]"\"pid\""[:]*[0-9][,]"\"status\""[:]*"\"running\""[,]"\"bundle\""[:]*$bundle*[,]"\"rootfs\""[:]"\""*"\""[,]"\"created\""[:]*[0-9]*[\}][\]] ]]
+	assert_line --index 0 --regexp '^\[\{"ociVersion":"[0-9]+\.[0-9]+\.[0-9]+","id":"test_box1","pid":[0-9]+,"status":"running","bundle":"[^"]*'"$bundle"'[^"]*","rootfs":"[^"]*","created":[^}]*\}'
+	assert_line --index 0 --regexp ',\{"ociVersion":"[0-9]+\.[0-9]+\.[0-9]+","id":"test_box2","pid":[0-9]+,"status":"running","bundle":"[^"]*'"$bundle"'[^"]*","rootfs":"[^"]*","created":[^}]*\}'
+	assert_line --index 0 --regexp ',\{"ociVersion":"[0-9]+\.[0-9]+\.[0-9]+","id":"test_box3","pid":[0-9]+,"status":"running","bundle":"[^"]*'"$bundle"'[^"]*","rootfs":"[^"]*","created":[^}]*\}\]$'
 }
 
 @test "list with non-existent root fails" {
