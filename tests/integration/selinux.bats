@@ -111,8 +111,7 @@ function enable_userns() {
 
 	update_config '	  .process.selinuxLabel |= "system_u:system_r:container_t:s0:c4,c5"
 			| .process.args = ["/run.sh"]'
-	run runc run tst
-	[ "$status" -ne 0 ]
+	run ! runc run tst
 	[ ${#lines[@]} -eq 1 ]
 	[[ "${lines[0]}" = "exec /run.sh: no such file or directory" ]]
 }

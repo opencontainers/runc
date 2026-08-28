@@ -80,39 +80,39 @@ function teardown() {
 
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_rbind_ratime
 
-	run runc exec test_rbind_ratime findmnt --noheadings -o options /mnt1
+	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt1
 	[[ "${output}" == "rw,relatime,"* ]]
 
-	run runc exec test_rbind_ratime findmnt --noheadings -o options /mnt1/subvol
+	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt1/subvol
 	[[ "${output}" == "rw,relatime,"* ]]
 
-	run runc exec test_rbind_ratime findmnt --noheadings -o options /mnt2
+	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt2
 	[[ "${output}" == "rw,noatime,"* ]]
 
-	run runc exec test_rbind_ratime findmnt --noheadings -o options /mnt2/subvol
+	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt2/subvol
 	[[ "${output}" == "rw,noatime,"* ]]
 
-	run runc exec test_rbind_ratime findmnt --noheadings -o options /mnt3
+	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt3
 	[[ "${output}" == "rw,"* ]]
 
-	run runc exec test_rbind_ratime findmnt --noheadings -o options /mnt3/subvol
+	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt3/subvol
 	[[ "${output}" == "rw,"* ]]
 
-	run runc exec test_rbind_ratime findmnt --noheadings -o options /mnt4
+	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt4
 	[[ "${output}" == "rw,relatime,"* ]]
 
-	run runc exec test_rbind_ratime findmnt --noheadings -o options /mnt4/subvol
+	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt4/subvol
 	[[ "${output}" == "rw,relatime,"* ]]
 
-	run runc exec test_rbind_ratime findmnt --noheadings -o options /mnt5
+	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt5
 	[[ "${output}" == "rw,relatime,"* ]]
 
-	run runc exec test_rbind_ratime findmnt --noheadings -o options /mnt5/subvol
+	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt5/subvol
 	[[ "${output}" == "rw,relatime,"* ]]
 
-	run runc exec test_rbind_ratime findmnt --noheadings -o options /mnt6
+	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt6
 	[[ "${output}" == "rw,relatime,"* ]]
 
-	run runc exec test_rbind_ratime findmnt --noheadings -o options /mnt6/subvol
+	run -0 runc exec test_rbind_ratime findmnt --noheadings -o options /mnt6/subvol
 	[[ "${output}" == "rw,relatime,"* ]]
 }

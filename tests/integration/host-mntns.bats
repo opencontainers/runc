@@ -24,7 +24,7 @@ function teardown() {
 			| .linux.maskedPaths = []
 			| .linux.readonlyPaths = []'
 	run -0 runc run test_host_mntns
-	run runc delete -f test_host_mntns
+	run -0 runc delete -f test_host_mntns
 
 	# There should be one such file.
 	run -0 ls createRuntimeHook.*

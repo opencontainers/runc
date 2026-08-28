@@ -55,7 +55,7 @@ function cpus_to_mask() {
 }'
 		mask=$(cpus_to_mask "$cpus")
 		echo "CPUS: $cpus, mask: $mask"
-		run runc --debug exec --process <(echo "$proc") ct1
+		run -0 runc --debug exec --process <(echo "$proc") ct1
 		[[ "$output" == *"nsexec"*": affinity: $mask"* ]]
 	done
 }
@@ -80,7 +80,7 @@ function cpus_to_mask() {
 		mask=$(cpus_to_mask "$cpus")
 		exp=${cpus//,/-} # "," --> "-".
 		echo "CPUS: $cpus, mask: $mask, final: $exp"
-		run runc --debug exec --process <(echo "$proc") ct1
+		run -0 runc --debug exec --process <(echo "$proc") ct1
 		[[ "$output" == *"nsexec"*": affinity: $mask"* ]]
 		[[ "$output" == *"Cpus_allowed_list:	$exp"* ]] # Mind the literal tab.
 	done
