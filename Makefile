@@ -216,7 +216,7 @@ cfmt:
 .PHONY: shellcheck
 shellcheck:
 	shellcheck tests/integration/*.bats tests/integration/*.sh \
-		tests/integration/*.bash tests/*.sh \
+		tests/integration/*.bash tests/integration/bin/* tests/*.sh \
 		man/*.sh script/*
 	# TODO: add shellcheck for more sh files (contrib/completions/bash/runc).
 
