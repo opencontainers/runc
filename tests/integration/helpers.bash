@@ -55,7 +55,7 @@ function runc_spec() {
 	local rootless=""
 	[ $EUID -ne 0 ] && rootless="--rootless"
 
-	run runc spec $rootless
+	run -0 runc spec $rootless
 
 	# Always add additional mappings if we have idmaps.
 	if [[ $EUID -ne 0 && "$ROOTLESS_FEATURES" == *"idmap"* ]]; then
