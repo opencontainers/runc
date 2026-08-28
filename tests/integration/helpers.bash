@@ -50,38 +50,12 @@ ARCH=$(uname -m)
 # Seccomp agent socket.
 SECCCOMP_AGENT_SOCKET="$BATS_TMPDIR/seccomp-agent.sock"
 
-# Wrapper around "run" that logs output to make tests easier to debug.
-function sane_run() {
-	local cmd="$1"
-	local cmdname="${CMDNAME:-$(basename "$cmd")}"
-	shift
-
-	run "$cmd" "$@"
-
-	# Some debug information to make life easier. bats will only print it if the
-	# test failed, in which case the output is useful.
-	# shellcheck disable=SC2154
-	echo "$cmdname $* (status=$status)" >&2
-	# shellcheck disable=SC2154
-	echo "$output" >&2
-}
-
-# Wrapper for runc.
-function runc() {
-	CMDNAME="$(basename "$RUNC")" sane_run __runc "$@"
-}
-
-# Raw wrapper for runc (i.e. one that does not use bats' run helper).
-function __runc() {
-	"${INTEGRATION_ROOT}/bin/runc" "$@"
-}
-
 # Wrapper for runc spec.
 function runc_spec() {
 	local rootless=""
 	[ $EUID -ne 0 ] && rootless="--rootless"
 
-	runc spec $rootless
+	run runc spec $rootless
 
 	# Always add additional mappings if we have idmaps.
 	if [[ $EUID -ne 0 && "$ROOTLESS_FEATURES" == *"idmap"* ]]; then
@@ -720,12 +694,14 @@ function retry() {
 
 	for ((i = 0; i < attempts; i++)); do
 		run "$@"
+		# shellcheck disable=SC2154 # set by run
 		if [[ "$status" -eq 0 ]]; then
 			return 0
 		fi
 		sleep "$delay"
 	done
 
+	# shellcheck disable=SC2154 # set by run
 	echo "Command \"$*\" failed $attempts times. Output: $output"
 	false
 }
@@ -733,9 +709,9 @@ function retry() {
 # retry until the given container has state
 function wait_for_container() {
 	if [ $# -eq 3 ]; then
-		retry "$1" "$2" __runc state "$3"
+		retry "$1" "$2" runc state "$3"
 	elif [ $# -eq 4 ]; then
-		retry "$1" "$2" eval "__runc state $3 | grep -qw $4"
+		retry "$1" "$2" eval "runc state $3 | grep -qw $4"
 	else
 		echo "Usage: wait_for_container ATTEMPTS DELAY ID [STATUS]" 1>&2
 		return 1
@@ -744,7 +720,7 @@ function wait_for_container() {
 
 function testcontainer() {
 	# test state of container
-	runc state "$1"
+	run runc state "$1"
 	if [ "$2" = "checkpointed" ]; then
 		[ "$status" -eq 1 ]
 		return
@@ -880,8 +856,8 @@ function teardown_bundle() {
 
 	teardown_recvtty
 	local ct
-	for ct in $(__runc list -q); do
-		__runc delete -f "$ct"
+	for ct in $(runc list -q); do
+		runc delete -f "$ct"
 	done
 	rm -rf "$ROOT"
 	remove_parent
