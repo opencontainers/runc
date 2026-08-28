@@ -131,7 +131,7 @@ function runc_restore_with_pipes() {
 	testcontainer "$name" running
 
 	run -0 runc exec --cwd /bin "$name" echo ok
-	[ "$output" = "ok" ]
+	assert_output "ok"
 }
 
 function simple_cr() {

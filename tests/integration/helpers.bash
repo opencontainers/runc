@@ -50,6 +50,9 @@ ARCH=$(uname -m)
 # Seccomp agent socket.
 SECCCOMP_AGENT_SOCKET="$BATS_TMPDIR/seccomp-agent.sock"
 
+# Assertion helpers (assert_output, refute_output, assert_line).
+load lib/assert
+
 # Wrapper for runc spec.
 function runc_spec() {
 	local rootless=""

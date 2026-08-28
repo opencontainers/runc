@@ -24,7 +24,7 @@ function teardown() {
 	update_config ' .process.args += ["-c", "echo $HOME"]'
 
 	run -0 runc run test_busybox
-	[[ "${lines[0]}" == '/override' ]]
+	assert_line --index 0 '/override'
 }
 
 @test "empty HOME env var is overridden" {
@@ -32,7 +32,7 @@ function teardown() {
 	update_config ' .process.args += ["-c", "echo $HOME"]'
 
 	run -0 runc run test_busybox
-	[[ "${lines[0]}" == '/root' ]]
+	assert_line --index 0 '/root'
 }
 
 @test "empty HOME env var is overridden with multiple overrides" {
@@ -40,7 +40,7 @@ function teardown() {
 	update_config ' .process.args += ["-c", "echo $HOME"]'
 
 	run -0 runc run test_busybox
-	[[ "${lines[0]}" == '/root' ]]
+	assert_line --index 0 '/root'
 }
 
 @test "env var HOME is set only once" {
@@ -70,7 +70,7 @@ function teardown() {
 	update_config ' .process.args += ["-c", "echo ONE=\"$ONE\""]'
 
 	run -0 runc run test_busybox
-	[[ "${lines[0]}" == "ONE=three" ]]
+	assert_line --index 0 "ONE=three"
 }
 
 @test "env var with new-line is honored" {
