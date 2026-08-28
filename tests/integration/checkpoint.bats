@@ -87,7 +87,7 @@ function check_pipes() {
 	stderr=$(cat <&${err_r})
 	exec {err_r}>&-
 
-	[[ "${output}" == *"ponG Ping"* ]]
+	assert_output --partial "ponG Ping"
 	if [ -n "$stderr" ]; then
 		fail "runc stderr: $stderr"
 	fi
@@ -161,9 +161,9 @@ function simple_cr() {
 
 	testcontainer test_busybox_netdevice running
 	run -0 runc exec test_busybox_netdevice ip address show dev dummy0
-	[[ "$output" == *" $global_ip "* ]]
-	[[ "$output" == *"ether $mac_address "* ]]
-	[[ "$output" == *"mtu $mtu_value "* ]]
+	assert_output --partial " $global_ip "
+	assert_output --partial "ether $mac_address "
+	assert_output --partial "mtu $mtu_value "
 
 	for _ in $(seq 2); do
 		run -0 runc checkpoint --work-path ./work-dir --manage-cgroups-mode ignore test_busybox_netdevice
@@ -174,9 +174,9 @@ function simple_cr() {
 
 		testcontainer test_busybox_netdevice running
 		run -0 runc exec test_busybox_netdevice ip address show dev dummy0
-		[[ "$output" == *" $global_ip "* ]]
-		[[ "$output" == *"ether $mac_address "* ]]
-		[[ "$output" == *"mtu $mtu_value "* ]]
+		assert_output --partial " $global_ip "
+		assert_output --partial "ether $mac_address "
+		assert_output --partial "mtu $mtu_value "
 	done
 }
 
@@ -216,11 +216,11 @@ function simple_cr() {
 
 	# runc should fail with absolute parent image path.
 	run ! runc checkpoint --parent-path "$(pwd)"/parent-dir --work-path ./work-dir --image-path ./image-dir --manage-cgroups-mode ignore test_busybox
-	[[ "${output}" == *"--parent-path"* ]]
+	assert_output --partial "--parent-path"
 
 	# runc should fail with invalid parent image path.
 	run ! runc checkpoint --parent-path ./parent-dir --work-path ./work-dir --image-path ./image-dir --manage-cgroups-mode ignore test_busybox
-	[[ "${output}" == *"--parent-path"* ]]
+	assert_output --partial "--parent-path"
 }
 
 @test "checkpoint --pre-dump and restore" {

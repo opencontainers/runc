@@ -56,7 +56,7 @@ function cpus_to_mask() {
 		mask=$(cpus_to_mask "$cpus")
 		echo "CPUS: $cpus, mask: $mask"
 		run -0 runc --debug exec --process <(echo "$proc") ct1
-		[[ "$output" == *"nsexec"*": affinity: $mask"* ]]
+		assert_output --regexp "nsexec.*: affinity: $mask"
 	done
 }
 
@@ -81,8 +81,8 @@ function cpus_to_mask() {
 		exp=${cpus//,/-} # "," --> "-".
 		echo "CPUS: $cpus, mask: $mask, final: $exp"
 		run -0 runc --debug exec --process <(echo "$proc") ct1
-		[[ "$output" == *"nsexec"*": affinity: $mask"* ]]
-		[[ "$output" == *"Cpus_allowed_list:	$exp"* ]] # Mind the literal tab.
+		assert_output --regexp "nsexec.*: affinity: $mask"
+		assert_output --partial "Cpus_allowed_list:	$exp" # Mind the literal tab.
 	done
 }
 
@@ -97,8 +97,8 @@ function cpus_to_mask() {
 
 	run -0 runc --debug exec ct1 grep "Cpus_allowed_list:" /proc/self/status
 	mask=$(cpus_to_mask "$initial")
-	[[ "$output" == *"nsexec"*": affinity: $mask"* ]]
-	[[ "$output" == *"Cpus_allowed_list:	$final"* ]] # Mind the literal tab.
+	assert_output --regexp "nsexec.*: affinity: $mask"
+	assert_output --partial "Cpus_allowed_list:	$final" # Mind the literal tab.
 }
 
 @test "runc run [CPU affinity should reset]" {

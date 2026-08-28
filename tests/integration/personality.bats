@@ -20,7 +20,7 @@ function teardown() {
 			}'
 
 	run -0 runc run test_busybox
-	[[ "$output" == *"i686"* ]]
+	assert_output --partial "i686"
 }
 
 @test "runc run personality with exec for i686" {
@@ -31,7 +31,7 @@ function teardown() {
 
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	run -0 runc exec test_busybox /bin/sh -c "uname -a"
-	[[ "$output" == *"i686"* ]]
+	assert_output --partial "i686"
 }
 
 @test "runc run personality for x86_64" {
@@ -43,7 +43,7 @@ function teardown() {
 			}'
 
 	run -0 runc run test_busybox
-	[[ "$output" == *"x86_64"* ]]
+	assert_output --partial "x86_64"
 }
 
 @test "runc run personality with exec for x86_64" {
@@ -54,7 +54,7 @@ function teardown() {
 
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	run -0 runc exec test_busybox /bin/sh -c "uname -a"
-	[[ "$output" == *"x86_64"* ]]
+	assert_output --partial "x86_64"
 }
 
 # check that personality can be set when the personality syscall is blocked by seccomp
@@ -70,5 +70,5 @@ function teardown() {
 
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	run -0 runc exec test_busybox /bin/sh -c "uname -a"
-	[[ "$output" == *"x86_64"* ]]
+	assert_output --partial "x86_64"
 }

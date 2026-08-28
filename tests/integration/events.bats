@@ -38,8 +38,8 @@ function test_events() {
 	[ -e events.log ]
 
 	output=$(head -1 events.log)
-	[[ "$output" == [\{]"\"type\""[:]"\"stats\""[,]"\"id\""[:]"\"test_busybox\""[,]* ]]
-	[[ "$output" == *"data"* ]]
+	assert_output --regexp '^\{"type":"stats","id":"test_busybox",'
+	assert_output --partial "data"
 }
 
 @test "events --stats" {
@@ -50,8 +50,8 @@ function test_events() {
 
 	# generate stats
 	run -0 runc events --stats test_busybox
-	[[ "${lines[0]}" == [\{]"\"type\""[:]"\"stats\""[,]"\"id\""[:]"\"test_busybox\""[,]* ]]
-	[[ "${lines[0]}" == *"data"* ]]
+	assert_line --index 0 --regexp '^\{"type":"stats","id":"test_busybox",'
+	assert_line --index 0 --partial "data"
 }
 
 @test "events --stats with psi data" {

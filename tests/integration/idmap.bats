@@ -123,7 +123,7 @@ function setup_idmap_basic_mount() {
 	}]'
 
 	run -0 runc run test_debian
-	[[ "$output" == *"=0=0="* ]]
+	assert_output --partial "=0=0="
 }
 
 @test "simple idmap mount [userns]" {
@@ -133,7 +133,7 @@ function setup_idmap_basic_mount() {
 	update_config '.process.args = ["sh", "-c", "stat -c =%u=%g= /tmp/mount-1/foo.txt"]'
 
 	run -0 runc run test_debian
-	[[ "$output" == *"=0=0="* ]]
+	assert_output --partial "=0=0="
 }
 
 @test "simple idmap mount [no userns]" {
@@ -142,7 +142,7 @@ function setup_idmap_basic_mount() {
 	update_config '.process.args = ["sh", "-c", "stat -c =%u=%g= /tmp/mount-1/foo.txt"]'
 
 	run -0 runc run test_debian
-	[[ "$output" == *"=100000=100000="* ]]
+	assert_output --partial "=100000=100000="
 }
 
 @test "write to an idmap mount [userns]" {
@@ -152,7 +152,7 @@ function setup_idmap_basic_mount() {
 	update_config '.process.args = ["sh", "-c", "touch /tmp/mount-1/bar && stat -c =%u=%g= /tmp/mount-1/bar"]'
 
 	run -0 runc run test_debian
-	[[ "$output" == *"=0=0="* ]]
+	assert_output --partial "=0=0="
 }
 
 @test "write to an idmap mount [no userns]" {
@@ -162,7 +162,7 @@ function setup_idmap_basic_mount() {
 
 	# The write must fail because the user is unmapped.
 	run ! runc run test_debian
-	[[ "$output" == *"Value too large for defined data type"* ]] # ERANGE
+	assert_output --partial "Value too large for defined data type" # ERANGE
 }
 
 @test "idmap mount with propagation flag [userns]" {
@@ -174,7 +174,7 @@ function setup_idmap_basic_mount() {
 	update_config '.mounts |= map((select(.source == "source-1/") | .options += ["shared"]) // .)'
 
 	run -0 runc run test_debian
-	[[ "$output" == *"shared"* ]]
+	assert_output --partial "shared"
 }
 
 @test "idmap mount with relative path [userns]" {
@@ -186,7 +186,7 @@ function setup_idmap_basic_mount() {
 	update_config '.mounts |= map((select(.source == "source-1/") | .destination = "tmp/mount-1") // .)'
 
 	run -0 runc run test_debian
-	[[ "$output" == *"=0=0="* ]]
+	assert_output --partial "=0=0="
 }
 
 @test "idmap mount with bind mount [userns]" {
@@ -197,8 +197,8 @@ function setup_idmap_basic_mount() {
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/{,bind-}mount-1/foo.txt"]'
 
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-1/foo.txt:0=0="* ]]
-	[[ "$output" == *"=/tmp/bind-mount-1/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	assert_output --partial "=/tmp/mount-1/foo.txt:0=0="
+	assert_output --partial "=/tmp/bind-mount-1/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="
 }
 
 @test "idmap mount with bind mount [no userns]" {
@@ -208,8 +208,8 @@ function setup_idmap_basic_mount() {
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/{,bind-}mount-1/foo.txt"]'
 
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-1/foo.txt:100000=100000="* ]]
-	[[ "$output" == *"=/tmp/bind-mount-1/foo.txt:0=0="* ]]
+	assert_output --partial "=/tmp/mount-1/foo.txt:100000=100000="
+	assert_output --partial "=/tmp/bind-mount-1/foo.txt:0=0="
 }
 
 @test "two idmap mounts (same mapping) with two bind mounts [userns]" {
@@ -223,8 +223,8 @@ function setup_idmap_basic_mount() {
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-[12]/foo.txt"]'
 
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-1/foo.txt:0=0="* ]]
-	[[ "$output" == *"=/tmp/mount-2/foo.txt:1=1="* ]]
+	assert_output --partial "=/tmp/mount-1/foo.txt:0=0="
+	assert_output --partial "=/tmp/mount-2/foo.txt:1=1="
 }
 
 @test "same idmap mount (different mappings) [userns]" {
@@ -239,15 +239,15 @@ function setup_idmap_basic_mount() {
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-multi1{,-alt{,-sym}}/{foo,bar,baz}.txt"]'
 
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-multi1/foo.txt:0=11="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1/bar.txt:1=22="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1/baz.txt:2=33="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1-alt/foo.txt:1000=2011="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1-alt/bar.txt:1001=2022="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1-alt/baz.txt:1002=2033="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1-alt-sym/foo.txt:2000=3011="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1-alt-sym/bar.txt:2001=3022="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1-alt-sym/baz.txt:2002=3033="* ]]
+	assert_output --partial "=/tmp/mount-multi1/foo.txt:0=11="
+	assert_output --partial "=/tmp/mount-multi1/bar.txt:1=22="
+	assert_output --partial "=/tmp/mount-multi1/baz.txt:2=33="
+	assert_output --partial "=/tmp/mount-multi1-alt/foo.txt:1000=2011="
+	assert_output --partial "=/tmp/mount-multi1-alt/bar.txt:1001=2022="
+	assert_output --partial "=/tmp/mount-multi1-alt/baz.txt:1002=2033="
+	assert_output --partial "=/tmp/mount-multi1-alt-sym/foo.txt:2000=3011="
+	assert_output --partial "=/tmp/mount-multi1-alt-sym/bar.txt:2001=3022="
+	assert_output --partial "=/tmp/mount-multi1-alt-sym/baz.txt:2002=3033="
 }
 
 @test "same idmap mount (different mappings) [no userns]" {
@@ -260,15 +260,15 @@ function setup_idmap_basic_mount() {
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-multi1{,-alt{,-sym}}/{foo,bar,baz}.txt"]'
 
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-multi1/foo.txt:100000=100011="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1/bar.txt:100001=100022="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1/baz.txt:100002=100033="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1-alt/foo.txt:101000=102011="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1-alt/bar.txt:101001=102022="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1-alt/baz.txt:101002=102033="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1-alt-sym/foo.txt:102000=103011="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1-alt-sym/bar.txt:102001=103022="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1-alt-sym/baz.txt:102002=103033="* ]]
+	assert_output --partial "=/tmp/mount-multi1/foo.txt:100000=100011="
+	assert_output --partial "=/tmp/mount-multi1/bar.txt:100001=100022="
+	assert_output --partial "=/tmp/mount-multi1/baz.txt:100002=100033="
+	assert_output --partial "=/tmp/mount-multi1-alt/foo.txt:101000=102011="
+	assert_output --partial "=/tmp/mount-multi1-alt/bar.txt:101001=102022="
+	assert_output --partial "=/tmp/mount-multi1-alt/baz.txt:101002=102033="
+	assert_output --partial "=/tmp/mount-multi1-alt-sym/foo.txt:102000=103011="
+	assert_output --partial "=/tmp/mount-multi1-alt-sym/bar.txt:102001=103022="
+	assert_output --partial "=/tmp/mount-multi1-alt-sym/baz.txt:102002=103033="
 }
 
 @test "multiple idmap mounts (different mappings) [userns]" {
@@ -282,15 +282,15 @@ function setup_idmap_basic_mount() {
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-multi[123]/{foo,bar,baz}.txt"]'
 
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-multi1/foo.txt:1100=1911="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1/bar.txt:1101=1922="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1/baz.txt:1102=1933="* ]]
-	[[ "$output" == *"=/tmp/mount-multi2/foo.txt:2200=2911="* ]]
-	[[ "$output" == *"=/tmp/mount-multi2/bar.txt:2201=2922="* ]]
-	[[ "$output" == *"=/tmp/mount-multi2/baz.txt:2202=2933="* ]]
-	[[ "$output" == *"=/tmp/mount-multi3/foo.txt:3528=3491="* ]]
-	[[ "$output" == *"=/tmp/mount-multi3/bar.txt:3133=3337="* ]]
-	[[ "$output" == *"=/tmp/mount-multi3/baz.txt:3999=3444="* ]]
+	assert_output --partial "=/tmp/mount-multi1/foo.txt:1100=1911="
+	assert_output --partial "=/tmp/mount-multi1/bar.txt:1101=1922="
+	assert_output --partial "=/tmp/mount-multi1/baz.txt:1102=1933="
+	assert_output --partial "=/tmp/mount-multi2/foo.txt:2200=2911="
+	assert_output --partial "=/tmp/mount-multi2/bar.txt:2201=2922="
+	assert_output --partial "=/tmp/mount-multi2/baz.txt:2202=2933="
+	assert_output --partial "=/tmp/mount-multi3/foo.txt:3528=3491="
+	assert_output --partial "=/tmp/mount-multi3/bar.txt:3133=3337="
+	assert_output --partial "=/tmp/mount-multi3/baz.txt:3999=3444="
 }
 
 @test "multiple idmap mounts (different mappings) [no userns]" {
@@ -302,15 +302,15 @@ function setup_idmap_basic_mount() {
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-multi[123]/{foo,bar,baz}.txt"]'
 
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-multi1/foo.txt:1100=1911="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1/bar.txt:1101=1922="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1/baz.txt:1102=1933="* ]]
-	[[ "$output" == *"=/tmp/mount-multi2/foo.txt:2200=2911="* ]]
-	[[ "$output" == *"=/tmp/mount-multi2/bar.txt:2201=2922="* ]]
-	[[ "$output" == *"=/tmp/mount-multi2/baz.txt:2202=2933="* ]]
-	[[ "$output" == *"=/tmp/mount-multi3/foo.txt:3528=3491="* ]]
-	[[ "$output" == *"=/tmp/mount-multi3/bar.txt:3133=3337="* ]]
-	[[ "$output" == *"=/tmp/mount-multi3/baz.txt:3999=3444="* ]]
+	assert_output --partial "=/tmp/mount-multi1/foo.txt:1100=1911="
+	assert_output --partial "=/tmp/mount-multi1/bar.txt:1101=1922="
+	assert_output --partial "=/tmp/mount-multi1/baz.txt:1102=1933="
+	assert_output --partial "=/tmp/mount-multi2/foo.txt:2200=2911="
+	assert_output --partial "=/tmp/mount-multi2/bar.txt:2201=2922="
+	assert_output --partial "=/tmp/mount-multi2/baz.txt:2202=2933="
+	assert_output --partial "=/tmp/mount-multi3/foo.txt:3528=3491="
+	assert_output --partial "=/tmp/mount-multi3/bar.txt:3133=3337="
+	assert_output --partial "=/tmp/mount-multi3/baz.txt:3999=3444="
 }
 
 @test "idmap mount (complicated mapping) [userns]" {
@@ -336,9 +336,9 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-multi1/{foo,bar,baz}.txt"]'
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-multi1/foo.txt:1000=1101="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1/bar.txt:2000=2202="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1/baz.txt:3000=3303="* ]]
+	assert_output --partial "=/tmp/mount-multi1/foo.txt:1000=1101="
+	assert_output --partial "=/tmp/mount-multi1/bar.txt:2000=2202="
+	assert_output --partial "=/tmp/mount-multi1/baz.txt:3000=3303="
 }
 
 @test "idmap mount (complicated mapping) [no userns]" {
@@ -362,9 +362,9 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-multi1/{foo,bar,baz}.txt"]'
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-multi1/foo.txt:1000=1101="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1/bar.txt:2000=2202="* ]]
-	[[ "$output" == *"=/tmp/mount-multi1/baz.txt:3000=3303="* ]]
+	assert_output --partial "=/tmp/mount-multi1/foo.txt:1000=1101="
+	assert_output --partial "=/tmp/mount-multi1/bar.txt:2000=2202="
+	assert_output --partial "=/tmp/mount-multi1/baz.txt:3000=3303="
 }
 
 @test "idmap mount (non-recursive idmap) [userns]" {
@@ -393,16 +393,16 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-tree/foo.txt:1000=1101="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/bar.txt:2000=2202="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/baz.txt:3000=3303="* ]]
+	assert_output --partial "=/tmp/mount-tree/foo.txt:1000=1101="
+	assert_output --partial "=/tmp/mount-tree/bar.txt:2000=2202="
+	assert_output --partial "=/tmp/mount-tree/baz.txt:3000=3303="
 	# Because we used "idmap", the child mounts were not remapped recursively.
-	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	assert_output --partial "=/tmp/mount-tree/multi1/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi1/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi1/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi2/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi2/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi2/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="
 }
 
 @test "idmap mount (non-recursive idmap) [no userns]" {
@@ -429,16 +429,16 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-tree/foo.txt:101000=101101="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/bar.txt:102000=102202="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/baz.txt:103000=103303="* ]]
+	assert_output --partial "=/tmp/mount-tree/foo.txt:101000=101101="
+	assert_output --partial "=/tmp/mount-tree/bar.txt:102000=102202="
+	assert_output --partial "=/tmp/mount-tree/baz.txt:103000=103303="
 	# Because we used "idmap", the child mounts were not remapped recursively.
-	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:100=211="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:101=222="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:102=233="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:200=211="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:201=222="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:202=233="* ]]
+	assert_output --partial "=/tmp/mount-tree/multi1/foo.txt:100=211="
+	assert_output --partial "=/tmp/mount-tree/multi1/bar.txt:101=222="
+	assert_output --partial "=/tmp/mount-tree/multi1/baz.txt:102=233="
+	assert_output --partial "=/tmp/mount-tree/multi2/foo.txt:200=211="
+	assert_output --partial "=/tmp/mount-tree/multi2/bar.txt:201=222="
+	assert_output --partial "=/tmp/mount-tree/multi2/baz.txt:202=233="
 }
 
 @test "idmap mount (idmap flag) [userns]" {
@@ -467,16 +467,16 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-tree/foo.txt:1000=1101="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/bar.txt:2000=2202="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/baz.txt:3000=3303="* ]]
+	assert_output --partial "=/tmp/mount-tree/foo.txt:1000=1101="
+	assert_output --partial "=/tmp/mount-tree/bar.txt:2000=2202="
+	assert_output --partial "=/tmp/mount-tree/baz.txt:3000=3303="
 	# Because we used "idmap", the child mounts were not remapped recursively.
-	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	assert_output --partial "=/tmp/mount-tree/multi1/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi1/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi1/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi2/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi2/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi2/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="
 }
 
 @test "idmap mount (idmap flag) [no userns]" {
@@ -503,16 +503,16 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-tree/foo.txt:101000=101101="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/bar.txt:102000=102202="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/baz.txt:103000=103303="* ]]
+	assert_output --partial "=/tmp/mount-tree/foo.txt:101000=101101="
+	assert_output --partial "=/tmp/mount-tree/bar.txt:102000=102202="
+	assert_output --partial "=/tmp/mount-tree/baz.txt:103000=103303="
 	# Because we used "idmap", the child mounts were not remapped recursively.
-	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:100=211="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:101=222="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:102=233="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:200=211="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:201=222="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:202=233="* ]]
+	assert_output --partial "=/tmp/mount-tree/multi1/foo.txt:100=211="
+	assert_output --partial "=/tmp/mount-tree/multi1/bar.txt:101=222="
+	assert_output --partial "=/tmp/mount-tree/multi1/baz.txt:102=233="
+	assert_output --partial "=/tmp/mount-tree/multi2/foo.txt:200=211="
+	assert_output --partial "=/tmp/mount-tree/multi2/bar.txt:201=222="
+	assert_output --partial "=/tmp/mount-tree/multi2/baz.txt:202=233="
 }
 
 @test "idmap mount (ridmap flag) [userns]" {
@@ -541,16 +541,16 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-tree/foo.txt:1000=1101="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/bar.txt:2000=2202="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/baz.txt:3000=3303="* ]]
+	assert_output --partial "=/tmp/mount-tree/foo.txt:1000=1101="
+	assert_output --partial "=/tmp/mount-tree/bar.txt:2000=2202="
+	assert_output --partial "=/tmp/mount-tree/baz.txt:3000=3303="
 	# The child mounts have the same mapping applied.
-	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:1000=1101="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:1001=2202="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:1002=3303="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:2000=1101="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:2001=2202="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:2002=3303="* ]]
+	assert_output --partial "=/tmp/mount-tree/multi1/foo.txt:1000=1101="
+	assert_output --partial "=/tmp/mount-tree/multi1/bar.txt:1001=2202="
+	assert_output --partial "=/tmp/mount-tree/multi1/baz.txt:1002=3303="
+	assert_output --partial "=/tmp/mount-tree/multi2/foo.txt:2000=1101="
+	assert_output --partial "=/tmp/mount-tree/multi2/bar.txt:2001=2202="
+	assert_output --partial "=/tmp/mount-tree/multi2/baz.txt:2002=3303="
 }
 
 @test "idmap mount (ridmap flag) [no userns]" {
@@ -577,16 +577,16 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-tree/foo.txt:101000=101101="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/bar.txt:102000=102202="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/baz.txt:103000=103303="* ]]
+	assert_output --partial "=/tmp/mount-tree/foo.txt:101000=101101="
+	assert_output --partial "=/tmp/mount-tree/bar.txt:102000=102202="
+	assert_output --partial "=/tmp/mount-tree/baz.txt:103000=103303="
 	# The child mounts have the same mapping applied.
-	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:101000=101101="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:101001=102202="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:101002=103303="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:102000=101101="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:102001=102202="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:102002=103303="* ]]
+	assert_output --partial "=/tmp/mount-tree/multi1/foo.txt:101000=101101="
+	assert_output --partial "=/tmp/mount-tree/multi1/bar.txt:101001=102202="
+	assert_output --partial "=/tmp/mount-tree/multi1/baz.txt:101002=103303="
+	assert_output --partial "=/tmp/mount-tree/multi2/foo.txt:102000=101101="
+	assert_output --partial "=/tmp/mount-tree/multi2/bar.txt:102001=102202="
+	assert_output --partial "=/tmp/mount-tree/multi2/baz.txt:102002=103303="
 }
 
 @test "idmap mount (idmap flag, implied mapping) [userns]" {
@@ -605,16 +605,16 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-tree/foo.txt:100=211="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/bar.txt:200=222="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/baz.txt:300=233="* ]]
+	assert_output --partial "=/tmp/mount-tree/foo.txt:100=211="
+	assert_output --partial "=/tmp/mount-tree/bar.txt:200=222="
+	assert_output --partial "=/tmp/mount-tree/baz.txt:300=233="
 	# Because we used "idmap", the child mounts were not remapped recursively.
-	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	assert_output --partial "=/tmp/mount-tree/multi1/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi1/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi1/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi2/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi2/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi2/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="
 }
 
 @test "idmap mount (ridmap flag, implied mapping) [userns]" {
@@ -633,16 +633,16 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-tree/foo.txt:100=211="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/bar.txt:200=222="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/baz.txt:300=233="* ]]
+	assert_output --partial "=/tmp/mount-tree/foo.txt:100=211="
+	assert_output --partial "=/tmp/mount-tree/bar.txt:200=222="
+	assert_output --partial "=/tmp/mount-tree/baz.txt:300=233="
 	# The child mounts have the same mapping applied.
-	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:100=211="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:101=222="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:102=233="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:200=211="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:201=222="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:202=233="* ]]
+	assert_output --partial "=/tmp/mount-tree/multi1/foo.txt:100=211="
+	assert_output --partial "=/tmp/mount-tree/multi1/bar.txt:101=222="
+	assert_output --partial "=/tmp/mount-tree/multi1/baz.txt:102=233="
+	assert_output --partial "=/tmp/mount-tree/multi2/foo.txt:200=211="
+	assert_output --partial "=/tmp/mount-tree/multi2/bar.txt:201=222="
+	assert_output --partial "=/tmp/mount-tree/multi2/baz.txt:202=233="
 }
 
 @test "idmap mount (idmap flag, implied mapping, userns join) [userns]" {
@@ -673,14 +673,14 @@ function setup_idmap_basic_mount() {
 
 	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
 	run -0 runc run test_debian
-	[[ "$output" == *"=/tmp/mount-tree/foo.txt:100=211="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/bar.txt:200=222="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/baz.txt:300=233="* ]]
+	assert_output --partial "=/tmp/mount-tree/foo.txt:100=211="
+	assert_output --partial "=/tmp/mount-tree/bar.txt:200=222="
+	assert_output --partial "=/tmp/mount-tree/baz.txt:300=233="
 	# Because we used "idmap", the child mounts were not remapped recursively.
-	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
-	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	assert_output --partial "=/tmp/mount-tree/multi1/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi1/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi1/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi2/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi2/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="
+	assert_output --partial "=/tmp/mount-tree/multi2/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="
 }

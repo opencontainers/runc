@@ -83,7 +83,7 @@ test_host_pidns_kill() {
 
 	# Check that kill errors on a stopped container.
 	run ! runc kill test_busybox 0
-	[[ "$output" == *"container not running"* ]]
+	assert_output --partial "container not running"
 
 	# Check that -a (now obsoleted) makes kill return no error for a stopped container.
 	run -0 runc kill -a test_busybox 0

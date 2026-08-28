@@ -22,13 +22,13 @@ function teardown() {
 
 	# Check init settings.
 	run -0 runc exec test_scheduler chrt -p 1
-	[[ "${lines[0]}" == *"scheduling policy: SCHED_BATCH" ]]
-	[[ "${lines[1]}" == *"priority: 0" ]]
+	assert_line --index 0 --regexp "scheduling policy: SCHED_BATCH$"
+	assert_line --index 1 --regexp "priority: 0$"
 
 	# Check exec settings derived from config.json.
 	run -0 runc exec test_scheduler sh -c 'chrt -p $$'
-	[[ "${lines[0]}" == *"scheduling policy: SCHED_BATCH" ]]
-	[[ "${lines[1]}" == *"priority: 0" ]]
+	assert_line --index 0 --regexp "scheduling policy: SCHED_BATCH$"
+	assert_line --index 1 --regexp "priority: 0$"
 
 	# Another exec, with different scheduler settings.
 	proc='
@@ -49,9 +49,9 @@ function teardown() {
 	runc exec -d --pid-file pid.txt --process <(echo "$proc") test_scheduler
 
 	run -0 chrt -p "$(cat pid.txt)"
-	[[ "${lines[0]}" == *"scheduling policy: SCHED_DEADLINE|SCHED_RESET_ON_FORK" ]]
-	[[ "${lines[1]}" == *"priority: 0" ]]
-	[[ "${lines[2]}" == *"runtime/deadline/period parameters: 42000/100000/1000000" ]]
+	assert_line --index 0 --regexp "scheduling policy: SCHED_DEADLINE\|SCHED_RESET_ON_FORK$"
+	assert_line --index 1 --regexp "priority: 0$"
+	assert_line --index 2 --regexp "runtime/deadline/period parameters: 42000/100000/1000000$"
 }
 
 # Checks that runc emits a specific error when scheduling policy is used
@@ -69,5 +69,5 @@ function teardown() {
 		| .process.scheduler = {"policy": "SCHED_DEADLINE", "nice": 19, "runtime": 42000, "deadline": 1000000, "period": 1000000, }'
 
 	run -1 runc run -d --console-socket "$CONSOLE_SOCKET" test_scheduler
-	[[ "$output" == *"process scheduler can't be used together with AllowedCPUs"* ]]
+	assert_output --partial "process scheduler can't be used together with AllowedCPUs"
 }
