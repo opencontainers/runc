@@ -10,13 +10,11 @@ function setup() {
 }
 
 @test "runc -h" {
-	runc -h
-	[ "$status" -eq 0 ]
+	run -0 runc -h
 	[[ ${lines[0]} =~ NAME:+ ]]
 	[[ ${lines[1]} =~ runc\ '-'\ Open\ Container\ Initiative\ runtime+ ]]
 
-	runc --help
-	[ "$status" -eq 0 ]
+	run -0 runc --help
 	[[ ${lines[0]} =~ NAME:+ ]]
 	[[ ${lines[1]} =~ runc\ '-'\ Open\ Container\ Initiative\ runtime+ ]]
 }
@@ -46,8 +44,7 @@ function setup() {
 
 	for cmd in "${cmds[@]}"; do
 		for arg in "-h" "--help"; do
-			runc "$cmd" "$arg"
-			[ "$status" -eq 0 ]
+			run -0 runc "$cmd" "$arg"
 			[[ ${lines[0]} =~ NAME:+ ]]
 			[[ ${lines[1]} =~ $bin\ $cmd+ ]]
 		done
@@ -55,7 +52,6 @@ function setup() {
 }
 
 @test "runc foo -h" {
-	runc foo -h
-	[ "$status" -ne 0 ]
+	run ! runc foo -h
 	[[ "${output}" == *"No help topic for 'foo'"* ]]
 }

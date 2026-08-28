@@ -13,7 +13,6 @@ function teardown() {
 
 @test "runc run [unloaded apparmor profile]" {
 	update_config '	  .process.apparmorProfile = "runc-test-definitely-not-loaded"'
-	runc run test_apparmor
-	[ "$status" -ne 0 ]
+	run ! runc run test_apparmor
 	[[ "$output" == *"apparmor profile "*"runc-test-definitely-not-loaded"*"profile not loaded"* ]]
 }
