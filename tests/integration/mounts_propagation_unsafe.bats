@@ -35,16 +35,12 @@ function teardown_isolated_mount_namespace() {
 	fi
 }
 
-function __runc_in_mount_namespace() {
-	in_mount_namespace runc "$@"
-}
-
 function make_rootfs_shared() {
 	in_mount_namespace mount --make-rshared /
 }
 
 function runc_in_mount_namespace() {
-	CMDNAME="$(basename "$RUNC")" sane_run __runc_in_mount_namespace "$@"
+	in_mount_namespace runc "$@"
 }
 
 function setup() {
@@ -67,7 +63,6 @@ function teardown() {
 
 	update_config ' .process.args = ["findmnt", "--noheadings", "-o", "PROPAGATION", "/"] '
 
-	runc_in_mount_namespace run test_slave_rootfs
-	[ "$status" -eq 0 ]
+	run -0 runc_in_mount_namespace run test_slave_rootfs
 	[ "$output" = "private,slave" ]
 }

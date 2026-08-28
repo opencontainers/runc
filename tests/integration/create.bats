@@ -46,12 +46,11 @@ is_allowed_fdtarget() {
 }
 
 @test "runc create[detect fd leak as comprehensively as possible]" {
-	runc create --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc create --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox created
 
-	pid=$(__runc state test_busybox | jq '.pid')
+	pid=$(runc state test_busybox | jq '.pid')
 	violation_found=0
 
 	while IFS= read -rd '' link; do
@@ -79,45 +78,38 @@ is_allowed_fdtarget() {
 }
 
 @test "runc create" {
-	runc create --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc create --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox created
 
-	runc start test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc start test_busybox
 
 	testcontainer test_busybox running
 }
 
 @test "runc create exec" {
-	runc create --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc create --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox created
 
-	runc exec test_busybox true
-	[ "$status" -eq 0 ]
+	run -0 runc exec test_busybox true
 
 	testcontainer test_busybox created
 
-	runc start test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc start test_busybox
 
 	testcontainer test_busybox running
 }
 
 @test "runc create --pid-file" {
-	runc create --pid-file pid.txt --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc create --pid-file pid.txt --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox created
 
 	[ -e pid.txt ]
-	[[ $(cat pid.txt) = $(__runc state test_busybox | jq '.pid') ]]
+	[[ $(cat pid.txt) = $(runc state test_busybox | jq '.pid') ]]
 
-	runc start test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc start test_busybox
 
 	testcontainer test_busybox running
 }
@@ -127,16 +119,14 @@ is_allowed_fdtarget() {
 	mkdir pid_file
 	cd pid_file
 
-	runc create --pid-file pid.txt -b "$bundle" --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc create --pid-file pid.txt -b "$bundle" --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	testcontainer test_busybox created
 
 	[ -e pid.txt ]
-	[[ $(cat pid.txt) = $(__runc state test_busybox | jq '.pid') ]]
+	[[ $(cat pid.txt) = $(runc state test_busybox | jq '.pid') ]]
 
-	runc start test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc start test_busybox
 
 	testcontainer test_busybox running
 }
@@ -160,8 +150,7 @@ is_allowed_fdtarget() {
 	fi
 
 	exp="Such configuration is strongly discouraged"
-	runc create --console-socket "$CONSOLE_SOCKET" test
-	[ "$status" -eq 0 ]
+	run -0 runc create --console-socket "$CONSOLE_SOCKET" test
 	if [ $EUID -ne 0 ] && ! rootless_cgroup; then
 		[[ "$output" = *"$exp"* ]]
 	else

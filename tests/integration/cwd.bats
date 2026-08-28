@@ -21,11 +21,9 @@ function teardown() {
 			| .process.user.uid = 42
 			| .process.args |= ["sleep", "1h"]'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
-	runc exec --user 0 test_busybox true
-	[ "$status" -eq 0 ]
+	run -0 runc exec --user 0 test_busybox true
 }
 
 # Verify a cwd owned by the container user can be chdir'd to,
@@ -53,8 +51,7 @@ function teardown() {
 			| .process.cwd = "'"$ROOTLESS_AUX_DIR"'"
 			| .process.args |= ["ls", "'"$ROOTLESS_AUX_DIR"'"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 }
 
 # Verify a cwd not owned by the container user can be chdir'd to,
@@ -69,6 +66,5 @@ function teardown() {
 			| .process.user.uid = 42
 			| .process.args |= ["ls", "/tmp"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 }
