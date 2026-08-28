@@ -23,8 +23,8 @@ function run_check_nofile() {
 	update_config '.process.args = ["/bin/sh", "-c", "ulimit -n; ulimit -H -n"]'
 
 	run -0 runc run test_rlimit
-	[[ "${lines[0]}" == "${soft}" ]]
-	[[ "${lines[1]}" == "${hard}" ]]
+	assert_line --index 0 "${soft}"
+	assert_line --index 1 "${hard}"
 }
 
 # Set and check rlimit_nofile for runc exec. Arguments are:
@@ -38,8 +38,8 @@ function exec_check_nofile() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_rlimit
 
 	run -0 runc exec test_rlimit /bin/sh -c "ulimit -n; ulimit -H -n"
-	[[ "${lines[0]}" == "${soft}" ]]
-	[[ "${lines[1]}" == "${hard}" ]]
+	assert_line --index 0 "${soft}"
+	assert_line --index 1 "${hard}"
 }
 
 @test "runc run with RLIMIT_NOFILE(The same as system's hard value)" {

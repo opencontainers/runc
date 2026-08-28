@@ -18,11 +18,11 @@ function teardown() {
 
 	# Check the init process.
 	run -0 runc exec test_ioprio ionice -p 1
-	[ "${lines[0]}" = 'best-effort: prio 4' ]
+	assert_line --index 0 'best-effort: prio 4'
 
 	# Check an exec process, which should derive ioprio from config.json.
 	run -0 runc exec test_ioprio ionice
-	[ "${lines[0]}" = 'best-effort: prio 4' ]
+	assert_line --index 0 'best-effort: prio 4'
 
 	# Check an exec with a priority taken from process.json,
 	# which should override the ioprio in config.json.
@@ -36,5 +36,5 @@ function teardown() {
 	"cwd": "/"
 }'
 	run -0 runc exec --process <(echo "$proc") test_ioprio
-	[ "${lines[0]}" = 'idle' ]
+	assert_line --index 0 'idle'
 }

@@ -30,7 +30,7 @@ function setup() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroup_chown
 
 	run -0 runc exec test_cgroup_chown sh -c "stat -c %U /sys/fs/cgroup"
-	[ "$output" = "nobody" ] # /sys/fs/cgroup owned by unmapped user
+	assert_output "nobody" # /sys/fs/cgroup owned by unmapped user
 }
 
 @test "runc exec (cgroup v2, rw cgroupfs, inherit cgroupns) does not chown cgroup" {
@@ -42,7 +42,7 @@ function setup() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroup_chown
 
 	run -0 runc exec test_cgroup_chown sh -c "stat -c %U /sys/fs/cgroup"
-	[ "$output" = "nobody" ] # /sys/fs/cgroup owned by unmapped user
+	assert_output "nobody" # /sys/fs/cgroup owned by unmapped user
 }
 
 @test "runc exec (cgroup v2, rw cgroupfs, new cgroupns) does chown cgroup" {
@@ -51,5 +51,5 @@ function setup() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroup_chown
 
 	run -0 runc exec test_cgroup_chown sh -c "stat -c %U /sys/fs/cgroup"
-	[ "$output" = "root" ] # /sys/fs/cgroup owned by root (of user namespace)
+	assert_output "root" # /sys/fs/cgroup owned by root (of user namespace)
 }

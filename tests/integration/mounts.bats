@@ -147,7 +147,7 @@ test_mount_target() {
 	# bind-mount of the correct inode.
 	update_config '.process.args = ["stat", "-c", "%n %d:%i", "--", "'"$real_dst"'"]'
 	run -0 runc run test_busybox
-	[[ "$output" == "$real_dst $(stat -c "%d:%i" -- "$src")" ]]
+	assert_output "$real_dst $(stat -c "%d:%i" -- "$src")"
 
 	# Make sure there is a mount entry for the target path.
 	# shellcheck disable=SC2016
@@ -273,7 +273,7 @@ test_mount_target() {
 	update_config '.process.args = ["stat", "-c", "%a", "/tmpfs"]'
 
 	run -0 runc run test_busybox
-	[[ "$output" == "710" ]]
+	assert_output "710"
 
 	update_config '.process.args = ["cat", "/proc/self/mounts"]'
 	run -0 runc run test_busybox
@@ -295,7 +295,7 @@ test_mount_target() {
 
 	# Explicitly setting mode= overrides whatever mode we would've inherited.
 	run -0 runc run test_busybox
-	[[ "$output" == "1500" ]]
+	assert_output "1500"
 
 	update_config '.process.args = ["cat", "/proc/self/mounts"]'
 	run -0 runc run test_busybox
@@ -317,7 +317,7 @@ test_mount_target() {
 
 	rm -rf rootfs/non-existent
 	run -0 runc run test_busybox
-	[[ "$output" == "1777" ]]
+	assert_output "1777"
 
 	update_config '.process.args = ["cat", "/proc/self/mounts"]'
 

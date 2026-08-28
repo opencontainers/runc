@@ -64,5 +64,5 @@ function teardown() {
 	update_config ' .process.args = ["findmnt", "--noheadings", "-o", "PROPAGATION", "/"] '
 
 	run -0 runc_in_mount_namespace run test_slave_rootfs
-	[ "$output" = "private,slave" ]
+	assert_output "private,slave"
 }

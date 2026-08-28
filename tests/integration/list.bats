@@ -29,9 +29,9 @@ function teardown() {
 	[[ "${lines[3]}" == *"test_box3"*[0-9]*"running"*$bundle*[0-9]* ]]
 
 	ROOT=$ALT_ROOT run -0 runc list -q
-	[ "${lines[0]}" = "test_box1" ]
-	[ "${lines[1]}" = "test_box2" ]
-	[ "${lines[2]}" = "test_box3" ]
+	assert_line --index 0 "test_box1"
+	assert_line --index 1 "test_box2"
+	assert_line --index 2 "test_box3"
 
 	ROOT=$ALT_ROOT run -0 runc list --format table
 	[[ ${lines[0]} =~ ID\ +PID\ +STATUS\ +BUNDLE\ +CREATED+ ]]
