@@ -180,7 +180,7 @@ function test_runc_delete_host_pidns() {
 	[[ ${pid} =~ [0-9]+ ]]
 
 	# create a sub-cgroup
-	cat <<EOF | runc exec test_busybox sh
+	runc exec test_busybox sh <<EOF
 set -e -u -x
 for s in ${subsystems}; do
   cd /sys/fs/cgroup/\$s
