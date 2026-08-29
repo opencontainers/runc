@@ -218,3 +218,31 @@ EOF
 	run -1 runc run test_hello
 	assert_output --partial "invalid rootfs: / is not allowed"
 }
+
+# https://github.com/opencontainers/runc/issues/5087
+@test "runc run [seccomp SCMP_ACT_KILL kills init]" {
+	# SCMP_ACT_KILL only kills the offending thread, leaving runc init with a
+	# zombie thread group leader and live threads holding its ends of the sync
+	# socket and the exec fifo open. Make sure runc notices that init is gone,
+	# rather than waiting for an EOF that can never arrive.
+	update_config '   .process.args = ["/bin/true"]
+			| .process.terminal = false
+			| .process.rlimits = [{"type": "RLIMIT_CORE", "soft": 0, "hard": 0}]
+			| .linux.seccomp = {
+				"defaultAction": "SCMP_ACT_ALLOW",
+				"syscalls": [{"names": ["write"], "action": "SCMP_ACT_KILL"}]
+			}'
+
+	# Give runc its own stdio. Should this regress, the leftover threads keep
+	# it open, and bats would hang on it instead of failing the test.
+	local log="$BATS_TEST_TMPDIR/run-5087.log" ret=0
+	timeout -k 5 30 runc run test_busybox </dev/null >"$log" 2>&1 || ret=$?
+	run -0 cat "$log"
+
+	# Not 124 or 137, which mean the timeout fired, i.e. runc has hung.
+	[ "$ret" -eq 1 ]
+	assert_output --partial "container init process died unexpectedly"
+	# The leftover threads have to be gone as well, or the container's cgroup
+	# can not be removed, and the next test to use this name would fail.
+	refute_output --partial "unable to destroy container"
+}
