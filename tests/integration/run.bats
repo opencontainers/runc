@@ -235,3 +235,35 @@ EOF
 	[ "$status" -eq 0 ]
 	[ "${lines[0]}" = "/home/tempuser" ]
 }
+
+# https://github.com/opencontainers/runc/issues/5087
+@test "runc run [seccomp SCMP_ACT_KILL kills init]" {
+	# SCMP_ACT_KILL only kills the offending thread, leaving runc init with a
+	# zombie thread group leader and live threads holding its ends of the sync
+	# socket and the exec fifo open. Make sure runc notices that init is gone,
+	# rather than waiting for an EOF that can never arrive.
+	update_config '   .process.args = ["/bin/true"]
+			| .process.terminal = false
+			| .process.rlimits = [{"type": "RLIMIT_CORE", "soft": 0, "hard": 0}]
+			| .linux.seccomp = {
+				"defaultAction": "SCMP_ACT_ALLOW",
+				"syscalls": [{"names": ["write"], "action": "SCMP_ACT_KILL"}]
+			}'
+
+	# Give runc its own stdio. Should this regress, the leftover threads keep
+	# it open, and bats would hang on it instead of failing the test.
+	local log="$BATS_TMPDIR/run-5087.log" ret=0
+	setup_runc_cmdline
+	timeout -k 5 30 "${RUNC_CMDLINE[@]}" run test_busybox \
+		</dev/null >"$log" 2>&1 || ret=$?
+	cat "$log"
+
+	# 124 and 137 both mean the timeout fired, i.e. runc has hung.
+	[ "$ret" -ne 124 ]
+	[ "$ret" -ne 137 ]
+	[ "$ret" -ne 0 ]
+	grep -q "container init process died unexpectedly" "$log"
+	# The leftover threads have to be gone as well, or the container's cgroup
+	# can not be removed, and the next test to use this name would fail.
+	run ! grep -q "unable to destroy container" "$log"
+}
