@@ -164,7 +164,7 @@ func (p *containerProcess) terminate() error {
 	return err
 }
 
-func (p *containerProcess) wait() (*os.ProcessState, error) { //nolint:unparam
+func (p *containerProcess) wait() (*os.ProcessState, error) {
 	err := p.cmd.Wait()
 
 	// Return actual ProcessState even on Wait error
@@ -584,9 +584,10 @@ func (p *setnsProcess) start() (retErr error) {
 	if !seenProcReady && ierr == nil {
 		ierr = errors.New("procReady not received")
 	}
-	// Must be done after Shutdown so the child will exit and we can wait for it.
+	// Do not wait for the child here: it may be unable to exit on its own
+	// (for example, if only one of its threads was killed), and the deferred
+	// error handler above terminates and reaps it anyway.
 	if ierr != nil {
-		_, _ = p.wait()
 		return ierr
 	}
 	return nil
@@ -625,6 +626,9 @@ func (p *setnsProcess) execSetns() error {
 	}
 	p.cmd.Process = process
 	p.process.ops = p
+	// Now that the final pid is known, let the sync socket use it to detect an
+	// init that dies without closing its end of the socket.
+	p.comm.syncSockParent.SetPeerPid(process.Pid)
 	return nil
 }
 
@@ -668,6 +672,9 @@ func (p *initProcess) waitForChildExit(childPid int) error {
 	}
 	p.cmd.Process = process
 	p.process.ops = p
+	// Now that the final pid is known, let the sync socket use it to detect an
+	// init that dies without closing its end of the socket.
+	p.comm.syncSockParent.SetPeerPid(process.Pid)
 	return nil
 }
 
