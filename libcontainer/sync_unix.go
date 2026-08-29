@@ -18,6 +18,9 @@ import (
 type syncSocket struct {
 	f      *os.File
 	closed atomic.Bool
+	// peerPid is the pid of the process on the other end of the socket, if
+	// known (see [syncSocket.SetPeerPid]).
+	peerPid int
 }
 
 func newSyncSocket(f *os.File) *syncSocket {
@@ -26,6 +29,13 @@ func newSyncSocket(f *os.File) *syncSocket {
 
 func (s *syncSocket) File() *os.File {
 	return s.f
+}
+
+// SetPeerPid tells the socket which process is on the other end of it, so that
+// ReadPacket does not block forever if that process dies without closing its
+// end of the socket. It has to be called once the peer's final pid is known.
+func (s *syncSocket) SetPeerPid(pid int) {
+	s.peerPid = pid
 }
 
 func (s *syncSocket) Close() error {
@@ -43,6 +53,13 @@ func (s *syncSocket) WritePacket(b []byte) (int, error) {
 }
 
 func (s *syncSocket) ReadPacket() ([]byte, error) {
+	if s.peerPid > 0 {
+		// A dead peer does not always result in a readable socket, so
+		// recvfrom(2) alone is not enough to avoid blocking forever.
+		if err := waitForInitWrite(int(s.f.Fd()), s.peerPid); err != nil {
+			return nil, err
+		}
+	}
 	size, _, err := linux.Recvfrom(int(s.f.Fd()), nil, unix.MSG_TRUNC|unix.MSG_PEEK)
 	if err != nil {
 		return nil, fmt.Errorf("fetch packet length from socket: %w", err)
