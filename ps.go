@@ -64,7 +64,14 @@ var psCommand = &cli.Command{
 			psArgs = []string{"-ef"}
 		}
 
-		cmdExec := exec.Command("ps", psArgs...)
+		// Use the actual path for ps rather than allowing "ps" via
+		// $PATH so a caller-controlled PATH cannot substitute
+		// a malicious binary through a sudo grant that keeps PATH
+		psBin := "/usr/bin/ps"
+		if _, err := os.Stat(psBin); err != nil {
+			psBin = "/bin/ps"
+		}
+		cmdExec := exec.Command(psBin, psArgs...)
 		output, err := cmdExec.CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("%w: %s", err, output)
