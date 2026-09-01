@@ -211,6 +211,12 @@ for ROOTLESS_FEATURES in $features_powerset; do
 		for v in "${ENV_LIST[@]}"; do
 			[ -v "$v" ] && ssh_env+=("$v=${!v}")
 		done
+		# Some hosts (e.g. GitHub Actions ubuntu-26.04 runners) have a stale
+		# XDG_RUNTIME_DIR in the system-wide environment, which then points to
+		# another user's runtime directory in our session, and systemctl --user
+		# fails with "Failed to connect to user scope bus via local transport:
+		# Operation not permitted". Set the correct value explicitly.
+		ssh_env+=("XDG_RUNTIME_DIR=/run/user/$(id -u rootless)")
 		ssh -t -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$HOME/.ssh/rootless.key" \
 			rootless@localhost -- "${ssh_env[@]}" bats -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	else

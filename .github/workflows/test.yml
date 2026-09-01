@@ -27,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, ubuntu-26.04, ubuntu-26.04-arm]
         go-version: [1.26.x, 1.27.x]
         libpathrs: ["libpathrs", ""]
         rootless: ["rootless", ""]
@@ -77,6 +77,14 @@ jobs:
         sudo apt update
         sudo apt -y install libseccomp-dev sshfs uidmap lld
 
+    - name: use the original sudo
+      # Ubuntu 26.04 uses sudo-rs by default, which does not support -E
+      # (https://github.com/trifectatechfoundation/sudo-rs/issues/1299).
+      if: startsWith(matrix.os, 'ubuntu-26.04')
+      run: |
+        sudo apt -y install sudo
+        sudo update-alternatives --set sudo /usr/bin/sudo.ws
+
     - name: install libpathrs ${{ env.LIBPATHRS_VERSION }}
       if: ${{ matrix.libpathrs != '' }}
       run: |
@@ -96,6 +104,15 @@ jobs:
         curl -fSsLl "$REPO/Release.key" | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_tools_criu.gpg > /dev/null
         echo "deb $REPO/ /" | sudo tee /etc/apt/sources.list.d/criu.list
         sudo apt update
+        # Ubuntu 26.04 comes with criu preinstalled, split into a few
+        # packages (criu, libcompel1, python3-pycriu) which conflict with
+        # the monolithic criu package from the repo above, so remove all
+        # the packages built from the distro criu source first.
+        distro_criu=$(dpkg-query -W -f='${binary:Package} ${source:Package}\n' | awk '$2 == "criu" { print $1 }')
+        if [ -n "$distro_criu" ]; then
+          # shellcheck disable=SC2086 # Word splitting is intentional here.
+          sudo apt -y purge $distro_criu
+        fi
         sudo apt -y install criu
 
     - name: install CRIU (${{ matrix.criu }})
@@ -130,9 +147,10 @@ jobs:
 
     - name: Allow userns for runc
       # https://discourse.ubuntu.com/t/ubuntu-24-04-lts-noble-numbat-release-notes/39890#unprivileged-user-namespace-restrictions-15
-      if: startsWith(matrix.os, 'ubuntu-24.04')
       run: |
-        sed "s;^profile runc /usr/sbin/;profile runc-test $PWD/;" < /etc/apparmor.d/runc | sudo apparmor_parser
+        # The attachment path differs between Ubuntu versions (/usr/sbin/runc
+        # on 24.04, /usr/{bin,sbin}/runc on 26.04), so match it loosely.
+        sed -E "s;^profile runc [^ ]+ ;profile runc-test $PWD/runc ;" < /etc/apparmor.d/runc | sudo apparmor_parser
 
     - name: unit test
       if: matrix.rootless != 'rootless'
