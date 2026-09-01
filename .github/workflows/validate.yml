@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 env:
-  GO_VERSION: 1.25
+  GO_VERSION: 1.26
   LIBPATHRS_VERSION: "0.2.5"
 
 jobs:

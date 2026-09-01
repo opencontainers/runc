@@ -28,6 +28,10 @@ func (m *mockCgroupManager) GetStats() (*cgroups.Stats, error) {
 	return nil, nil
 }
 
+func (m *mockCgroupManager) Stats(_ *cgroups.StatsOptions) (*cgroups.Stats, error) {
+	return nil, nil
+}
+
 func (m *mockCgroupManager) Apply(pid int) error {
 	return nil
 }
