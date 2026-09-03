@@ -597,6 +597,12 @@ function requires() {
 				skip_me=1
 			fi
 			;;
+		apparmor)
+			if [ ! -e /sys/kernel/security/apparmor ] ||
+				[ "$(cat /sys/module/apparmor/parameters/enabled 2>/dev/null)" != "Y" ]; then
+				skip_me=1
+			fi
+			;;
 		cgroupns)
 			if [ ! -e "/proc/self/ns/cgroup" ]; then
 				skip_me=1

@@ -130,7 +130,7 @@ func (l *linuxStandardInit) Init() error {
 		}
 	}
 	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
-		return fmt.Errorf("unable to apply apparmor profile: %w", err)
+		return err
 	}
 
 	if err := sys.WriteSysctls(l.config.Config.Sysctl); err != nil {
