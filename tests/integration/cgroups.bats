@@ -12,8 +12,7 @@ function setup() {
 }
 
 @test "runc create (no limits + no cgrouppath + no permission) succeeds" {
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
 }
 
 @test "runc create (rootless + no limits + cgrouppath + no permission) fails with permission error" {
@@ -21,9 +20,8 @@ function setup() {
 
 	set_cgroups_path
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
-	[ "$status" -eq 1 ]
-	[[ "$output" == *"unable to apply cgroup configuration"*"permission denied"* ]]
+	run -1 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
+	assert_output --regexp 'unable to apply cgroup configuration.*permission denied'
 }
 
 @test "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error" {
@@ -31,10 +29,9 @@ function setup() {
 
 	set_resources_limit
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
-	[ "$status" -eq 1 ]
+	run -1 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
 	[[ "$output" == *"rootless needs no limits + no cgrouppath when no permission is granted for cgroups"* ]] ||
-		[[ "$output" == *"cannot set pids limit: container could not join or create cgroup"* ]]
+		assert_output --partial "cannot set pids limit: container could not join or create cgroup"
 }
 
 @test "runc create (limits + cgrouppath + permission on the cgroup dir) succeeds" {
@@ -43,8 +40,7 @@ function setup() {
 	set_cgroups_path
 	set_resources_limit
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
 	if [ -v CGROUP_V2 ]; then
 		if [ -v RUNC_USE_SYSTEMD ]; then
 			if [ $EUID -eq 0 ]; then
@@ -65,12 +61,10 @@ function setup() {
 	set_cgroups_path
 	set_resources_limit
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
 
-	runc exec test_cgroups_permissions echo "cgroups_exec"
-	[ "$status" -eq 0 ]
-	[[ ${lines[0]} == *"cgroups_exec"* ]]
+	run -0 runc exec test_cgroups_permissions echo "cgroups_exec"
+	assert_line --index 0 --partial "cgroups_exec"
 }
 
 @test "runc exec (cgroup v2 + init process in non-root cgroup) succeeds" {
@@ -79,49 +73,40 @@ function setup() {
 	set_cgroups_path
 	set_cgroup_mount_writable
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_group
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_group
 
-	runc exec test_cgroups_group cat /sys/fs/cgroup/cgroup.controllers
-	[ "$status" -eq 0 ]
-	[[ ${lines[0]} == *"memory"* ]]
+	run -0 runc exec test_cgroups_group cat /sys/fs/cgroup/cgroup.controllers
+	assert_line --index 0 --partial "memory"
 
-	runc exec test_cgroups_group cat /proc/self/cgroup
-	[ "$status" -eq 0 ]
-	[[ ${lines[0]} = "0::/" ]]
+	run -0 runc exec test_cgroups_group cat /proc/self/cgroup
+	assert_line --index 0 "0::/"
 
-	runc exec test_cgroups_group mkdir /sys/fs/cgroup/foo
-	[ "$status" -eq 0 ]
+	run -0 runc exec test_cgroups_group mkdir /sys/fs/cgroup/foo
 
-	runc exec test_cgroups_group sh -c "echo 1 > /sys/fs/cgroup/foo/cgroup.procs"
-	[ "$status" -eq 0 ]
+	run -0 runc exec test_cgroups_group sh -c "echo 1 > /sys/fs/cgroup/foo/cgroup.procs"
 
 	# the init process is now in "/foo", but an exec process can still join "/"
 	# because we haven't enabled any domain controller.
-	runc exec test_cgroups_group cat /proc/self/cgroup
-	[ "$status" -eq 0 ]
-	[[ ${lines[0]} = "0::/" ]]
+	run -0 runc exec test_cgroups_group cat /proc/self/cgroup
+	assert_line --index 0 "0::/"
 
 	# turn on a domain controller (memory)
-	runc exec test_cgroups_group sh -euxc 'echo $$ > /sys/fs/cgroup/foo/cgroup.procs; echo +memory > /sys/fs/cgroup/cgroup.subtree_control'
-	[ "$status" -eq 0 ]
+	run -0 runc exec test_cgroups_group sh -euxc 'echo $$ > /sys/fs/cgroup/foo/cgroup.procs; echo +memory > /sys/fs/cgroup/cgroup.subtree_control'
 
 	# an exec process can no longer join "/" after turning on a domain controller.
 	# falls back to "/foo".
-	runc exec test_cgroups_group cat /proc/self/cgroup
-	[ "$status" -eq 0 ]
-	[[ ${lines[0]} = "0::/foo" ]]
+	run -0 runc exec test_cgroups_group cat /proc/self/cgroup
+	assert_line --index 0 "0::/foo"
 
 	# teardown: remove "/foo"
-	cat <<'EOF' | runc exec test_cgroups_group sh -eux
+	run -0 runc exec test_cgroups_group sh -eux <<'EOF'
 echo -memory > /sys/fs/cgroup/cgroup.subtree_control
 for pid in $(cat /sys/fs/cgroup/foo/cgroup.procs); do
 	echo $pid > /sys/fs/cgroup/cgroup.procs || true
 done
 rmdir /sys/fs/cgroup/foo
 EOF
-	runc exec test_cgroups_group test ! -d /sys/fs/cgroup/foo
-	[ "$status" -eq 0 ]
+	run -0 runc exec test_cgroups_group test ! -d /sys/fs/cgroup/foo
 }
 
 @test "runc run (cgroup v1 + unified resources should fail)" {
@@ -131,9 +116,8 @@ EOF
 	set_resources_limit
 	update_config '.linux.resources.unified |= {"memory.min": "131072"}'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
-	[ "$status" -ne 0 ]
-	[[ "$output" == *'invalid configuration'* ]]
+	run ! runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
+	assert_output --partial 'invalid configuration'
 }
 
 @test "runc run (blkio weight)" {
@@ -143,15 +127,14 @@ EOF
 	set_cgroups_path
 	update_config '.linux.resources.blockIO |= {"weight": 750}'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
 
-	runc exec test_cgroups_unified sh -c 'cat /sys/fs/cgroup/io.bfq.weight'
+	run runc exec test_cgroups_unified sh -c 'cat /sys/fs/cgroup/io.bfq.weight'
 	if [[ "$status" -eq 0 ]]; then
-		[ "$output" = 'default 750' ]
+		assert_output 'default 750'
 	else
-		runc exec test_cgroups_unified sh -c 'cat /sys/fs/cgroup/io.weight'
-		[ "$output" = 'default 7475' ]
+		run -0 runc exec test_cgroups_unified sh -c 'cat /sys/fs/cgroup/io.weight'
+		assert_output 'default 7475'
 	fi
 }
 
@@ -188,8 +171,7 @@ EOF
 			| .linux.resources.blockIO.weightDevice |= [
 				{ major: '"$major"', minor: '"$minor"', weight: 444 }
 			]'
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_dev_weight
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_dev_weight
 
 	if [ -v CGROUP_V2 ]; then
 		file="io.bfq.weight"
@@ -199,7 +181,7 @@ EOF
 	weights1=$(get_cgroup_value $file)
 
 	# Check that runc update works.
-	runc update -r - test_dev_weight <<EOF
+	run -0 runc update -r - test_dev_weight <<EOF
 {
   "blockIO": {
     "weight": 111,
@@ -240,8 +222,7 @@ EOF
 			   ]
 			| .linux.resources.unified |=
 				{"io.max": "'"$major1"':'"$minor1"' riops=333 wiops=444\n'"$major2"':'"$minor2"' riops=555 wiops=666\n"}'
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_dev_weight
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_dev_weight
 
 	weights=$(get_cgroup_value "io.max")
 	grep "^$major1:$minor1 .* riops=333 wiops=444$" <<<"$weights"
@@ -255,8 +236,7 @@ EOF
 	set_cgroups_path
 	update_config '.linux.resources.cpu.idle = 1'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
 	check_cgroup_value "cpu.idle" "1"
 }
 
@@ -300,8 +280,7 @@ convert_hugetlb_size() {
 	done
 
 	set_cgroups_path
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_hugetlb
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_hugetlb
 
 	lim="max"
 	[ -v CGROUP_V1 ] && lim="limit_in_bytes"
@@ -332,8 +311,7 @@ convert_hugetlb_size() {
 	set_cgroups_path
 	update_config '.linux.resources.pids.limit = 0'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_pids
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_pids
 	# systemd doesn't support TasksMax=0 so runc will silently remap it to 1
 	# (for consistency, we do this for systemd *and* cgroupfs).
 	check_cgroup_value "pids.max" "1"
@@ -348,8 +326,7 @@ convert_hugetlb_size() {
 	set_cgroups_path
 	update_config '.linux.resources.pids.limit = -1'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_pids
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_pids
 	check_cgroup_value "pids.max" "max"
 	# systemd < v227 shows UINT64_MAX instead of "infinity".
 	check_systemd_value "TasksMax" "infinity" "18446744073709551615"
@@ -369,11 +346,9 @@ convert_hugetlb_size() {
 				"cpu.weight": "42"
 			}'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
 
-	runc exec test_cgroups_unified sh -c 'cd /sys/fs/cgroup && grep . *.min *.max *.low *.high'
-	[ "$status" -eq 0 ]
+	run -0 runc exec test_cgroups_unified sh -c 'cd /sys/fs/cgroup && grep . *.min *.max *.low *.high'
 	echo "$output"
 
 	echo "$output" | grep -q '^memory.min:131072$'
@@ -401,11 +376,9 @@ convert_hugetlb_size() {
 				"memory.swap.max": "20971520"
 			}'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
 
-	runc exec test_cgroups_unified sh -c 'cd /sys/fs/cgroup && grep . *.max'
-	[ "$status" -eq 0 ]
+	run -0 runc exec test_cgroups_unified sh -c 'cd /sys/fs/cgroup && grep . *.max'
 	echo "$output"
 
 	echo "$output" | grep -q '^memory.max:20512768$'
@@ -434,20 +407,16 @@ convert_hugetlb_size() {
 				"cpu.weight": "42"
 			}'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
 
-	runc exec test_cgroups_unified cat /sys/fs/cgroup/memory.min
-	[ "$status" -eq 0 ]
-	[ "$output" = '131072' ]
+	run -0 runc exec test_cgroups_unified cat /sys/fs/cgroup/memory.min
+	assert_output '131072'
 
-	runc exec test_cgroups_unified cat /sys/fs/cgroup/memory.max
-	[ "$status" -eq 0 ]
-	[ "$output" = '41943040' ]
+	run -0 runc exec test_cgroups_unified cat /sys/fs/cgroup/memory.max
+	assert_output '41943040'
 
-	runc exec test_cgroups_unified cat /sys/fs/cgroup/pids.max
-	[ "$status" -eq 0 ]
-	[ "$output" = '42' ]
+	run -0 runc exec test_cgroups_unified cat /sys/fs/cgroup/pids.max
+	assert_output '42'
 	check_systemd_value "TasksMax" 42
 
 	check_cpu_quota 5000 50000
@@ -461,12 +430,10 @@ convert_hugetlb_size() {
 
 	set_cgroups_path
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
 
 	# Make sure we don't have any extra cgroups inside
-	runc exec test_cgroups_unified find /sys/fs/cgroup/ -type d
-	[ "$status" -eq 0 ]
+	run -0 runc exec test_cgroups_unified find /sys/fs/cgroup/ -type d
 	[ "$(wc -l <<<"$output")" -eq 1 ]
 }
 
@@ -475,15 +442,13 @@ convert_hugetlb_size() {
 
 	set_cgroups_path
 
-	runc run --pid-file pid.txt -d --console-socket "$CONSOLE_SOCKET" test_cgroups_group
-	[ "$status" -eq 0 ]
+	run -0 runc run --pid-file pid.txt -d --console-socket "$CONSOLE_SOCKET" test_cgroups_group
 
 	pid=$(cat pid.txt)
 	run_cgroup=$(tail -1 </proc/"$pid"/cgroup)
 	[[ "$run_cgroup" == *"runc-cgroups-integration-test"* ]]
 
-	runc exec test_cgroups_group cat /proc/self/cgroup
-	[ "$status" -eq 0 ]
+	run -0 runc exec test_cgroups_group cat /proc/self/cgroup
 	exec_cgroup=${lines[-1]}
 	[[ $exec_cgroup == *"runc-cgroups-integration-test"* ]]
 
@@ -497,15 +462,12 @@ convert_hugetlb_size() {
 
 	set_cgroups_path
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
-	[ "$status" -eq 0 ]
-	runc pause ct1
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" ct1
+	run -0 runc pause ct1
 
 	# Exec should not timeout or succeed.
-	runc exec ct1 echo ok
-	[ "$status" -eq 255 ]
-	[[ "$output" == *"cannot exec in a paused container"* ]]
+	run -255 runc exec ct1 echo ok
+	assert_output --partial "cannot exec in a paused container"
 }
 
 @test "runc exec --ignore-paused" {
@@ -514,21 +476,18 @@ convert_hugetlb_size() {
 
 	set_cgroups_path
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
-	[ "$status" -eq 0 ]
-	runc pause ct1
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" ct1
+	run -0 runc pause ct1
 
 	# Resume the container a bit later.
 	(
 		sleep 2
-		runc resume ct1
+		run runc resume ct1
 	) &
 
 	# Exec should succeed (once the container is resumed).
-	runc exec --ignore-paused ct1 echo ok
-	[ "$status" -eq 0 ]
-	[ "$output" = "ok" ]
+	run -0 runc exec --ignore-paused ct1 echo ok
+	assert_output "ok"
 }
 
 @test "runc run/create should error for a non-empty cgroup" {
@@ -536,18 +495,15 @@ convert_hugetlb_size() {
 
 	set_cgroups_path
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" ct1
 
 	# Run a second container sharing the cgroup with the first one.
-	runc --debug run -d --console-socket "$CONSOLE_SOCKET" ct2
-	[ "$status" -ne 0 ]
-	[[ "$output" == *"container's cgroup is not empty"* ]]
+	run ! runc --debug run -d --console-socket "$CONSOLE_SOCKET" ct2
+	assert_output --partial "container's cgroup is not empty"
 
 	# Same but using runc create.
-	runc create --console-socket "$CONSOLE_SOCKET" ct3
-	[ "$status" -ne 0 ]
-	[[ "$output" == *"container's cgroup is not empty"* ]]
+	run ! runc create --console-socket "$CONSOLE_SOCKET" ct3
+	assert_output --partial "container's cgroup is not empty"
 }
 
 @test "runc run/create should refuse pre-existing frozen cgroup" {
@@ -571,16 +527,14 @@ convert_hugetlb_size() {
 	echo "$STATE" >"$FREEZER"
 
 	# Start a container.
-	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
-	[ "$status" -eq 1 ]
+	run -1 runc run -d --console-socket "$CONSOLE_SOCKET" ct1
 	# A warning should be printed.
-	[[ "$output" == *"container's cgroup unexpectedly frozen"* ]]
+	assert_output --partial "container's cgroup unexpectedly frozen"
 
 	# Same check for runc create.
-	runc create --console-socket "$CONSOLE_SOCKET" ct2
-	[ "$status" -eq 1 ]
+	run -1 runc create --console-socket "$CONSOLE_SOCKET" ct2
 	# A warning should be printed.
-	[[ "$output" == *"container's cgroup unexpectedly frozen"* ]]
+	assert_output --partial "container's cgroup unexpectedly frozen"
 
 	# Cleanup.
 	rmdir "$FREEZER_DIR"

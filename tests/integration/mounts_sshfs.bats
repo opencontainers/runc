@@ -78,17 +78,15 @@ function setup_sshfs_bind_flags() {
 function pass_sshfs_bind_flags() {
 	setup_sshfs_bind_flags "$@"
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 	mnt_flags="$output"
 }
 
 function fail_sshfs_bind_flags() {
 	setup_sshfs_bind_flags "$@"
 
-	runc run test_busybox
-	[ "$status" -ne 0 ]
-	[[ "$output" == *"runc run failed: unable to start container process: error during container init: error mounting"*"operation not permitted"* ]]
+	run ! runc run test_busybox
+	assert_output --regexp 'runc run failed: unable to start container process: error during container init: error mounting.*operation not permitted'
 }
 
 @test "runc run [mount(8)-like behaviour: --bind with no options]" {

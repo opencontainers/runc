@@ -49,20 +49,18 @@ function teardown() {
 	update_config ' .linux.netDevices |= {"dummy0": {} }
       		| .process.args |= ["ip", "address", "show", "dev", "dummy0"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 }
 
 @test "move network device to container network namespace and restore it back" {
 	setup_netns
 	update_config ' .linux.netDevices |= {"dummy0": {} }'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	# The network namespace owner controls the lifecycle of the interface.
 	# The interface should remain on the namespace after the container was killed.
-	runc delete --force test_busybox
+	run -0 runc delete --force test_busybox
 
 	# Move back the interface to the root namespace (pid 1).
 	ip netns exec "$ns_name" ip link set dev dummy0 netns 1
@@ -76,8 +74,7 @@ function teardown() {
 	update_config ' .linux.netDevices |= {"dummy0": {} }
       		| .process.args |= ["ip", "address", "show", "dev", "dummy0"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 
 	# Verify the interface is still present in the network namespace.
 	ip netns exec "$ns_name" ip address show dev dummy0
@@ -95,13 +92,12 @@ function teardown() {
 	ip link set down dev dummy0
 	ip address add "$global_ip" dev dummy0
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "$output" == *"$global_ip "* ]]
+	run -0 runc run test_busybox
+	assert_output --partial "$global_ip "
 
 	# Verify the interface is still present in the network namespace.
 	run -0 ip netns exec "$ns_name" ip address show dev dummy0
-	[[ "$output" == *"$global_ip "* ]]
+	assert_output --partial "$global_ip "
 }
 
 @test "move network device to precreated container network namespace and set ip address without global scope" {
@@ -116,9 +112,8 @@ function teardown() {
 	ip link set down dev dummy0
 	ip address add "$non_global_ip" dev dummy0
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "$output" != *" $non_global_ip "* ]]
+	run -0 runc run test_busybox
+	refute_output --partial " $non_global_ip "
 
 	# Verify the interface is still present in the network namespace.
 	ip netns exec "$ns_name" ip address show dev dummy0
@@ -133,13 +128,12 @@ function teardown() {
 	# Set a custom mtu to the interface.
 	ip link set mtu "$mtu_value" dev dummy0
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "$output" == *"mtu $mtu_value "* ]]
+	run -0 runc run test_busybox
+	assert_output --partial "mtu $mtu_value "
 
 	# Verify the interface is still present in the network namespace.
 	run -0 ip netns exec "$ns_name" ip address show dev dummy0
-	[[ "$output" == *"mtu $mtu_value "* ]]
+	assert_output --partial "mtu $mtu_value "
 }
 
 @test "move network device to precreated container network namespace and set mac address" {
@@ -151,13 +145,12 @@ function teardown() {
 	# set a custom mac address to the interface
 	ip link set address "$mac_address" dev dummy0
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "$output" == *"ether $mac_address "* ]]
+	run -0 runc run test_busybox
+	assert_output --partial "ether $mac_address "
 
 	# Verify the interface is still present in the network namespace.
 	run -0 ip netns exec "$ns_name" ip address show dev dummy0
-	[[ "$output" == *"ether $mac_address "* ]]
+	assert_output --partial "ether $mac_address "
 }
 
 @test "move network device to precreated container network namespace and rename" {
@@ -165,8 +158,7 @@ function teardown() {
 	update_config ' .linux.netDevices |= { "dummy0": { "name" : "ctr_dummy0" } }
       		| .process.args |= ["ip", "address", "show", "dev", "ctr_dummy0"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 
 	# Verify the interface is still present in the network namespace.
 	ip netns exec "$ns_name" ip address show dev ctr_dummy0
@@ -188,15 +180,14 @@ function teardown() {
 	# Set a custom ip address to the interface.
 	ip address add "$global_ip" dev dummy0
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "$output" == *" $global_ip "* ]]
-	[[ "$output" == *"ether $mac_address "* ]]
-	[[ "$output" == *"mtu $mtu_value "* ]]
+	run -0 runc run test_busybox
+	assert_output --partial " $global_ip "
+	assert_output --partial "ether $mac_address "
+	assert_output --partial "mtu $mtu_value "
 
 	# Verify the interface is still present in the network namespace.
 	run -0 ip netns exec "$ns_name" ip address show dev ctr_dummy0
-	[[ "$output" == *" $global_ip "* ]]
-	[[ "$output" == *"ether $mac_address "* ]]
-	[[ "$output" == *"mtu $mtu_value "* ]]
+	assert_output --partial " $global_ip "
+	assert_output --partial "ether $mac_address "
+	assert_output --partial "mtu $mtu_value "
 }

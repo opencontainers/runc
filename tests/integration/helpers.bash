@@ -2,7 +2,7 @@
 
 set -u
 
-bats_require_minimum_version 1.5.0
+bats_require_minimum_version 1.7.0
 
 # Root directory of integration tests.
 INTEGRATION_ROOT=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
@@ -13,6 +13,20 @@ eval "$IMAGES"
 unset IMAGES
 
 : "${RUNC:="${INTEGRATION_ROOT}/../../runc"}"
+export RUNC
+
+# Directory with the runc wrapper (see bin/runc). Must be in PATH so that runc
+# can be used from bats' run helper, and after commands like taskset.
+if [[ ":$PATH:" != *":${INTEGRATION_ROOT}/bin:"* ]]; then
+	PATH="${INTEGRATION_ROOT}/bin:$PATH"
+	export PATH
+fi
+
+# The runc wrapper is a separate process, so this has to be exported
+# (unlike with the shell function it replaced).
+if [ -v RUNC_USE_SYSTEMD ]; then
+	export RUNC_USE_SYSTEMD
+fi
 
 # Path to binaries compiled from packages in tests/cmd by "make test-binaries").
 TESTBINDIR=${INTEGRATION_ROOT}/../cmd/_bin
@@ -36,46 +50,15 @@ ARCH=$(uname -m)
 # Seccomp agent socket.
 SECCCOMP_AGENT_SOCKET="$BATS_TMPDIR/seccomp-agent.sock"
 
-# Wrapper around "run" that logs output to make tests easier to debug.
-function sane_run() {
-	local cmd="$1"
-	local cmdname="${CMDNAME:-$(basename "$cmd")}"
-	shift
-
-	run "$cmd" "$@"
-
-	# Some debug information to make life easier. bats will only print it if the
-	# test failed, in which case the output is useful.
-	# shellcheck disable=SC2154
-	echo "$cmdname $* (status=$status)" >&2
-	# shellcheck disable=SC2154
-	echo "$output" >&2
-}
-
-# Wrapper for runc.
-function runc() {
-	CMDNAME="$(basename "$RUNC")" sane_run __runc "$@"
-}
-
-function setup_runc_cmdline() {
-	RUNC_CMDLINE=("$RUNC")
-	[[ -v RUNC_USE_SYSTEMD ]] && RUNC_CMDLINE+=("--systemd-cgroup")
-	[[ -n "${ROOT:-}" ]] && RUNC_CMDLINE+=("--root" "$ROOT/state")
-	export RUNC_CMDLINE
-}
-
-# Raw wrapper for runc.
-function __runc() {
-	setup_runc_cmdline
-	"${RUNC_CMDLINE[@]}" "$@"
-}
+# Assertion helpers (assert_output, refute_output, assert_line).
+load lib/assert
 
 # Wrapper for runc spec.
 function runc_spec() {
 	local rootless=""
 	[ $EUID -ne 0 ] && rootless="--rootless"
 
-	runc spec $rootless
+	run -0 runc spec $rootless
 
 	# Always add additional mappings if we have idmaps.
 	if [[ $EUID -ne 0 && "$ROOTLESS_FEATURES" == *"idmap"* ]]; then
@@ -714,12 +697,14 @@ function retry() {
 
 	for ((i = 0; i < attempts; i++)); do
 		run "$@"
+		# shellcheck disable=SC2154 # set by run
 		if [[ "$status" -eq 0 ]]; then
 			return 0
 		fi
 		sleep "$delay"
 	done
 
+	# shellcheck disable=SC2154 # set by run
 	echo "Command \"$*\" failed $attempts times. Output: $output"
 	false
 }
@@ -727,9 +712,9 @@ function retry() {
 # retry until the given container has state
 function wait_for_container() {
 	if [ $# -eq 3 ]; then
-		retry "$1" "$2" __runc state "$3"
+		retry "$1" "$2" runc state "$3"
 	elif [ $# -eq 4 ]; then
-		retry "$1" "$2" eval "__runc state $3 | grep -qw $4"
+		retry "$1" "$2" eval "runc state $3 | grep -qw $4"
 	else
 		echo "Usage: wait_for_container ATTEMPTS DELAY ID [STATUS]" 1>&2
 		return 1
@@ -738,13 +723,13 @@ function wait_for_container() {
 
 function testcontainer() {
 	# test state of container
-	runc state "$1"
+	run runc state "$1"
 	if [ "$2" = "checkpointed" ]; then
 		[ "$status" -eq 1 ]
 		return
 	fi
 	[ "$status" -eq 0 ]
-	[[ "${output}" == *"$2"* ]]
+	assert_output --partial "$2"
 }
 
 # Check that all the listed processes are gone. Use after kill/stop etc.
@@ -841,6 +826,7 @@ function setup_bundle() {
 
 	# Root for various container directories (state, tty, bundle).
 	ROOT=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
+	export ROOT
 	mkdir -p "$ROOT/state" "$ROOT/bundle/rootfs"
 
 	# Directories created by mktemp -d have 0700 permission bits. Tests
@@ -873,8 +859,8 @@ function teardown_bundle() {
 
 	teardown_recvtty
 	local ct
-	for ct in $(__runc list -q); do
-		__runc delete -f "$ct"
+	for ct in $(runc list -q); do
+		runc delete -f "$ct"
 	done
 	rm -rf "$ROOT"
 	remove_parent

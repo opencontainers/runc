@@ -174,7 +174,7 @@ integration: runcimage
 
 .PHONY: localintegration
 localintegration: runc test-binaries
-	bats -t tests/integration$(TESTPATH)
+	bats -t --print-output-on-failure tests/integration$(TESTPATH)
 
 .PHONY: rootlessintegration
 rootlessintegration: runcimage
@@ -216,8 +216,8 @@ cfmt:
 .PHONY: shellcheck
 shellcheck:
 	shellcheck tests/integration/*.bats tests/integration/*.sh \
-		tests/integration/*.bash tests/*.sh \
-		man/*.sh script/*
+		tests/integration/*.bash tests/integration/lib/*.bash \
+		tests/integration/bin/* tests/*.sh man/*.sh script/*
 	# TODO: add shellcheck for more sh files (contrib/completions/bash/runc).
 
 .PHONY: shfmt
