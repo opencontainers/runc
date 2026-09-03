@@ -131,10 +131,10 @@ func doReadSync(pipe *syncSocket) (syncT, error) {
 			logrus.Debugf("sync pipe closed")
 			return sync, err
 		}
-		return sync, fmt.Errorf("reading from parent failed: %w", err)
+		return sync, fmt.Errorf("reading sync failed: %w", err)
 	}
 	if err := json.Unmarshal(packet, &sync); err != nil {
-		return sync, fmt.Errorf("unmarshal sync from parent failed: %w", err)
+		return sync, fmt.Errorf("unmarshal sync failed: %w", err)
 	}
 	logrus.Debugf("read sync %s", sync)
 	if sync.Type == procError {
