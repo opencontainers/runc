@@ -28,7 +28,8 @@ function build_libseccomp() {
 	local tar="libseccomp-${ver}.tar.gz"
 
 	# Download, check, and extract.
-	curl -fsSL --remote-name-all "https://github.com/seccomp/libseccomp/releases/download/v${ver}/${tar}"{,.asc}
+	curl -fsSL --retry 5 --remote-name-all \
+		"https://github.com/seccomp/libseccomp/releases/download/v${ver}/${tar}"{,.asc}
 	sha256sum --strict --check - <<<"${SECCOMP_SHA256[${ver}]} *${tar}"
 
 	local srcdir
