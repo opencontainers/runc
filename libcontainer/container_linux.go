@@ -233,17 +233,48 @@ func (c *Container) Exec() error {
 func (c *Container) exec() error {
 	path := filepath.Join(c.stateDir, execFifoFilename)
 	if err := handleFifo(path, c.initProcess.pid()); err != nil {
+		if dead, ok := errors.AsType[*initDeadError](err); ok {
+			c.killDeadInit(dead.startTime)
+		}
 		return err
 	}
 
 	return c.postStart()
 }
 
-// handleFifo listens for either a byte written to the FIFO file or
-// the init process exiting. On kernels supporting pidfd_open(2)
-// (>= 5.3), it uses a single poll(2) for efficiency. On older kernels,
-// it falls back to a polling loop that periodically checks the init
-// process's liveness. This function is blocking.
+// killDeadInit disposes of an init process whose thread group leader is gone
+// while its other threads are still running (see [initDead]). Those threads
+// hold the container's file descriptors open, so whoever inherited them would
+// wait for an EOF forever, and they keep its cgroup populated, so destroying
+// the container would fail.
+//
+// Note the container has to have a private PID namespace for the kernel to
+// kill the rest of its processes once init is gone; destroy() takes care of
+// the shared namespace case.
+//
+// startTime is the start time of the init as seen when it was found dead.
+func (c *Container) killDeadInit(startTime uint64) {
+	// This can not go through c.signal, as hasInit (and so signalInit) treats
+	// a zombie init as not running. Compare the start time here instead, to
+	// make sure the pid was not reused.
+	if startTime == 0 || startTime != c.initProcessStartTime {
+		return
+	}
+	if err := c.initProcess.signal(unix.SIGKILL); err != nil {
+		logrus.WithError(err).Warn("unable to kill dead container init")
+		return
+	}
+	// Reap init, so that its cgroup is empty by the time we return. If it is
+	// not our child (as is the case for "runc start"), there is nothing to
+	// reap here, and its real parent does it for us.
+	if _, err := c.initProcess.wait(); err != nil {
+		logrus.WithError(err).Debug("unable to wait for dead container init")
+	}
+}
+
+// handleFifo waits for either a byte written to the FIFO file by the
+// container's init process (meaning it is about to execve the container
+// process), or for that init process to die. This function is blocking.
 func handleFifo(path string, pid int) error {
 	f, err := os.OpenFile(path, os.O_RDONLY|unix.O_NONBLOCK, 0)
 	if err != nil {
@@ -251,8 +282,8 @@ func handleFifo(path string, pid int) error {
 	}
 	defer f.Close()
 
-	if err := waitForFifoReady(f, pid); err != nil {
-		return err
+	if err := waitForInitWrite(int(f.Fd()), pid); err != nil {
+		return fmt.Errorf("wait for exec fifo: %w", err)
 	}
 
 	if err := readFromExecFifo(f); err != nil {
@@ -263,67 +294,6 @@ func handleFifo(path string, pid int) error {
 		return err
 	}
 	return nil
-}
-
-// waitForFifoReady blocks until either the FIFO has data available to read,
-// or the init process has exited. It does not consume the data — it only
-// returns once a subsequent read on f will not block indefinitely.
-func waitForFifoReady(f *os.File, pid int) error {
-	// TODO: switch to os.Process.WithHandle once go < 1.26 is no longer supported.
-	pidFd, err := unix.PidfdOpen(pid, 0)
-	if err == nil {
-		defer unix.Close(pidFd)
-		return waitForFifoReadyPidfd(f, pidFd)
-	}
-	// fall through to the polling path.
-	return waitForFifoReadyPolling(f, pid)
-}
-
-// fast path: a single poll(2) on both the
-// FIFO and a pidfd, blocking with no timeout.
-func waitForFifoReadyPidfd(f *os.File, pidFd int) error {
-	pfds := []unix.PollFd{
-		{Fd: int32(f.Fd()), Events: unix.POLLIN},
-		{Fd: int32(pidFd), Events: unix.POLLIN},
-	}
-	for {
-		_, err := unix.Poll(pfds, -1)
-		if errors.Is(err, unix.EINTR) {
-			continue
-		}
-		if err != nil {
-			return fmt.Errorf("poll exec fifo: %w", err)
-		}
-		// We don't care which FD woke us up. In all cases the next step
-		// is to read the FIFO: if init wrote the byte (alive or dead),
-		// it's there to be read; if init died without writing, the read
-		// returns EOF and readFromExecFifo reports the dead-process error.
-		return nil
-	}
-}
-
-// the fallback for kernels without pidfd_open.
-func waitForFifoReadyPolling(f *os.File, pid int) error {
-	pfd := []unix.PollFd{{Fd: int32(f.Fd()), Events: unix.POLLIN}}
-	const pollIntervalMs = 100
-	for {
-		n, err := unix.Poll(pfd, pollIntervalMs)
-		if errors.Is(err, unix.EINTR) {
-			continue
-		}
-		if err != nil {
-			return fmt.Errorf("poll exec fifo: %w", err)
-		}
-		if n > 0 && pfd[0].Revents&(unix.POLLIN|unix.POLLHUP) != 0 {
-			return nil
-		}
-		// If init is dead, fallthrough and let readFromExecFifo distinguish
-		// "wrote before dying" from "died before writing".
-		stat, err := system.Stat(pid)
-		if err != nil || stat.State == system.Zombie {
-			return nil
-		}
-	}
 }
 
 func readFromExecFifo(execFifo io.Reader) error {
