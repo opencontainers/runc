@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   systems. (#5403, #5428)
 - Fixed a missing `O_CLOEXEC` when opening the cgroup v2 directory to set up
   device rules. (#5403, #5428)
+- runc no longer misdetects a non-initial user namespace as the initial one
+  when that namespace has a full identity ID mapping (`0 0 4294967295`), as
+  used by systemd >= 260 units with `PrivateUsers=full`. Previously this made
+  runc skip its user namespace code paths, so starting a container in such a
+  unit failed with `bpf_prog_query(BPF_CGROUP_DEVICE) failed: operation not
+  permitted`. (#5396, [moby/sys#239])
+
+[moby/sys#239]: https://github.com/moby/sys/issues/239
 
 ### Changed ###
 - Switched to opencontainers/cgroups v0.1.0, which no longer uses the
