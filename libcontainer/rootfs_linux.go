@@ -737,7 +737,8 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 				logrus.Debugf(
 					"working around failure to set vfs flags on bind-mount %s: srcFlags=%s flagsSet=%s flagsClr=%s: %v",
 					m.Destination, stringifyMountFlags(srcFlags),
-					stringifyMountFlags(m.Flags), stringifyMountFlags(m.ClearedFlags), mountErr)
+					stringifyMountFlags(m.Flags), stringifyMountFlags(m.ClearedFlags), mountErr,
+				)
 
 				// If the user explicitly request one of the locked flags *not*
 				// be set, we need to return an error to avoid producing mounts
