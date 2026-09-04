@@ -8,15 +8,21 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "daily"
+    cooldown:
+      default-days: 7
 
   # Dependencies listed in .github/workflows/*.yml
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "daily"
+    cooldown:
+      default-days: 7
 
   # Dependencies listed in Dockerfile
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "daily"
+    cooldown:
+      default-days: 7

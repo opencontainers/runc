@@ -9,6 +9,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Cancel superseded runs of the same pull request. For everything else
+# (in particular, pushes to a branch or a tag) there is no PR number, so
+# the group falls back to the unique run_id and nothing is cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -20,7 +27,9 @@ jobs:
   keyring:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
     - name: check runc.keyring
       run: make validate-keyring
 
@@ -28,23 +37,23 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-      pull-requests: read
       checks: write # to allow the action to annotate code in the PR.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 2
-      - uses: actions/setup-go@v6
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: install deps
         run: |
           sudo apt -q update
           sudo apt -qy install libseccomp-dev
-      - uses: golangci/golangci-lint-action@v9
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          version: v2.10
+          version: v2.12
           skip-cache: true
       # Extra linters, only checking new code from a pull request to main.
       - name: lint-extra
@@ -52,32 +61,10 @@ jobs:
         run: |
           golangci-lint run --config .golangci-extra.yml --new-from-rev=HEAD~1
 
-  modernize:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 2
-      - uses: actions/setup-go@v6
-        with:
-          go-version: stable # modernize@latest may require latest Go.
-      - name: install deps
-        run: |
-          sudo apt -q update
-          sudo apt -qy install libseccomp-dev
-      - name: run go fix
-        run: |
-          go fix ./...
-          git diff --exit-code
-      - name: run modernize
-        run: |
-          go run golang.org/x/tools/go/analysis/passes/modernize/cmd/modernize@latest -fix ./...
-          git diff --exit-code
-
   govulncheck:
     runs-on: ubuntu-24.04
     steps:
-    - uses: golang/govulncheck-action@v1
+    - uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
 
   compile-buildtags:
     runs-on: ubuntu-24.04
@@ -85,9 +72,11 @@ jobs:
       # Don't ignore C warnings. Note that the output of "go env CGO_CFLAGS" by default is "-g -O2", so we keep them.
       CGO_CFLAGS: -g -O2 -Werror
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: install go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: install deps
@@ -105,7 +94,9 @@ jobs:
   codespell:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
     - name: install deps
       # Version of codespell bundled with Ubuntu is way old, so use pip.
       run: pip install --break-system-packages codespell==v2.4.1
@@ -115,14 +106,18 @@ jobs:
   shfmt:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
     - name: shfmt
       run: make shfmt
 
   shellcheck:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: install shellcheck
         env:
           VERSION: v0.11.0
@@ -137,7 +132,7 @@ jobs:
           sudo rm -f /usr/bin/shellcheck
           # Add ~/bin to $PATH.
           echo ~/bin >> $GITHUB_PATH
-      - uses: lumaxis/shellcheck-problem-matchers@v2
+      - uses: lumaxis/shellcheck-problem-matchers@bf6e0860fd06e4910738c6160dcd2889146ce824 # v2.3.1
       - name: run
         run: make shellcheck
       - name: check-config.sh
@@ -146,16 +141,20 @@ jobs:
   space-at-eol:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - run: rm -fr vendor
       - run: if git -P grep -I -n '\s$'; then echo "^^^ extra whitespace at EOL, please fix"; exit 1; fi
 
   deps:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
     - name: install go
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version: "${{ env.GO_VERSION }}"
         check-latest: true
@@ -172,19 +171,19 @@ jobs:
   commit:
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: read # Needed by get-pr-commits to list the PR's commits.
     runs-on: ubuntu-24.04
     steps:
       - name: get pr commits
         if: github.event_name == 'pull_request' # Only check commits on pull requests.
         id: 'get-pr-commits'
-        uses: tim-actions/get-pr-commits@v1.3.1
+        uses: tim-actions/get-pr-commits@198af03565609bb4ed924d1260247b4881f09e7d # v1.3.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: check subject line length
         if: github.event_name == 'pull_request' # Only check commits on pull requests.
-        uses: tim-actions/commit-message-checker-with-regex@v0.3.2
+        uses: tim-actions/commit-message-checker-with-regex@094fc16ff83d04e2ec73edb5eaf6aa267db33791 # v0.3.2
         with:
           commits: ${{ steps.get-pr-commits.outputs.commits }}
           pattern: '^.{0,72}(\n.*)*$'
@@ -198,7 +197,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - name: checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
     - name: install deps
       run: |
         sudo apt -qq update
@@ -211,7 +212,9 @@ jobs:
   check-go:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
     - name: check Go version
       run: |
         GO_VER=$(awk -F= '/^ARG\s+GO_VERSION=/ {print $2; quit}' Dockerfile)
@@ -226,7 +229,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - name: checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
 
     - name: check CHANGELOG.md
       run: make verify-changelog
@@ -245,7 +250,7 @@ jobs:
     - name: make releaseall
       run: make releaseall
     - name: upload artifacts
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: release-${{ github.run_id }}
         path: release/*
@@ -254,7 +259,9 @@ jobs:
   get-images:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
     - name: install bashbrew
       env:
         BASEURL: https://github.com/docker-library/bashbrew/releases/download
@@ -278,7 +285,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - name: checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
 
     - name: install runc and conmon deps
       # XXX maybe switch to conmon/hack/github-actions-setup if the burden
@@ -291,7 +300,7 @@ jobs:
         sudo -E PATH="$PATH" ./script/build-libpathrs.sh "$LIBPATHRS_VERSION" /usr
 
     - name: install Go
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version: "${{ env.GO_VERSION }}"
 
@@ -304,7 +313,7 @@ jobs:
         sed "s;^profile runc /usr/sbin/;profile runc-test $PWD/;" < /etc/apparmor.d/runc | sudo apparmor_parser
 
     - name: setup bats
-      uses: bats-core/bats-action@4.0.0
+      uses: bats-core/bats-action@77d6fb60505b4d0d1d73e48bd035b55074bbfb43 # 4.0.0
       with:
         bats-version: 1.13.0 # As required by conmon in hack/github-actions-setup.
         support-install: false
@@ -313,7 +322,7 @@ jobs:
         file-install: false
 
     - name: checkout conmon
-      uses: actions/checkout@v6
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         repository: containers/conmon
         path: conmon
@@ -322,6 +331,7 @@ jobs:
         # image can not be pulled) that are not in any release yet. Switch to
         # a released version once one is out (> v2.2.1).
         ref: f4cefcd7a33932131ab1a0130ae0b0175368025a
+        persist-credentials: false
 
     - name: build conmon
       run: cd conmon && make
@@ -333,6 +343,20 @@ jobs:
       # expected to skip in this environment.
       run: |
         RUNTIME_BINARY=$(pwd)/runc ./conmon/test/run-tests.sh --strict -j $(nproc)
+
+  zizmor:
+    runs-on: ubuntu-24.04
+    steps:
+    - name: checkout
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    - uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
+      with:
+        version: 1.29.0
+        advanced-security: false
+        annotations: true
 
   all-done:
     needs:
@@ -347,11 +371,11 @@ jobs:
       - govulncheck
       - keyring
       - lint
-      - modernize
       - release
       - shellcheck
       - shfmt
       - space-at-eol
+      - zizmor
     runs-on: ubuntu-24.04
     steps:
     - run: echo "All jobs completed"
