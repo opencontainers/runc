@@ -48,6 +48,15 @@ type parentProcess interface {
 	// wait waits on the process returning the process state.
 	wait() (*os.ProcessState, error)
 
+	// withHandle calls fn with a handle (a pidfd on Linux) that is
+	// guaranteed to refer to the process for the duration of the call,
+	// even if the process exits meanwhile. If no usable handle is
+	// available, fn is not called and an error is returned: [os.ErrNoHandle]
+	// if the process never had one (e.g. the kernel is too old), or
+	// [os.ErrProcessDone] if it had one but the process was already waited
+	// for.
+	withHandle(fn func(handle uintptr)) error
+
 	// startTime returns the process start time.
 	startTime() (uint64, error)
 	signal(os.Signal) error
@@ -169,6 +178,13 @@ func (p *containerProcess) wait() (*os.ProcessState, error) { //nolint:unparam
 
 	// Return actual ProcessState even on Wait error
 	return p.cmd.ProcessState, err
+}
+
+func (p *containerProcess) withHandle(fn func(handle uintptr)) error {
+	if p.cmd.Process == nil {
+		return os.ErrNoHandle
+	}
+	return p.cmd.Process.WithHandle(fn)
 }
 
 type setnsProcess struct {
@@ -540,7 +556,7 @@ func (p *setnsProcess) start() (retErr error) {
 			if err := json.Unmarshal(*sync.Arg, &srcFd); err != nil {
 				return fmt.Errorf("sync %q passed invalid fd arg: %w", sync.Type, err)
 			}
-			seccompFd, err := pidGetFd(p.pid(), srcFd)
+			seccompFd, err := pidGetFd(p, srcFd)
 			if err != nil {
 				return fmt.Errorf("sync %q get fd %d from child failed: %w", sync.Type, srcFd, err)
 			}
@@ -948,7 +964,7 @@ func (p *initProcess) start() (retErr error) {
 			if err := json.Unmarshal(*sync.Arg, &srcFd); err != nil {
 				return fmt.Errorf("sync %q passed invalid fd arg: %w", sync.Type, err)
 			}
-			seccompFd, err := pidGetFd(p.pid(), srcFd)
+			seccompFd, err := pidGetFd(p, srcFd)
 			if err != nil {
 				return fmt.Errorf("sync %q get fd %d from child failed: %w", sync.Type, srcFd, err)
 			}
@@ -1103,15 +1119,22 @@ func (p *initProcess) setupNetworkDevices() error {
 	return nil
 }
 
-func pidGetFd(pid, srcFd int) (*os.File, error) {
-	pidFd, err := unix.PidfdOpen(pid, 0)
-	if err != nil {
-		return nil, os.NewSyscallError("pidfd_open", err)
+// pidGetFd returns a copy of the file descriptor srcFd of process p.
+func pidGetFd(p parentProcess, srcFd int) (*os.File, error) {
+	var (
+		fd     int
+		getErr error
+	)
+	// Reuse the handle os/exec already holds for the process, rather than
+	// opening another pidfd by pid. Note that pidfd_getfd(2) requires a 5.6
+	// kernel, so a kernel that has no handle for us can't do this anyway.
+	if err := p.withHandle(func(handle uintptr) {
+		fd, getErr = unix.PidfdGetfd(int(handle), srcFd, 0)
+	}); err != nil {
+		return nil, fmt.Errorf("no process handle to get fd from: %w", err)
 	}
-	defer unix.Close(pidFd)
-	fd, err := unix.PidfdGetfd(pidFd, srcFd, 0)
-	if err != nil {
-		return nil, os.NewSyscallError("pidfd_getfd", err)
+	if getErr != nil {
+		return nil, os.NewSyscallError("pidfd_getfd", getErr)
 	}
 	return os.NewFile(uintptr(fd), "[pidfd_getfd]"), nil
 }
