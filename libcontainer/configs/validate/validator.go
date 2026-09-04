@@ -491,12 +491,12 @@ func memoryPolicy(config *configs.Config) error {
 	}
 	switch mpol.Mode {
 	case unix.MPOL_DEFAULT, unix.MPOL_LOCAL:
-		if mpol.Nodes != nil && mpol.Nodes.Count() != 0 {
+		if mpol.Nodes.Count() != 0 {
 			return fmt.Errorf("memory policy mode requires 0 nodes but got %d", mpol.Nodes.Count())
 		}
 	case unix.MPOL_BIND, unix.MPOL_INTERLEAVE,
 		unix.MPOL_PREFERRED_MANY, unix.MPOL_WEIGHTED_INTERLEAVE:
-		if mpol.Nodes == nil || mpol.Nodes.Count() == 0 {
+		if mpol.Nodes.Count() == 0 {
 			return fmt.Errorf("memory policy mode requires at least one node but got 0")
 		}
 	case unix.MPOL_PREFERRED:

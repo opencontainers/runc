@@ -59,9 +59,10 @@ func TestToCPUSet(t *testing.T) {
 		{in: "1024", out: set(1024)},
 		{in: "8191", out: set(8191)},
 		{in: "4096-4098", out: set(4096, 4097, 4098)},
-		{in: "0,65536", out: set(0, 65536)},
+		{in: "0,65534", out: set(0, 65534)},
 		// Maximum allowed value.
-		{in: "65536", out: set(65536)},
+		{in: "65535", out: set(65535)},
+		{in: "65532-65535", out: set(65532, 65533, 65534, 65535)},
 
 		// Error cases.
 		{in: "-", isErr: true},
@@ -74,8 +75,8 @@ func TestToCPUSet(t *testing.T) {
 		// Extra spaces inside a range is not OK.
 		{in: "1 - 2", isErr: true},
 		// Larger than the maximum supported value.
-		{in: "65537", isErr: true},
-		{in: "0-65537", isErr: true},
+		{in: "65536", isErr: true},
+		{in: "0-65536", isErr: true},
 	}
 
 	for _, tc := range testCases {
