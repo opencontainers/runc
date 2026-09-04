@@ -17,6 +17,12 @@ unset IMAGES
 # Path to binaries compiled from packages in tests/cmd by "make test-binaries").
 TESTBINDIR=${INTEGRATION_ROOT}/../cmd/_bin
 
+# ROOT should not be inherited from the environment.
+if [ -v ROOT ]; then
+	echo "helpers.bash: ignoring ROOT set in the environment ($ROOT)" >&2
+	unset ROOT
+fi
+
 # Some variables may not always be set. Set those to empty value,
 # if unset, to avoid "unbound variable" error.
 : "${ROOTLESS_FEATURES:=}"
@@ -777,6 +783,31 @@ function wait_pids_gone() {
 	return 1
 }
 
+# Name of the marker file, used by make_test_root and is_test_root.
+ROOT_MARKER=".runc-integration-test-root"
+
+# make_test_root creates a directory to be used as $ROOT (or a similar
+# per-test directory), marking it as safe to remove in a teardown.
+function make_test_root() {
+	local dir="$1"
+
+	mkdir -p "$dir"
+	touch "$dir/$ROOT_MARKER"
+}
+
+# is_test_root returns 0 if the argument is a directory created by
+# make_test_root, meaning it is safe to remove it recursively.
+function is_test_root() {
+	local dir="${1:-}"
+
+	[ -d "$dir" ] || return 1
+	# Must be under the bats-created temporary directory.
+	[ -n "${BATS_RUN_TMPDIR:-}" ] || return 1
+	[[ "$dir" == "$BATS_RUN_TMPDIR"/* ]] || return 1
+	# Must contain the marker file.
+	[ -f "$dir/$ROOT_MARKER" ]
+}
+
 function setup_recvtty() {
 	[ ! -v ROOT ] && return 1 # must not be called without ROOT set
 	local dir="$ROOT/tty"
@@ -841,6 +872,7 @@ function setup_bundle() {
 
 	# Root for various container directories (state, tty, bundle).
 	ROOT=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
+	make_test_root "$ROOT"
 	mkdir -p "$ROOT/state" "$ROOT/bundle/rootfs"
 
 	# Directories created by mktemp -d have 0700 permission bits. Tests
@@ -876,7 +908,11 @@ function teardown_bundle() {
 	for ct in $(__runc list -q); do
 		__runc delete -f "$ct"
 	done
-	rm -rf "$ROOT"
+	if is_test_root "$ROOT"; then
+		rm -rf "$ROOT"
+	else
+		echo "teardown_bundle: refusing to remove $ROOT (no $ROOT_MARKER in it)" >&2
+	fi
 	remove_parent
 }
 
