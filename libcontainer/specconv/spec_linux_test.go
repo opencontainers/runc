@@ -32,7 +32,7 @@ func TestCreateCommandHookTimeout(t *testing.T) {
 func TestCreateHooks(t *testing.T) {
 	rspec := &specs.Spec{
 		Hooks: &specs.Hooks{
-			Prestart: []specs.Hook{
+			Prestart: []specs.Hook{ //nolint:staticcheck // Ignore SA1019. Need to keep deprecated package for compatibility.
 				{
 					Path: "/some/hook/path",
 				},
@@ -364,7 +364,7 @@ func TestLinuxCgroupWithMemoryResource(t *testing.T) {
 			Limit:            &limit,
 			Reservation:      &reservation,
 			Swap:             &swap,
-			Kernel:           &kernel,
+			Kernel:           &kernel, //nolint:staticcheck // Ignore SA1019. Need to keep deprecated package for compatibility.
 			KernelTCP:        &kernelTCP,
 			Swappiness:       swappinessPtr,
 			DisableOOMKiller: &disableOOMKiller,
