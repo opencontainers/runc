@@ -54,7 +54,6 @@ func (l *linuxStandardInit) Init() error {
 			if err := selinux.SetKeyLabel(l.config.ProcessLabel); err != nil {
 				return err
 			}
-			defer selinux.SetKeyLabel("") //nolint: errcheck
 		}
 		ringname, keepperms, newperms := l.getSessionRingParams()
 
@@ -185,7 +184,6 @@ func (l *linuxStandardInit) Init() error {
 		if err := selinux.SetExecLabel(l.config.ProcessLabel); err != nil {
 			return fmt.Errorf("can't set process label: %w", err)
 		}
-		defer selinux.SetExecLabel("") //nolint: errcheck
 	}
 	// Without NoNewPrivileges seccomp is a privileged operation, so we need to
 	// do this before dropping capabilities; otherwise do it as late as possible

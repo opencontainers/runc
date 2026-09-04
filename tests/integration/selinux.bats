@@ -104,3 +104,20 @@ function enable_userns() {
 	enable_userns
 	exec_check_label
 }
+
+# Check that an execve failure is reported as such, rather than aborting
+# runc init. See https://github.com/opencontainers/runc/issues/5438.
+@test "runc run (execve error + custom selinux label)" {
+	cat <<-EOF >rootfs/run.sh
+		#!/mmnnttbb foo bar
+		sh
+	EOF
+	chmod +x rootfs/run.sh
+
+	update_config '	  .process.selinuxLabel |= "system_u:system_r:container_t:s0:c4,c5"
+			| .process.args = ["/run.sh"]'
+	runc run tst
+	[ "$status" -ne 0 ]
+	[ ${#lines[@]} -eq 1 ]
+	[[ "${lines[0]}" = "exec /run.sh: no such file or directory" ]]
+}
