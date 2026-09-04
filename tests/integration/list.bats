@@ -5,6 +5,7 @@ load helpers
 function setup() {
 	setup_busybox
 	ALT_ROOT="$ROOT/alt"
+	make_test_root "$ALT_ROOT"
 	mkdir -p "$ALT_ROOT/state"
 }
 
