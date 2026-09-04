@@ -72,7 +72,7 @@ func getNetworkInterfaceStats(interfaceName string) (*types.NetworkInterface, er
 		if err != nil {
 			return nil, err
 		}
-		*(netStat.Out) = data
+		*netStat.Out = data
 	}
 	return out, nil
 }
