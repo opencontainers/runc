@@ -20,7 +20,11 @@ func FchmodFile(f *os.File, mode uint32) error {
 	// in order to mirror glibc) returns EOPNOTSUPP rather than EINVAL
 	// (what the kernel actually returns for invalid flags, which is being
 	// emulated) or ENOSYS (which is what glibc actually sees).
-	if err != unix.EINVAL && err != unix.EOPNOTSUPP { //nolint:errorlint // unix errors are bare
+	// Some vendor-customized "franken-kernels" (such as QNAP's 5.10 kernel)
+	// implement or route syscall 452 (fchmodat2) without proper AT_EMPTY_PATH
+	// support in VFS, returning raw ENOENT instead of ENOSYS. Treat ENOENT as
+	// a fallback trigger to accommodate these kernels. See #5415.
+	if err != unix.EINVAL && err != unix.EOPNOTSUPP && err != unix.ENOENT { //nolint:errorlint // unix errors are bare
 		// err == nil is implicitly handled
 		return os.NewSyscallError("fchmodat2 AT_EMPTY_PATH", err)
 	}
