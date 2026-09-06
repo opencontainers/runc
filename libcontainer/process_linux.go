@@ -213,7 +213,7 @@ func tryResetCPUAffinity(pid int) {
 // Starts setns process with specified initial CPU affinity.
 func (p *setnsProcess) startWithCPUAffinity() error {
 	aff := p.config.CPUAffinity
-	if aff == nil || aff.Initial == nil {
+	if aff == nil || len(aff.Initial) == 0 {
 		return p.cmd.Start()
 	}
 	errCh := make(chan error)
@@ -242,11 +242,11 @@ func (p *setnsProcess) setFinalCPUAffinity() error {
 	aff := p.config.CPUAffinity
 	// If there was no affinity configured at all, we want to reset
 	// the affinity to make sure we don't inherit an unexpected one.
-	if aff == nil || aff.Final == nil && aff.Initial == nil {
+	if aff == nil || len(aff.Final) == 0 && len(aff.Initial) == 0 {
 		tryResetCPUAffinity(p.pid())
 		return nil
 	}
-	if aff.Final == nil {
+	if len(aff.Final) == 0 {
 		return nil
 	}
 	if err := linux.SchedSetaffinity(p.pid(), aff.Final); err != nil {
