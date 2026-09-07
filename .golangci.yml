@@ -9,7 +9,10 @@ formatters:
     - gofumpt
   settings:
     gofumpt:
-      extra-rules: true
+      extra:
+        balance-calls: true
+        clothe-returns: true
+        group-params: true
 
 linters:
   enable:

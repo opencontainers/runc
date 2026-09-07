@@ -269,7 +269,7 @@ func TestExecInTTY(t *testing.T) {
 		ok(t, err)
 		ps.ConsoleSocket = child
 
-		done := make(chan (error))
+		done := make(chan error)
 		go func() {
 			f, err := cmsg.RecvFile(parent)
 			if err != nil {

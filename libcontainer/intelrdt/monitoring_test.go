@@ -11,7 +11,8 @@ import (
 func TestParseMonFeatures(t *testing.T) {
 	t.Run("All features available", func(t *testing.T) {
 		parsedMonFeatures, err := parseMonFeatures(
-			strings.NewReader("mbm_total_bytes\nmbm_local_bytes\nllc_occupancy"))
+			strings.NewReader("mbm_total_bytes\nmbm_local_bytes\nllc_occupancy"),
+		)
 		if err != nil {
 			t.Errorf("Error while parsing mon features err = %v", err)
 		}
