@@ -21,7 +21,7 @@ permissions:
 
 env:
   GO_VERSION: 1.26
-  LIBPATHRS_VERSION: "0.2.5"
+  LIBPATHRS_VERSION: "0.2.6"
 
 jobs:
   keyring:
