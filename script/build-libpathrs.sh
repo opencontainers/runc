@@ -45,6 +45,7 @@ declare -A RUST_TARGET_TO_CC=(
 # sha256 checksums for libpathrs release tarballs.
 declare -A LIBPATHRS_SHA256=(
 	["0.2.5"]=f8f4a9419eb839cd5decbd120b65f0495bf6eac07155477fe39a8c2a23da589d
+	["0.2.6"]=7b1e3a2c3cc0bd9f94187edbb6d1ba9737deb2bf7f724df1ee37653ea405b2b0
 )
 
 function generate_cargo_config() {
