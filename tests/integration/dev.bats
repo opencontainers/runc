@@ -10,6 +10,36 @@ function teardown() {
 	teardown_bundle
 }
 
+@test "runc run [redundant default /dev/full]" {
+	requires root # Rootless devices behave differently.
+
+	# 1. This is how a device from the default AllowedDevices should work as is.
+	# It's /dev/full so it should return "no space left on device" error.
+	update_config '	.process.args |= ["sh", "-c", "stat /dev/full; echo foo >/dev/full"]'
+	runc run test_dev
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"Device type: 1,7"* ]]
+	[[ "$output" == *": No space left on device"* ]]
+
+	# 2. Add the device to linux.devices only (but not to linux.resources.devices).
+	# This way it will be excluded from the cgroup allow rules.
+	update_config ' .linux.devices += [{"path": "/dev/full", "type": "c", "major": 1, "minor": 7}]'
+	runc run test_dev
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"Device type: 1,7"* ]]
+	[[ "$output" == *": Operation not permitted"* ]]
+
+	# 3. Also add it to cgroups list. Now it should work like the default one (see 1 above).
+	update_config ' .linux.resources.devices = [
+		{"allow": false, "access": "rwm"},
+		{"allow": true, "type": "c", "major": 1, "minor": 7, "access": "rw"}
+	]'
+	runc run test_dev
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"Device type: 1,7"* ]]
+	[[ "$output" == *": No space left on device"* ]]
+}
+
 @test "runc run [redundant default /dev/tty]" {
 	update_config ' .linux.devices += [{"path": "/dev/tty", "type": "c", "major": 5, "minor": 0}]
 		      | .process.args |= ["ls", "-lLn", "/dev/tty"]'
