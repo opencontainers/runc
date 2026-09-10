@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"sync"
 
 	"github.com/opencontainers/runc/libcontainer/system"
 )
@@ -57,6 +58,13 @@ func (p *restoredProcess) wait() (*os.ProcessState, error) {
 	return st, nil
 }
 
+func (p *restoredProcess) withHandle(fn func(handle uintptr)) error {
+	if p.cmd.Process == nil {
+		return os.ErrNoHandle
+	}
+	return p.cmd.Process.WithHandle(fn)
+}
+
 func (p *restoredProcess) startTime() (uint64, error) {
 	return p.processStartTime, nil
 }
@@ -84,6 +92,29 @@ type nonChildProcess struct {
 	processPid       int
 	processStartTime uint64
 	fds              []string
+
+	procOnce sync.Once
+	proc     *os.Process
+}
+
+// osProcess returns an [os.Process] for the container init.
+//
+// Unlike the other parentProcess implementations, we have no [exec.Cmd] to
+// take it from, so it has to be looked up by pid, which is inherently racy
+// (the pid could have been reused before we get here). Once found, though, it
+// is kept and reused: on Linux it holds a pidfd, so every subsequent operation
+// on it is guaranteed to affect this very process, and never a recycled pid.
+// If the pid is already gone by then, the result is a process permanently
+// marked as done, which is exactly what every caller wants to hear.
+//
+// The lookup is lazy because most things one can do with a loaded container
+// (state, list, ps, ...) never need it, and it costs an fd.
+func (p *nonChildProcess) osProcess() *os.Process {
+	p.procOnce.Do(func() {
+		// On Unix, FindProcess never fails.
+		p.proc, _ = os.FindProcess(p.processPid)
+	})
+	return p.proc
 }
 
 func (p *nonChildProcess) start() error {
@@ -102,16 +133,16 @@ func (p *nonChildProcess) wait() (*os.ProcessState, error) {
 	return nil, errors.New("restored process cannot be waited on")
 }
 
+func (p *nonChildProcess) withHandle(fn func(handle uintptr)) error {
+	return p.osProcess().WithHandle(fn)
+}
+
 func (p *nonChildProcess) startTime() (uint64, error) {
 	return p.processStartTime, nil
 }
 
 func (p *nonChildProcess) signal(s os.Signal) error {
-	proc, err := os.FindProcess(p.processPid)
-	if err != nil {
-		return err
-	}
-	return proc.Signal(s)
+	return p.osProcess().Signal(s)
 }
 
 func (p *nonChildProcess) externalDescriptors() []string {
