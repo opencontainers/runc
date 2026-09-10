@@ -397,11 +397,13 @@ func mountCgroupV1(m mountEntry, c *mountConfig) error {
 }
 
 func mountCgroupV2(m mountEntry, c *mountConfig) error {
-	err := utils.WithProcfdFile(m.dstFile, func(dstFd string) error {
-		return mountViaFds(m.Source, nil, m.Destination, dstFd, "cgroup2", uintptr(m.Flags), m.Data)
-	})
-	if err == nil || (!errors.Is(err, unix.EPERM) && !errors.Is(err, unix.EBUSY)) {
-		return err
+	if c.cgroupns {
+		err := utils.WithProcfdFile(m.dstFile, func(dstFd string) error {
+			return mountViaFds(m.Source, nil, m.Destination, dstFd, "cgroup2", uintptr(m.Flags), m.Data)
+		})
+		if err == nil || (!errors.Is(err, unix.EPERM) && !errors.Is(err, unix.EBUSY)) {
+			return err
+		}
 	}
 
 	// When we are in UserNS but CgroupNS is not unshared, we cannot mount
@@ -418,8 +420,14 @@ func mountCgroupV2(m mountEntry, c *mountConfig) error {
 		// rather than the whole /sys/fs/cgroup.
 		bindM.Source = c.cgroup2Path
 	}
+	if !c.cgroupns {
+		// With host cgroup namespace, bind-mount the existing cgroup2
+		// hierarchy instead of mounting a fresh cgroup2 instance, and detach
+		// it from host-side propagation.
+		bindM.PropagationFlags = append(bindM.PropagationFlags, unix.MS_PRIVATE)
+	}
 	// mountToRootfs() handles remounting for MS_RDONLY.
-	err = mountToRootfs(c, mountEntry{Mount: bindM})
+	err := mountToRootfs(c, mountEntry{Mount: bindM})
 	if c.rootlessCgroups && errors.Is(err, unix.ENOENT) {
 		// ENOENT (for `src = c.cgroup2Path`) happens when rootless runc is being executed
 		// outside the userns+mountns.
