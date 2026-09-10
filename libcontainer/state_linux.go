@@ -57,13 +57,16 @@ func destroy(c *Container) error {
 			return fmt.Errorf("unable to remove container's IntelRDT group: %w", err)
 		}
 	}
+	c.initProcess = nil
+	if err := runPoststopHooks(c); err != nil {
+		return fmt.Errorf("unable to run post stop hooks: %w", err)
+	}
+	c.state = &stoppedState{c: c}
+
 	if err := os.RemoveAll(c.stateDir); err != nil {
 		return fmt.Errorf("unable to remove container state dir: %w", err)
 	}
-	c.initProcess = nil
-	err := runPoststopHooks(c)
-	c.state = &stoppedState{c: c}
-	return err
+	return nil
 }
 
 func runPoststopHooks(c *Container) error {
