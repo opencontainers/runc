@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: kjanat/actionlint@c9565647ad2ff016b50b148a595dfcce50975816 # v1.13.0
+      - uses: kjanat/actionlint@1ab487e641ac26ed42a8a753158033d55eaae2e4 # v1.14.0
 
   all-done:
     needs:
