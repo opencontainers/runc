@@ -554,34 +554,51 @@ convert_hugetlb_size() {
 	requires cgroups_freezer
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 
-	set_cgroups_path
+	local dirs=() dir
 
-	if [ -v CGROUP_V1 ]; then
-		FREEZER_DIR="${CGROUP_FREEZER_BASE_PATH}/${REL_CGROUPS_PATH}"
-		FREEZER="${FREEZER_DIR}/freezer.state"
-		STATE="FROZEN"
-	else
-		FREEZER_DIR="${CGROUP_V2_PATH}"
-		FREEZER="${FREEZER_DIR}/cgroup.freeze"
-		STATE="1"
-	fi
+	# Set a new cgroup path, create the cgroup, and freeze it.
+	#
+	# A new cgroup is used for every container, since a runtime may not
+	# check the cgroup until it is used (e.g. by a systemd scope, which
+	# is then removed together with the cgroup, asynchronously).
+	function new_frozen_cgroup() {
+		local dir freezer state
 
-	# Create and freeze the cgroup.
-	mkdir -p "$FREEZER_DIR"
-	echo "$STATE" >"$FREEZER"
+		set_cgroups_path
+		if [ -v CGROUP_V1 ]; then
+			dir="${CGROUP_FREEZER_BASE_PATH}/${REL_CGROUPS_PATH}"
+			freezer="${dir}/freezer.state"
+			state="FROZEN"
+		else
+			dir="${CGROUP_V2_PATH}"
+			freezer="${dir}/cgroup.freeze"
+			state="1"
+		fi
+
+		mkdir -p "$dir"
+		echo "$state" >"$freezer"
+		dirs+=("$dir")
+	}
 
 	# Start a container.
+	new_frozen_cgroup
 	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
 	[ "$status" -eq 1 ]
 	# A warning should be printed.
 	[[ "$output" == *"container's cgroup unexpectedly frozen"* ]]
 
 	# Same check for runc create.
+	new_frozen_cgroup
 	runc create --console-socket "$CONSOLE_SOCKET" ct2
 	[ "$status" -eq 1 ]
 	# A warning should be printed.
 	[[ "$output" == *"container's cgroup unexpectedly frozen"* ]]
 
-	# Cleanup.
-	rmdir "$FREEZER_DIR"
+	# Cleanup. The cgroups might be being removed, see above.
+	function remove_cgroup() {
+		rmdir "$1" || [ ! -d "$1" ]
+	}
+	for dir in "${dirs[@]}"; do
+		retry 10 0.1 remove_cgroup "$dir"
+	done
 }
