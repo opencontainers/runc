@@ -495,6 +495,11 @@ function simple_cr() {
 	local pid
 	pid=$(cat "pid")
 	grep -q "${REL_CGROUPS_PATH}$" "/proc/$pid/cgroup"
+
+	if [ -v CGROUP_V2 ]; then
+		runc exec test_busybox grep '^0::/$' /proc/self/cgroup
+		[ "$status" -eq 0 ]
+	fi
 }
 
 @test "checkpoint/restore and exec" {
