@@ -496,6 +496,14 @@ function have_criu() {
 	run ! grep -q '^criu-3\.17-[123]\.el9' <<<"$ver"
 }
 
+# Check if criu version is at least $1 (e.g. "4.3").
+function criu_version_ge() {
+	local ver
+	ver=$(criu --version | sed -n 's/^Version: //p')
+	[ -n "$ver" ] || return 1
+	[ "$(printf '%s\n%s\n' "$1" "$ver" | sort -V | head -n1)" = "$1" ]
+}
+
 # Allows a test to specify what things it requires. If the environment can't
 # support it, the test is skipped with a message.
 function requires() {
