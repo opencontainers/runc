@@ -889,6 +889,26 @@ function teardown_bundle() {
 	done
 	rm -rf "$ROOT"
 	remove_parent
+	check_cgroup_removed
+}
+
+# Check that the container cgroup, if set by set_cgroups_path, is removed.
+function check_cgroup_removed() {
+	[ -v REL_CGROUPS_PATH ] || return 0
+
+	local paths=() g var p
+	if [ -v CGROUP_V2 ]; then
+		paths=("$CGROUP_V2_PATH")
+	else
+		for g in ${CGROUP_SUBSYSTEMS}; do
+			var=CGROUP_${g^^}_BASE_PATH
+			[ -v "$var" ] && paths+=("${!var}${REL_CGROUPS_PATH}")
+		done
+	fi
+	for p in "${paths[@]}"; do
+		# The cgroup might be removed asynchronously (e.g. by systemd).
+		retry 10 0.1 test ! -d "$p"
+	done
 }
 
 function remap_rootfs() {
