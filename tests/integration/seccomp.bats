@@ -18,8 +18,7 @@ function teardown() {
 	update_config ".linux.seccomp = $(<"${TESTDATA}/${TEST_NAME}.json")"
 	update_config '.process.args = ["/seccomp_test"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 }
 
 @test "runc run [seccomp defaultErrnoRet=ENXIO]" {
@@ -30,8 +29,7 @@ function teardown() {
 	update_config ".linux.seccomp = $(<"${TESTDATA}/${TEST_NAME}.json")"
 	update_config '.process.args = ["/seccomp_test2"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 }
 
 # TODO:
@@ -46,9 +44,8 @@ function teardown() {
 				"syscalls":[{"names":["mkdir","mkdirat"], "action":"SCMP_ACT_ERRNO"}]
 			}'
 
-	runc run test_busybox
-	[ "$status" -ne 0 ]
-	[[ "$output" == *"mkdir:"*"/dev/shm/foo"*"Operation not permitted"* ]]
+	run ! runc run test_busybox
+	assert_output --regexp 'mkdir:.*/dev/shm/foo.*Operation not permitted'
 }
 
 @test "runc run [seccomp] (SCMP_ACT_ERRNO explicit errno)" {
@@ -59,9 +56,8 @@ function teardown() {
 				"syscalls":[{"names":["mkdir","mkdirat"], "action":"SCMP_ACT_ERRNO", "errnoRet": 100}]
 			}'
 
-	runc run test_busybox
-	[ "$status" -ne 0 ]
-	[[ "$output" == *"Network is down"* ]]
+	run ! runc run test_busybox
+	assert_output --partial "Network is down"
 }
 
 # Prints the numeric value of provided seccomp flags combination.
@@ -102,7 +98,7 @@ function flags_value() {
 	#
 	# Filter out WAIT_KILLABLE_RECV as it requires a listener,
 	# and thus tested separately in seccomp-notify.bats.
-	mapfile -t flags < <(__runc features | jq -c '.linux.seccomp.supportedFlags' |
+	mapfile -t flags < <(runc features | jq -c '.linux.seccomp.supportedFlags' |
 		tr -d '[]\n' | tr ',' '\n' | grep -v 'WAIT_KILLABLE_RECV')
 
 	# This is a set of all possible flag combinations to test.
@@ -141,14 +137,13 @@ function flags_value() {
 			;;
 		esac
 
-		runc --debug run test_busybox
-		[ "$status" -ne 0 ]
-		[[ "$output" == *"mkdir:"*"/dev/shm/foo"*"Operation not permitted"* ]]
+		run ! runc --debug run test_busybox
+		assert_output --regexp 'mkdir:.*/dev/shm/foo.*Operation not permitted'
 
 		# Check the numeric flags value, as printed in the debug log, is as expected.
 		exp="\"seccomp filter flags: ${TEST_CASES[$key]}\""
 		echo "flags $key, expecting $exp"
-		[[ "$output" == *"$exp"* ]]
+		assert_output --partial "$exp"
 	done
 }
 
@@ -161,8 +156,7 @@ function flags_value() {
 				"syscalls":[{"names":["mkdir","mkdirat"], "action":"SCMP_ACT_KILL"}]
 			}'
 
-	runc run test_busybox
-	[ "$status" -ne 0 ]
+	run ! runc run test_busybox
 }
 
 # check that a startContainer hook is run with the seccomp filters applied
@@ -180,10 +174,9 @@ function flags_value() {
 				} ]
 			}'
 
-	runc run test_busybox
-	[ "$status" -ne 0 ]
-	[[ "$output" == *"error running startContainer hook"* ]]
-	[[ "$output" == *"bad system call"* ]]
+	run ! runc run test_busybox
+	assert_output --partial "error running startContainer hook"
+	assert_output --partial "bad system call"
 }
 
 @test "runc run [seccomp] (verify syscall compatibility after seccomp enforcement)" {
@@ -194,6 +187,5 @@ function flags_value() {
 				"syscalls":[{"names":["close_range", "fsopen", "fsconfig", "fspick", "openat2", "open_tree", "move_mount", "mount_setattr"], "action":"SCMP_ACT_ERRNO", "errnoRet": 38}]
 			}'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 }

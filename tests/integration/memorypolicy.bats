@@ -17,9 +17,8 @@ function teardown() {
 		"mode": "MPOL_INTERLEAVE",
 		"nodes": "0"
 	}'
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "${lines[0]}" == "interleave:0" ]]
+	run -0 runc run test_busybox
+	assert_line --index 0 "interleave:0"
 }
 
 @test "runc run memory policy bind static" {
@@ -30,9 +29,8 @@ function teardown() {
 		"nodes": "0",
 		"flags": ["MPOL_F_STATIC_NODES"]
 	}'
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "${lines[0]}" == "bind"*"static"*"0" ]]
+	run -0 runc run test_busybox
+	assert_line --index 0 --regexp "^bind.*static.*0$"
 }
 
 @test "runc run and exec memory policy prefer relative" {
@@ -42,12 +40,10 @@ function teardown() {
 		"nodes": "0",
 		"flags": ["MPOL_F_RELATIVE_NODES"]
 	}'
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
-	runc exec test_busybox /bin/sh -c "head -n 1 /proc/self/numa_maps | cut -d \" \" -f 2"
-	[ "$status" -eq 0 ]
-	[[ "${lines[0]}" == "prefer"*"relative"*"0" ]]
+	run -0 runc exec test_busybox /bin/sh -c "head -n 1 /proc/self/numa_maps | cut -d \" \" -f 2"
+	assert_line --index 0 --regexp "^prefer.*relative.*0$"
 }
 
 @test "runc run empty memory policy" {
@@ -55,9 +51,8 @@ function teardown() {
 	.process.args = ["/bin/sh", "-c", "head -n 1 /proc/self/numa_maps | cut -d \" \" -f 2"]
 	| .linux.memoryPolicy = {
 	}'
-	runc run test_busybox
-	[ "$status" -eq 1 ]
-	[[ "${lines[0]}" == *"invalid memory policy"* ]]
+	run -1 runc run test_busybox
+	assert_line --index 0 --partial "invalid memory policy"
 }
 
 @test "runc run memory policy with non-existing mode" {
@@ -67,9 +62,8 @@ function teardown() {
 		"mode": "INTERLEAVE",
 		"nodes": "0"
 	}'
-	runc run test_busybox
-	[ "$status" -eq 1 ]
-	[[ "${lines[0]}" == *"invalid memory policy"* ]]
+	run -1 runc run test_busybox
+	assert_line --index 0 --partial "invalid memory policy"
 }
 
 @test "runc run memory policy with invalid flag" {
@@ -80,9 +74,8 @@ function teardown() {
 		"nodes": "0",
 		"flags": ["MPOL_F_RELATIVE_NODES", "badflag"]
 	}'
-	runc run test_busybox
-	[ "$status" -eq 1 ]
-	[[ "${lines[0]}" == *"invalid memory policy flag"* ]]
+	run -1 runc run test_busybox
+	assert_line --index 0 --partial "invalid memory policy flag"
 }
 
 @test "runc run memory policy default with missing nodes" {
@@ -91,9 +84,8 @@ function teardown() {
 	| .linux.memoryPolicy = {
 		"mode": "MPOL_DEFAULT"
 	}'
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "${lines[0]}" == *"default"* ]]
+	run -0 runc run test_busybox
+	assert_line --index 0 --partial "default"
 }
 
 @test "runc run memory policy with missing mode" {
@@ -102,9 +94,8 @@ function teardown() {
 	| .linux.memoryPolicy = {
 		"nodes": "0-7"
 	}'
-	runc run test_busybox
-	[ "$status" -eq 1 ]
-	[[ "${lines[0]}" == *"invalid memory policy mode"* ]]
+	run -1 runc run test_busybox
+	assert_line --index 0 --partial "invalid memory policy mode"
 }
 
 @test "runc run memory policy calls syscall with invalid arguments" {
@@ -114,9 +105,8 @@ function teardown() {
 		"mode": "MPOL_DEFAULT",
 		"nodes": "0-7",
 	}'
-	runc run test_busybox
-	[ "$status" -eq 1 ]
-	[[ "${lines[*]}" == *"mode requires 0 nodes but got 8"* ]]
+	run -1 runc run test_busybox
+	assert_output --partial "mode requires 0 nodes but got 8"
 }
 
 @test "runc run memory policy bind way too large a node number" {
@@ -127,7 +117,6 @@ function teardown() {
 		"nodes": "0-9876543210",
 		"flags": []
 	}'
-	runc run test_busybox
-	[ "$status" -eq 1 ]
-	[[ "${lines[0]}" == *"invalid memory policy node"* ]]
+	run -1 runc run test_busybox
+	assert_line --index 0 --partial "invalid memory policy node"
 }

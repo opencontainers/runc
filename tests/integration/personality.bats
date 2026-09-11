@@ -19,9 +19,8 @@ function teardown() {
                 "flags": []
 			}'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "$output" == *"i686"* ]]
+	run -0 runc run test_busybox
+	assert_output --partial "i686"
 }
 
 @test "runc run personality with exec for i686" {
@@ -30,11 +29,9 @@ function teardown() {
                 "domain": "LINUX32",
       }'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
-	runc exec test_busybox /bin/sh -c "uname -a"
-	[ "$status" -eq 0 ]
-	[[ "$output" == *"i686"* ]]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	run -0 runc exec test_busybox /bin/sh -c "uname -a"
+	assert_output --partial "i686"
 }
 
 @test "runc run personality for x86_64" {
@@ -45,9 +42,8 @@ function teardown() {
                 "flags": []
 			}'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "$output" == *"x86_64"* ]]
+	run -0 runc run test_busybox
+	assert_output --partial "x86_64"
 }
 
 @test "runc run personality with exec for x86_64" {
@@ -56,11 +52,9 @@ function teardown() {
                 "domain": "LINUX",
       }'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
-	runc exec test_busybox /bin/sh -c "uname -a"
-	[ "$status" -eq 0 ]
-	[[ "$output" == *"x86_64"* ]]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	run -0 runc exec test_busybox /bin/sh -c "uname -a"
+	assert_output --partial "x86_64"
 }
 
 # check that personality can be set when the personality syscall is blocked by seccomp
@@ -74,9 +68,7 @@ function teardown() {
                 "syscalls":[{"names":["personality"], "action":"SCMP_ACT_ERRNO"}]
 	  }'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
-	runc exec test_busybox /bin/sh -c "uname -a"
-	[ "$status" -eq 0 ]
-	[[ "$output" == *"x86_64"* ]]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	run -0 runc exec test_busybox /bin/sh -c "uname -a"
+	assert_output --partial "x86_64"
 }
