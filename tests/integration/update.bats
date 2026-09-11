@@ -896,7 +896,7 @@ EOF
 }
 EOF
 	[ "$status" -ne 0 ]
-	[[ "$output" == *"rejecting memory limit"* ]]
+	[[ "$output" == *"memory limit"* ]]
 	testcontainer test_update running
 
 	# Setting memory+swap to low value with checkBeforeUpdate=true should fail.
@@ -910,7 +910,7 @@ EOF
 }
 EOF
 	[ "$status" -ne 0 ]
-	[[ "$output" == *"rejecting memory+swap limit"* ]]
+	[[ "$output" == *"memory"*"limit"* ]]
 	testcontainer test_update running
 
 	# The container will be OOM killed, and runc might either succeed

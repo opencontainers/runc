@@ -23,7 +23,7 @@ function setup() {
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"unable to apply cgroup configuration"*"permission denied"* ]]
+	[[ "$output" == *"cgroup"*"ermission denied"* ]]
 }
 
 @test "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error" {

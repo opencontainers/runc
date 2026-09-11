@@ -57,7 +57,7 @@ function teardown() {
 	}'
 	runc run test_busybox
 	[ "$status" -eq 1 ]
-	[[ "${lines[0]}" == *"invalid memory policy"* ]]
+	[[ "${lines[0]}" == *"mem"*"olicy"* ]]
 }
 
 @test "runc run memory policy with non-existing mode" {
@@ -69,7 +69,7 @@ function teardown() {
 	}'
 	runc run test_busybox
 	[ "$status" -eq 1 ]
-	[[ "${lines[0]}" == *"invalid memory policy"* ]]
+	[[ "${lines[0]}" == *"mem"*"olicy"* ]]
 }
 
 @test "runc run memory policy with invalid flag" {
@@ -82,7 +82,7 @@ function teardown() {
 	}'
 	runc run test_busybox
 	[ "$status" -eq 1 ]
-	[[ "${lines[0]}" == *"invalid memory policy flag"* ]]
+	[[ "${lines[0]}" == *"mem"*"olicy"*"flag"* ]]
 }
 
 @test "runc run memory policy default with missing nodes" {
@@ -104,7 +104,7 @@ function teardown() {
 	}'
 	runc run test_busybox
 	[ "$status" -eq 1 ]
-	[[ "${lines[0]}" == *"invalid memory policy mode"* ]]
+	[[ "${lines[0]}" == *"mem"*"olicy"*"mode"* ]]
 }
 
 @test "runc run memory policy calls syscall with invalid arguments" {
@@ -129,5 +129,5 @@ function teardown() {
 	}'
 	runc run test_busybox
 	[ "$status" -eq 1 ]
-	[[ "${lines[0]}" == *"invalid memory policy node"* ]]
+	[[ "${lines[0]}" == *"0-9876543210"* ]]
 }

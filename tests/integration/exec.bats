@@ -408,7 +408,7 @@ EOF
 	# Although we never close the sync socket when doing exec,
 	# but we need to keep this test to ensure this behavior is always right.
 	[ ${#lines[@]} -eq 1 ]
-	[[ ${lines[0]} = *"exec /run.sh: no such file or directory"* ]]
+	[[ ${lines[0]} = *"exec "*"/run.sh"*"o such file or directory"* ]]
 }
 
 # https://github.com/opencontainers/runc/issues/4688

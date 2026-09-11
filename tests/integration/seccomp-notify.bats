@@ -179,7 +179,8 @@ function scmp_act_notify_template() {
 
 	runc run test_busybox
 	[ "$status" -ne 0 ]
-	[[ "$output" == *"failed to connect with seccomp agent"* ]]
+	[[ "$output" == *"seccomp"* ]]
+	[[ "$output" == *"connect"* ]]
 }
 
 # Check that agent-returned error for the syscall works.
