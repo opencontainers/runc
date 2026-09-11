@@ -244,7 +244,7 @@ test_mount_target() {
 	# This should fail.
 	runc run test_busybox
 	[ "$status" -ne 0 ]
-	[[ "$output" == *"must be mounted on ordinary directory"* ]]
+	[[ "$output" == *"proc"*"directory"* ]]
 }
 
 # https://github.com/opencontainers/runc/issues/4401
