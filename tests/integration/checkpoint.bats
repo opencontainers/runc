@@ -491,10 +491,11 @@ function simple_cr() {
 	new_path=$(get_cgroup_path "pids")
 	test -d "$new_path"
 
-	# Check that container's init is in the new cgroup.
+	# Check that container's init is in the new cgroup, or its sub-cgroup
+	# (a runtime may use one, e.g. crun with systemd cgroup manager).
 	local pid
 	pid=$(cat "pid")
-	grep -q "${REL_CGROUPS_PATH}$" "/proc/$pid/cgroup"
+	grep -rqx "$pid" --include=cgroup.procs "$new_path"
 }
 
 @test "checkpoint/restore and exec" {

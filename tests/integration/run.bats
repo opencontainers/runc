@@ -217,7 +217,7 @@ EOF
 	# After the sync socket closed, we should not send error to parent
 	# process, or else we will get a unnecessary error log(#4171).
 	[ ${#lines[@]} -eq 1 ]
-	[[ ${lines[0]} = "exec /run.sh: no such file or directory" ]]
+	[[ ${lines[0]} = *"exec "*"/run.sh"*"o such file or directory"* ]]
 }
 
 # https://github.com/opencontainers/runc/issues/4688

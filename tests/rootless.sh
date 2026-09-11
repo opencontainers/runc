@@ -32,7 +32,7 @@ ROOT="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
 # List of environment variables needed for the tests.
 # They are usually exported, but since we use ssh  below,
 # we need to explicitly add them to the command line.
-ENV_LIST=(PATH RUNC_USE_SYSTEMD ROOTLESS_FEATURES ROOTLESS_UIDMAP_START ROOTLESS_UIDMAP_LENGTH ROOTLESS_GIDMAP_START ROOTLESS_GIDMAP_LENGTH ROOTLESS_AUX_DIR ROOTLESS_AUX_UID)
+ENV_LIST=(PATH RUNC RUNC_USE_SYSTEMD RUNC_ALLOW_UNSAFE_TESTS BATS_TEST_TIMEOUT ROOTLESS_FEATURES ROOTLESS_UIDMAP_START ROOTLESS_UIDMAP_LENGTH ROOTLESS_GIDMAP_START ROOTLESS_GIDMAP_LENGTH ROOTLESS_AUX_DIR ROOTLESS_AUX_UID)
 
 # FEATURE: Opportunistic new{uid,gid}map support, allowing a rootless container
 #          to be set up with the usage of helper setuid binaries.
