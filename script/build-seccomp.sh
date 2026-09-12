@@ -44,14 +44,21 @@ function build_libseccomp() {
 	make install
 	make clean
 
-	# Save the original cflags.
-	local original_cflags="${CFLAGS:-}"
+	# Save the original CFLAGS, including whether it was unset.
+	local original_cflags
+	if [ -v CFLAGS ]; then
+		original_cflags="$CFLAGS"
+	fi
 
 	# Build and install for all requested architectures.
 	local arch
 	for arch in "${arches[@]}"; do
 		# Reset CFLAGS.
-		CFLAGS="$original_cflags"
+		if [ -v original_cflags ]; then
+			CFLAGS="$original_cflags"
+		else
+			unset CFLAGS
+		fi
 		set_cross_vars "$arch"
 		./configure --host "$HOST" \
 			--prefix="$dest/$arch" --libdir="$dest/$arch/lib" \
