@@ -44,8 +44,9 @@ function build_libseccomp() {
 	make install
 	make clean
 
-	# Save the original cflags.
-	local original_cflags="${CFLAGS:-}"
+	# Use configure's default if CFLAGS is unset, before set_cross_vars
+	# exports it and prevents configure from choosing its own default.
+	local original_cflags="${CFLAGS--g -O2}"
 
 	# Build and install for all requested architectures.
 	local arch
