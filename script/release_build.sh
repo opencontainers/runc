@@ -63,14 +63,9 @@ function build_project() {
 	# it can reuse cached pkg-config results).
 	local make_args=(COMMIT_NO= EXTRA_FLAGS="-a" EXTRA_LDFLAGS="${ldflags}" static)
 
-	# Save the original cflags.
-	local original_cflags="${CFLAGS:-}"
-
 	# Build for all requested architectures.
 	local arch
 	for arch in "${arches[@]}"; do
-		# Reset CFLAGS.
-		CFLAGS="$original_cflags"
 		set_cross_vars "$arch"
 		make -C "$root" \
 			PKG_CONFIG_PATH="$dylibdir/$arch/lib/pkgconfig" \
