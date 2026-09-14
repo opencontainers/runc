@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-09-13
+
+> TODO: release tagline.
+
 ### Fixed ###
 - `runc exec -p` with a process.json lacking `env` now sets `HOME` again
   (a regression in runc 1.3.0). (#5265, #5266, #5459)
@@ -30,7 +34,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   used by systemd >= 260 units with `PrivateUsers=full`. Previously this made
   runc skip its user namespace code paths, so starting a container in such a
   unit failed with `bpf_prog_query(BPF_CGROUP_DEVICE) failed: operation not
-  permitted`. (#5396, #5411, [moby/sys#239])
+  permitted`. (#5396, #5411, #5451, [moby/sys#239])
+- Fixed a `runc init` panic (SIGABRT) on the error path, caused by SELinux
+  labels being reset after the cached libpathrs procfs handle was already
+  closed. This is fixed both by not resetting the labels on the init error
+  path, and by updating to libpathrs v0.2.6, which now handles a closed
+  procfs handle gracefully. (#5438, #5439, #5442, #5448, #5449, #5467,
+  #5469)
 - Fixed various issues when the libseccomp version runc is run with differs
   from the one it was compiled against (e.g. built with libseccomp >= 2.6.0 and
   run with an older one), by updating to libseccomp-golang v0.12.0. This also
@@ -42,7 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed ###
 - Switched to opencontainers/cgroups v0.1.0, which no longer uses the
   high-level cilium/ebpf API to manage cgroup v2 device rules. As a result,
-  the runc binary shrunk by about 1 MiB (7.5%) on amd64. (#5403, #5428)
+  the runc binary shrunk by about 1 MiB (7.5%) on amd64. This also means runc
+  no longer calls the cilium/ebpf code affected by GO-2026-6238. (#5403, #5428)
+- Updated golang.org/x/net to v0.55.0. (#5379, #5381)
 - Updated builds to libseccomp v2.6.1. (#5376, #5460)
 
 ## [1.5.1] - 2026-07-14
@@ -1853,7 +1865,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1
 
 <!-- 1.5.z patch releases -->
-[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.1...release-1.5
+[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.2...release-1.5
+[1.5.2]: https://github.com/opencontainers/runc/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/opencontainers/runc/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...v1.5.0
 [1.5.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.2...v1.5.0-rc.3
