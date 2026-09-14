@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   this is a correctness rather than a security fix. (#5403, #5457)
 - Fixed a missing `O_CLOEXEC` when opening the cgroup v2 directory to set up
   device rules. (#5403, #5428)
+- When `rootfsPropagation` is set to `rslave`, the rootfs parent mount is no
+  longer made private before pivoting into the rootfs, so unmount/remount
+  events on host mountpoints under the rootfs are now propagated to the
+  running container. (#5192, #5200, #5458)
 - runc no longer misdetects a non-initial user namespace as the initial one
   when that namespace has a full identity ID mapping (`0 0 4294967295`), as
   used by systemd >= 260 units with `PrivateUsers=full`. Previously this made
