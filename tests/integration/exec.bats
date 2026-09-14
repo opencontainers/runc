@@ -154,6 +154,16 @@ function teardown() {
 	assert_output "hello"
 }
 
+@test "runc exec --preserve-fds with no inherited fd" {
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+
+	# Use a separate shell so closing fd 3 does not interfere with bats itself.
+	# The check must happen before runc opens its log file in fd 3 and mistakes
+	# that descriptor for one inherited from runc's caller.
+	run ! bash -c 'exec 3>&-; exec "$@"' bash runc --log preserve-fds.log exec --preserve-fds=1 test_busybox true
+	assert_output --partial "preserved-fd 0"
+}
+
 function check_exec_debug() {
 	[[ "$*" == *"nsexec container setup"* ]]
 	[[ "$*" == *"child process in init()"* ]]
