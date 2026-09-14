@@ -3,7 +3,7 @@ module github.com/opencontainers/runc
 go 1.25.0
 
 require (
-	cyphar.com/go-pathrs v0.2.5
+	cyphar.com/go-pathrs v0.2.6
 	github.com/checkpoint-restore/go-criu/v8 v8.3.0
 	github.com/containerd/console v1.0.5
 	github.com/coreos/go-systemd/v22 v22.7.0
