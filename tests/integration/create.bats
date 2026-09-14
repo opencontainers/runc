@@ -90,6 +90,13 @@ is_allowed_fdtarget() {
 	testcontainer test_busybox running
 }
 
+@test "runc create --preserve-fds with no inherited fd" {
+	setup_runc_cmdline
+	run bash -c 'exec 3>&-; exec "$@"' bash "${RUNC_CMDLINE[@]}" create --preserve-fds=1 test_missing_fd
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"preserved-fd 0"* ]]
+}
+
 @test "runc create exec" {
 	runc create --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]

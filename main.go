@@ -153,6 +153,11 @@ func main() {
 		featuresCommand,
 	}
 	app.Before = func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
+		// This check must be done before any runc setup which might open a file
+		// descriptor in the range requested by --preserve-fds.
+		if err := checkPreserveFDs(cmd); err != nil {
+			return ctx, err
+		}
 		if !cmd.IsSet("root") && xdgDirUsed {
 			// According to the XDG specification, we need to set anything in
 			// XDG_RUNTIME_DIR to have a sticky bit if we don't want it to get

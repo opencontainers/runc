@@ -38,13 +38,8 @@ const (
 //
 // The order of the file descriptors is preserved in the returned slice.
 func Files() []*os.File {
-	pid, err := strconv.Atoi(os.Getenv("LISTEN_PID"))
-	if err != nil || pid != os.Getpid() {
-		return nil
-	}
-
-	nfds, err := strconv.Atoi(os.Getenv("LISTEN_FDS"))
-	if err != nil || nfds <= 0 {
+	nfds := NumFiles()
+	if nfds == 0 {
 		return nil
 	}
 
@@ -62,4 +57,19 @@ func Files() []*os.File {
 	}
 
 	return files
+}
+
+// NumFiles returns the number of file descriptors passed to this process via
+// the systemd fd-passing protocol.
+func NumFiles() int {
+	pid, err := strconv.Atoi(os.Getenv("LISTEN_PID"))
+	if err != nil || pid != os.Getpid() {
+		return 0
+	}
+
+	nfds, err := strconv.Atoi(os.Getenv("LISTEN_FDS"))
+	if err != nil || nfds <= 0 {
+		return 0
+	}
+	return nfds
 }
