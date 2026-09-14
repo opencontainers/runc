@@ -6,27 +6,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-09-13
+
+> TODO: release tagline.
+
 ### Fixed ###
+- `runc exec -p` with a process.json lacking `env` now sets `HOME` again
+  (a regression in runc 1.3.0). (#5265, #5266, #5459)
 - Worked around a Linux kernel bug (present since kernel v6.17, fixed in v7.2)
   which caused the kernel to write past the end of the structure
   provided by userspace (runc). This resulted in memory corruption inside runc
   (manifesting as random crashes) when configuring device rules on cgroup v2
   systems. (#5403, #5428)
+- `runc exec --cgroup` (and the equivalent libcontainer `Process.SubCgroupPaths`
+  API) no longer accepts a sub-cgroup path that escapes the container's cgroup
+  into a sibling cgroup sharing the same name prefix. Note that using
+  `--cgroup` requires the same privileges as running `runc exec` itself, so
+  this is a correctness rather than a security fix. (#5403, #5457)
 - Fixed a missing `O_CLOEXEC` when opening the cgroup v2 directory to set up
   device rules. (#5403, #5428)
+- When `rootfsPropagation` is set to `rslave`, the rootfs parent mount is no
+  longer made private before pivoting into the rootfs, so unmount/remount
+  events on host mountpoints under the rootfs are now propagated to the
+  running container. (#5192, #5200, #5458)
 - runc no longer misdetects a non-initial user namespace as the initial one
   when that namespace has a full identity ID mapping (`0 0 4294967295`), as
   used by systemd >= 260 units with `PrivateUsers=full`. Previously this made
   runc skip its user namespace code paths, so starting a container in such a
   unit failed with `bpf_prog_query(BPF_CGROUP_DEVICE) failed: operation not
-  permitted`. (#5396, #5411, [moby/sys#239])
+  permitted`. (#5396, #5411, #5451, [moby/sys#239])
+- Fixed a `runc init` panic (SIGABRT) on the error path, caused by SELinux
+  labels being reset after the cached libpathrs procfs handle was already
+  closed. This is fixed both by not resetting the labels on the init error
+  path, and by updating to libpathrs v0.2.6, which now handles a closed
+  procfs handle gracefully. (#5438, #5439, #5442, #5448, #5449, #5467,
+  #5469)
+- Fixed various issues when the libseccomp version runc is run with differs
+  from the one it was compiled against (e.g. built with libseccomp >= 2.6.0 and
+  run with an older one), by updating to libseccomp-golang v0.12.0. This also
+  supersedes the `SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV` workaround added in
+  runc 1.5.1. (#5436, #5461)
 
 [moby/sys#239]: https://github.com/moby/sys/issues/239
 
 ### Changed ###
 - Switched to opencontainers/cgroups v0.1.0, which no longer uses the
   high-level cilium/ebpf API to manage cgroup v2 device rules. As a result,
-  the runc binary shrunk by about 1 MiB (7.5%) on amd64. (#5403, #5428)
+  the runc binary shrunk by about 1 MiB (7.5%) on amd64. This also means runc
+  no longer calls the cilium/ebpf code affected by GO-2026-6238. (#5403, #5428)
+- Updated golang.org/x/net to v0.55.0. (#5379, #5381)
+- Updated builds to libseccomp v2.6.1. (#5376, #5460)
 
 ## [1.5.1] - 2026-07-14
 
@@ -1836,7 +1865,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1
 
 <!-- 1.5.z patch releases -->
-[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.1...release-1.5
+[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.2...release-1.5
+[1.5.2]: https://github.com/opencontainers/runc/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/opencontainers/runc/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...v1.5.0
 [1.5.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.2...v1.5.0-rc.3
