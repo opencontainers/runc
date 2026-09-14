@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Switched to opencontainers/cgroups v0.1.0, which no longer uses the
   high-level cilium/ebpf API to manage cgroup v2 device rules. As a result,
   the runc binary shrunk by about 1 MiB (7.5%) on amd64. (#5403, #5428)
+- Updated builds to libseccomp v2.6.1. (#5376, #5460)
 
 ## [1.5.1] - 2026-07-14
 
