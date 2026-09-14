@@ -50,4 +50,35 @@ cd bats-core
 [Helper functions](https://github.com/opencontainers/runc/blob/master/tests/integration/helpers.bash)
 are provided in order to facilitate writing tests.
 
+Call runc (and any other command) via bats' `run` helper, giving the expected
+exit code, and check its output with the assertion helpers:
+
+```bash
+run -0 runc list -q
+assert_line --index 0 "test_box1"
+
+run ! runc state test_busybox
+assert_output --partial "does not exist"
+```
+
+The `-N` argument to `run` makes bats fail the test unless the command exits
+with code N, and `run !` unless it fails with any non-zero code. Use `run -0`
+for a command that has to succeed; a bare `run` accepts any exit code, so use
+it only where the exit code is genuinely irrelevant.
+
+The available assertions, a subset of the
+[bats-assert](https://github.com/bats-core/bats-assert) API implemented in
+[lib/assert.bash](https://github.com/opencontainers/runc/blob/master/tests/integration/lib/assert.bash),
+are:
+
+```bash
+assert_output [--partial | --regexp] EXPECTED
+refute_output [--partial | --regexp] UNEXPECTED
+assert_line --index IDX [--partial | --regexp] EXPECTED
+```
+
+Prefer these over `[ ... ]` or `[[ ... ]]` comparisons: when an assertion
+fails, the test log shows both the expected and the actual value, while a bare
+test expression only shows the expression itself.
+
 Please see existing tests for examples.

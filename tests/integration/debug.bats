@@ -18,52 +18,48 @@ function check_debug() {
 }
 
 @test "global --debug" {
-	runc --debug run test_hello
-	[ "$status" -eq 0 ]
+	run -0 runc --debug run test_hello
 
 	# check expected debug output was sent to stderr
-	[[ "${output}" == *"level=debug"* ]]
+	assert_output --partial "level=debug"
 	check_debug "$output"
 }
 
 @test "global --debug to --log" {
-	runc --log log.out --debug run test_hello
-	[ "$status" -eq 0 ]
+	run -0 runc --log log.out --debug run test_hello
 
 	# check output does not include debug info
-	[[ "${output}" != *"level=debug"* ]]
+	refute_output --partial "level=debug"
 
 	cat log.out >&2
 	# check expected debug output was sent to log.out
 	output=$(cat log.out)
-	[[ "${output}" == *"level=debug"* ]]
+	assert_output --partial "level=debug"
 	check_debug "$output"
 }
 
 @test "global --debug to --log --log-format 'text'" {
-	runc --log log.out --log-format "text" --debug run test_hello
-	[ "$status" -eq 0 ]
+	run -0 runc --log log.out --log-format "text" --debug run test_hello
 
 	# check output does not include debug info
-	[[ "${output}" != *"level=debug"* ]]
+	refute_output --partial "level=debug"
 
 	cat log.out >&2
 	# check expected debug output was sent to log.out
 	output=$(cat log.out)
-	[[ "${output}" == *"level=debug"* ]]
+	assert_output --partial "level=debug"
 	check_debug "$output"
 }
 
 @test "global --debug to --log --log-format 'json'" {
-	runc --log log.out --log-format "json" --debug run test_hello
-	[ "$status" -eq 0 ]
+	run -0 runc --log log.out --log-format "json" --debug run test_hello
 
 	# check output does not include debug info
-	[[ "${output}" != *"level=debug"* ]]
+	refute_output --partial "level=debug"
 
 	cat log.out >&2
 	# check expected debug output was sent to log.out
 	output=$(cat log.out)
-	[[ "${output}" == *'"level":"debug"'* ]]
+	assert_output --partial '"level":"debug"'
 	check_debug "$output"
 }

@@ -218,10 +218,11 @@ for ROOTLESS_FEATURES in $features_powerset; do
 		# Operation not permitted". Set the correct value explicitly.
 		ssh_env+=("XDG_RUNTIME_DIR=/run/user/$(id -u rootless)")
 		ssh -t -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$HOME/.ssh/rootless.key" \
-			rootless@localhost -- "${ssh_env[@]}" bats -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
+			rootless@localhost -- "${ssh_env[@]}" bats -t --print-output-on-failure "$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	else
 		export "${ENV_LIST[@]}"
-		sudo -HE -u rootless PATH="$PATH" "$(command -v bats)" -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
+		sudo -HE -u rootless PATH="$PATH" "$(command -v bats)" -t --print-output-on-failure \
+			"$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	fi
 	cleanup
 done

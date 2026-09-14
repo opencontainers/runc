@@ -10,21 +10,18 @@ function setup() {
 }
 
 @test "runc -h" {
-	runc -h
-	[ "$status" -eq 0 ]
-	[[ ${lines[0]} =~ NAME:+ ]]
-	[[ ${lines[1]} =~ runc\ '-'\ Open\ Container\ Initiative\ runtime+ ]]
+	run -0 runc -h
+	assert_line --index 0 --regexp 'NAME:+'
+	assert_line --index 1 --regexp 'runc - Open Container Initiative runtime+'
 
-	runc --help
-	[ "$status" -eq 0 ]
-	[[ ${lines[0]} =~ NAME:+ ]]
-	[[ ${lines[1]} =~ runc\ '-'\ Open\ Container\ Initiative\ runtime+ ]]
+	run -0 runc --help
+	assert_line --index 0 --regexp 'NAME:+'
+	assert_line --index 1 --regexp 'runc - Open Container Initiative runtime+'
 }
 
 @test "runc command -h" {
-	local runc
-	# shellcheck disable=SC2153
-	runc="$(basename "$RUNC")"
+	local bin
+	bin=$(basename "$RUNC")
 	local cmds=(
 		checkpoint
 		create
@@ -47,16 +44,14 @@ function setup() {
 
 	for cmd in "${cmds[@]}"; do
 		for arg in "-h" "--help"; do
-			runc "$cmd" "$arg"
-			[ "$status" -eq 0 ]
-			[[ ${lines[0]} =~ NAME:+ ]]
-			[[ ${lines[1]} =~ $runc\ $cmd+ ]]
+			run -0 runc "$cmd" "$arg"
+			assert_line --index 0 --regexp 'NAME:+'
+			assert_line --index 1 --regexp "$bin $cmd+"
 		done
 	done
 }
 
 @test "runc foo -h" {
-	runc foo -h
-	[ "$status" -ne 0 ]
-	[[ "${output}" == *"No help topic for 'foo'"* ]]
+	run ! runc foo -h
+	assert_output --partial "No help topic for 'foo'"
 }
