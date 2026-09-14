@@ -1,0 +1,38 @@
+# This is deliberately a separate workflow -- so that it still runs when
+# another workflow file is broken.
+name: actionlint
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - main
+      - release-*
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs of the same pull request. For everything else
+# (in particular, pushes to a branch or a tag) there is no PR number, so
+# the group falls back to the unique run_id and nothing is cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: kjanat/actionlint@08bb2c4f0d039744455b87aef1c647fb8b66d37b # v1.17.0
+
+  all-done:
+    needs:
+    - actionlint
+    runs-on: ubuntu-24.04
+    steps:
+    - run: echo "All jobs completed"
