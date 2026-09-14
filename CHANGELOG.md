@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   runc skip its user namespace code paths, so starting a container in such a
   unit failed with `bpf_prog_query(BPF_CGROUP_DEVICE) failed: operation not
   permitted`. (#5396, #5411, [moby/sys#239])
+- Fixed various issues when the libseccomp version runc is run with differs
+  from the one it was compiled against (e.g. built with libseccomp >= 2.6.0 and
+  run with an older one), by updating to libseccomp-golang v0.12.0. This also
+  supersedes the `SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV` workaround added in
+  runc 1.5.1. (#5436, #5461)
 
 [moby/sys#239]: https://github.com/moby/sys/issues/239
 
