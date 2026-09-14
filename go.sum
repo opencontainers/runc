@@ -1,5 +1,5 @@
-cyphar.com/go-pathrs v0.2.5 h1:SnX9FBvnoyn3lUs1dkMgZ52bAETpirNu3FTRh5HlRik=
-cyphar.com/go-pathrs v0.2.5/go.mod h1:y8f1EMG7r+hCuFf/rXsKqMJrJAUoADZGNh5/vZPKcGc=
+cyphar.com/go-pathrs v0.2.6 h1:+btfBJ7qWKZo+TDJlDZ2tPqToKdN8QD4BAOqomueXZg=
+cyphar.com/go-pathrs v0.2.6/go.mod h1:y8f1EMG7r+hCuFf/rXsKqMJrJAUoADZGNh5/vZPKcGc=
 github.com/aperturerobotics/protobuf-go-lite v0.15.0 h1:Ke9pkt5zO5iQf2q7iAYsXHlCDhGeQH0cvhCTIiiWUIg=
 github.com/aperturerobotics/protobuf-go-lite v0.15.0/go.mod h1:3Ay/E7iaw2KWLirK3+dDdNJZHK0hu8Y1/kKeYeUa+8s=
 github.com/checkpoint-restore/go-criu/v8 v8.4.0 h1:w6WDxjde4pvXYTIBuj6dsWsaPorKwSWuCk/qSKTO3Jw=
