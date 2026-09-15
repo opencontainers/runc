@@ -15,7 +15,6 @@ import (
 	"github.com/urfave/cli/v3"
 	"golang.org/x/sys/unix"
 
-	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/internal/third_party/systemd/activation"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -245,17 +244,7 @@ func (r *runner) run(config *specs.Process) (_ int, retErr error) {
 		process.ExtraFiles = append(process.ExtraFiles, r.listenFDs...)
 	}
 	baseFd := 3 + len(process.ExtraFiles)
-	procSelfFd, closer, err := pathrs.ProcThreadSelfOpen("fd/", unix.O_DIRECTORY|unix.O_CLOEXEC)
-	if err != nil {
-		return -1, err
-	}
-	defer closer()
-	defer procSelfFd.Close()
 	for i := baseFd; i < baseFd+r.preserveFDs; i++ {
-		err := unix.Faccessat(int(procSelfFd.Fd()), strconv.Itoa(i), unix.F_OK, 0)
-		if err != nil {
-			return -1, fmt.Errorf("unable to stat preserved-fd %d (of %d): %w", i-baseFd, r.preserveFDs, err)
-		}
 		process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), "PreserveFD:"+strconv.Itoa(i)))
 	}
 	// Setting up IO is a two stage process. We need to modify process to deal
@@ -324,6 +313,43 @@ func (r *runner) run(config *specs.Process) (_ int, retErr error) {
 	// For non-detached container, we should forward signals to the container.
 	handler := <-handlerCh
 	return handler.forward(process, tty)
+}
+
+// checkPreserveFDs verifies that all file descriptors requested by
+// --preserve-fds were inherited by runc. It must be called before runc opens
+// any files of its own, otherwise an internal file descriptor could fill a gap
+// in the requested range and be mistaken for an inherited descriptor.
+func checkPreserveFDs(cmd *cli.Command) error {
+	name := cmd.Args().First()
+	subcmd := cmd.Command(name)
+	if subcmd == nil {
+		return nil
+	}
+
+	preserveFDs := 0
+	baseFd := 3
+	switch name {
+	case "create", "run":
+		preserveFDs = subcmd.Int("preserve-fds")
+		baseFd += activation.NumFiles()
+	case "exec":
+		preserveFDs = subcmd.Int("preserve-fds")
+	default:
+		return nil
+	}
+
+	for i := baseFd; i < baseFd+preserveFDs; i++ {
+		flags, err := unix.FcntlInt(uintptr(i), unix.F_GETFD, 0)
+		if err != nil {
+			return fmt.Errorf("unable to stat preserved-fd %d (of %d): %w", i-baseFd, preserveFDs, err)
+		}
+		// A descriptor with FD_CLOEXEC cannot have been inherited through the
+		// execve which started runc. It belongs to the Go runtime or runc.
+		if flags&unix.FD_CLOEXEC != 0 {
+			return fmt.Errorf("preserved-fd %d (of %d) has the close-on-exec flag set", i-baseFd, preserveFDs)
+		}
+	}
+	return nil
 }
 
 func (r *runner) destroy() {
