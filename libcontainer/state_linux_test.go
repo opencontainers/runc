@@ -84,6 +84,34 @@ func TestRestoredStateTransition(t *testing.T) {
 	)
 }
 
+// TestRestoredStateExitedReportsStopped covers the #5370 regression where
+// restoredState.transition accepted stopped/running without updating c.state,
+// so a restored container whose process later exited kept reporting Running.
+func TestRestoredStateExitedReportsStopped(t *testing.T) {
+	c := &Container{}
+	c.state = &restoredState{c: c}
+
+	// refreshState() path when the init process is gone: transition to stopped.
+	if err := c.state.transition(&stoppedState{c: c}); err != nil {
+		t.Fatalf("transition returned error: %v", err)
+	}
+	if got := c.state.status(); got != Stopped {
+		t.Fatalf("restored+exited reports %v, want Stopped", got)
+	}
+}
+
+func TestRunningStateExitedReportsStopped(t *testing.T) {
+	c := &Container{}
+	c.state = &runningState{c: c}
+
+	if err := c.state.transition(&stoppedState{c: c}); err != nil {
+		t.Fatalf("transition returned error: %v", err)
+	}
+	if got := c.state.status(); got != Stopped {
+		t.Fatalf("running+exited reports %v, want Stopped", got)
+	}
+}
+
 func TestRunningStateTransition(t *testing.T) {
 	testTransitions(
 		t,
