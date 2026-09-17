@@ -16,7 +16,6 @@ function teardown() {
 
 	update_config ' .process.args = ["findmnt", "--noheadings", "-o", "PROPAGATION", "/"] '
 
-	runc run test_shared_rootfs
-	[ "$status" -eq 0 ]
-	[ "$output" = "shared" ]
+	run -0 runc run test_shared_rootfs
+	assert_output "shared"
 }

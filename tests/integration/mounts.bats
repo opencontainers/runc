@@ -18,8 +18,7 @@ function test_ro_cgroup_mount() {
 	local lines status
 	# shellcheck disable=SC2016
 	update_config '.process.args |= ["sh", "-euc", "for f in `grep /sys/fs/cgroup /proc/mounts | awk \"{print \\\\$2}\"| uniq`; do test -e $f && grep -w $f /proc/mounts | tail -n1; done"]'
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 	[ "${#lines[@]}" -ne 0 ]
 	for line in "${lines[@]}"; do [[ "${line}" == *'ro,'* ]]; done
 }
@@ -122,9 +121,8 @@ function test_mount_order() {
 	# Check that the entire tree was copied and the mounts were done in the
 	# expected order.
 	update_config '.process.args = ["cat", "/final/x/y/z/z/x/y/z/x/file"]'
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "$output" == *"a/x"* ]] # the final "file" was from a/x.
+	run -0 runc run test_busybox
+	assert_output --partial "a/x" # the final "file" was from a/x.
 }
 
 # This needs to be placed at the top of the bats file to work around
@@ -148,16 +146,14 @@ test_mount_target() {
 	# Make sure the target path is at the right spot and is actually a
 	# bind-mount of the correct inode.
 	update_config '.process.args = ["stat", "-c", "%n %d:%i", "--", "'"$real_dst"'"]'
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "$output" == "$real_dst $(stat -c "%d:%i" -- "$src")" ]]
+	run -0 runc run test_busybox
+	assert_output "$real_dst $(stat -c "%d:%i" -- "$src")"
 
 	# Make sure there is a mount entry for the target path.
 	# shellcheck disable=SC2016
 	update_config '.process.args = ["awk", "-F", "PATH='"$real_dst"'", "$2 == PATH", "/proc/self/mounts"]'
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "$output" == *"$real_dst"* ]]
+	run -0 runc run test_busybox
+	assert_output --partial "$real_dst"
 
 	# Switch back the old config so this function can be called multiple times.
 	mv "$old_config" "./config.json"
@@ -176,9 +172,8 @@ test_mount_target() {
 			| .process.args |= ["ls", "-ld", "/dir1/dir2"]'
 
 	umask 022
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "${lines[0]}" == *'drwxrwxrwx'* ]]
+	run -0 runc run test_busybox
+	assert_line --index 0 --partial 'drwxrwxrwx'
 }
 
 @test "runc run [bind mount]" {
@@ -189,9 +184,8 @@ test_mount_target() {
 				}]
 			| .process.args |= ["ls", "/tmp/bind/config.json"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "${lines[0]}" == *'/tmp/bind/config.json'* ]]
+	run -0 runc run test_busybox
+	assert_line --index 0 --partial '/tmp/bind/config.json'
 }
 
 # https://github.com/opencontainers/runc/issues/2246
@@ -204,9 +198,8 @@ test_mount_target() {
 				}]
 			| .process.args |= ["grep", "^tmpfs /mnt", "/proc/mounts"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "${lines[0]}" == *'ro,'* ]]
+	run -0 runc run test_busybox
+	assert_line --index 0 --partial 'ro,'
 }
 
 # https://github.com/opencontainers/runc/issues/3248
@@ -214,9 +207,8 @@ test_mount_target() {
 	update_config '   .mounts |= map((select(.destination == "/dev") | .options += ["ro"]) // .)
 			| .process.args |= ["grep", "^tmpfs /dev", "/proc/mounts"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "${lines[0]}" == *'ro,'* ]]
+	run -0 runc run test_busybox
+	assert_line --index 0 --partial 'ro,'
 }
 
 # https://github.com/opencontainers/runc/issues/2683
@@ -231,8 +223,7 @@ test_mount_target() {
 					options: ["ro", "nodev", "nosuid"]
 				}]
 			| .process.args |= ["true"]'
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 }
 
 # CVE-2023-27561 CVE-2019-19921
@@ -242,9 +233,8 @@ test_mount_target() {
 	mkdir -p rootfs/bad-proc
 	ln -sf /bad-proc rootfs/proc
 	# This should fail.
-	runc run test_busybox
-	[ "$status" -ne 0 ]
-	[[ "$output" == *"must be mounted on ordinary directory"* ]]
+	run ! runc run test_busybox
+	assert_output --partial "must be mounted on ordinary directory"
 }
 
 # https://github.com/opencontainers/runc/issues/4401
@@ -260,8 +250,7 @@ test_mount_target() {
 	}]'
 	update_config '.process.args |= ["true"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 
 	# Verify that the setgid bit is inherited.
 	[[ "$(stat -c %a rootfs/setgid)" == 7755 ]]
@@ -283,13 +272,11 @@ test_mount_target() {
 	}]'
 	update_config '.process.args = ["stat", "-c", "%a", "/tmpfs"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "$output" == "710" ]]
+	run -0 runc run test_busybox
+	assert_output "710"
 
 	update_config '.process.args = ["cat", "/proc/self/mounts"]'
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 	grep -Ex "tmpfs /tmpfs tmpfs [^ ]*\bmode=710\b[^ ]* .*" <<<"$output"
 }
 
@@ -307,13 +294,11 @@ test_mount_target() {
 	update_config '.process.args = ["stat", "-c", "%a", "/tmpfs"]'
 
 	# Explicitly setting mode= overrides whatever mode we would've inherited.
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "$output" == "1500" ]]
+	run -0 runc run test_busybox
+	assert_output "1500"
 
 	update_config '.process.args = ["cat", "/proc/self/mounts"]'
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 	grep -Ex "tmpfs /tmpfs tmpfs [^ ]*\bmode=1500\b[^ ]* .*" <<<"$output"
 
 	# Verify that the actual directory was not chmod-ed.
@@ -331,15 +316,13 @@ test_mount_target() {
 	update_config '.process.args = ["stat", "-c", "%a", "/non-existent/foo/bar/baz"]'
 
 	rm -rf rootfs/non-existent
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "$output" == "1777" ]]
+	run -0 runc run test_busybox
+	assert_output "1777"
 
 	update_config '.process.args = ["cat", "/proc/self/mounts"]'
 
 	rm -rf rootfs/non-existent
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 	# We don't explicitly set a mode= in this case, it is just the tmpfs default.
 	grep -Ex "tmpfs /non-existent/foo/bar/baz tmpfs .*" <<<"$output"
 	run ! grep -Ex "tmpfs /non-existent/foo/bar/baz tmpfs [^ ]*\bmode=[0-7]+\b[^ ]* .*" <<<"$output"

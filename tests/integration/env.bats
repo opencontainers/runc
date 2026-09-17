@@ -23,27 +23,24 @@ function teardown() {
 	update_config ' .process.env += ["HOME=/override"]'
 	update_config ' .process.args += ["-c", "echo $HOME"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "${lines[0]}" == '/override' ]]
+	run -0 runc run test_busybox
+	assert_line --index 0 '/override'
 }
 
 @test "empty HOME env var is overridden" {
 	update_config ' .process.env += ["HOME="]'
 	update_config ' .process.args += ["-c", "echo $HOME"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "${lines[0]}" == '/root' ]]
+	run -0 runc run test_busybox
+	assert_line --index 0 '/root'
 }
 
 @test "empty HOME env var is overridden with multiple overrides" {
 	update_config ' .process.env += ["HOME=/override", "HOME="]'
 	update_config ' .process.args += ["-c", "echo $HOME"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "${lines[0]}" == '/root' ]]
+	run -0 runc run test_busybox
+	assert_line --index 0 '/root'
 }
 
 @test "env var HOME is set only once" {
@@ -51,8 +48,7 @@ function teardown() {
 	update_config ' .process.args = ["env"]'
 	update_config ' .process.env = ["HOME=", "PATH=/usr/bin:/bin"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 
 	# There should be 2 words/env-vars: HOME and PATH.
 	[ "$(wc -w <<<"$output")" -eq 2 ]
@@ -63,8 +59,7 @@ function teardown() {
 	update_config ' .process.args = ["env"]'
 	update_config ' .process.env = ["ONE=two", "ONE=", "PATH=/usr/bin:/bin"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 
 	# There should be 3 words/env-vars: ONE, PATH and HOME.
 	[ "$(wc -w <<<"$output")" -eq 3 ]
@@ -74,17 +69,15 @@ function teardown() {
 	update_config ' .process.env += ["ONE=two", "ONE=three"]'
 	update_config ' .process.args += ["-c", "echo ONE=\"$ONE\""]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[[ "${lines[0]}" == "ONE=three" ]]
+	run -0 runc run test_busybox
+	assert_line --index 0 "ONE=three"
 }
 
 @test "env var with new-line is honored" {
 	update_config ' .process.env = ["NEW_LINE_ENV=\n", "PATH=/usr/bin:/bin"]'
 	update_config ' .process.args = ["env"]'
 
-	runc run test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run test_busybox
 
 	# There should be 4 lines
 	# NEW_LINE is a \n and when printed, it takes another line:
@@ -100,8 +93,7 @@ function teardown() {
 # process.json only, not from config.json, and that HOME
 # is always set.
 @test "env [runc exec -p]" {
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	cat <<_EOF_ >process.json
 {
@@ -116,20 +108,18 @@ function teardown() {
 }
 _EOF_
 
-	runc exec -p process.json test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc exec -p process.json test_busybox
 	# Env should have entries from process.json.
-	[[ "$output" == *'FOO=bar'* ]]
+	assert_output --partial 'FOO=bar'
 	# ...and HOME set from container's /etc/passwd.
-	[[ "$output" == *'HOME=/root'* ]]
+	assert_output --partial 'HOME=/root'
 	# Env should NOT contain entries from config.json.
-	[[ "$output" != *'TERM='* ]]
-	[[ "$output" != *'PATH='* ]]
+	refute_output --partial 'TERM='
+	refute_output --partial 'PATH='
 }
 
 @test "env HOME is set for runc exec -p with no process.env" {
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	# "env" is not set.
 	cat <<_EOF_ >process.json
@@ -138,8 +128,7 @@ _EOF_
     "cwd": "/"
 }
 _EOF_
-	runc exec -p process.json test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc exec -p process.json test_busybox
 	# Env should have HOME set from container's /etc/passwd.
-	[[ "$output" == *'HOME=/root'* ]]
+	assert_output --partial 'HOME=/root'
 }

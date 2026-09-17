@@ -40,11 +40,10 @@ function run_check_label() {
 	LABEL="system_u:system_r:container_t:s0:c4,c5"
 	update_config '	  .process.selinuxLabel |= "'"$LABEL"'"
 			| .process.args = ["/bin/'"$HELPER"'"]'
-	runc run tst
-	[ "$status" -eq 0 ]
+	run -0 runc run tst
 	# Key name is _ses.$CONTAINER_NAME.
 	KEY=_ses.tst
-	[ "$output" == "$KEY $LABEL" ]
+	assert_output "$KEY $LABEL"
 }
 
 # This needs to be placed at the top of the bats file to work around
@@ -56,14 +55,12 @@ function exec_check_label() {
 	LABEL="system_u:system_r:container_t:s0:c4,c5"
 	update_config '	  .process.selinuxLabel |= "'"$LABEL"'"
 			| .process.args = ["/bin/sh"]'
-	runc run -d --console-socket "$CONSOLE_SOCKET" tst
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" tst
 
-	runc exec tst "/bin/$HELPER"
-	[ "$status" -eq 0 ]
+	run -0 runc exec tst "/bin/$HELPER"
 	# Key name is _ses.$CONTAINER_NAME.
 	KEY=_ses.tst
-	[ "$output" == "$KEY $LABEL" ]
+	assert_output "$KEY $LABEL"
 }
 
 function enable_userns() {
@@ -76,15 +73,13 @@ function enable_userns() {
 # Baseline test, to check that runc works with selinux enabled.
 @test "runc run (no selinux label)" {
 	update_config '	  .process.args = ["/bin/true"]'
-	runc run tst
-	[ "$status" -eq 0 ]
+	run -0 runc run tst
 }
 
 @test "runc run (custom selinux label)" {
 	update_config '	  .process.selinuxLabel |= "system_u:system_r:container_t:s0:c4,c5"
 			| .process.args = ["/bin/true"]'
-	runc run tst
-	[ "$status" -eq 0 ]
+	run -0 runc run tst
 }
 
 @test "runc run (session keyring security label)" {
@@ -116,8 +111,7 @@ function enable_userns() {
 
 	update_config '	  .process.selinuxLabel |= "system_u:system_r:container_t:s0:c4,c5"
 			| .process.args = ["/run.sh"]'
-	runc run tst
-	[ "$status" -ne 0 ]
+	run ! runc run tst
 	[ ${#lines[@]} -eq 1 ]
-	[[ "${lines[0]}" = "exec /run.sh: no such file or directory" ]]
+	assert_line --index 0 "exec /run.sh: no such file or directory"
 }
