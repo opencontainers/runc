@@ -278,10 +278,7 @@ func finalizeRootfs(config *configs.Config) (err error) {
 	// All tmpfs mounts and /dev were previously mounted as rw
 	// by mountPropagate. Remount them read-only as requested.
 	for _, m := range config.Mounts {
-		if m.Flags&unix.MS_RDONLY != unix.MS_RDONLY {
-			continue
-		}
-		if m.Device == "tmpfs" || pathrs.LexicallyCleanPath(m.Destination) == "/dev" {
+		if m.IsReadonlyDeferred() {
 			if err := remountReadonly(m); err != nil {
 				return err
 			}
@@ -1491,7 +1488,7 @@ func (m *mountEntry) mountPropagate(rootFd *os.File, mountLabel string) error {
 	// operations on it. We need to set up files in "/dev", and other tmpfs
 	// mounts may need to be chmod-ed after mounting. These mounts will be
 	// remounted ro later in finalizeRootfs(), if necessary.
-	if m.Device == "tmpfs" || pathrs.LexicallyCleanPath(m.Destination) == "/dev" {
+	if m.IsReadonlyDeferred() {
 		flags &= ^unix.MS_RDONLY
 	}
 
