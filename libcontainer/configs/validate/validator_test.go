@@ -172,6 +172,35 @@ func TestValidateSecurityWithoutNEWNS(t *testing.T) {
 	}
 }
 
+func TestValidateSecurityWithReadonlyfs(t *testing.T) {
+	config := &configs.Config{
+		Rootfs:     "/var",
+		Readonlyfs: true,
+		Namespaces: configs.Namespaces(
+			[]configs.Namespace{
+				{Type: configs.NEWNS},
+			},
+		),
+	}
+
+	err := Validate(config)
+	if err != nil {
+		t.Errorf("Expected error to not occur: %+v", err)
+	}
+}
+
+func TestValidateSecurityReadonlyfsWithoutNEWNS(t *testing.T) {
+	config := &configs.Config{
+		Rootfs:     "/var",
+		Readonlyfs: true,
+	}
+
+	err := Validate(config)
+	if err == nil {
+		t.Error("Expected error to occur but it was nil")
+	}
+}
+
 func TestValidateUserNamespace(t *testing.T) {
 	if _, err := os.Stat("/proc/self/ns/user"); errors.Is(err, os.ErrNotExist) {
 		t.Skip("Test requires userns.")
