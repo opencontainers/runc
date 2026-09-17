@@ -139,6 +139,14 @@ func security(config *configs.Config) error {
 	if config.Readonlyfs && !config.Namespaces.Contains(configs.NEWNS) {
 		return errors.New("unable to make rootfs read-only without a private MNT namespace")
 	}
+	// Same for mounts which can only be made read-only by a remount.
+	if !config.Namespaces.Contains(configs.NEWNS) {
+		for _, m := range config.Mounts {
+			if m.IsReadonlyDeferred() {
+				return fmt.Errorf("unable to make %s read-only without a private MNT namespace", m.Destination)
+			}
+		}
+	}
 	if config.ProcessLabel != "" && !selinux.GetEnabled() {
 		return errors.New("selinux label is specified in config, but selinux is disabled or not supported")
 	}

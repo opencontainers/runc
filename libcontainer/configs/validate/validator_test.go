@@ -201,6 +201,68 @@ func TestValidateSecurityReadonlyfsWithoutNEWNS(t *testing.T) {
 	}
 }
 
+func TestValidateSecurityWithReadonlyTmpfs(t *testing.T) {
+	config := &configs.Config{
+		Rootfs: "/var",
+		Mounts: []*configs.Mount{
+			{
+				Destination: "/dev/shm",
+				Device:      "tmpfs",
+				Flags:       unix.MS_RDONLY,
+			},
+		},
+		Namespaces: configs.Namespaces(
+			[]configs.Namespace{
+				{Type: configs.NEWNS},
+			},
+		),
+	}
+
+	err := Validate(config)
+	if err != nil {
+		t.Errorf("Expected error to not occur: %+v", err)
+	}
+}
+
+func TestValidateSecurityReadonlyTmpfsWithoutNEWNS(t *testing.T) {
+	config := &configs.Config{
+		Rootfs: "/var",
+		Mounts: []*configs.Mount{
+			{
+				Destination: "/dev/shm",
+				Device:      "tmpfs",
+				Flags:       unix.MS_RDONLY,
+			},
+		},
+	}
+
+	err := Validate(config)
+	if err == nil {
+		t.Error("Expected error to occur but it was nil")
+	}
+}
+
+// A read-only mount which does not need a remount to be made read-only is
+// fine without a mount namespace.
+func TestValidateSecurityReadonlyBindWithoutNEWNS(t *testing.T) {
+	config := &configs.Config{
+		Rootfs: "/var",
+		Mounts: []*configs.Mount{
+			{
+				Source:      "/etc",
+				Destination: "/etc",
+				Device:      "bind",
+				Flags:       unix.MS_BIND | unix.MS_RDONLY,
+			},
+		},
+	}
+
+	err := Validate(config)
+	if err != nil {
+		t.Errorf("Expected error to not occur: %+v", err)
+	}
+}
+
 func TestValidateUserNamespace(t *testing.T) {
 	if _, err := os.Stat("/proc/self/ns/user"); errors.Is(err, os.ErrNotExist) {
 		t.Skip("Test requires userns.")
