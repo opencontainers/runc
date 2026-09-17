@@ -27,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   this is a correctness rather than a security fix. (#5403)
 - Fixed a missing `O_CLOEXEC` when opening the cgroup v2 directory to set up
   device rules. (#5403)
+- `process.user.umask` is now honored for a container which does not have its
+  own mount namespace. Previously it was silently ignored, and not even the
+  default umask of 022 was set. (#5479)
 
 ### Changed ###
 - runc now requires Go 1.26+ to build. (#5413)
@@ -36,6 +39,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the runc binary shrunk by about 1 MiB (7.5%) on amd64. (#5403)
 - The `cpuAffinity` and NUMA `memoryPolicy` settings are no longer limited
   to 1024 CPUs/nodes, as runc now uses a dynamically-sized CPU mask. (#5343)
+- A container configuration which asks for a read-only rootfs
+  (`root.readonly`), a read-only tmpfs mount, or a read-only `/dev`, but does
+  not have its own mount namespace, is now refused. Previously such a
+  container was silently started with those filesystems left writable, since
+  making them read-only requires a remount, which is only possible in a
+  private mount namespace. This is consistent with how `maskedPaths` and
+  `readonlyPaths`, which have the same requirement, were already treated.
+  (#5371, #5479)
 
 ## [1.5.0] - 2026-06-19
 
