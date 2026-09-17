@@ -295,11 +295,6 @@ func finalizeRootfs(config *configs.Config) (err error) {
 		}
 	}
 
-	if config.Umask != nil {
-		unix.Umask(int(*config.Umask))
-	} else {
-		unix.Umask(0o022)
-	}
 	return nil
 }
 
