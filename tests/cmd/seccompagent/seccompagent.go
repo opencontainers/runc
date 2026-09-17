@@ -130,7 +130,7 @@ func handleNewMessage(sockfd int) (uintptr, string, error) {
 func readArgString(pid uint32, offset int64) (string, error) {
 	buffer := make([]byte, 4096) // PATH_MAX
 
-	memfd, err := linux.Open(fmt.Sprintf("/proc/%d/mem", pid), unix.O_RDONLY, 0o777)
+	memfd, err := linux.Open(fmt.Sprintf("/proc/%d/mem", pid), unix.O_RDONLY|unix.O_CLOEXEC, 0o777)
 	if err != nil {
 		return "", err
 	}
