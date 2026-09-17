@@ -22,7 +22,8 @@ function teardown() {
 			| .hooks |= . + {"createRuntime": [{"path": "/bin/sh", "args": ["/bin/sh", "-c", "touch createRuntimeHook.$$"]}]}
 			| .linux.namespaces -= [{"type": "mount"}]
 			| .linux.maskedPaths = []
-			| .linux.readonlyPaths = []'
+			| .linux.readonlyPaths = []
+			| .root.readonly = false'
 	runc run test_host_mntns
 	[ "$status" -eq 0 ]
 	runc delete -f test_host_mntns
