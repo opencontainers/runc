@@ -30,6 +30,7 @@ function get_platform() {
 # based on the architecture specified in $1.
 function set_cross_vars() {
 	GOARCH="$1" # default, may be overridden below
+	local cc_flags=""
 	unset GOARM
 
 	PLATFORM="$(get_platform)"
@@ -47,7 +48,9 @@ function set_cross_vars() {
 			cpu_type=i686
 		fi
 		HOST=x86_64-${PLATFORM}
-		CFLAGS="-m32 -march=$cpu_type ${CFLAGS[*]}"
+		# Pass these via CC rather than CFLAGS, so that autoconf
+		# still uses its default CFLAGS (-g -O2) when CFLAGS is unset.
+		cc_flags=" -m32 -march=$cpu_type"
 		;;
 	amd64)
 		HOST=x86_64-${PLATFORM}
@@ -80,8 +83,8 @@ function set_cross_vars() {
 		;;
 	esac
 
-	CC="${HOST:+$HOST-}gcc"
+	CC="${HOST:+$HOST-}gcc${cc_flags}"
 	STRIP="${HOST:+$HOST-}strip"
 
-	export HOST CFLAGS GOARM GOARCH CC STRIP
+	export HOST GOARM GOARCH CC STRIP
 }
