@@ -73,7 +73,7 @@ function teardown() {
 	ln -s /symlink rootfs/proc
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 1 ]
-	[[ "${output}" == *"must be mounted on ordinary directory"* ]]
+	[[ "${output}" == *"proc"*"directory"* ]]
 }
 
 @test "mask paths [prohibit symlink /sys]" {

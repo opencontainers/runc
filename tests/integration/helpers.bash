@@ -91,6 +91,11 @@ function update_config() {
 # Shortcut to add additional uids and gids, based on the values set as part of
 # a rootless configuration.
 function runc_rootless_idmap() {
+	# Some runtimes (e.g. crun) do not add the default mappings to the
+	# rootless spec, as they are implied. Add those explicitly, as the
+	# mappings added below would replace them.
+	update_config ' .linux.uidMappings //= [{"hostID": '"$(id -u)"', "containerID": 0, "size": 1}]
+			| .linux.gidMappings //= [{"hostID": '"$(id -g)"', "containerID": 0, "size": 1}]'
 	update_config ' .mounts |= map((select(.type == "devpts") | .options += ["gid=5"]) // .)
 			| .linux.uidMappings += [{"hostID": '"$ROOTLESS_UIDMAP_START"', "containerID": 1000, "size": '"$ROOTLESS_UIDMAP_LENGTH"'}]
 			| .linux.gidMappings += [{"hostID": '"$ROOTLESS_GIDMAP_START"', "containerID": 100, "size": 1}]
@@ -884,6 +889,26 @@ function teardown_bundle() {
 	done
 	rm -rf "$ROOT"
 	remove_parent
+	check_cgroup_removed
+}
+
+# Check that the container cgroup, if set by set_cgroups_path, is removed.
+function check_cgroup_removed() {
+	[ -v REL_CGROUPS_PATH ] || return 0
+
+	local paths=() g var p
+	if [ -v CGROUP_V2 ]; then
+		paths=("$CGROUP_V2_PATH")
+	else
+		for g in ${CGROUP_SUBSYSTEMS}; do
+			var=CGROUP_${g^^}_BASE_PATH
+			[ -v "$var" ] && paths+=("${!var}${REL_CGROUPS_PATH}")
+		done
+	fi
+	for p in "${paths[@]}"; do
+		# The cgroup might be removed asynchronously (e.g. by systemd).
+		retry 10 0.1 test ! -d "$p"
+	done
 }
 
 function remap_rootfs() {
