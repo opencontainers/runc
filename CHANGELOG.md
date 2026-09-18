@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed ###
+- `runc exec -p` with a process.json lacking `env` now sets `HOME` again
+  (a regression in runc 1.3.0). (#5265, #5266, #5459)
 - Worked around a Linux kernel bug (present since kernel v6.17, fixed in v7.2)
   which caused the kernel to write past the end of the structure
   provided by userspace (runc). This resulted in memory corruption inside runc
