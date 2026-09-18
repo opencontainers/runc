@@ -10,6 +10,7 @@ declare -A SECCOMP_SHA256=(
 	["2.5.5"]=248a2c8a4d9b9858aa6baf52712c34afefcf9c9e94b76dce02c1c9aa25fb3375
 	["2.5.6"]=04c37d72965dce218a0c94519b056e1775cf786b5260ee2b7992956c4ee38633
 	["2.6.0"]=83b6085232d1588c379dc9b9cae47bb37407cf262e6e74993c61ba72d2a784dc
+	["2.6.1"]=501f66c667225d53791b97e1d7cf85ab764c297d04881f60f38f451c4b0ee1be
 )
 
 # Due to libseccomp being LGPL we must include its sources,
