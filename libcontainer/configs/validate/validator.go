@@ -199,7 +199,29 @@ func convertSysctlVariableToDotsSeparator(val string) string {
 	if firstSepIndex == -1 || val[firstSepIndex] == '.' {
 		return val
 	}
+	return swapSysctlSeparators(val)
+}
 
+// convertSysctlVariableToPath returns the /proc/sys relative path of the given
+// sysctl variable, following the same rules as
+// convertSysctlVariableToDotsSeparator.
+//
+// For example:
+// Input sysctl variable "net.ipv4.conf.eno2/100.rp_filter"
+// will return the converted value "net/ipv4/conf/eno2.100/rp_filter".
+func convertSysctlVariableToPath(val string) string {
+	if val == "" {
+		return val
+	}
+	firstSepIndex := strings.IndexAny(val, "./")
+	if firstSepIndex == -1 || val[firstSepIndex] == '/' {
+		return val
+	}
+	return swapSysctlSeparators(val)
+}
+
+// swapSysctlSeparators interchanges dots and slashes in a sysctl variable.
+func swapSysctlSeparators(val string) string {
 	f := func(r rune) rune {
 		switch r {
 		case '.':
@@ -210,6 +232,18 @@ func convertSysctlVariableToDotsSeparator(val string) string {
 		return r
 	}
 	return strings.Map(f, val)
+}
+
+// checkSysctlPath returns an error unless the given sysctl variable maps to a
+// clean path below /proc/sys. Anything else (an absolute path, an empty or a
+// "." or ".." component) is rejected, as such a key could otherwise be used to
+// reach a sysctl which is not the one being validated.
+func checkSysctlPath(key string) error {
+	p := convertSysctlVariableToPath(key)
+	if !filepath.IsLocal(p) || filepath.Clean(p) != p {
+		return fmt.Errorf("sysctl %q is not a valid sysctl name", key)
+	}
+	return nil
 }
 
 // sysctl validates that the specified sysctl keys are valid or not.
@@ -234,6 +268,9 @@ func sysctl(config *configs.Config) error {
 	)
 
 	for s := range config.Sysctl {
+		if err := checkSysctlPath(s); err != nil {
+			return err
+		}
 		s := convertSysctlVariableToDotsSeparator(s)
 		if validSysctlMap[s] || strings.HasPrefix(s, "fs.mqueue.") {
 			if config.Namespaces.Contains(configs.NEWIPC) {
