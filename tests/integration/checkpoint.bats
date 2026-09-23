@@ -496,6 +496,18 @@ function simple_cr() {
 	local pid
 	pid=$(cat "pid")
 	grep -rqx "$pid" --include=cgroup.procs "$new_path"
+
+	# Check that cgroupns is there. The check is more complicated for v1
+	# so we only do it for v2. This requires a CRIU fix from
+	# https://github.com/checkpoint-restore/criu/pull/3139, which is
+	# expected to be released in CRIU 4.3.
+	if [ -v CGROUP_V2 ] && criu_version_ge 4.3; then
+		echo "orig_path = $orig_path"
+		echo " new_path = $new_path"
+		runc exec test_busybox cat /proc/self/cgroup
+		[ "$status" -eq 0 ]
+		[ "$output" = "0::/" ] # Means own cgroupns
+	fi
 }
 
 @test "checkpoint/restore and exec" {
