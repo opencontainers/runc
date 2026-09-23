@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   this is a correctness rather than a security fix. (#5403)
 - Fixed a missing `O_CLOEXEC` when opening the cgroup v2 directory to set up
   device rules. (#5403)
+- Some long-standing file-descriptor leaks on the eBPF devices cgroups were
+  fixed. (#5403, #5487)
 
 ### Changed ###
 - runc now requires Go 1.26+ to build. (#5413)
