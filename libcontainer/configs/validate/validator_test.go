@@ -288,6 +288,65 @@ func TestConvertSysctlVariableToDotsSeparator(t *testing.T) {
 	}
 }
 
+// TestConvertSysctlVariableToPath tests whether the sysctl variable can be
+// correctly converted to its /proc/sys relative path.
+func TestConvertSysctlVariableToPath(t *testing.T) {
+	type testCase struct {
+		in  string
+		out string
+	}
+	valid := []testCase{
+		{in: "", out: ""},
+		{in: "kernel.shm_rmid_forced", out: "kernel/shm_rmid_forced"},
+		{in: "kernel/shm_rmid_forced", out: "kernel/shm_rmid_forced"},
+		{in: "net.ipv4.conf.eno2/100.rp_filter", out: "net/ipv4/conf/eno2.100/rp_filter"},
+		{in: "net/ipv4/conf/eno2.100/rp_filter", out: "net/ipv4/conf/eno2.100/rp_filter"},
+		{in: "net/ipv4/ip_local_port_range", out: "net/ipv4/ip_local_port_range"},
+		{in: "kernel/msgmax", out: "kernel/msgmax"},
+		{in: "kernel.sem", out: "kernel/sem"},
+	}
+
+	for _, test := range valid {
+		got := convertSysctlVariableToPath(test.in)
+		if got != test.out {
+			t.Errorf("The sysctl variable was not converted correctly. got: %s, want: %s", got, test.out)
+		}
+	}
+}
+
+// TestValidateSysctlUncleanPath makes sure sysctl names which do not map to a
+// clean path below /proc/sys are rejected.
+func TestValidateSysctlUncleanPath(t *testing.T) {
+	sysctl := []string{
+		"net/../kernel/sysrq",
+		"net...kernel.sysrq",
+		"/net/ipv4/ip_forward",
+		".net.ipv4.ip_forward",
+		"net//ipv4/ip_forward",
+		"net..ipv4.ip_forward",
+		"net/ipv4/ip_forward/",
+		"net/./ipv4/ip_forward",
+		"..",
+		"",
+	}
+
+	for _, k := range sysctl {
+		config := &configs.Config{
+			Rootfs: "/var",
+			Sysctl: map[string]string{k: "ctl"},
+			Namespaces: []configs.Namespace{
+				{Type: configs.NEWNET},
+				{Type: configs.NEWIPC},
+				{Type: configs.NEWUTS},
+			},
+		}
+
+		if err := Validate(config); err == nil {
+			t.Errorf("Expected error to occur with sysctl %q but it was nil", k)
+		}
+	}
+}
+
 func TestValidateSysctl(t *testing.T) {
 	sysctl := map[string]string{
 		"fs.mqueue.ctl":                    "ctl",
