@@ -12,7 +12,7 @@ import (
 )
 
 func registerMemoryEventV2(cgDir, evName, cgEvName string) (<-chan struct{}, error) {
-	fd, err := unix.InotifyInit()
+	fd, err := unix.InotifyInit1(unix.IN_CLOEXEC)
 	if err != nil {
 		return nil, fmt.Errorf("unable to init inotify: %w", err)
 	}
