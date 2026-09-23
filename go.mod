@@ -21,7 +21,7 @@ require (
 	github.com/opencontainers/selinux v1.15.1
 	github.com/seccomp/libseccomp-golang v0.12.0
 	github.com/sirupsen/logrus v1.10.2
-	github.com/urfave/cli/v3 v3.11.0
+	github.com/urfave/cli/v3 v3.12.0
 	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5
 	golang.org/x/net v0.59.0
