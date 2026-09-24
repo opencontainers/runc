@@ -19,6 +19,13 @@ function teardown() {
 	[ "$status" -ne 0 ]
 }
 
+@test "runc run --preserve-fds with no inherited fd" {
+	setup_runc_cmdline
+	run bash -c 'exec 3>&-; exec "$@"' bash "${RUNC_CMDLINE[@]}" run --preserve-fds=1 test_missing_fd
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"preserved-fd 0"* ]]
+}
+
 @test "runc run --keep" {
 	runc run --keep test_run_keep
 	[ "$status" -eq 0 ]
