@@ -135,10 +135,6 @@ $(gpg "${tmp_runc_gpgflags[@]}" --list-keys)
 EOF
 read -r
 
-# Only needed for local signing -- change the owner since by default it's built
-# inside a container which means it'll have the wrong owner and permissions.
-[ -w "$releasedir" ] || sudo chown -R "$(id -u):$(id -g)" "$releasedir"
-
 # Sign everything.
 for bin in "$releasedir/$project"*; do
 	[[ "$(basename "$bin")" == "$project.$hashcmd" ]] && continue # skip hash
