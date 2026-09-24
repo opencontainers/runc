@@ -85,6 +85,8 @@ while getopts "H:hr:S:v:" opt; do
 done
 
 version="${version:-$(<"$root/VERSION")}"
+# Allow the version to be specified as a tag (with a leading v).
+version="${version#v}"
 releasedir="${releasedir:-release/$version}"
 hashcmd="${hashcmd:-sha256sum}"
 
