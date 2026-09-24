@@ -8,6 +8,7 @@ on:
     branches:
       - main
       - release-*
+  merge_group:
   pull_request:
   workflow_dispatch:
 
@@ -30,7 +31,7 @@ jobs:
           persist-credentials: false
       - uses: kjanat/actionlint@08bb2c4f0d039744455b87aef1c647fb8b66d37b # v1.17.0
 
-  all-done:
+  all-done-actionlint:
     needs:
     - actionlint
     runs-on: ubuntu-24.04

@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - release-*
+  merge_group:
   pull_request:
   workflow_dispatch:
 
@@ -375,7 +376,7 @@ jobs:
         advanced-security: false
         annotations: true
 
-  all-done:
+  all-done-validate:
     needs:
       - check-go
       - cfmt
