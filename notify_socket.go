@@ -117,7 +117,9 @@ func (s *notifySocket) run(pid1 int) error {
 	ticker := time.NewTicker(time.Millisecond * 100)
 	defer ticker.Stop()
 
-	fileChan := make(chan []byte)
+	// Buffered so the goroutine below can't block forever sending to a
+	// receiver that has already returned via the ticker/timeout path.
+	fileChan := make(chan []byte, 1)
 	go func() {
 		for {
 			buf := make([]byte, 4096)
@@ -126,10 +128,13 @@ func (s *notifySocket) run(pid1 int) error {
 				return
 			}
 			got := buf[0:r]
-			// systemd-ready sends a single datagram with the state string as payload,
-			// so we don't need to worry about partial messages.
+			// systemd-ready sends a single datagram with the state string as
+			// payload, so we don't need to worry about partial messages. A
+			// datagram may contain several newline-separated assignments
+			// (e.g. "STATUS=...\nREADY=1"), so the prefix must be checked on
+			// each line, not on the whole datagram.
 			for line := range bytes.SplitSeq(got, []byte{'\n'}) {
-				if bytes.HasPrefix(got, []byte("READY=")) {
+				if bytes.HasPrefix(line, []byte("READY=")) {
 					fileChan <- line
 					return
 				}
