@@ -165,3 +165,13 @@ gpg "${tmp_seccomp_gpgflags[@]}" --verify libseccomp*.asc
 gpg "${tmp_libpathrs_gpgflags[@]}" --verify libpathrs*.asc
 
 popd
+
+set +x
+cat >&2 <<EOT
+
+Signed the $project release in $releasedir. To upload the signatures and
+the signed checksums file to a (draft) GitHub release, run:
+
+	gh release upload v$version --repo opencontainers/$project --clobber \\
+		$releasedir/*.asc $releasedir/$project.$hashcmd
+EOT
