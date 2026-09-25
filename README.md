@@ -17,10 +17,10 @@ All releases are signed by one of the keys listed in the [`runc.keyring` file in
 
 ## Security
 
-The reporting process and disclosure communications are outlined [here](https://github.com/opencontainers/org/blob/master/SECURITY.md).
+The reporting process and disclosure communications are outlined [here](https://github.com/opencontainers/org/blob/main/SECURITY.md).
 
 ### Security Audit
-A third party security audit was performed by Cure53, you can see the full report [here](https://github.com/opencontainers/runc/blob/master/docs/Security-Audit.pdf).
+A third party security audit was performed by Cure53, you can see the full report [here](https://github.com/opencontainers/runc/blob/main/docs/Security-Audit.pdf).
 
 ## Building
 
