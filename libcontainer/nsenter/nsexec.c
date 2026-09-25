@@ -716,7 +716,10 @@ static void log_cpu_affinity()
 	/* Do not print the complete mask, we only need a few first CPUs. */
 	for (i = 0; i < sizeof(mask) * 8; i++) {
 		if (CPU_ISSET(i, &cpus))
-			mask |= 1 << i;
+			/* Cast to size_t (mask's type) before shifting: for i >= 31 the
+			 * shift below would otherwise overflow (and for i >= 32, be
+			 * undefined behaviour) in the "int"-typed literal 1. */
+			mask |= (size_t)1 << i;
 	}
 
 	write_log(DEBUG, "affinity: 0x%zx", mask);
