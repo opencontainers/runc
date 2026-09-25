@@ -73,13 +73,18 @@ func rootfs(config *configs.Config) error {
 
 // https://elixir.bootlin.com/linux/v6.12/source/net/core/dev.c#L1066
 func devValidName(name string) bool {
-	if len(name) == 0 || len(name) > unix.IFNAMSIZ {
+	// The kernel's dev_valid_name() rejects strnlen(name, IFNAMSIZ) ==
+	// IFNAMSIZ, i.e. any name of length >= IFNAMSIZ, because IFNAMSIZ
+	// includes the terminating NUL: the longest valid name is IFNAMSIZ-1.
+	if len(name) == 0 || len(name) >= unix.IFNAMSIZ {
 		return false
 	}
 	if name == "." || name == ".." {
 		return false
 	}
-	if strings.ContainsAny(name, "/: ") {
+	// The kernel also rejects '/' , ':', and any isspace() byte (not just
+	// ' '): '\t', '\n', '\v', '\f', '\r'.
+	if strings.ContainsAny(name, "/: \t\n\v\f\r") {
 		return false
 	}
 	return true

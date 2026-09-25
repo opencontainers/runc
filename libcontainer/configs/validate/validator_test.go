@@ -1061,8 +1061,11 @@ func TestDevValidName(t *testing.T) {
 	}{
 		{name: "", valid: false},
 		{name: "a", valid: true},
-		{name: strings.Repeat("a", unix.IFNAMSIZ), valid: true},
+		{name: strings.Repeat("a", unix.IFNAMSIZ-1), valid: true},
+		{name: strings.Repeat("a", unix.IFNAMSIZ), valid: false},
 		{name: strings.Repeat("a", unix.IFNAMSIZ+1), valid: false},
+		{name: "eth0\t0", valid: false},
+		{name: "eth0\n0", valid: false},
 		{name: ".", valid: false},
 		{name: "..", valid: false},
 		{name: "dev/null", valid: false},
