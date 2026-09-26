@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   device rules. (#5403)
 - Some long-standing file-descriptor leaks on the eBPF devices cgroups were
   fixed. (#5403, #5487)
+- runc now rejects a process spec with duplicate `rlimits` entries of the
+  same type, as required by the runtime-spec. Previously, the last such
+  entry silently took effect. (#5493)
 
 ### Changed ###
 - runc now requires Go 1.26+ to build. (#5413)

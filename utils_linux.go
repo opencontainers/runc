@@ -367,6 +367,13 @@ func validateProcessSpec(spec *specs.Process) error {
 	if spec.SelinuxLabel != "" && !selinux.GetEnabled() {
 		return errors.New("selinux label is specified in config, but selinux is disabled or not supported")
 	}
+	seen := make(map[string]struct{}, len(spec.Rlimits))
+	for _, rlimit := range spec.Rlimits {
+		if _, ok := seen[rlimit.Type]; ok {
+			return fmt.Errorf("duplicate rlimit type: %s", rlimit.Type)
+		}
+		seen[rlimit.Type] = struct{}{}
+	}
 	return nil
 }
 
