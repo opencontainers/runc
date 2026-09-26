@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   accordingly. This lifts the previous 1024 CPUs/nodes limit. (#5343)
 - The deprecated `libcontainer/devices` package has been removed. Use
   `github.com/moby/sys/devices` instead. (#5142, #5223, #5495)
+- The deprecated `RecvFile`, `SendFile`, and `SendRawFd` functions have been
+  removed from `libcontainer/utils`. (#5227, #5231, #5495)
 
 ### Fixed ###
 - The poststart hooks are now executed after starting the user-specified
