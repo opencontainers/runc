@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0-rc.1] - 2026-10-06
+
+> Lo bueno, si breve, dos veces bueno.
+
+> [!NOTE]
+> runc v1.6.0-rc.1 includes all of the patches backported to runc v1.5.2.
+
 ### libcontainer API ###
 - `configs.ToCPUSet` now returns a `unix.CPUSetDynamic` instead of a
   `*unix.CPUSet`, and the `Initial`/`Final` fields of `configs.CPUAffinity` and
@@ -26,6 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `process.user.umask` is now honored for a container which does not have its
   own mount namespace. Previously it was silently ignored, and not even the
   default umask of 022 was set. (#5479)
+- When an AppArmor profile is not loaded, runc now says so explicitly and
+  names the profile, instead of returning a confusing `no such file or
+  directory` error about a procfs file. (#5438, #5441)
 
 ### Changed ###
 - runc now requires Go 1.26+ to build. (#5413)
@@ -43,6 +53,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   private mount namespace. This is consistent with how `maskedPaths` and
   `readonlyPaths`, which have the same requirement, were already treated.
   (#5371, #5479)
+- Switched from urfave/cli v1 (which is in maintenance mode) to v3. The
+  command-line syntax is intended to remain the same, but the help output
+  looks different. Please report any regressions in command-line parsing.
+  The `urfave_cli_no_docs` build tag is no longer used. (#5184)
+- `runc start` now waits for the container's init process using poll(2) and
+  pidfd (where available), instead of a goroutine with a 100ms polling
+  timeout. (#5251, #5271)
+- runc no longer sets up a signal forwarder for detached containers, as
+  there is nothing to forward the signals to. (#4661)
 
 ## [1.5.2] - 2026-09-25
 
@@ -1921,7 +1940,7 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.6.0-rc.1...HEAD
 [1.5.0]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...v1.5.0
 [1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
 [1.3.0]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...v1.3.0
@@ -1998,3 +2017,6 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.5.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.2...v1.5.0-rc.3
 [1.5.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...v1.5.0-rc.2
 [1.5.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.5.0-rc.1
+
+<!-- 1.6.z patch releases -->
+[1.6.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.5.0...v1.6.0-rc.1
