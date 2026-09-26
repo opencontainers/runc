@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0-rc.1] - 2026-09-30
+
+> [!NOTE]
+> runc v1.6.0-rc.1 includes all of the patches backported to runc v1.5.2.
+
 ### libcontainer API ###
 - `configs.ToCPUSet` now returns a `unix.CPUSetDynamic` instead of a
   `*unix.CPUSet`, and the `Initial`/`Final` fields of `configs.CPUAffinity` and
@@ -15,29 +20,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed ###
 - The poststart hooks are now executed after starting the user-specified
   process, fixing a runtime-spec conformance issue. (#4347, #5186)
+- When an AppArmor profile is not loaded, runc now says so explicitly and
+  names the profile, instead of returning a confusing `no such file or
+  directory` error about a procfs file. (#5438, #5441)
+
+### Changed ###
+- runc now requires Go 1.26+ to build. (#5413)
+- The `cpuAffinity` and NUMA `memoryPolicy` settings are no longer limited
+  to 1024 CPUs/nodes, as runc now uses a dynamically-sized CPU mask. (#5343)
+- Switched from urfave/cli v1 (which is in maintenance mode) to v3. The
+  command-line syntax is intended to remain the same, but the help output
+  looks different. Please report any regressions in command-line parsing.
+  The `urfave_cli_no_docs` build tag is no longer used. (#5184)
+- `runc start` now waits for the container's init process using poll(2) and
+  pidfd (where available), instead of a goroutine with a 100ms polling
+  timeout. (#5251, #5271)
+- runc no longer sets up a signal forwarder for detached containers, as
+  there is nothing to forward the signals to. (#4661)
+
+## [1.5.2] - 2026-09-25
+
+> Всё сбудется, стоит только расхотеть!
+
+### Fixed ###
+- `runc exec -p` with a process.json lacking `env` now sets `HOME` again
+  (a regression in runc 1.3.0). (#5265, #5266, #5459)
 - Worked around a Linux kernel bug (present since kernel v6.17, fixed in v7.2)
   which caused the kernel to write past the end of the structure
   provided by userspace (runc). This resulted in memory corruption inside runc
   (manifesting as random crashes) when configuring device rules on cgroup v2
-  systems. (#5403)
+  systems. (#5403, #5428)
 - `runc exec --cgroup` (and the equivalent libcontainer `Process.SubCgroupPaths`
   API) no longer accepts a sub-cgroup path that escapes the container's cgroup
   into a sibling cgroup sharing the same name prefix. Note that using
   `--cgroup` requires the same privileges as running `runc exec` itself, so
-  this is a correctness rather than a security fix. (#5403)
+  this is a correctness rather than a security fix. (#5403, #5457)
 - Fixed a missing `O_CLOEXEC` when opening the cgroup v2 directory to set up
-  device rules. (#5403)
+  device rules. (#5403, #5428)
 - Some long-standing file-descriptor leaks on the eBPF devices cgroups were
-  fixed. (#5403, #5487)
+  fixed. (#5403, #5428)
+- When `rootfsPropagation` is set to `rslave`, the rootfs parent mount is no
+  longer made private before pivoting into the rootfs, so unmount/remount
+  events on host mountpoints under the rootfs are now propagated to the
+  running container. (#5192, #5200, #5458)
+- runc no longer misdetects a non-initial user namespace as the initial one
+  when that namespace has a full identity ID mapping (`0 0 4294967295`), as
+  used by systemd >= 260 units with `PrivateUsers=full`. Previously this made
+  runc skip its user namespace code paths, so starting a container in such a
+  unit failed with `bpf_prog_query(BPF_CGROUP_DEVICE) failed: operation not
+  permitted`. (#5396, #5411, #5451, [moby/sys#239])
+- Fixed a `runc init` panic (SIGABRT) on the error path, caused by SELinux
+  labels being reset after the cached libpathrs procfs handle was already
+  closed. This is fixed both by not resetting the labels on the init error
+  path, and by updating to libpathrs v0.2.6, which now handles a closed
+  procfs handle gracefully. (#5438, #5439, #5442, #5448, #5449, #5467,
+  #5469)
+- Fixed various issues when the libseccomp version runc is run with differs
+  from the one it was compiled against (e.g. built with libseccomp >= 2.6.0 and
+  run with an older one), by updating to libseccomp-golang v0.12.0. This also
+  supersedes the `SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV` workaround added in
+  runc 1.5.1. (#5436, #5461)
+- The libseccomp library statically linked into release binaries is now built
+  with optimizations enabled (the default `-g -O2` `CFLAGS`); previously it was
+  built unoptimized. (#5464, #5465)
+
+[moby/sys#239]: https://github.com/moby/sys/issues/239
 
 ### Changed ###
-- runc now requires Go 1.26+ to build. (#5413)
-- Updated builds to libseccomp v2.6.1. (#5376)
 - Switched to opencontainers/cgroups v0.1.0, which no longer uses the
   high-level cilium/ebpf API to manage cgroup v2 device rules. As a result,
-  the runc binary shrunk by about 1 MiB (7.5%) on amd64. (#5403)
-- The `cpuAffinity` and NUMA `memoryPolicy` settings are no longer limited
-  to 1024 CPUs/nodes, as runc now uses a dynamically-sized CPU mask. (#5343)
+  the runc binary shrunk by about 1 MiB (7.5%) on amd64. This also means runc
+  no longer calls the cilium/ebpf code affected by GO-2026-6238. (#5403, #5428)
+- Updated golang.org/x/net to v0.55.0. (#5379, #5381)
+- Updated builds to libseccomp v2.6.1. (#5376, #5460)
+
+## [1.5.1] - 2026-07-14
+
+> El lujo es vulgaridad, dijo, y me conquistó.
+
+### Fixed ###
+- There was a regression reported in with the `maskPaths` optimisation added in
+  1.5.0-rc.3 (#5275). On Ubuntu Focal (20.04), attempts to mount `tmpfs` with
+  the `nr_inodes=1` option will fail due to a downstream kernel patch
+  (ironically originating from AUFS). We now have a fallback path using
+  `nr_inodes=2` instead if the operation fails. (#5348, #5358, #5359)
+- Properly handle `EINVAL` for seccomp `SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV`
+  when trying to rewrite the filter. This appears to only happen if you compile
+  runc with libseccomp >= 2.6.0 and then run it with an < 2.6.0 libseccomp.
+  (#5347, #5354)
 
 ## [1.5.0] - 2026-06-19
 
@@ -1845,7 +1915,7 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.6.0-rc.1...HEAD
 [1.5.0]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...v1.5.0
 [1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
 [1.3.0]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...v1.3.0
@@ -1915,8 +1985,13 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1
 
 <!-- 1.5.z patch releases -->
-[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.0...release-1.5
+[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.2...release-1.5
+[1.5.2]: https://github.com/opencontainers/runc/compare/v1.5.1...v1.5.2
+[1.5.1]: https://github.com/opencontainers/runc/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...v1.5.0
 [1.5.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.2...v1.5.0-rc.3
 [1.5.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...v1.5.0-rc.2
 [1.5.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.5.0-rc.1
+
+<!-- 1.6.z patch releases -->
+[1.6.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.5.0...v1.6.0-rc.1
