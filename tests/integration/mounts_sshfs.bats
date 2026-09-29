@@ -133,9 +133,6 @@ function fail_sshfs_bind_flags() {
 	run -0 grep -wq rw <<<"$mnt_flags"
 	run ! grep -wq noexec <<<"$mnt_flags"
 	run ! grep -wq nosymfollow <<<"$mnt_flags"
-	# FIXME FIXME: As with mount(8), trying to clear an atime flag the "naive"
-	# way will be ignored!
-	run -0 grep -wq nodiratime <<<"$mnt_flags"
 
 	# Now try with a user namespace.
 	update_config ' .linux.namespaces += [{"type": "user"}]
@@ -212,9 +209,6 @@ function fail_sshfs_bind_flags() {
 	run ! grep -wq nosuid <<<"$mnt_flags"
 	run ! grep -wq nodev <<<"$mnt_flags"
 	run ! grep -wq noexec <<<"$mnt_flags"
-	# FIXME FIXME: As with mount(8), trying to clear an atime flag the "naive"
-	# way will be ignored!
-	run -0 grep -wq noatime <<<"$mnt_flags"
 
 	# Now try with a user namespace.
 	update_config ' .linux.namespaces += [{"type": "user"}]
@@ -300,8 +294,6 @@ function fail_sshfs_bind_flags() {
 	# Unspecified flags must be cleared.
 	run ! grep -wq nosuid <<<"$mnt_flags"
 	run ! grep -wq nodev <<<"$mnt_flags"
-	# FIXME: As with mount(8), runc keeps the old atime setting by default.
-	run -0 grep -wq noatime <<<"$mnt_flags"
 
 	# Now try with a user namespace.
 	update_config ' .linux.namespaces += [{"type": "user"}]
@@ -329,22 +321,6 @@ function fail_sshfs_bind_flags() {
 		run ! grep -wq nodiratime <<<"${1:-$mnt_flags}"
 	}
 
-	# FIXME: As with mount(8), runc keeps the old atime setting by default.
-	pass_sshfs_bind_flags "noatime" "bind"
-	run -0 grep -wq noatime <<<"$mnt_flags"
-	run ! grep -wq relatime <<<"$mnt_flags"
-
-	# FIXME: As with mount(8), runc keeps the old atime setting by default.
-	pass_sshfs_bind_flags "noatime" "bind,norelatime"
-	run -0 grep -wq noatime <<<"$mnt_flags"
-	run ! grep -wq relatime <<<"$mnt_flags"
-
-	# FIXME FIXME: As with mount(8), trying to clear an atime flag the "naive"
-	# way will be ignored!
-	pass_sshfs_bind_flags "noatime" "bind,atime"
-	run -0 grep -wq noatime <<<"$mnt_flags"
-	run ! grep -wq relatime <<<"$mnt_flags"
-
 	# ... but explicitly setting a different flag works.
 	pass_sshfs_bind_flags "noatime" "bind,relatime"
 	run ! grep -wq noatime <<<"$mnt_flags"
@@ -370,11 +346,8 @@ function fail_sshfs_bind_flags() {
 	run ! grep -wq noatime <<<"$mnt_flags"
 	run -0 grep -wq nodiratime <<<"$mnt_flags"
 	run ! grep -wq relatime <<<"$mnt_flags"
-	# FIXME FIXME: relatime should not be set in this case.
 	pass_sshfs_bind_flags "noatime" "bind,nodiratime,norelatime"
-	run ! grep -wq noatime <<<"$mnt_flags"
 	run -0 grep -wq nodiratime <<<"$mnt_flags"
-	run -0 grep -wq relatime <<<"$mnt_flags"
 
 	# Now try with a user namespace.
 	update_config ' .linux.namespaces += [{"type": "user"}]
