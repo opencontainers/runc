@@ -27,7 +27,7 @@ ALL_FEATURES=("idmap" "cgroup")
 if [ -v RUNC_USE_SYSTEMD ]; then
 	ALL_FEATURES=("idmap")
 fi
-ROOT="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
+SRC_ROOT="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
 
 # List of environment variables needed for the tests.
 # They are usually exported, but since we use ssh  below,
@@ -182,7 +182,7 @@ features_powerset="$(powerset "${ALL_FEATURES[@]}")"
 
 # Make sure we have container images downloaded, as otherwise
 # rootless user won't be able to write to $TESTDATA.
-"$ROOT"/tests/integration/get-images.sh >/dev/null
+"$SRC_ROOT"/tests/integration/get-images.sh >/dev/null
 
 # Iterate over the powerset of all features.
 IFS=:
@@ -218,10 +218,10 @@ for ROOTLESS_FEATURES in $features_powerset; do
 		# Operation not permitted". Set the correct value explicitly.
 		ssh_env+=("XDG_RUNTIME_DIR=/run/user/$(id -u rootless)")
 		ssh -t -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$HOME/.ssh/rootless.key" \
-			rootless@localhost -- "${ssh_env[@]}" bats -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
+			rootless@localhost -- "${ssh_env[@]}" bats -t "$SRC_ROOT/tests/integration$ROOTLESS_TESTPATH"
 	else
 		export "${ENV_LIST[@]}"
-		sudo -HE -u rootless PATH="$PATH" "$(command -v bats)" -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
+		sudo -HE -u rootless PATH="$PATH" "$(command -v bats)" -t "$SRC_ROOT/tests/integration$ROOTLESS_TESTPATH"
 	fi
 	cleanup
 done
