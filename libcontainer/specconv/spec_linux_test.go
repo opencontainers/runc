@@ -1026,3 +1026,39 @@ func TestCreateNetDevices(t *testing.T) {
 		})
 	}
 }
+
+func TestParseMountOptionsDefaultsNotInData(t *testing.T) {
+	m := parseMountOptions([]string{"defaults", "size=1m", "mode=777"})
+	if strings.Contains(m.Data, "defaults") {
+		t.Errorf("defaults must not be passed as mount data, got %q", m.Data)
+	}
+	if !strings.Contains(m.Data, "size=1m") || !strings.Contains(m.Data, "mode=777") {
+		t.Errorf("expected size and mode in mount data, got %q", m.Data)
+	}
+	if m.Flags != 0 || m.ClearedFlags != 0 {
+		t.Errorf("defaults must not change mount flags, flags=%#x cleared=%#x", m.Flags, m.ClearedFlags)
+	}
+
+	unknown := parseMountOptions([]string{"defaults", "notarealoption", "size=1m"})
+	if strings.Contains(unknown.Data, "defaults") {
+		t.Errorf("defaults must not be passed as mount data, got %q", unknown.Data)
+	}
+	if !strings.Contains(unknown.Data, "notarealoption") {
+		t.Errorf("unknown option must be preserved in mount data, got %q", unknown.Data)
+	}
+
+	// Nonzero flags keep set/clear behavior and are not treated as data.
+	flagged := parseMountOptions([]string{"ro", "nodev", "rw"})
+	if flagged.Flags&unix.MS_RDONLY != 0 {
+		t.Errorf("rw should clear MS_RDONLY, flags=%#x cleared=%#x", flagged.Flags, flagged.ClearedFlags)
+	}
+	if flagged.ClearedFlags&unix.MS_RDONLY == 0 {
+		t.Errorf("rw should record MS_RDONLY as cleared, cleared=%#x", flagged.ClearedFlags)
+	}
+	if flagged.Flags&unix.MS_NODEV == 0 {
+		t.Errorf("nodev should set MS_NODEV, flags=%#x", flagged.Flags)
+	}
+	if flagged.Data != "" {
+		t.Errorf("known flags must not be passed as data, got %q", flagged.Data)
+	}
+}
