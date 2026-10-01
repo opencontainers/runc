@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -351,17 +352,14 @@ func (r *runner) checkTerminal(config *specs.Process) error {
 	return nil
 }
 
-// checkProcessRlimits returns an error if spec has duplicate rlimit types.
-func checkProcessRlimits(spec *specs.Process) error {
-	rlimits := make([]configs.Rlimit, 0, len(spec.Rlimits))
-	for _, r := range spec.Rlimits {
-		rl, err := createLibContainerRlimit(r)
-		if err != nil {
-			return err
+// checkProcessRlimits returns an error if p has duplicate rlimit types.
+func checkProcessRlimits(p *specs.Process) error {
+	for i, r := range p.Rlimits {
+		if slices.ContainsFunc(p.Rlimits[:i], func(x specs.POSIXRlimit) bool { return x.Type == r.Type }) {
+			return fmt.Errorf("duplicate rlimit type: %s", r.Type)
 		}
-		rlimits = append(rlimits, rl)
 	}
-	return configs.CheckRlimits(rlimits)
+	return nil
 }
 
 func validateProcessSpec(spec *specs.Process) error {

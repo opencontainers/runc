@@ -28,11 +28,6 @@ func TestCheckProcessRlimits(t *testing.T) {
 			},
 			isErr: true,
 		},
-		{
-			name:    "unknown type",
-			rlimits: []specs.POSIXRlimit{{Type: "RLIMIT_BOGUS"}},
-			isErr:   true,
-		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			err := checkProcessRlimits(&specs.Process{Rlimits: tc.rlimits})
