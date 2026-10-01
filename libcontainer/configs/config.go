@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -632,4 +633,17 @@ func (c *Command) Run(s *specs.State) error {
 		<-errC
 		return fmt.Errorf("hook ran past specified timeout of %.1fs", c.Timeout.Seconds())
 	}
+}
+
+// CheckRlimits returns an error if limits contain more than one entry
+// of the same type.
+func CheckRlimits(limits []Rlimit) error {
+	// There are only a few rlimit types, so a linear search is cheaper
+	// than building a map.
+	for i, l := range limits {
+		if slices.ContainsFunc(limits[:i], func(r Rlimit) bool { return r.Type == l.Type }) {
+			return fmt.Errorf("duplicate rlimit type: %d", l.Type)
+		}
+	}
+	return nil
 }

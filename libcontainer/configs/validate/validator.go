@@ -34,6 +34,7 @@ func Validate(config *configs.Config) error {
 		scheduler,
 		ioPriority,
 		memoryPolicy,
+		rlimits,
 	}
 	for _, c := range checks {
 		if err := c(config); err != nil {
@@ -519,4 +520,10 @@ func memoryPolicy(config *configs.Config) error {
 		return fmt.Errorf("invalid memory policy mode: %d", mpol.Mode)
 	}
 	return nil
+}
+
+// rlimits checks that there is no more than one entry per rlimit type,
+// as required by the runtime-spec.
+func rlimits(config *configs.Config) error {
+	return configs.CheckRlimits(config.Rlimits)
 }

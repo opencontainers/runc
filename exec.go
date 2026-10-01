@@ -217,7 +217,15 @@ func getProcess(cmd *cli.Command, c *libcontainer.Container) (*specs.Process, er
 		if err := json.NewDecoder(f).Decode(&p); err != nil {
 			return nil, err
 		}
-		return &p, validateProcessSpec(&p)
+		if err := validateProcessSpec(&p); err != nil {
+			return nil, err
+		}
+		// The process is new input (not from an existing container's
+		// config.json), so reject duplicate rlimit types here.
+		if err := checkProcessRlimits(&p); err != nil {
+			return nil, err
+		}
+		return &p, nil
 	}
 	// Process from config.json and CLI flags.
 	bundle, ok := utils.SearchLabels(c.Config().Labels, "bundle")

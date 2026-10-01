@@ -1168,3 +1168,39 @@ func TestDevValidName(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateRlimits(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		rlimits []configs.Rlimit
+		isErr   bool
+	}{
+		{name: "none"},
+		{
+			name: "distinct",
+			rlimits: []configs.Rlimit{
+				{Type: unix.RLIMIT_NOFILE, Soft: 32, Hard: 64},
+				{Type: unix.RLIMIT_CORE},
+			},
+		},
+		{
+			name: "duplicate",
+			rlimits: []configs.Rlimit{
+				{Type: unix.RLIMIT_NOFILE, Soft: 32, Hard: 64},
+				{Type: unix.RLIMIT_NOFILE, Soft: 48, Hard: 64},
+			},
+			isErr: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			config := &configs.Config{Rootfs: "/var", Rlimits: tc.rlimits}
+			err := Validate(config)
+			if tc.isErr && err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !tc.isErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}

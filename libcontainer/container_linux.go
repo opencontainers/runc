@@ -373,6 +373,9 @@ func (c *Container) start(process *Process) (retErr error) {
 	}
 
 	if process.Init {
+		if err := configs.CheckRlimits(process.Rlimits); err != nil {
+			return err
+		}
 		if c.initProcessStartTime != 0 {
 			return errors.New("container already has init process")
 		}
