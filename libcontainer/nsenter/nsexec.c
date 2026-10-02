@@ -200,6 +200,8 @@ static void update_setgroups(int pid, enum policy_t setgroup)
 static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 {
 	int child;
+	char **argv;
+	size_t nfields = 0;
 
 	/*
 	 * If @app is NULL, execve will segfault. Just check it here and bail (if
@@ -210,13 +212,28 @@ static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 	if (!app)
 		bailx("mapping tool not present");
 
+	/*
+	 * Count the whitespace-separated fields in @map so argv can hold every
+	 * mapping plus {app, pid, NULL}. The number of ID mappings is not
+	 * bounded, so a fixed-size argv would overflow (and be left without a
+	 * NULL terminator) once there were enough mappings.
+	 */
+	for (char *s = map; *s != '\0';) {
+		s += strspn(s, "\n ");
+		if (*s == '\0')
+			break;
+		nfields++;
+		s += strcspn(s, "\n ");
+	}
+	argv = malloc((nfields + 3) * sizeof(*argv));
+	if (argv == NULL)
+		bail("failed to allocate argv for mapping tool");
+
 	child = fork();
 	if (child < 0)
 		bail("failed to fork");
 
 	if (!child) {
-#define MAX_ARGV 20
-		char *argv[MAX_ARGV];
 		char *envp[] = { NULL };
 		char pid_fmt[16];
 		int argc = 0;
@@ -230,12 +247,7 @@ static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 		 * Convert the map string into a list of argument that
 		 * newuidmap/newgidmap can understand.
 		 */
-
-		while (argc < MAX_ARGV) {
-			if (*map == '\0') {
-				argv[argc++] = NULL;
-				break;
-			}
+		while (*map != '\0') {
 			argv[argc++] = map;
 			next = strpbrk(map, "\n ");
 			if (next == NULL)
@@ -243,12 +255,14 @@ static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 			*next++ = '\0';
 			map = next + strspn(next, "\n ");
 		}
+		argv[argc] = NULL;
 
 		execve(app, argv, envp);
 		bail("failed to execv");
 	} else {
 		int status;
 
+		free(argv);
 		while (true) {
 			if (waitpid(child, &status, 0) < 0) {
 				if (errno == EINTR)
