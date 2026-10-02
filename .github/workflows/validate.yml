@@ -91,6 +91,8 @@ jobs:
         run: make BUILDTAGS=""
       - name: compile with runc_nocriu build tag
         run: make RUNC_BUILDTAGS="runc_nocriu"
+      - name: verify linker dead code elimination is not disabled
+        run: make verify-dce
 
   codespell:
     runs-on: ubuntu-24.04
