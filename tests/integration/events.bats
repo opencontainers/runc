@@ -22,39 +22,36 @@ function test_events() {
 		retry_every="$2"
 	fi
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	# Spawn two subshels:
 	# 1. Event logger that sends stats events to events.log.
-	(__runc events ${interval:+ --interval "$interval"} test_busybox >events.log) &
+	(runc events ${interval:+ --interval "$interval"} test_busybox >events.log) &
 	# 2. Waits for an event that includes test_busybox then kills the
 	#    test_busybox container which causes the event logger to exit.
 	(
 		retry 10 "$retry_every" grep -q test_busybox events.log
-		__runc delete -f test_busybox
+		runc delete -f test_busybox
 	) &
 	wait # for both subshells to finish
 
 	[ -e events.log ]
 
 	output=$(head -1 events.log)
-	[[ "$output" == [\{]"\"type\""[:]"\"stats\""[,]"\"id\""[:]"\"test_busybox\""[,]* ]]
-	[[ "$output" == *"data"* ]]
+	assert_output --regexp '^\{"type":"stats","id":"test_busybox",'
+	assert_output --partial "data"
 }
 
 @test "events --stats" {
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 	init_cgroup_paths
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	# generate stats
-	runc events --stats test_busybox
-	[ "$status" -eq 0 ]
-	[[ "${lines[0]}" == [\{]"\"type\""[:]"\"stats\""[,]"\"id\""[:]"\"test_busybox\""[,]* ]]
-	[[ "${lines[0]}" == *"data"* ]]
+	run -0 runc events --stats test_busybox
+	assert_line --index 0 --regexp '^\{"type":"stats","id":"test_busybox",'
+	assert_line --index 0 --partial "data"
 }
 
 @test "events --stats with psi data" {
@@ -64,17 +61,14 @@ function test_events() {
 
 	update_config '.linux.resources.cpu |= { "quota": 1000 }'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	# Stress the CPU a bit. Need something that runs for more than 10s.
-	runc exec test_busybox dd if=/dev/zero bs=1 count=128K of=/dev/null
-	[ "$status" -eq 0 ]
+	run -0 runc exec test_busybox dd if=/dev/zero bs=1 count=128K of=/dev/null
 
-	runc exec test_busybox sh -c 'tail /sys/fs/cgroup/*.pressure'
+	run -0 runc exec test_busybox sh -c 'tail /sys/fs/cgroup/*.pressure'
 
-	runc events --stats test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc events --stats test_busybox
 
 	# Check PSI metrics.
 	jq '.data.cpu.psi' <<<"${lines[0]}"
@@ -91,11 +85,9 @@ function test_events() {
 	requires cgroups_v2 cgroups_hugetlb
 	init_cgroup_paths
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
-	runc events --stats test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc events --stats test_busybox
 	# Ensure hugetlb node is present.
 	jq -e '.data.hugetlb // empty' <<<"${lines[0]}"
 }
@@ -120,20 +112,19 @@ function test_events() {
 	# we need the container to hit OOM, so disable swap
 	update_config '(.. | select(.resources? != null)) .resources.memory |= {"limit": 33554432, "swap": 33554432}'
 
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	# spawn two sub processes (shells)
 	# the first sub process is an event logger that sends stats events to events.log
 	# the second sub process exec a memory hog process to cause a oom condition
 	# and waits for an oom event
-	(__runc events test_busybox >events.log) &
+	(runc events test_busybox >events.log) &
 	(
 		retry 10 1 grep -q test_busybox events.log
 		# shellcheck disable=SC2016
-		__runc exec -d test_busybox sh -c 'test=$(dd if=/dev/urandom ibs=5120k)'
+		runc exec -d test_busybox sh -c 'test=$(dd if=/dev/urandom ibs=5120k)'
 		retry 30 1 grep -q oom events.log
-		__runc delete -f test_busybox
+		runc delete -f test_busybox
 	) &
 	wait # wait for the above sub shells to finish
 

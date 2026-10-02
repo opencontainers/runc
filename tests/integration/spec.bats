@@ -12,13 +12,11 @@ function teardown() {
 }
 
 @test "spec generation cwd" {
-	runc run test_hello
-	[ "$status" -eq 0 ]
+	run -0 runc run test_hello
 }
 
 @test "spec generation --bundle" {
-	runc run --bundle "$(pwd)" test_hello
-	[ "$status" -eq 0 ]
+	run -0 runc run --bundle "$(pwd)" test_hello
 }
 
 @test "spec validator" {
