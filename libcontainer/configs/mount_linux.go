@@ -1,6 +1,10 @@
 package configs
 
-import "golang.org/x/sys/unix"
+import (
+	"path/filepath"
+
+	"golang.org/x/sys/unix"
+)
 
 type MountIDMapping struct {
 	// Recursive indicates if the mapping needs to be recursive.
@@ -65,4 +69,16 @@ func (m *Mount) IsBind() bool {
 
 func (m *Mount) IsIDMapped() bool {
 	return m.IDMapping != nil
+}
+
+// IsReadonlyDeferred tells whether the mount is to be mounted read-write
+// first, and remounted read-only afterwards (by finalizeRootfs), rather than
+// being mounted read-only right away. This is needed for mounts which require
+// further modifications after being mounted (setting up files in "/dev",
+// chmod-ing tmpfs mounts).
+//
+// Note that such a remount is only possible in a private mount namespace.
+func (m *Mount) IsReadonlyDeferred() bool {
+	return m.Flags&unix.MS_RDONLY == unix.MS_RDONLY &&
+		(m.Device == "tmpfs" || filepath.Clean(m.Destination) == "/dev")
 }

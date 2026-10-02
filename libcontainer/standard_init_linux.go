@@ -118,6 +118,14 @@ func (l *linuxStandardInit) Init() error {
 		}
 	}
 
+	// Set the umask. This is not related to the rootfs setup, so it has to be
+	// done even when the container does not have its own mount namespace.
+	if l.config.Config.Umask != nil {
+		unix.Umask(int(*l.config.Config.Umask))
+	} else {
+		unix.Umask(0o022)
+	}
+
 	if hostname := l.config.Config.Hostname; hostname != "" {
 		if err := unix.Sethostname([]byte(hostname)); err != nil {
 			return &os.SyscallError{Syscall: "sethostname", Err: err}

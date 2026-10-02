@@ -564,6 +564,7 @@ func TestSpecconvExampleValidate(t *testing.T) {
 func TestSpecconvNoLinuxSection(t *testing.T) {
 	spec := Example()
 	spec.Root.Path = "/"
+	spec.Root.Readonly = false // Requires a mount namespace.
 	spec.Linux = nil
 	spec.Hostname = ""
 
