@@ -268,7 +268,22 @@ jobs:
       # CPUs: min(4, host CPU cores)
       # RAM:  min(4 GiB, half of host memory)
       # Disk: 100 GiB
-      run: limactl start --plain --name=default template:${{ matrix.template }}
+      env:
+        TEMPLATE: ${{ matrix.template }}
+      run: |
+        set -eux -o pipefail
+        args=()
+        if [ "$TEMPLATE" = "experimental/fedora-rawhide" ]; then
+          # Lima (as of v2.2.0) derives the image name from rawhide/COMPOSE_ID,
+          # which is often out of sync with the actual images, resulting in 404.
+          # Find the image ourselves (local images take precedence over base).
+          #
+          # TODO: revert once lima with https://github.com/lima-vm/lima/pull/5563 is released.
+          dir=https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Cloud/x86_64/images
+          img=$(curl -fsSL --retry 5 "$dir/" | grep -oE 'Fedora-Cloud-Base-Generic-Rawhide-[0-9]+\.n\.[0-9]+\.x86_64\.qcow2' | head -n 1)
+          args+=(--set ".images=[{\"location\": \"$dir/$img\", \"arch\": \"x86_64\"}]")
+        fi
+        limactl start --plain --name=default "${args[@]}" "template:$TEMPLATE"
 
     - name: "Initialize VM"
       run: |
