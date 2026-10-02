@@ -42,6 +42,7 @@ jobs:
         rootless: ["rootless", ""]
         race: ["-race", ""]
         criu: ["", "criu-dev"]
+        strictspec: [""]
         exclude:
           # Disable most of criu-dev jobs, as they are expensive
           # (need to compile criu) and don't add much value/coverage.
@@ -52,6 +53,22 @@ jobs:
           # Do race detection only with latest stable Go version.
           - race: -race
             go-version: 1.26.x
+        include:
+          # Strict config.json parsing, to catch wrong keys in tests.
+          - os: ubuntu-26.04
+            go-version: 1.27.x
+            libpathrs: libpathrs
+            rootless: ""
+            race: ""
+            criu: ""
+            strictspec: strictspec
+          - os: ubuntu-26.04
+            go-version: 1.27.x
+            libpathrs: libpathrs
+            rootless: rootless
+            race: ""
+            criu: ""
+            strictspec: strictspec
 
     runs-on: ${{ matrix.os }}
 
@@ -105,6 +122,11 @@ jobs:
       if: ${{ matrix.libpathrs == '' }}
       run: |
         echo RUNC_BUILDTAGS=-libpathrs >>"$GITHUB_ENV"
+
+    - name: enable strict config.json parsing
+      if: ${{ matrix.strictspec != '' }}
+      run: |
+        echo RUNC_BUILDTAGS="$RUNC_BUILDTAGS runc_strictspec" >>"$GITHUB_ENV"
 
     - name: install CRIU
       if: ${{ matrix.criu == '' }}
