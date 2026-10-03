@@ -128,7 +128,7 @@ func loadSpec(cPath string) (spec *specs.Spec, err error) {
 	}
 	defer cf.Close()
 
-	if err = json.NewDecoder(cf).Decode(&spec); err != nil {
+	if err = decodeSpec(cf, &spec); err != nil {
 		return nil, err
 	}
 	if spec == nil {
