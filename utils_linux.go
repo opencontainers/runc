@@ -15,7 +15,6 @@ import (
 	"github.com/urfave/cli/v3"
 	"golang.org/x/sys/unix"
 
-	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/internal/third_party/systemd/activation"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -245,16 +244,19 @@ func (r *runner) run(config *specs.Process) (_ int, retErr error) {
 		process.ExtraFiles = append(process.ExtraFiles, r.listenFDs...)
 	}
 	baseFd := 3 + len(process.ExtraFiles)
-	procSelfFd, closer, err := pathrs.ProcThreadSelfOpen("fd/", unix.O_DIRECTORY|unix.O_CLOEXEC)
-	if err != nil {
-		return -1, err
-	}
-	defer closer()
-	defer procSelfFd.Close()
 	for i := baseFd; i < baseFd+r.preserveFDs; i++ {
-		err := unix.Faccessat(int(procSelfFd.Fd()), strconv.Itoa(i), unix.F_OK, 0)
+
+		// Check that the fd was really inherited from runc's caller. Merely
+		// checking that the fd is open is not sufficient, as the fd number
+		// could have been reused by runc itself (or the Go runtime). Any such
+		// fd has the close-on-exec flag set, while an inherited one can not
+		// have it, as it would have been closed by execve.
+		flags, err := unix.FcntlInt(uintptr(i), unix.F_GETFD, 0)
 		if err != nil {
-			return -1, fmt.Errorf("unable to stat preserved-fd %d (of %d): %w", i-baseFd, r.preserveFDs, err)
+			return -1, fmt.Errorf("fcntl on preserved-fd %d (of %d) failed: %w", i-baseFd, r.preserveFDs, err)
+		}
+		if flags&unix.FD_CLOEXEC != 0 {
+			return -1, fmt.Errorf("preserved-fd %d (of %d) has the close-on-exec flag set", i-baseFd, r.preserveFDs)
 		}
 		process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), "PreserveFD:"+strconv.Itoa(i)))
 	}
