@@ -1141,19 +1141,21 @@ func parseMountOptions(options []string) *configs.Mount {
 	)
 	initMaps()
 	for _, o := range options {
-		// If the option does not exist in the mountFlags table,
-		// or the flag is not supported on the platform,
-		// then it is a data value for a specific fs type.
-		if f, exists := mountFlags[o]; exists && f.flag != 0 {
+		// Options absent from the mountFlags table are data for a specific fs type.
+		// A recognized option is consumed even when its flag is zero: "defaults"
+		// is a no-op and must not be forwarded as filesystem data (for example to tmpfs).
+		if f, exists := mountFlags[o]; exists {
 			// FIXME: The *atime flags are special (they are more of an enum
 			// with quite hairy semantics) and thus arguably setting some of
 			// them should clear unrelated flags.
-			if f.clear {
-				m.Flags &= ^f.flag
-				m.ClearedFlags |= f.flag
-			} else {
-				m.Flags |= f.flag
-				m.ClearedFlags &= ^f.flag
+			if f.flag != 0 {
+				if f.clear {
+					m.Flags &= ^f.flag
+					m.ClearedFlags |= f.flag
+				} else {
+					m.Flags |= f.flag
+					m.ClearedFlags &= ^f.flag
+				}
 			}
 		} else if f, exists := mountPropagationMapping[o]; exists && f != 0 {
 			m.PropagationFlags = append(m.PropagationFlags, f)
