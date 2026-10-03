@@ -92,6 +92,46 @@ jobs:
       - name: compile with runc_nocriu build tag
         run: make RUNC_BUILDTAGS="runc_nocriu"
 
+  binary-size:
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read # Needed to read the PR's labels.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Check out the PR head (not the merge commit), with full history.
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: install go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "${{ env.GO_VERSION }}"
+      - name: install deps
+        run: |
+          sudo apt update
+          sudo apt -y install libseccomp-dev
+      - name: install libpathrs ${{ env.LIBPATHRS_VERSION }}
+        run: |
+          sudo -E PATH="$PATH" ./script/build-libpathrs.sh "$LIBPATHRS_VERSION" /usr
+      - name: build each commit and check binary size
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          LABEL: bloat-approved
+        run: |
+          # Labels are read via the API (rather than from the event payload)
+          # so that re-running the job after adding the label works.
+          labels=$(gh api "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.labels[].name')
+          if grep -Fxq "$LABEL" <<<"$labels"; then
+            echo "Found $LABEL label, binary growth above the limit is allowed."
+            export ALLOW_GROWTH=1
+          fi
+          ./script/check-binary-size.sh "$BASE_SHA"
+
   codespell:
     runs-on: ubuntu-24.04
     steps:
@@ -172,15 +212,13 @@ jobs:
 
 
   commit:
+    if: github.event_name == 'pull_request'
     permissions:
       contents: read
       pull-requests: read # Needed to list the PR's commits.
     runs-on: ubuntu-24.04
     steps:
       - name: check commit subject line length
-        # Only check commits on pull requests. For other events, the step is
-        # skipped and the job succeeds (so that all-done can succeed, too).
-        if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -377,7 +415,12 @@ jobs:
         annotations: true
 
   all-done-validate:
+    # Jobs that are not applicable to the event (e.g. PR-only jobs on push)
+    # are skipped, which by default skips this job, too. Run it anyway, and
+    # fail if any of the needed jobs has failed or was cancelled.
+    if: ${{ !cancelled() }}
     needs:
+      - binary-size
       - check-go
       - cfmt
       - codespell
@@ -396,4 +439,15 @@ jobs:
       - zizmor
     runs-on: ubuntu-24.04
     steps:
-    - run: echo "All jobs completed"
+    - name: check that all jobs succeeded
+      env:
+        NEEDS: ${{ toJSON(needs) }}
+      run: |
+        failed=$(jq -r 'to_entries[]
+            | select(.value.result != "success" and .value.result != "skipped")
+            | "::error::Job \(.key) result: \(.value.result)"' <<<"$NEEDS")
+        if [ -n "$failed" ]; then
+          echo "$failed"
+          exit 1
+        fi
+        echo "All jobs completed"
