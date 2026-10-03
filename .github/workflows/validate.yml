@@ -273,6 +273,73 @@ jobs:
         name: release-${{ github.run_id }}
         path: release/*
 
+  # On a tag push, create a draft GitHub release with the artifacts built by
+  # the release job, and the release notes generated from the annotated tag
+  # message and CHANGELOG.md (see script/release_notes.sh). To publish it,
+  # a maintainer has to download, sign, and re-upload the artifacts (see
+  # script/release_download.sh), then mark the release as non-draft.
+  draft-release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: release
+    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+    - name: checkout
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+        # Full history and tags are needed to generate release notes.
+        fetch-depth: 0
+    - name: check version
+      run: |
+        VERSION="$(<VERSION)"
+        if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
+          echo "::error::tag $GITHUB_REF_NAME does not match VERSION ($VERSION)"
+          exit 1
+        fi
+        echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+        # Make sure we have the annotated tag (release notes are taken
+        # from its message), not a lightweight one.
+        git fetch --force origin "+refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME"
+        test "$(git cat-file -t "$GITHUB_REF_NAME")" = tag
+    - name: download artifacts
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        name: release-${{ github.run_id }}
+        path: artifacts
+    - name: create draft release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -x
+        mkdir release
+        find artifacts -type f -exec mv -t release {} +
+        ls -l release
+        script/release_notes.sh "$VERSION" > "$RUNNER_TEMP/notes.md"
+        args=()
+        if [[ "$VERSION" == *-* ]]; then
+          # Versions like 1.5.0-rc.1 are pre-releases.
+          args+=(--prerelease)
+        else
+          # A release from an older branch (e.g. 1.4.4 after 1.5.0) must
+          # not be marked as the latest one.
+          tags="$(git tag -l 'v[0-9]*' --sort=-v:refname)"
+          latest="$(awk '!/-/ {print; exit}' <<<"$tags")"
+          if [ "$GITHUB_REF_NAME" != "$latest" ]; then
+            args+=(--latest=false)
+          fi
+        fi
+        gh release create "$GITHUB_REF_NAME" \
+          --repo "$GITHUB_REPOSITORY" \
+          --verify-tag \
+          --draft \
+          "${args[@]}" \
+          --title "$(script/release_notes.sh -t "$VERSION")" \
+          --notes-file "$RUNNER_TEMP/notes.md" \
+          release/*
+
 
   get-images:
     runs-on: ubuntu-24.04
