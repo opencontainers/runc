@@ -371,8 +371,7 @@ EOF
 # "runc exec --process", but not for an existing container whose
 # config.json (created by an older runc) has them.
 @test "runc exec [duplicate rlimits in existing container config]" {
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
 	# Simulate a config.json from an older runc.
 	update_config '.process.rlimits = [
@@ -380,17 +379,15 @@ EOF
 		{"type": "RLIMIT_NOFILE", "soft": 48, "hard": 64}
 	]'
 
-	runc exec test_busybox true
-	[ "$status" -eq 0 ]
+	run -0 runc exec test_busybox true
 
 	proc='{"terminal": false, "cwd": "/", "args": ["true"],
 		"rlimits": [
 			{"type": "RLIMIT_NOFILE", "soft": 32, "hard": 64},
 			{"type": "RLIMIT_NOFILE", "soft": 48, "hard": 64}
 		]}'
-	runc exec --process <(echo "$proc") test_busybox
-	[ "$status" -ne 0 ]
-	[[ "$output" == *"duplicate rlimit type"* ]]
+	run ! runc exec --process <(echo "$proc") test_busybox
+	assert_output --partial "duplicate rlimit type"
 }
 
 @test "runc run [duplicate rlimits]" {
@@ -399,7 +396,6 @@ EOF
 		{"type": "RLIMIT_NOFILE", "soft": 48, "hard": 64}
 	]'
 
-	runc run test_busybox
-	[ "$status" -ne 0 ]
-	[[ "$output" == *"duplicate rlimit type"* ]]
+	run ! runc run test_busybox
+	assert_output --partial "duplicate rlimit type"
 }
