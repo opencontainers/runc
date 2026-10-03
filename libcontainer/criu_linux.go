@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"time"
 	"unicode"
@@ -971,17 +970,7 @@ func (c *Container) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuO
 	if logrus.GetLevel() >= logrus.DebugLevel &&
 		(req.GetType() != criurpc.CriuReqType_FEATURE_CHECK &&
 			req.GetType() != criurpc.CriuReqType_VERSION) {
-
-		val := reflect.ValueOf(req.GetOpts())
-		v := reflect.Indirect(val)
-		for i := range v.NumField() {
-			st := v.Type()
-			name := st.Field(i).Name
-			if 'A' <= name[0] && name[0] <= 'Z' {
-				value := val.MethodByName("Get" + name).Call([]reflect.Value{})
-				logrus.Debugf("CRIU option %s with value %v", name, value[0])
-			}
-		}
+		logrus.Debugf("CRIU options: %s", req.GetOpts().MarshalProtoText())
 	}
 	data, err := req.MarshalVT()
 	if err != nil {
