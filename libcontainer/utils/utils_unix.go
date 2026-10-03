@@ -218,11 +218,14 @@ func ProcThreadSelfFd(fd uintptr) (string, ProcThreadSelfCloser) {
 	return ProcThreadSelf("fd/" + strconv.FormatUint(uint64(fd), 10))
 }
 
-// Openat is a Go-friendly openat(2) wrapper.
+// Openat is a Go-friendly openat(2) wrapper. A nil dir is equivalent to
+// AT_FDCWD (i.e. path is resolved relative to the current directory).
 func Openat(dir *os.File, path string, flags int, mode uint32) (*os.File, error) {
 	dirFd := unix.AT_FDCWD
+	name := path
 	if dir != nil {
 		dirFd = int(dir.Fd())
+		name = dir.Name() + "/" + path
 	}
 	flags |= unix.O_CLOEXEC
 
@@ -230,5 +233,5 @@ func Openat(dir *os.File, path string, flags int, mode uint32) (*os.File, error)
 	if err != nil {
 		return nil, err
 	}
-	return os.NewFile(uintptr(fd), dir.Name()+"/"+path), nil
+	return os.NewFile(uintptr(fd), name), nil
 }

@@ -606,6 +606,16 @@ func (c *Command) Run(s *specs.State) error {
 		Stdin:  bytes.NewReader(b),
 		Stdout: &stdout,
 		Stderr: &stderr,
+		// Without this, Wait (called below, and by extension the timeout
+		// enforced by this function) can block indefinitely past the kill
+		// below: any child or grandchild of the hook process that inherits
+		// the write end of the stdout/stderr pipes (e.g. a background
+		// command started by a shell-script hook) keeps those pipes open
+		// even after the hook itself has been killed, and Wait does not
+		// return until it observes EOF on them. WaitDelay bounds how long
+		// Wait keeps waiting on the pipes once it has seen the process
+		// exit, by force-closing them.
+		WaitDelay: 5 * time.Second,
 	}
 	if err := cmd.Start(); err != nil {
 		return err

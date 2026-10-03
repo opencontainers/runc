@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -717,24 +718,56 @@ func getLinuxPersonalityFromStr(domain string) (int, error) {
 func convertSecToUSec(value dbus.Variant) (dbus.Variant, error) {
 	var sec uint64
 	const M = 1000000
+	// saturate, rather than silently wrap around uint64, on overflow --
+	// matches systemd's own USEC_INFINITY sentinel for "unbounded".
+	const maxSec = math.MaxUint64 / M
 	vi := value.Value()
 	switch value.Signature().String() {
 	case "y":
 		sec = uint64(vi.(byte)) * M
 	case "n":
-		sec = uint64(vi.(int16)) * M
+		if v := vi.(int16); v < 0 {
+			return value, fmt.Errorf("negative duration %d is not supported", v)
+		} else {
+			sec = uint64(v) * M
+		}
 	case "q":
 		sec = uint64(vi.(uint16)) * M
 	case "i":
-		sec = uint64(vi.(int32)) * M
+		if v := vi.(int32); v < 0 {
+			return value, fmt.Errorf("negative duration %d is not supported", v)
+		} else {
+			sec = uint64(v) * M
+		}
 	case "u":
 		sec = uint64(vi.(uint32)) * M
 	case "x":
-		sec = uint64(vi.(int64)) * M
+		v := vi.(int64)
+		if v < 0 {
+			return value, fmt.Errorf("negative duration %d is not supported", v)
+		}
+		if uint64(v) > maxSec {
+			sec = math.MaxUint64
+		} else {
+			sec = uint64(v) * M
+		}
 	case "t":
-		sec = vi.(uint64) * M
+		v := vi.(uint64)
+		if v > maxSec {
+			sec = math.MaxUint64
+		} else {
+			sec = v * M
+		}
 	case "d":
-		sec = uint64(vi.(float64) * M)
+		v := vi.(float64)
+		if v < 0 {
+			return value, fmt.Errorf("negative duration %v is not supported", v)
+		}
+		if v > maxSec {
+			sec = math.MaxUint64
+		} else {
+			sec = uint64(v * M)
+		}
 	default:
 		return value, errors.New("not a number")
 	}
