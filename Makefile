@@ -45,7 +45,7 @@ ifneq (,$(filter $(GOARCH),386 amd64 arm arm64 loong64 ppc64le riscv64 s390x))
 	endif
 endif
 GO_BUILD := $(GO) build $(TRIMPATH) $(GO_BUILDMODE) \
-	$(EXTRA_FLAGS) -tags "$(BUILDTAGS)" \
+	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) urfave_cli_no_template" \
 	-ldflags "$(LDFLAGS_COMMON) $(EXTRA_LDFLAGS)"
 
 GO_BUILDMODE_STATIC :=
@@ -61,7 +61,7 @@ ifneq (,$(filter $(GOARCH),arm64 amd64))
 endif
 # Enable static PIE binaries on supported platforms.
 GO_BUILD_STATIC := $(GO) build $(TRIMPATH) $(GO_BUILDMODE_STATIC) \
-	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
+	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) urfave_cli_no_template netgo osusergo" \
 	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS_STATIC) $(EXTRA_LDFLAGS)"
 
 GPG_KEYID ?= cyphar@cyphar.com
@@ -248,6 +248,20 @@ verify-dependencies: vendor
 	@test -z "$$(git status --porcelain -- go.mod go.sum vendor/)" \
 		|| (echo -e "git status:\n $$(git status -- go.mod go.sum vendor/)\nerror: vendor/, go.mod and/or go.sum not up to date. Run \"make vendor\" to update"; exit 1) \
 		&& echo "all vendor files are up to date."
+
+# Check that nothing disables the linker's dead code elimination of
+# exported methods, which noticeably increases the binary size. This is
+# caused by calling reflect.Value.Method or reflect.Value.MethodByName
+# with a non-constant argument, including indirectly (e.g. text/template).
+# The check itself is verified using tests/dce-canary, which disables DCE.
+.PHONY: verify-dce
+verify-dce:
+	$(GO) build -o /dev/null -ldflags=-dumpdep ./tests/dce-canary 2>&1 \
+		| grep -q '<ReflectMethod>' \
+		|| { echo "error: verify-dce self-check failed (tests/dce-canary not detected)"; exit 1; }
+	set -o pipefail; $(GO_BUILD) -o /dev/null -ldflags=-dumpdep . 2>&1 \
+		| { ! grep -q '<ReflectMethod>' \
+		|| { echo "error: linker dead code elimination is disabled; use github.com/aarzilli/whydeadcode to find out why"; exit 1; }; }
 
 .PHONY: validate-keyring
 validate-keyring:
