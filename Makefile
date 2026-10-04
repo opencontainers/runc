@@ -17,10 +17,9 @@ RUNC_BUILDTAGS ?=
 BUILDTAGS_REMOVE := $(patsubst -%,%,$(filter -%,$(RUNC_BUILDTAGS)))
 BUILDTAGS_ADD    := $(filter-out -%,$(RUNC_BUILDTAGS))
 BUILDTAGS := $(filter-out $(BUILDTAGS_REMOVE),$(BUILDTAGS)) $(BUILDTAGS_ADD)
-# TODO: remove EXTRA_BUILDTAGS for runc 1.6.
+# TODO: remove EXTRA_BUILDTAGS check for runc 1.8.
 ifdef EXTRA_BUILDTAGS
-  $(warning EXTRA_BUILDTAGS is deprecated; use RUNC_BUILDTAGS instead)
-  BUILDTAGS += $(EXTRA_BUILDTAGS)
+  $(error EXTRA_BUILDTAGS has been removed; use RUNC_BUILDTAGS instead)
 endif
 
 COMMIT := $(shell git describe --dirty --long --always)
