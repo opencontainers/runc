@@ -231,11 +231,10 @@ static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 		 * newuidmap/newgidmap can understand.
 		 */
 
-		while (argc < MAX_ARGV) {
-			if (*map == '\0') {
-				argv[argc++] = NULL;
-				break;
-			}
+		while (*map != '\0') {
+			/* Leave room for the terminating NULL. */
+			if (argc >= MAX_ARGV - 1)
+				bailx("too many ID mappings for %s", app);
 			argv[argc++] = map;
 			next = strpbrk(map, "\n ");
 			if (next == NULL)
@@ -243,6 +242,7 @@ static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 			*next++ = '\0';
 			map = next + strspn(next, "\n ");
 		}
+		argv[argc] = NULL;
 
 		execve(app, argv, envp);
 		bail("failed to execv");
