@@ -215,7 +215,11 @@ static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 		bail("failed to fork");
 
 	if (!child) {
-#define MAX_ARGV 20
+		/*
+		 * The kernel accepts up to 340 mappings (UID_GID_MAP_MAX_EXTENTS),
+		 * each taking 3 arguments, plus app, pid, and the terminating NULL.
+		 */
+#define MAX_ARGV (2 + 3 * 340 + 1)
 		char *argv[MAX_ARGV];
 		char *envp[] = { NULL };
 		char pid_fmt[16];
