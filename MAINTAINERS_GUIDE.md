@@ -91,6 +91,8 @@ either:
 In all cases, a maintainer requesting changes blocks the merge until the
 request is resolved (the reviewer approves, or the review is dismissed).
 
+These rules are enforced by the `review-policy` status check.
+
 Overall the maintainer system works because of mutual respect across the
 maintainers of the project.  The maintainers trust one another to make decisions
 in the best interests of the project.  Sometimes maintainers can disagree and

@@ -1,0 +1,242 @@
+# Enforce the pull request merge rules described in MAINTAINERS_GUIDE.md
+# ("Who decides what?"). The result is set as a "review-policy" commit
+# status on the pull request head, which is a required status check.
+#
+# A pull request must not be able to change the rules it is checked against.
+# Therefore, this only runs in contexts which use this workflow from the
+# default branch, reads MAINTAINERS from the default branch, and never checks
+# out the pull request code. The triggers are:
+#
+#  - pull_request_target: a pull request is opened, updated, closed, or its
+#    draft status is changed;
+#  - workflow_run: a review is submitted or dismissed. Using
+#    pull_request_review directly is not possible, since for pull requests
+#    from forks it only gets a read-only token (see review-policy-trigger.yml);
+#  - schedule: re-evaluate all open pull requests. This is mostly for the
+#    time-based rule, but it also catches up with MAINTAINERS changes, missed
+#    events, and pull requests opened before this workflow was added.
+#
+# When changing this workflow, do NOT:
+#  - add pull_request, pull_request_review, or pull_request_review_comment
+#    triggers, as those run the pull request's copy of this file;
+#  - add actions/checkout, or run anything from a checked out tree;
+#  - read repository files from a ref other than the default branch.
+name: review-policy
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, closed, ready_for_review, converted_to_draft]
+  workflow_run:
+    workflows: [review-policy-trigger]
+    types: [completed]
+  schedule:
+    - cron: '17 */4 * * *'
+  workflow_dispatch:
+
+# Each run evaluates the current state of all open pull requests having a
+# given head commit, so a newer run for the same head supersedes the older one.
+# Note that the pull request number can't be used here, since it is not
+# available in workflow_run for pull requests from forks.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.run_id }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  review-policy:
+    # Runs triggered by Dependabot only get a read-only token, so they can't
+    # set a commit status. Such pull requests are handled once reviewed, or
+    # by the scheduled run.
+    #
+    # The workflow_run trigger matches the triggering workflow by its name
+    # only, and a pull request can add a workflow with the same name, so only
+    # accept workflow_run for pull_request_review runs.
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.event == 'pull_request_review')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const defaultBranch = context.payload.repository.default_branch;
+            const statusContext = 'review-policy';
+            // Review period for maintainer's pull requests with one LGTM.
+            const days = 7;
+            const largeDays = 14;
+            const largeLines = 100;
+
+            // MAINTAINERS lines look like "Name <email> (@login)". Always read
+            // it from the default branch, even for pull requests against
+            // release branches: this is the single source of truth, and a pull
+            // request must not be able to add its author to it.
+            const { data: file } = await github.rest.repos.getContent({
+              owner, repo, path: 'MAINTAINERS', ref: defaultBranch,
+            });
+            const maintainers = new Set(
+              Buffer.from(file.content, 'base64').toString()
+                .split('\n')
+                .map((line) => line.trim().split(' ').pop())
+                .filter((word) => word.startsWith('(@') && word.endsWith(')'))
+                .map((word) => word.slice(2, -1).toLowerCase()));
+            if (maintainers.size === 0) {
+              core.setFailed('No maintainers found in MAINTAINERS.');
+              return;
+            }
+            core.info(`Maintainers: ${[...maintainers].join(' ')}`);
+
+            let prs = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: 'open', per_page: 100,
+            });
+            // A commit status belongs to a commit, not to a pull request, so
+            // pull requests having the same head commit can't be told apart.
+            const sameHead = new Map();
+            for (const pr of prs) {
+              sameHead.set(pr.head.sha, [...(sameHead.get(pr.head.sha) ?? []), pr.number]);
+            }
+            // For event-triggered runs, evaluate all pull requests having
+            // the same head (see concurrency above). For workflow_run, this
+            // is also the only way to find the pull request, since
+            // workflow_run.pull_requests is empty for pull requests from forks.
+            let sha;
+            if (context.eventName === 'pull_request_target') {
+              sha = context.payload.pull_request.head.sha;
+            } else if (context.eventName === 'workflow_run') {
+              sha = context.payload.workflow_run.head_sha;
+            }
+            if (sha) {
+              prs = prs.filter((pr) => pr.head.sha === sha);
+            }
+
+            // When the pull request was (last) marked as ready for review.
+            // A pull request opened as non-draft has no such event.
+            async function readySince(pr) {
+              // This returns all events (from all pages), oldest first.
+              const events = await github.paginate(github.rest.issues.listEvents, {
+                owner, repo, issue_number: pr.number, per_page: 100,
+              });
+              const ready = events.filter((e) => e.event === 'ready_for_review').pop();
+              return new Date(ready ? ready.created_at : pr.created_at);
+            }
+
+            // Files defining the project rules, or enforcing them.
+            function isGovernanceFile(f) {
+              return f === 'MAINTAINERS' ||
+                (f.endsWith('.md') && !f.includes('/') &&
+                  f !== 'README.md' && f !== 'CHANGELOG.md') ||
+                f.startsWith('.github/workflows/review-policy');
+            }
+
+            // Documentation and CI configuration.
+            function isRoutineFile(f) {
+              return f.endsWith('.md') || f.startsWith('.github/');
+            }
+
+            // Returns 'governance', 'routine', or 'normal'.
+            function changeKind(pr, files) {
+              // The API returns at most 3000 files, so a governance file
+              // might be missing from the list.
+              if (files.length >= 3000) {
+                return 'governance';
+              }
+              const names = files.flatMap((f) =>
+                f.previous_filename ? [f.filename, f.previous_filename] : [f.filename]);
+              if (names.some(isGovernanceFile)) {
+                return 'governance';
+              }
+              if (pr.user.login === 'dependabot[bot]' || names.every(isRoutineFile)) {
+                return 'routine';
+              }
+              return 'normal';
+            }
+
+            async function evaluate(pr) {
+              if (pr.draft) {
+                return ['pending', 'Draft pull request.'];
+              }
+              const author = pr.user.login.toLowerCase();
+              const reviews = await github.paginate(github.rest.pulls.listReviews, {
+                owner, repo, pull_number: pr.number, per_page: 100,
+              });
+              // The latest non-comment review of each reviewer is what counts.
+              const latest = new Map();
+              for (const r of reviews) {
+                if (r.user && r.state !== 'COMMENTED' && r.state !== 'PENDING') {
+                  latest.set(r.user.login.toLowerCase(), r.state);
+                }
+              }
+              const approved = [];
+              const blocked = [];
+              for (const [user, state] of latest) {
+                if (user === author || !maintainers.has(user)) {
+                  continue;
+                }
+                if (state === 'APPROVED') {
+                  approved.push(user);
+                } else if (state === 'CHANGES_REQUESTED') {
+                  blocked.push(user);
+                }
+              }
+
+              if (blocked.length > 0) {
+                return ['failure', `Changes requested by ${blocked.join(', ')}.`];
+              }
+              if (approved.length >= 2) {
+                return ['success', `LGTMs from ${approved.join(', ')}.`];
+              }
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                owner, repo, pull_number: pr.number, per_page: 100,
+              });
+              const kind = changeKind(pr, files);
+              if (kind === 'routine') {
+                if (approved.length === 1) {
+                  return ['success', `LGTM from ${approved[0]} (routine change).`];
+                }
+                return ['pending', 'Needs 1 maintainer LGTM (routine change).'];
+              }
+              if (kind === 'governance') {
+                return ['pending', `Needs 2 maintainer LGTMs (governance change), got ${approved.length}.`];
+              }
+              if (approved.length === 0 || !maintainers.has(author)) {
+                return ['pending', `Needs 2 maintainer LGTMs, got ${approved.length}.`];
+              }
+              const lines = files
+                .filter((f) => !f.filename.startsWith('vendor/'))
+                .reduce((sum, f) => sum + f.additions + f.deletions, 0);
+              const period = lines > largeLines ? largeDays : days;
+              const until = new Date((await readySince(pr)).getTime() + period * 86400 * 1000);
+              if (Date.now() >= until.getTime()) {
+                return ['success', `LGTM from ${approved[0]}, and ${period} days passed.`];
+              }
+              const date = until.toISOString().slice(0, 16).replace('T', ' ');
+              return ['pending', `Needs another LGTM, or wait till ${date} UTC.`];
+            }
+
+            const targetUrl = `${context.serverUrl}/${owner}/${repo}/blob/${defaultBranch}/MAINTAINERS_GUIDE.md#who-decides-what`;
+            for (const pr of prs) {
+              // The description is the same for all such pull requests, so
+              // the status is not set again by each of them.
+              const shared = sameHead.get(pr.head.sha);
+              const [state, description] = shared.length > 1
+                ? ['failure', `Same head commit in ${shared.map((n) => `#${n}`).join(', ')}; push a different commit to all but one.`]
+                : await evaluate(pr);
+              core.info(`#${pr.number} (${pr.head.sha}): ${state}: ${description}`);
+              // Avoid adding duplicate statuses (there is a limit of 1000
+              // statuses per commit and context).
+              const { data: statuses } = await github.rest.repos.listCommitStatusesForRef({
+                owner, repo, ref: pr.head.sha, per_page: 100,
+              });
+              const cur = statuses.find((s) => s.context === statusContext);
+              if (cur && cur.state === state && cur.description === description) {
+                continue;
+              }
+              await github.rest.repos.createCommitStatus({
+                owner, repo, sha: pr.head.sha, state, description,
+                context: statusContext, target_url: targetUrl,
+              });
+            }
