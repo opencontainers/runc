@@ -351,6 +351,18 @@ func (r *runner) checkTerminal(config *specs.Process) error {
 	return nil
 }
 
+// checkProcessRlimits returns an error if p has duplicate rlimit types.
+func checkProcessRlimits(p *specs.Process) error {
+	for i, rlimit := range p.Rlimits {
+		for _, previous := range p.Rlimits[:i] {
+			if previous.Type == rlimit.Type {
+				return fmt.Errorf("duplicate rlimit type: %s", rlimit.Type)
+			}
+		}
+	}
+	return nil
+}
+
 func validateProcessSpec(spec *specs.Process) error {
 	if spec == nil {
 		return errors.New("process property must not be empty")
