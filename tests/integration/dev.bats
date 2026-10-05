@@ -136,3 +136,35 @@ function teardown() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_need_reload
 	check_systemd_value "NeedDaemonReload" "no"
 }
+
+# https://github.com/opencontainers/runc/issues/5499
+@test "runc run [existing device node matches]" {
+	requires root
+
+	update_config ' .linux.devices += [{"path": "/data/null", "type": "c", "major": 1, "minor": 3}]
+		      | .process.args |= ["ls", "-lLn", "/data/null"]'
+	mkdir rootfs/data
+	mknod rootfs/data/null c 1 3
+
+	run -0 runc run test_dev
+	assert_line --index 0 --regexp '^c.+1,.+3.+/data/null'
+}
+
+# https://github.com/opencontainers/runc/issues/5499
+@test "runc run [existing device node conflicts]" {
+	requires root
+
+	update_config ' .linux.devices += [{"path": "/data/conflict", "type": "c", "major": 1, "minor": 3}]'
+	mkdir rootfs/data
+
+	# A regular file.
+	touch rootfs/data/conflict
+	run ! runc run test_dev
+	assert_output --partial "/data/conflict has incorrect ftype"
+
+	# A different device.
+	rm rootfs/data/conflict
+	mknod rootfs/data/conflict c 1 5
+	run ! runc run test_dev
+	assert_output --partial "/data/conflict has incorrect major:minor: 1:5 doesn't match expected 1:3"
+}
