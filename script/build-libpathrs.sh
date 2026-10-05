@@ -20,26 +20,30 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 PLATFORM="$(get_platform)"
 
+# Cross-compiled libraries are used for static (release) builds against musl
+# (see set_cross_vars in lib.sh). The exceptions are s390x (see the comment in
+# set_cross_vars), and 386, which is not released, and is only used by CI to
+# check that runc builds on 32-bit.
 declare -A GOARCH_TO_RUST_TARGET=(
 	["386"]=i686-unknown-linux-gnu
-	["amd64"]=x86_64-unknown-linux-gnu
-	["arm64"]=aarch64-unknown-linux-gnu
-	["armel"]=armv5te-unknown-linux-gnueabi
-	["armhf"]=armv7-unknown-linux-gnueabihf
-	["ppc64le"]=powerpc64le-unknown-linux-gnu
+	["amd64"]=x86_64-unknown-linux-musl
+	["arm64"]=aarch64-unknown-linux-musl
+	["armel"]=armv5te-unknown-linux-musleabi
+	["armhf"]=armv7-unknown-linux-musleabihf
+	["ppc64le"]=powerpc64le-unknown-linux-musl
+	["riscv64"]=riscv64gc-unknown-linux-musl
 	["s390x"]=s390x-unknown-linux-gnu
-	["riscv64"]=riscv64gc-unknown-linux-gnu
 )
 
 declare -A RUST_TARGET_TO_CC=(
 	["i686-unknown-linux-gnu"]="i686-${PLATFORM}-gcc"
-	["x86_64-unknown-linux-gnu"]="x86_64-${PLATFORM}-gcc"
-	["aarch64-unknown-linux-gnu"]="aarch64-${PLATFORM}-gcc"
-	["armv5te-unknown-linux-gnueabi"]="arm-${PLATFORM}eabi-gcc"
-	["armv7-unknown-linux-gnueabihf"]="arm-${PLATFORM}eabihf-gcc"
-	["powerpc64le-unknown-linux-gnu"]="powerpc64le-${PLATFORM}-gcc"
+	["x86_64-unknown-linux-musl"]="x86_64-${PLATFORM}-gcc"
+	["aarch64-unknown-linux-musl"]="aarch64-${PLATFORM}-gcc"
+	["armv5te-unknown-linux-musleabi"]="arm-${PLATFORM}eabi-gcc"
+	["armv7-unknown-linux-musleabihf"]="arm-${PLATFORM}eabihf-gcc"
+	["powerpc64le-unknown-linux-musl"]="powerpc64le-${PLATFORM}-gcc"
+	["riscv64gc-unknown-linux-musl"]="riscv64-${PLATFORM}-gcc"
 	["s390x-unknown-linux-gnu"]="s390x-${PLATFORM}-gcc"
-	["riscv64gc-unknown-linux-gnu"]="riscv64-${PLATFORM}-gcc"
 )
 
 # sha256 checksums for libpathrs release tarballs.
@@ -130,12 +134,30 @@ function build_libpathrs() {
 
 	for go_arch in "${go_arches[@]}"; do
 		local rust_target="${GOARCH_TO_RUST_TARGET[$go_arch]}"
+		local cargo_flags=("${extra_cargo_flags[@]}" "--target=$rust_target")
+		local make_target=release install_flags=()
+		if [[ "$rust_target" == *-musl* ]]; then
+			# Only a static library is needed for static (release) builds.
+			# Building a shared library would also require libgcc_s for musl.
+			cargo_flags+=("--release")
+			make_target=target/release/libpathrs.a
+			install_flags=(--disable-shared)
+		fi
 		make \
-			EXTRA_CARGO_FLAGS="${extra_cargo_flags[*]} --target=$rust_target" \
-			release
+			EXTRA_CARGO_FLAGS="${cargo_flags[*]}" \
+			"$make_target"
 		./install.sh \
 			--rust-target="$rust_target" \
-			--prefix="$dest/$go_arch"
+			--prefix="$dest/$go_arch" \
+			"${install_flags[@]}"
+		if [[ "$rust_target" == *-musl* ]]; then
+			# Rust standard library for musl needs an unwinder, and libgcc_eh
+			# from the distro's gcc cross-compilers can't be used, since it
+			# is built for glibc. Use the one which comes with Rust.
+			cp "$(rustc --print sysroot)/lib/rustlib/$rust_target/lib/self-contained/libunwind.a" \
+				"$dest/$go_arch/lib/"
+			sed -i 's/^Libs: .*/& -lunwind/' "$dest/$go_arch/lib/pkgconfig/pathrs.pc"
+		fi
 		cargo clean
 	done
 

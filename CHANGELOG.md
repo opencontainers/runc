@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed ###
+- The static release binaries are now linked against musl libc instead of
+  glibc (except for s390x, which is still linked against glibc). This makes
+  them smaller by about 890 KB (9.7%) on amd64. The 386 release binary is no
+  longer provided. (#5517)
+
 ## [1.6.0-rc.2] - 2026-11-12
 
 > To celebrate the fact that we've seen the back of another black day.
