@@ -157,23 +157,32 @@ _runc_exec() {
 	local boolean_options="
 	   --help
 	   --no-new-privs
-	   --tty, -t
-	   --detach, -d
+	   --tty
+	   -t
+	   --detach
+	   -d
+	   --ignore-paused
 	"
 
 	local options_with_args="
 	   --console-socket
+	   --pidfd-socket
 	   --cwd
-	   --env, -e
-	   --user, -u
-	   --additional-gids, -g
-	   --process, -p
+	   --env
+	   -e
+	   --user
+	   -u
+	   --additional-gids
+	   -g
+	   --process
+	   -p
 	   --pid-file
 	   --process-label
 	   --apparmor
-	   --cap, -c
+	   --cap
+	   -c
 	   --preserve-fds
-	   --ignore-paused
+	   --cgroup
 	"
 
 	local all_options="$options_with_args $boolean_options"
@@ -184,7 +193,7 @@ _runc_exec() {
 		return
 		;;
 
-	--console-socket | --cwd | --process | --apparmor)
+	--console-socket | --pidfd-socket | --cwd | --process | --pid-file | --apparmor)
 		case "$cur" in
 		*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
 		'')
@@ -278,6 +287,7 @@ _runc_pause() {
 	   --help
 	   -h
 	"
+	local options_with_args=""
 
 	case "$cur" in
 	-*)
@@ -295,8 +305,16 @@ _runc_ps() {
 	   -h
 	"
 	local options_with_args="
-	   --format, -f
+	   --format
+	   -f
 	"
+
+	case "$prev" in
+	--format | -f)
+		COMPREPLY=($(compgen -W 'table json' -- "$cur"))
+		return
+		;;
+	esac
 
 	case "$cur" in
 	-*)
@@ -312,8 +330,10 @@ _runc_delete() {
 	local boolean_options="
 	   --help
 	   -h
-	   --format, -f
+	   --force
+	   -f
 	"
+	local options_with_args=""
 
 	case "$cur" in
 	-*)
@@ -332,6 +352,7 @@ _runc_kill() {
           --all
           -a
 	"
+	local options_with_args=""
 
 	case "$prev" in
 	"kill")
@@ -393,7 +414,7 @@ _runc_list() {
 
 	case "$prev" in
 	--format | -f)
-		COMPREPLY=($(compgen -W 'text json' -- "$cur"))
+		COMPREPLY=($(compgen -W 'table json' -- "$cur"))
 		return
 		;;
 
@@ -456,8 +477,9 @@ _runc_spec() {
 _runc_run() {
 	local boolean_options="
 	   --help
-	   --detatch
+	   --detach
 	   -d
+	   --keep
 	   --no-subreaper
 	   --no-pivot
 	   --no-new-keyring
@@ -467,12 +489,13 @@ _runc_run() {
 	   --bundle
 	   -b
 	   --console-socket
+	   --pidfd-socket
 	   --pid-file
 	   --preserve-fds
 	"
 
 	case "$prev" in
-	--bundle | -b | --console-socket | --pid-file)
+	--bundle | -b | --console-socket | --pidfd-socket | --pid-file)
 		case "$cur" in
 		'')
 			COMPREPLY=($(compgen -W '/' -- "$cur"))
@@ -575,11 +598,12 @@ _runc_create() {
 	   --bundle
 	   -b
 	   --console-socket
+	   --pidfd-socket
 	   --pid-file
 	   --preserve-fds
 	"
 	case "$prev" in
-	--bundle | -b | --console-socket | --pid-file)
+	--bundle | -b | --console-socket | --pidfd-socket | --pid-file)
 		case "$cur" in
 		'')
 			COMPREPLY=($(compgen -W '/' -- "$cur"))
@@ -619,6 +643,7 @@ _runc_help() {
 _runc_restore() {
 	local boolean_options="
 	   --help
+	   -h
 	   --tcp-established
 	   --ext-unix-sk
 	   --shell-job
@@ -634,11 +659,14 @@ _runc_restore() {
 	local options_with_args="
 	   -b
 	   --bundle
+	   --console-socket
 	   --image-path
 	   --work-path
 	   --manage-cgroups-mode
 	   --pid-file
 	   --empty-ns
+	   --lsm-profile
+	   --lsm-mount-context
 	"
 
 	local all_options="$options_with_args $boolean_options"
@@ -649,7 +677,7 @@ _runc_restore() {
 		return
 		;;
 
-	--pid-file | --image-path | --work-path | --bundle | -b)
+	--pid-file | --console-socket | --image-path | --work-path | --bundle | -b)
 		case "$cur" in
 		*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
 		'')
@@ -679,11 +707,25 @@ _runc_restore() {
 	esac
 }
 
+_runc_features() {
+	local boolean_options="
+	   --help
+	   -h
+	"
+
+	case "$cur" in
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options" -- "$cur"))
+		;;
+	esac
+}
+
 _runc_resume() {
 	local boolean_options="
 	   --help
 	   -h
 	"
+	local options_with_args=""
 
 	case "$cur" in
 	-*)
@@ -700,6 +742,7 @@ _runc_state() {
 	   --help
 	   -h
 	"
+	local options_with_args=""
 
 	case "$cur" in
 	-*)
@@ -715,6 +758,7 @@ _runc_start() {
 	   --help
 	   -h
 	"
+	local options_with_args=""
 
 	case "$cur" in
 	-*)
@@ -775,6 +819,7 @@ _runc() {
 		delete
 		events
 		exec
+		features
 		kill
 		list
 		pause
