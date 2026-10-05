@@ -10,7 +10,7 @@ ARG CRIU_REPO=https://download.opensuse.org/repositories/devel:/tools:/criu/Debi
 RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
     wget -nv $CRIU_REPO/Release.key -O- | gpg --dearmor > "$KEYFILE" \
     && echo "deb [signed-by=$KEYFILE] $CRIU_REPO/ /" > /etc/apt/sources.list.d/criu.list \
-    && printf "%s\n" i386 armel armhf arm64 ppc64el s390x riscv64 | xargs -t -n1 -- dpkg --add-architecture \
+    && printf "%s\n" armel armhf arm64 ppc64el s390x riscv64 | xargs -t -n1 -- dpkg --add-architecture \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
@@ -19,7 +19,6 @@ RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
         clang \
         criu \
         gcc \
-        gcc-multilib \
         curl \
         gawk \
         gperf \
@@ -34,7 +33,6 @@ RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
         uidmap \
         iproute2 \
     && apt-get install -y --no-install-recommends \
-        libc-dev:i386 libgcc-s1:i386 gcc-i686-linux-gnu libstd-rust-dev:i386 \
         gcc-aarch64-linux-gnu libc-dev-arm64-cross libstd-rust-dev:arm64 \
         gcc-arm-linux-gnueabi libc-dev-armel-cross libstd-rust-dev:armel \
         gcc-arm-linux-gnueabihf libc-dev-armhf-cross libstd-rust-dev:armhf \
@@ -59,7 +57,7 @@ RUN cd /tmp \
     && ./install.sh /usr/local \
     && rm -rf /tmp/bats-core
 
-ARG RELEASE_ARCHES="386 amd64 arm64 armel armhf ppc64le riscv64 s390x"
+ARG RELEASE_ARCHES="amd64 arm64 armel armhf ppc64le riscv64 s390x"
 ENV DYLIB_DIR=/opt/runc-dylibs
 
 # install libseccomp

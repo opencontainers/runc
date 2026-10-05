@@ -30,28 +30,11 @@ function get_platform() {
 # based on the architecture specified in $1.
 function set_cross_vars() {
 	GOARCH="$1" # default, may be overridden below
-	local cc_flags=""
 	unset GOARM
 
 	PLATFORM="$(get_platform)"
-	[[ "$PLATFORM" == *suse* ]] && is_suse=1
 
 	case "$1" in
-	386)
-		# Always use the 64-bit compiler to build the 386 binary, which works
-		# for the more common cross-build method for x86 (namely, the
-		# equivalent of dpkg --add-architecture).
-		local cpu_type
-		if [ -v is_suse ]; then
-			cpu_type=i586
-		else
-			cpu_type=i686
-		fi
-		HOST=x86_64-${PLATFORM}
-		# Pass these via CC rather than CFLAGS, so that autoconf
-		# still uses its default CFLAGS (-g -O2) when CFLAGS is unset.
-		cc_flags=" -m32 -march=$cpu_type"
-		;;
 	amd64)
 		HOST=x86_64-${PLATFORM}
 		;;
@@ -83,7 +66,7 @@ function set_cross_vars() {
 		;;
 	esac
 
-	CC="${HOST:+$HOST-}gcc${cc_flags}"
+	CC="${HOST:+$HOST-}gcc"
 	STRIP="${HOST:+$HOST-}strip"
 
 	export HOST GOARM GOARCH CC STRIP
