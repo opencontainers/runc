@@ -1045,7 +1045,7 @@ func mknodDevice(destDir *os.File, destName string, node *devices.Device) error 
 				what, node.Type, node.Path,
 				stat.Mode&unix.S_IFMT, fileMode&unix.S_IFMT)
 		}
-		if rdev := uint64(stat.Rdev); rdev != dev { //nolint:unconvert // Rdev is uint32 on MIPS.
+		if rdev := uint64(stat.Rdev); node.Type != devices.FifoDevice && rdev != dev { //nolint:unconvert // Rdev is uint32 on MIPS.
 			return fmt.Errorf("%s %c device inode %s has incorrect major:minor: %d:%d doesn't match expected %d:%d",
 				what, node.Type, node.Path,
 				unix.Major(rdev), unix.Minor(rdev),

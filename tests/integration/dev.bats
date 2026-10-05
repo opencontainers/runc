@@ -168,3 +168,14 @@ function teardown() {
 	run ! runc run test_dev
 	assert_output --partial "/data/conflict has incorrect major:minor: 1:5 doesn't match expected 1:3"
 }
+
+@test "runc run [fifo device with major:minor]" {
+	requires root
+
+	# For a fifo, major:minor are ignored by mknod(2).
+	update_config ' .linux.devices += [{"path": "/dev/testfifo", "type": "p", "major": 1, "minor": 3}]
+		      | .process.args |= ["ls", "-ln", "/dev/testfifo"]'
+
+	run -0 runc run test_dev
+	assert_line --index 0 --regexp '^p.+/dev/testfifo'
+}
