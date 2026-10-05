@@ -119,7 +119,7 @@ func setupIO(process *libcontainer.Process, container *libcontainer.Container, c
 			}()
 		} else {
 			// the caller of runc will handle receiving the console master
-			conn, err := net.Dial("unix", sockpath)
+			conn, err := net.DialUnix("unix", nil, &net.UnixAddr{Name: sockpath, Net: "unix"})
 			if err != nil {
 				return nil, err
 			}
@@ -129,7 +129,7 @@ func setupIO(process *libcontainer.Process, container *libcontainer.Container, c
 				}
 			}()
 			t.postStart = append(t.postStart, conn)
-			socket, err := conn.(*net.UnixConn).File()
+			socket, err := conn.File()
 			if err != nil {
 				return nil, err
 			}
@@ -441,12 +441,12 @@ func setupPidfdSocket(process *libcontainer.Process, sockpath string) (_clean fu
 		return nil, fmt.Errorf("--pidfd-socket requires >= v5.3 kernel")
 	}
 
-	conn, err := net.Dial("unix", sockpath)
+	conn, err := net.DialUnix("unix", nil, &net.UnixAddr{Name: sockpath, Net: "unix"})
 	if err != nil {
 		return nil, fmt.Errorf("failed to dail %s: %w", sockpath, err)
 	}
 
-	socket, err := conn.(*net.UnixConn).File()
+	socket, err := conn.File()
 	if err != nil {
 		conn.Close()
 		return nil, fmt.Errorf("failed to dup socket: %w", err)

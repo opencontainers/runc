@@ -1117,13 +1117,13 @@ func pidGetFd(pid, srcFd int) (*os.File, error) {
 }
 
 func sendContainerProcessState(listenerPath string, state *specs.ContainerProcessState, file *os.File) error {
-	conn, err := net.Dial("unix", listenerPath)
+	conn, err := net.DialUnix("unix", nil, &net.UnixAddr{Name: listenerPath, Net: "unix"})
 	if err != nil {
 		return fmt.Errorf("failed to connect with seccomp agent specified in the seccomp profile: %w", err)
 	}
 	defer conn.Close()
 
-	socket, err := conn.(*net.UnixConn).File()
+	socket, err := conn.File()
 	if err != nil {
 		return fmt.Errorf("cannot get seccomp socket: %w", err)
 	}
