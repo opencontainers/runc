@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The deprecated `RecvFile`, `SendFile`, and `SendRawFd` functions have been
   removed from `libcontainer/utils`. (#5227, #5231, #5495)
 
+### Removed ###
+- The deprecated `EXTRA_BUILDTAGS` make variable has been removed, and setting
+  it is now an error. Use `RUNC_BUILDTAGS` instead. (#5171, #5198, #5511)
+
 ### Fixed ###
 - The poststart hooks are now executed after starting the user-specified
   process, fixing a runtime-spec conformance issue. (#4347, #5186)
