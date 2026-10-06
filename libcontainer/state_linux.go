@@ -207,6 +207,8 @@ func (r *restoredState) status() Status {
 func (r *restoredState) transition(s containerState) error {
 	switch s.(type) {
 	case *stoppedState, *runningState:
+		// Update c.state so refreshState can leave restoredState after exit.
+		r.c.state = s
 		return nil
 	}
 	return newStateTransitionError(r, s)
