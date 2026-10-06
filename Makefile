@@ -63,8 +63,6 @@ GO_BUILD_STATIC := $(GO) build $(TRIMPATH) $(GO_BUILDMODE_STATIC) \
 	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) urfave_cli_no_template netgo osusergo" \
 	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS_STATIC) $(EXTRA_LDFLAGS)"
 
-GPG_KEYID ?= cyphar@cyphar.com
-
 # Some targets need cgo, which is disabled by default when cross compiling.
 # Enable cgo explicitly for those.
 # Both runc and libcontainer/integration need libcontainer/nsenter.
@@ -120,7 +118,6 @@ release: runcimage
 		--rm -v $(CURDIR):/go/src/$(PROJECT) \
 		-e RELEASE_ARGS=$(RELEASE_ARGS) \
 		$(RUNC_IMAGE) make localrelease
-	script/release_sign.sh -S $(GPG_KEYID)
 
 .PHONY: localrelease
 localrelease: verify-changelog

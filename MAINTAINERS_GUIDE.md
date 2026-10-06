@@ -101,3 +101,47 @@ a vote by 66% of the current maintainers.
 The voting period is ten business days.  Issues related to a maintainer's performance should
 be discussed with them among the other maintainers so that they are not surprised by
 a pull request removing them.
+
+
+## How is a release made?
+
+Release versioning, cadence, and support policy are described in
+[RELEASES.md](RELEASES.md). The release artifacts are built by CI, but signed
+by a release maintainer (whose key must be in `runc.keyring`). To make release
+`vX.Y.Z`:
+
+1. Open a pull request against the appropriate branch (`main` for `-rc`
+   releases of a new minor version, `release-X.Y` otherwise) containing:
+   * a commit which sets `VERSION` to `X.Y.Z`, and moves the `Unreleased`
+     section in `CHANGELOG.md` to `[X.Y.Z] - YYYY-MM-DD` (with an optional
+     quote at its beginning, which becomes a part of the release title);
+   * a commit which sets `VERSION` back to development (e.g. `X.Y.Z+dev`).
+
+2. Once the pull request is merged, update your local copy of the branch,
+   and generate the tag message template:
+
+   ```
+   ./script/release_notes.sh -m vX.Y.Z > tag-msg
+   ```
+
+   The script finds the release commit (the one setting `VERSION` to `X.Y.Z`),
+   and prints its hash.
+
+3. Edit `tag-msg`: write the preamble (replacing the `TODO` line) and review
+   the rest. Then create a signed tag for the release commit, and push it:
+
+   ```
+   git tag -s -F tag-msg vX.Y.Z <release-commit>
+   git push origin vX.Y.Z
+   ```
+
+4. Wait for CI (the `validate` workflow) to build the release artifacts and
+   create a draft GitHub release. Its title, preamble, and the list of
+   contributors are taken from the tag message.
+
+5. Download the release artifacts, and follow the printed instructions to
+   sign them, upload the signatures, review, and publish the release:
+
+   ```
+   ./script/release_download.sh -v vX.Y.Z
+   ```
