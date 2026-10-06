@@ -113,10 +113,10 @@ function test_mount_order() {
 	config_add_bind_mount "$PWD/bind-src/sym-a" "/mnt/x/y/z"
 	# Create a recursive bind-mount that uses part of the current tree in the
 	# container.
-	config_add_bind_mount "$rootfs/mnt/x" "$rootfs/mnt/x/y/z/x" "$ctr_src_opts"
-	config_add_bind_mount "$rootfs/mnt/x/y" "$rootfs/mnt/x/y/z" "$ctr_src_opts"
+	config_add_bind_mount "$rootfs/mnt/x" "/mnt/x/y/z/x" "$ctr_src_opts"
+	config_add_bind_mount "$rootfs/mnt/x/y" "/mnt/x/y/z" "$ctr_src_opts"
 	# Finally, bind-mount the whole thing on top of /final.
-	config_add_bind_mount "$rootfs/mnt" "$rootfs/final" "$ctr_src_opts"
+	config_add_bind_mount "$rootfs/mnt" "/final" "$ctr_src_opts"
 
 	# Check that the entire tree was copied and the mounts were done in the
 	# expected order.

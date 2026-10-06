@@ -530,6 +530,9 @@ func statfsToMountFlags(st unix.Statfs_t) int {
 
 func (m *mountEntry) createOpenMountpoint(root *os.File) (Err error) {
 	rootfs := root.Name()
+	// The runtime spec says the destination is a path inside the container,
+	// but for legacy reasons (see commit 087caf69) a destination with the
+	// host rootfs path prefix is also accepted, and the prefix is stripped.
 	unsafePath := pathrs.LexicallyStripRoot(rootfs, m.Destination)
 	dstFile, err := pathrs.OpenInRoot(root, unsafePath, unix.O_PATH)
 	defer func() {
