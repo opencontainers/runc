@@ -150,16 +150,6 @@ func (c *Container) Stats() (*Stats, error) {
 			return stats, fmt.Errorf("unable to get container Intel RDT stats: %w", err)
 		}
 	}
-	for _, iface := range c.config.Networks {
-		switch iface.Type {
-		case "veth":
-			istats, err := getNetworkInterfaceStats(iface.HostInterfaceName)
-			if err != nil {
-				return stats, fmt.Errorf("unable to get network stats for interface %q: %w", iface.HostInterfaceName, err)
-			}
-			stats.Interfaces = append(stats.Interfaces, istats)
-		}
-	}
 	return stats, nil
 }
 
