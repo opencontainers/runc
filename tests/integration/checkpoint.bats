@@ -74,7 +74,7 @@ function setup_pipes() {
 }
 
 function check_pipes() {
-	local output stderr
+	local err
 
 	echo Ping >&${in_w}
 	exec {in_w}>&-
@@ -82,14 +82,14 @@ function check_pipes() {
 	exec {err_w}>&-
 
 	exec {in_r}>&-
-	output=$(cat <&${out_r})
+	run -0 cat <&${out_r}
 	exec {out_r}>&-
-	stderr=$(cat <&${err_r})
+	err=$(cat <&${err_r})
 	exec {err_r}>&-
 
 	assert_output --partial "ponG Ping"
-	if [ -n "$stderr" ]; then
-		fail "runc stderr: $stderr"
+	if [ -n "$err" ]; then
+		fail "runc stderr: $err"
 	fi
 }
 
