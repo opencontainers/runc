@@ -41,6 +41,7 @@ type mountError struct {
 	srcFile *mountSource
 	target  string
 	dstFd   string
+	fstype  string
 	flags   uintptr
 	data    string
 	err     error
@@ -120,6 +121,9 @@ func (e *mountError) Error() string {
 		out += ", dstFd=" + e.dstFd
 	}
 
+	if e.fstypeUsed() {
+		out += ", type=" + e.fstype
+	}
 	if e.flags != uintptr(0) {
 		out += ", flags=" + stringifyMountFlags(e.flags)
 	}
@@ -128,7 +132,33 @@ func (e *mountError) Error() string {
 	}
 
 	out += ": " + e.err.Error()
+	out += e.hint()
 	return out
+}
+
+// fstypeUsed reports whether the filesystem type is relevant for the failed
+// operation. mount(2) ignores it for bind mounts, remounts, moves, and
+// propagation changes.
+func (e *mountError) fstypeUsed() bool {
+	const ignored = unix.MS_BIND | unix.MS_REMOUNT | unix.MS_MOVE |
+		unix.MS_SHARED | unix.MS_PRIVATE | unix.MS_SLAVE | unix.MS_UNBINDABLE
+	return e.op == "mount" && e.fstype != "" && e.flags&ignored == 0
+}
+
+// hint returns an explanation for some cryptic mount errors, or an empty
+// string.
+func (e *mountError) hint() string {
+	if !e.fstypeUsed() || !errors.Is(e.err, unix.ENODEV) {
+		return ""
+	}
+	// ENODEV from mount(2) means the filesystem type is not known to the
+	// kernel. A common mistake is to set type to "bind" and expect a bind
+	// mount, while it is the "bind" or "rbind" option that makes it so.
+	switch e.fstype {
+	case "bind", "rbind":
+		return ` (to create a bind mount, add "bind" or "rbind" to mount options)`
+	}
+	return ` (filesystem type "` + e.fstype + `" is not supported by the kernel)`
 }
 
 // Unwrap returns the underlying error.
@@ -200,6 +230,7 @@ func mountViaFds(source string, srcFile *mountSource, target, dstFd, fstype stri
 			srcFile: srcFile,
 			target:  target,
 			dstFd:   dstFd,
+			fstype:  fstype,
 			flags:   flags,
 			data:    data,
 			err:     err,
