@@ -81,16 +81,17 @@ function check_pipes() {
 	exec {out_w}>&-
 	exec {err_w}>&-
 
-	exec {in_r}>&-
-	run -0 cat <&${out_r}
-	exec {out_r}>&-
-	err=$(cat <&${err_r})
-	exec {err_r}>&-
+	exec {in_r}<&-
+	# Use timeout to not hang forever if stdin/stdout are not connected.
+	run timeout 30 cat <&${out_r}
+	exec {out_r}<&-
+	err=$(timeout 30 cat <&${err_r}) || true
+	exec {err_r}<&-
 
-	assert_output --partial "ponG Ping"
-	if [ -n "$err" ]; then
-		fail "runc stderr: $err"
-	fi
+	# Check stderr first, as it might explain what's wrong with stdout.
+	[ -z "$err" ] || fail "runc stderr: $err"
+	[ "$status" -eq 0 ] || fail "reading stdout failed (status: $status, 124 is timeout)"
+	assert_output "ponG Ping"
 }
 
 # Usage: runc_run_with_pipes container-name
@@ -281,7 +282,7 @@ function simple_cr() {
 
 	# wait for lazy page server to be ready
 	out=$(timeout 2 dd if=/proc/self/fd/${lazy_r} bs=1 count=1 2>/dev/null | od)
-	exec {lazy_r}>&-
+	exec {lazy_r}<&-
 	exec {lazy_w}>&-
 	# shellcheck disable=SC2116,SC2086
 	out=$(echo $out) # rm newlines
