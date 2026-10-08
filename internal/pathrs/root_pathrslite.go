@@ -60,7 +60,7 @@ func CreateInRoot(root *os.File, subpath string, flags int, fileMode uint32) (*o
 	// dirFd is inside the root. O_NOFOLLOW will stop us from following
 	// trailing symlinks, so this is safe to do. libpathrs's Root::create_file
 	// works the same way.
-	flags |= unix.O_CREAT | unix.O_NOFOLLOW
+	flags |= unix.O_CREAT | unix.O_NOFOLLOW | unix.O_CLOEXEC
 	fd, err := linux.Openat(int(dirFd.Fd()), filename, flags, fileMode)
 	if err != nil {
 		return nil, err
