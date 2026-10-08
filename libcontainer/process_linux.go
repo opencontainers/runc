@@ -444,7 +444,12 @@ func (p *setnsProcess) startWithCgroupFD() error {
 
 	cmdCopy := cloneCmd(p.cmd)
 	err = p.startWithCPUAffinity()
-	if err != nil && p.cmd.SysProcAttr.UseCgroupFD {
+	// Do not retry on EAGAIN. The most probable cause is the container
+	// cgroup pids limit being hit, and retrying without CLONE_INTO_CGROUP
+	// would bypass the limit (since moving a process into a cgroup is not
+	// subject to the pids limit). Other causes (RLIMIT_NPROC, threads-max,
+	// pid_max) do not depend on CLONE_INTO_CGROUP, so retrying won't help.
+	if err != nil && p.cmd.SysProcAttr.UseCgroupFD && !errors.Is(err, unix.EAGAIN) {
 		logrus.Debugf("exec with CLONE_INTO_CGROUP failed: %v; retrying without", err)
 		// SysProcAttr.CgroupFD is never used when UseCgroupFD is unset.
 		cmdCopy.SysProcAttr.UseCgroupFD = false
