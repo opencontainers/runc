@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -1187,6 +1186,19 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 		Value: c.config.RootlessEUID,
 	})
 
+	// If root is not mapped in the user namespace, tell runc init which
+	// user and group to use instead.
+	if uid, gid := c.config.UsernsRootIDs(); uid != 0 || gid != 0 {
+		r.AddData(&Int32msg{
+			Type:  SetupUIDAttr,
+			Value: uint32(uid),
+		})
+		r.AddData(&Int32msg{
+			Type:  SetupGIDAttr,
+			Value: uint32(gid),
+		})
+	}
+
 	// write boottime and monotonic time ns offsets only when we are not joining an existing time ns
 	_, joinExistingTime := nsMaps[configs.NEWTIME]
 	if !joinExistingTime && c.config.TimeOffsets != nil {
@@ -1228,8 +1240,8 @@ func ignoreTerminateErrors(err error) error {
 }
 
 func requiresRootOrMappingTool(c *configs.Config) bool {
-	gidMap := []configs.IDMap{
-		{ContainerID: 0, HostID: int64(os.Getegid()), Size: 1},
-	}
-	return !reflect.DeepEqual(c.GIDMappings, gidMap)
+	// A single mapping of our own egid can be set up without privileges
+	// or a mapping tool, regardless of the container gid it is mapped to.
+	m := c.GIDMappings
+	return len(m) != 1 || m[0].HostID != int64(os.Getegid()) || m[0].Size != 1
 }

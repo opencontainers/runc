@@ -49,9 +49,11 @@ func (c *Config) HostUID(containerID int) (int, error) {
 }
 
 // HostRootUID gets the root uid for the process on host which could be non-zero
-// when user namespaces are enabled.
+// when user namespaces are enabled. If user namespaces are enabled but uid 0
+// is not mapped, the host uid of the lowest mapped container uid is returned
+// (which is what runc init uses to set up the container in such case).
 func (c *Config) HostRootUID() (int, error) {
-	return c.HostUID(0)
+	return c.HostUID(c.rootID(c.UIDMappings))
 }
 
 // HostGID gets the translated gid for the process on host which could be
@@ -79,9 +81,35 @@ func (c *Config) HostGID(containerID int) (int, error) {
 }
 
 // HostRootGID gets the root gid for the process on host which could be non-zero
-// when user namespaces are enabled.
+// when user namespaces are enabled. If user namespaces are enabled but gid 0
+// is not mapped, the host gid of the lowest mapped container gid is returned
+// (which is what runc init uses to set up the container in such case).
 func (c *Config) HostRootGID() (int, error) {
-	return c.HostGID(0)
+	return c.HostGID(c.rootID(c.GIDMappings))
+}
+
+// UsernsRootIDs returns the container uid and gid which runc init uses as root
+// to set up the container. Both are 0, unless user namespaces are enabled and 0
+// is not mapped, in which case the lowest mapped container ID is used.
+func (c *Config) UsernsRootIDs() (uid, gid int) {
+	return c.rootID(c.UIDMappings), c.rootID(c.GIDMappings)
+}
+
+// rootID returns the container ID which runc init uses as root to set up
+// the container. This is 0, unless user namespaces are enabled and 0 is not
+// mapped, in which case it is the lowest mapped container ID.
+func (c *Config) rootID(idMap []IDMap) int {
+	if !c.Namespaces.Contains(NEWUSER) || len(idMap) == 0 {
+		return 0
+	}
+	if _, found := c.hostIDFromMapping(0, idMap); found {
+		return 0
+	}
+	minID := idMap[0].ContainerID
+	for _, m := range idMap[1:] {
+		minID = min(minID, m.ContainerID)
+	}
+	return int(minID)
 }
 
 // Utility function that gets a host ID for a container ID from user namespace map
