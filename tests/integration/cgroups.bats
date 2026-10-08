@@ -276,7 +276,7 @@ convert_hugetlb_size() {
 	for ((i = 0; i < ${#sizes[@]}; i++)); do
 		size="${sizes[$i]}"
 		limit="${limits[$i]}"
-		update_config '.linux.resources.hugepageLimits += [{ pagesize: "'"$size"'", limit: '"$limit"' }]'
+		update_config '.linux.resources.hugepageLimits += [{ pageSize: "'"$size"'", limit: '"$limit"' }]'
 	done
 
 	set_cgroups_path
