@@ -3,6 +3,15 @@
 This branch of runc implements the [OCI Runtime Spec v1.3.0](https://github.com/opencontainers/runtime-spec/tree/v1.3.0)
 for the `linux` platform.
 
+## Deviations
+
+runc deviates from the spec in the following ways:
+
+* [`ociVersion`](https://github.com/opencontainers/runtime-spec/blob/v1.3.0/config.md#specification-version)
+  is not validated: runc does not generate an error if it is missing, empty, not
+  in SemVer format, or specifies a version not supported by runc (e.g. with a
+  different major version).
+
 ## Architectures
 
 The following architectures are supported:
