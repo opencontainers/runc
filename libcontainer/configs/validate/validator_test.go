@@ -1145,6 +1145,38 @@ func TestValidateUserSysctlWithoutUserNamespace(t *testing.T) {
 	}
 }
 
+func TestValidateRlimits(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		rlimits []configs.Rlimit
+		wantErr bool
+	}{
+		{name: "none"},
+		{
+			name: "distinct",
+			rlimits: []configs.Rlimit{
+				{Type: unix.RLIMIT_NOFILE, Soft: 32, Hard: 64},
+				{Type: unix.RLIMIT_CORE},
+			},
+		},
+		{
+			name: "duplicate",
+			rlimits: []configs.Rlimit{
+				{Type: unix.RLIMIT_NOFILE, Soft: 32, Hard: 64},
+				{Type: unix.RLIMIT_NOFILE, Soft: 48, Hard: 64},
+			},
+			wantErr: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := rlimits(&configs.Config{Rootfs: "/var", Rlimits: tc.rlimits})
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("rlimits() error = %v, wantErr %t", err, tc.wantErr)
+			}
+		})
+	}
+}
+
 func TestDevValidName(t *testing.T) {
 	testCases := []struct {
 		name  string

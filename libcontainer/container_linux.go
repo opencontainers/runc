@@ -376,6 +376,9 @@ func (c *Container) start(process *Process) (retErr error) {
 		if c.initProcessStartTime != 0 {
 			return errors.New("container already has init process")
 		}
+		if err := configs.CheckRlimits(process.Rlimits); err != nil {
+			return err
+		}
 		if err := c.createExecFifo(); err != nil {
 			return err
 		}

@@ -38,6 +38,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   directory` error about a procfs file. (#5438, #5441)
 
 ### Changed ###
+- runc now rejects a new container, or a process passed to
+  `runc exec --process`, with duplicate `rlimits` entries of the same type,
+  as required by the runtime-spec. Previously, the last such entry silently
+  took effect. `runc exec` into an existing container is not affected.
+  (#5493, #5513)
 - runc now requires Go 1.26+ to build. (#5413)
 - The runc binary is now built with the `urfave_cli_no_template` build tag,
   which, together with removing the reflect-based logging of CRIU options,
