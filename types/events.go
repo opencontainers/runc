@@ -16,13 +16,14 @@ type Event struct {
 
 // Stats is the runc specific stats structure for stability when encoding and decoding stats.
 type Stats struct {
-	CPU               Cpu                 `json:"cpu"`
-	CPUSet            CPUSet              `json:"cpuset"`
-	Memory            Memory              `json:"memory"`
-	Pids              Pids                `json:"pids"`
-	Blkio             Blkio               `json:"blkio"`
-	Hugetlb           map[string]Hugetlb  `json:"hugetlb"`
-	IntelRdt          IntelRdt            `json:"intel_rdt"`
+	CPU      Cpu                `json:"cpu"`
+	CPUSet   CPUSet             `json:"cpuset"`
+	Memory   Memory             `json:"memory"`
+	Pids     Pids               `json:"pids"`
+	Blkio    Blkio              `json:"blkio"`
+	Hugetlb  map[string]Hugetlb `json:"hugetlb"`
+	IntelRdt IntelRdt           `json:"intel_rdt"`
+	// Deprecated: always empty.
 	NetworkInterfaces []*NetworkInterface `json:"network_interfaces"`
 }
 
