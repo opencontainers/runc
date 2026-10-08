@@ -1,4 +1,5 @@
 ARG GO_VERSION=1.26
+ARG RUST_VERSION=1.99
 ARG BATS_VERSION=v1.12.0
 ARG LIBSECCOMP_VERSION=2.6.1
 ARG LIBPATHRS_VERSION=0.2.6
@@ -10,16 +11,14 @@ ARG CRIU_REPO=https://download.opensuse.org/repositories/devel:/tools:/criu/Debi
 RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
     wget -nv $CRIU_REPO/Release.key -O- | gpg --dearmor > "$KEYFILE" \
     && echo "deb [signed-by=$KEYFILE] $CRIU_REPO/ /" > /etc/apt/sources.list.d/criu.list \
-    && printf "%s\n" i386 armel armhf arm64 ppc64el s390x riscv64 | xargs -t -n1 -- dpkg --add-architecture \
+    && printf "%s\n" armel armhf arm64 ppc64el riscv64 | xargs -t -n1 -- dpkg --add-architecture \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
-        cargo \
         cargo-auditable \
         clang \
         criu \
         gcc \
-        gcc-multilib \
         curl \
         gawk \
         gperf \
@@ -27,22 +26,45 @@ RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
         jq \
         kmod \
         lld \
+        musl-dev \
         pkg-config \
         python3-minimal \
+        rustup \
         sshfs \
         sudo \
         uidmap \
         iproute2 \
     && apt-get install -y --no-install-recommends \
-        libc-dev:i386 libgcc-s1:i386 gcc-i686-linux-gnu libstd-rust-dev:i386 \
-        gcc-aarch64-linux-gnu libc-dev-arm64-cross libstd-rust-dev:arm64 \
-        gcc-arm-linux-gnueabi libc-dev-armel-cross libstd-rust-dev:armel \
-        gcc-arm-linux-gnueabihf libc-dev-armhf-cross libstd-rust-dev:armhf \
-        gcc-powerpc64le-linux-gnu libc-dev-ppc64el-cross libstd-rust-dev:ppc64el \
-        gcc-s390x-linux-gnu libc-dev-s390x-cross libstd-rust-dev:s390x \
-        gcc-riscv64-linux-gnu libc-dev-riscv64-cross libstd-rust-dev:riscv64 \
+        gcc-aarch64-linux-gnu libc-dev-arm64-cross musl-dev:arm64 \
+        gcc-arm-linux-gnueabi libc-dev-armel-cross musl-dev:armel \
+        gcc-arm-linux-gnueabihf libc-dev-armhf-cross musl-dev:armhf \
+        gcc-powerpc64le-linux-gnu libc-dev-ppc64el-cross musl-dev:ppc64el \
+        gcc-riscv64-linux-gnu libc-dev-riscv64-cross musl-dev:riscv64 \
+        gcc-s390x-linux-gnu libc-dev-s390x-cross \
     && apt-get clean \
     && rm -rf /var/cache/apt /var/lib/apt/lists/* /etc/apt/sources.list.d/*.list
+
+# Debian's musl-dev does not provide Linux kernel headers, so make the ones
+# from linux-libc-dev available for musl builds (see set_cross_vars).
+RUN for d in linux asm-generic x86_64-linux-gnu/asm; do \
+        ln -s "/usr/include/$d" /usr/include/x86_64-linux-musl/; \
+    done \
+    && for t in aarch64-linux-gnu:aarch64-linux-musl \
+            arm-linux-gnueabi:arm-linux-musleabi \
+            arm-linux-gnueabihf:arm-linux-musleabihf \
+            powerpc64le-linux-gnu:powerpc64le-linux-musl \
+            riscv64-linux-gnu:riscv64-linux-musl; do \
+        for d in linux asm asm-generic; do \
+            ln -s "/usr/${t%:*}/include/$d" "/usr/include/${t#*:}/"; \
+        done; \
+    done
+
+# Install Rust, with standard libraries for release targets (used by
+# libpathrs build for release binaries, see build-libpathrs.sh).
+ARG RUST_VERSION
+RUN rustup toolchain install "$RUST_VERSION" --profile minimal --no-self-update \
+        --target x86_64-unknown-linux-musl,aarch64-unknown-linux-musl,armv5te-unknown-linux-musleabi,armv7-unknown-linux-musleabihf,powerpc64le-unknown-linux-musl,riscv64gc-unknown-linux-musl,s390x-unknown-linux-gnu \
+    && rustup default "$RUST_VERSION"
 
 # Add a dummy user for the rootless integration tests. While runC does
 # not require an entry in /etc/passwd to operate, one of the tests uses
@@ -59,7 +81,7 @@ RUN cd /tmp \
     && ./install.sh /usr/local \
     && rm -rf /tmp/bats-core
 
-ARG RELEASE_ARCHES="386 amd64 arm64 armel armhf ppc64le riscv64 s390x"
+ARG RELEASE_ARCHES="amd64 arm64 armel armhf ppc64le riscv64 s390x"
 ENV DYLIB_DIR=/opt/runc-dylibs
 
 # install libseccomp
