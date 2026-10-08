@@ -210,3 +210,19 @@ function teardown() {
 
 	run -0 runc kill test_busybox KILL
 }
+
+@test "runc run [tty, SIGINT is forwarded]" {
+	update_config '(.. | select(.[]? == "sh")) += ["-c", "trap \"exit 3\" INT; echo ready; while :; do sleep 0.1; done"]'
+
+	runc run test_busybox >"$ROOT/out.txt" &
+	local pid=$! ret=0
+
+	# Wait for the container to set up the trap.
+	retry 50 0.1 grep -q ready "$ROOT/out.txt"
+
+	# runc should forward SIGINT to the container (rather than
+	# exiting and leaving the container running), see #1624.
+	kill -INT "$pid"
+	wait "$pid" || ret=$?
+	[ "$ret" -eq 3 ]
+}
