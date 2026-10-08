@@ -11,6 +11,10 @@ runc deviates from the spec in the following ways:
   of a container in the `created` state kills the container process and deletes
   the container, rather than generating an error. Deleting a container which is
   `running` or `paused` does generate an error (unless `--force` is used).
+* [`ociVersion`](https://github.com/opencontainers/runtime-spec/blob/v1.3.0/config.md#specification-version)
+  is not validated: runc does not generate an error if it is missing, empty, not
+  in SemVer format, or specifies a version not supported by runc (e.g. with a
+  different major version).
 
 ## Architectures
 
