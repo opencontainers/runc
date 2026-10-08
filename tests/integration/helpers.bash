@@ -82,6 +82,8 @@ function update_config() {
 	local config
 	config=$(jq "$@" "./config.json") || return
 	echo "$config" >"./config.json"
+	# Make sure the test does not use wrong or unknown keys.
+	"$TESTBINDIR/check-config" "./config.json"
 }
 
 # Shortcut to add additional uids and gids, based on the values set as part of
