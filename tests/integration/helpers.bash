@@ -79,7 +79,9 @@ function runc_spec() {
 
 # Helper function to reformat config.json file. Input uses jq syntax.
 function update_config() {
-	jq "$@" "./config.json" | awk 'BEGIN{RS="";getline<"-";print>ARGV[1]}' "./config.json"
+	local config
+	config=$(jq "$@" "./config.json") || return
+	echo "$config" >"./config.json"
 }
 
 # Shortcut to add additional uids and gids, based on the values set as part of
