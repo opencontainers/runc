@@ -60,8 +60,8 @@ The accepted format is as follow (unchanged values can be omitted):
   "unified": {}
 }
 
-Note: if data is to be read from a file or the standard input, all
-other options are ignored.
+Options specified on the command line override the values from
+the file or the standard input.
 `,
 		},
 
@@ -180,84 +180,98 @@ other options are ignored.
 			if err != nil {
 				return err
 			}
-		} else {
-			if val := cmd.Int("blkio-weight"); val != 0 {
-				r.BlockIO.Weight = new(uint16(val))
+		}
+		// Some fields might have been set to null in the JSON.
+		if r.Memory == nil {
+			r.Memory = &specs.LinuxMemory{}
+		}
+		if r.CPU == nil {
+			r.CPU = &specs.LinuxCPU{}
+		}
+		if r.BlockIO == nil {
+			r.BlockIO = &specs.LinuxBlockIO{}
+		}
+		if r.Pids == nil {
+			r.Pids = &specs.LinuxPids{}
+		}
+
+		// Options set from the command line override those from the JSON.
+		if val := cmd.Int("blkio-weight"); val != 0 {
+			r.BlockIO.Weight = new(uint16(val))
+		}
+		if val := cmd.String("cpuset-cpus"); val != "" {
+			r.CPU.Cpus = val
+		}
+		if val := cmd.String("cpuset-mems"); val != "" {
+			r.CPU.Mems = val
+		}
+		if val := cmd.String("cpu-idle"); val != "" {
+			idle, err := strconv.ParseInt(val, 10, 64)
+			if err != nil {
+				return fmt.Errorf("invalid value for cpu-idle: %w", err)
 			}
-			if val := cmd.String("cpuset-cpus"); val != "" {
-				r.CPU.Cpus = val
-			}
-			if val := cmd.String("cpuset-mems"); val != "" {
-				r.CPU.Mems = val
-			}
-			if val := cmd.String("cpu-idle"); val != "" {
-				idle, err := strconv.ParseInt(val, 10, 64)
+			r.CPU.Idle = new(idle)
+		}
+
+		for _, pair := range []struct {
+			opt  string
+			dest **uint64
+		}{
+			{"cpu-burst", &r.CPU.Burst},
+			{"cpu-period", &r.CPU.Period},
+			{"cpu-rt-period", &r.CPU.RealtimePeriod},
+			{"cpu-share", &r.CPU.Shares},
+		} {
+			if val := cmd.String(pair.opt); val != "" {
+				v, err := strconv.ParseUint(val, 10, 64)
 				if err != nil {
-					return fmt.Errorf("invalid value for cpu-idle: %w", err)
+					return fmt.Errorf("invalid value for %s: %w", pair.opt, err)
 				}
-				r.CPU.Idle = new(idle)
+				*pair.dest = &v
 			}
+		}
+		for _, pair := range []struct {
+			opt  string
+			dest **int64
+		}{
+			{"cpu-quota", &r.CPU.Quota},
+			{"cpu-rt-runtime", &r.CPU.RealtimeRuntime},
+		} {
+			if val := cmd.String(pair.opt); val != "" {
+				v, err := strconv.ParseInt(val, 10, 64)
+				if err != nil {
+					return fmt.Errorf("invalid value for %s: %w", pair.opt, err)
+				}
+				*pair.dest = &v
+			}
+		}
+		for _, pair := range []struct {
+			opt  string
+			dest **int64
+		}{
+			{"memory", &r.Memory.Limit},
+			{"memory-swap", &r.Memory.Swap},
+			{"kernel-memory", &r.Memory.Kernel}, //nolint:staticcheck // Ignore SA1019. Need to keep deprecated package for compatibility.
+			{"kernel-memory-tcp", &r.Memory.KernelTCP},
+			{"memory-reservation", &r.Memory.Reservation},
+		} {
+			if val := cmd.String(pair.opt); val != "" {
+				var v int64
 
-			for _, pair := range []struct {
-				opt  string
-				dest **uint64
-			}{
-				{"cpu-burst", &r.CPU.Burst},
-				{"cpu-period", &r.CPU.Period},
-				{"cpu-rt-period", &r.CPU.RealtimePeriod},
-				{"cpu-share", &r.CPU.Shares},
-			} {
-				if val := cmd.String(pair.opt); val != "" {
-					v, err := strconv.ParseUint(val, 10, 64)
+				if val != "-1" {
+					v, err = units.RAMInBytes(val)
 					if err != nil {
 						return fmt.Errorf("invalid value for %s: %w", pair.opt, err)
 					}
-					*pair.dest = &v
+				} else {
+					v = -1
 				}
+				*pair.dest = &v
 			}
-			for _, pair := range []struct {
-				opt  string
-				dest **int64
-			}{
-				{"cpu-quota", &r.CPU.Quota},
-				{"cpu-rt-runtime", &r.CPU.RealtimeRuntime},
-			} {
-				if val := cmd.String(pair.opt); val != "" {
-					v, err := strconv.ParseInt(val, 10, 64)
-					if err != nil {
-						return fmt.Errorf("invalid value for %s: %w", pair.opt, err)
-					}
-					*pair.dest = &v
-				}
-			}
-			for _, pair := range []struct {
-				opt  string
-				dest **int64
-			}{
-				{"memory", &r.Memory.Limit},
-				{"memory-swap", &r.Memory.Swap},
-				{"kernel-memory", &r.Memory.Kernel}, //nolint:staticcheck // Ignore SA1019. Need to keep deprecated package for compatibility.
-				{"kernel-memory-tcp", &r.Memory.KernelTCP},
-				{"memory-reservation", &r.Memory.Reservation},
-			} {
-				if val := cmd.String(pair.opt); val != "" {
-					var v int64
+		}
 
-					if val != "-1" {
-						v, err = units.RAMInBytes(val)
-						if err != nil {
-							return fmt.Errorf("invalid value for %s: %w", pair.opt, err)
-						}
-					} else {
-						v = -1
-					}
-					*pair.dest = &v
-				}
-			}
-
-			if cmd.IsSet("pids-limit") {
-				r.Pids.Limit = new(int64(cmd.Int("pids-limit")))
-			}
+		if cmd.IsSet("pids-limit") {
+			r.Pids.Limit = new(int64(cmd.Int("pids-limit")))
 		}
 
 		// Fix up values
