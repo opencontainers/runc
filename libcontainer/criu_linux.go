@@ -963,15 +963,6 @@ func (c *Container) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuO
 	}
 
 	logrus.Debugf("Using CRIU in %s mode", req.GetType().String())
-	// In the case of criurpc.CriuReqType_FEATURE_CHECK req.GetOpts()
-	// should be empty. For older CRIU versions it still will be
-	// available but empty. criurpc.CriuReqType_VERSION actually
-	// has no req.GetOpts().
-	if logrus.GetLevel() >= logrus.DebugLevel &&
-		(req.GetType() != criurpc.CriuReqType_FEATURE_CHECK &&
-			req.GetType() != criurpc.CriuReqType_VERSION) {
-		logrus.Debugf("CRIU options: %s", req.GetOpts().MarshalProtoText())
-	}
 	data, err := req.MarshalVT()
 	if err != nil {
 		return err
@@ -1016,7 +1007,6 @@ func (c *Container) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuO
 
 		switch t {
 		case criurpc.CriuReqType_FEATURE_CHECK:
-			logrus.Debugf("Feature check says: %s", resp)
 			criuFeatures = resp.GetFeatures()
 		case criurpc.CriuReqType_NOTIFY:
 			if err := c.criuNotifications(resp, process, cmd, opts, extFds, oob[:oobn]); err != nil {
@@ -1039,7 +1029,7 @@ func (c *Container) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuO
 		case criurpc.CriuReqType_DUMP:
 		case criurpc.CriuReqType_PRE_DUMP:
 		default:
-			return fmt.Errorf("unable to parse the response %s", resp.String())
+			return fmt.Errorf("unexpected CRIU response type %s", t)
 		}
 
 		break
@@ -1097,7 +1087,7 @@ func unlockNetwork(config *configs.Config) error {
 func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, cmd *exec.Cmd, opts *CriuOpts, fds []string, oob []byte) error {
 	notify := resp.GetNotify()
 	if notify == nil {
-		return fmt.Errorf("invalid response: %s", resp.String())
+		return errors.New("invalid CRIU response: no notify data")
 	}
 	script := notify.GetScript()
 	logrus.Debugf("notify: %s\n", script)
