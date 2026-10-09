@@ -90,6 +90,28 @@ func waitProcess(p *libcontainer.Process, t testing.TB) {
 	}
 }
 
+// waitExec waits for the process to execute a binary with the given name.
+//
+// When container.Run returns, the container init may still be running
+// runc init code, which is about to execute the container's binary. To
+// see the container's binary (rather than runc init) in the process list,
+// we need to wait for it.
+func waitExec(t testing.TB, p *libcontainer.Process, name string) {
+	t.Helper()
+	pid, err := p.Pid()
+	ok(t, err)
+	comm := "/proc/" + strconv.Itoa(pid) + "/comm"
+	for range 500 {
+		data, err := os.ReadFile(comm)
+		ok(t, err)
+		if strings.TrimSpace(string(data)) == name {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("timed out waiting for pid %d to execute %q", pid, name)
+}
+
 // newRootfs creates a new tmp directory and copies the busybox root
 // filesystem to it.
 func newRootfs(t testing.TB) string {
