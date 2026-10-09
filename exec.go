@@ -18,11 +18,14 @@ import (
 var execCommand = &cli.Command{
 	Name:  "exec",
 	Usage: "execute new process inside the container",
-	ArgsUsage: `<container-id> <command> [command options]  || -p process.json <container-id>
+	ArgsUsage: `<container-id> <command> [command options]  || -p process.json <container-id> [<command> [command options]]
 
 Where "<container-id>" is the name for the instance of the container and
 "<command>" is the command to be executed in the container.
 "<command>" can't be empty unless a "-p" flag provided.
+
+If "-p" is used, options specified on the command line (as well as
+"<command>", if specified) override the values from process.json.
 
 EXAMPLE:
 For example, if the container is configured to run the linux ps command the
@@ -207,37 +210,46 @@ func execProcess(cmd *cli.Command) (int, error) {
 }
 
 func getProcess(cmd *cli.Command, c *libcontainer.Container) (*specs.Process, error) {
+	var p *specs.Process
+	args := cmd.Args().Slice()[1:] // Skip container ID.
 	if path := cmd.String("process"); path != "" {
+		// Process from process.json.
 		f, err := os.Open(path)
 		if err != nil {
 			return nil, err
 		}
 		defer f.Close()
-		var p specs.Process
-		if err := json.NewDecoder(f).Decode(&p); err != nil {
+		p = &specs.Process{}
+		if err := json.NewDecoder(f).Decode(p); err != nil {
 			return nil, err
 		}
-		return &p, validateProcessSpec(&p)
+		if len(args) > 0 {
+			p.Args = args
+		}
+	} else {
+		// Process from config.json.
+		bundle, ok := utils.SearchLabels(c.Config().Labels, "bundle")
+		if !ok {
+			return nil, errors.New("bundle not found in labels")
+		}
+		if err := os.Chdir(bundle); err != nil {
+			return nil, err
+		}
+		spec, err := loadSpec(specConfig)
+		if err != nil {
+			return nil, err
+		}
+		p = spec.Process
+		if len(args) == 0 {
+			return nil, errors.New("exec args cannot be empty")
+		}
+		p.Args = args
+		// Always set tty to false, unless explicitly enabled from CLI.
+		p.Terminal = false
 	}
-	// Process from config.json and CLI flags.
-	bundle, ok := utils.SearchLabels(c.Config().Labels, "bundle")
-	if !ok {
-		return nil, errors.New("bundle not found in labels")
-	}
-	if err := os.Chdir(bundle); err != nil {
-		return nil, err
-	}
-	spec, err := loadSpec(specConfig)
-	if err != nil {
-		return nil, err
-	}
-	p := spec.Process
-	args := cmd.Args().Slice()
-	if len(args) < 2 {
-		return nil, errors.New("exec args cannot be empty")
-	}
-	p.Args = args[1:]
-	// Override the cwd, if passed.
+
+	// Options specified on the command line override those from
+	// process.json or config.json.
 	if cwd := cmd.String("cwd"); cwd != "" {
 		p.Cwd = cwd
 	}
@@ -248,6 +260,9 @@ func getProcess(cmd *cli.Command, c *libcontainer.Container) (*specs.Process, er
 		p.SelinuxLabel = l
 	}
 	if caps := cmd.StringSlice("cap"); len(caps) > 0 {
+		if p.Capabilities == nil {
+			p.Capabilities = &specs.LinuxCapabilities{}
+		}
 		for _, c := range caps {
 			p.Capabilities.Bounding = append(p.Capabilities.Bounding, c)
 			p.Capabilities.Effective = append(p.Capabilities.Effective, c)
@@ -263,8 +278,9 @@ func getProcess(cmd *cli.Command, c *libcontainer.Container) (*specs.Process, er
 	// append the passed env variables
 	p.Env = append(p.Env, cmd.StringSlice("env")...)
 
-	// Always set tty to false, unless explicitly enabled from CLI.
-	p.Terminal = cmd.Bool("tty")
+	if cmd.IsSet("tty") {
+		p.Terminal = cmd.Bool("tty")
+	}
 	if cmd.IsSet("no-new-privs") {
 		p.NoNewPrivileges = cmd.Bool("no-new-privs")
 	}
