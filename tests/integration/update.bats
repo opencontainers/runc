@@ -329,6 +329,36 @@ EOF
 	check_systemd_value "TasksMax" "1"
 }
 
+# https://github.com/opencontainers/runc/issues/1793
+@test "update -r with command line options" {
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+	requires cgroups_memory cgroups_pids
+	init_cgroup_paths
+
+	if [ -v CGROUP_V1 ]; then
+		MEM_LIMIT="memory.limit_in_bytes"
+	else
+		MEM_LIMIT="memory.max"
+	fi
+
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+
+	# Command line options override the values from JSON.
+	run -0 runc update -r - --pids-limit 30 test_update <<EOF
+{
+  "memory": {
+    "limit": 67108864
+  },
+  "pids": {
+    "limit": 10
+  }
+}
+EOF
+	check_cgroup_value "$MEM_LIMIT" 67108864
+	check_cgroup_value "pids.max" 30
+	check_systemd_value "TasksMax" 30
+}
+
 @test "cpu burst" {
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires cgroups_cpu_burst

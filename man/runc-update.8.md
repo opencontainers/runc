@@ -49,7 +49,8 @@ Unchanged values can be omitted.
 # OPTIONS
 **--resources**|**-r** _resources.json_
 : Read the new resource limits from _resources.json_. Use **-** to read from
-stdin. If this option is used, all other options are ignored.
+stdin. Options specified on the command line override the values from
+_resources.json_.
 
 **--blkio-weight** _weight_
 : Set a new io weight.
