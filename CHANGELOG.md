@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [libpathrs v0.2.5]: https://github.com/cyphar/libpathrs/releases/tag/v0.2.5
 
+### Fixed ###
+- Running a container which does not have its own mount namespace no longer
+  changes the propagation of host's `/` and of the parent mount of the
+  container rootfs (they were made private or slave). (#5537)
+
 
 ## [1.4.3] - 2026-06-13
 
