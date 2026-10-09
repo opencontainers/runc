@@ -118,7 +118,7 @@ following will output a list of processes running in the container:
 		if err := checkArgs(cmd, 1, minArgs); err != nil {
 			return err
 		}
-		if err := revisePidFile(cmd); err != nil {
+		if err := revisePaths(cmd); err != nil {
 			return err
 		}
 		status, err := execProcess(cmd)
