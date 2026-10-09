@@ -169,7 +169,11 @@ func setupAndMountToRootfs(pipe *syncSocket, config *configs.Config, mountConfig
 // finalizeRootfs after this function to finish setting up the rootfs.
 func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 	config := iConfig.Config
-	if err := prepareRoot(config); err != nil {
+	prepare := prepareRoot
+	if !config.Namespaces.Contains(configs.NEWNS) {
+		prepare = prepareRootInHostMountNS
+	}
+	if err := prepare(config); err != nil {
 		return fmt.Errorf("error preparing rootfs: %w", err)
 	}
 
@@ -1110,6 +1114,18 @@ func prepareRoot(config *configs.Config) error {
 	}
 
 	return mount(config.Rootfs, config.Rootfs, "bind", unix.MS_BIND|unix.MS_REC, "")
+}
+
+// prepareRootInHostMountNS is like prepareRoot, but for a container that
+// runs in the host mount namespace. The propagation of existing mounts
+// must not be changed, as this would affect the host.
+func prepareRootInHostMountNS(config *configs.Config) error {
+	if err := mount(config.Rootfs, config.Rootfs, "bind", unix.MS_BIND|unix.MS_REC, ""); err != nil {
+		return err
+	}
+	// Make the new rootfs mount a slave, so that container mounts
+	// do not propagate to the host (and other mount namespaces).
+	return mount("", config.Rootfs, "", unix.MS_SLAVE|unix.MS_REC, "")
 }
 
 func setReadonly() error {
