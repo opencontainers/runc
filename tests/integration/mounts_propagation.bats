@@ -19,3 +19,14 @@ function teardown() {
 	run -0 runc run test_shared_rootfs
 	assert_output "shared"
 }
+
+@test "runc run [rootfsPropagation, host mount ns] must fail" {
+	update_config '	  .linux.rootfsPropagation = "rslave"
+			| .linux.namespaces -= [{"type": "mount"}]
+			| .linux.maskedPaths = []
+			| .linux.readonlyPaths = []
+			| .root.readonly = false'
+
+	run -1 runc run test_host_mntns
+	assert_output --partial "unable to set rootfs propagation without a private MNT namespace"
+}
