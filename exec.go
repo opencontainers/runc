@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -206,6 +207,38 @@ func execProcess(cmd *cli.Command) (int, error) {
 	return r.run(p)
 }
 
+// loadDefaultProcess returns the process configuration from config.json,
+// as saved by runc create, run, or restore to the container state
+// directory. If it's not there (i.e. the container was created by an older
+// runc version), it is read from config.json in the bundle directory.
+func loadDefaultProcess(cmd *cli.Command, c *libcontainer.Container) (*specs.Process, error) {
+	f, err := os.Open(filepath.Join(cmd.String("root"), c.ID(), processFile))
+	if err == nil {
+		defer f.Close()
+		var p specs.Process
+		if err := json.NewDecoder(f).Decode(&p); err != nil {
+			return nil, fmt.Errorf("can't decode %s: %w", f.Name(), err)
+		}
+		return &p, nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+
+	bundle, ok := utils.SearchLabels(c.Config().Labels, "bundle")
+	if !ok {
+		return nil, errors.New("bundle not found in labels")
+	}
+	if err := os.Chdir(bundle); err != nil {
+		return nil, err
+	}
+	spec, err := loadSpec(specConfig)
+	if err != nil {
+		return nil, err
+	}
+	return spec.Process, nil
+}
+
 func getProcess(cmd *cli.Command, c *libcontainer.Container) (*specs.Process, error) {
 	if path := cmd.String("process"); path != "" {
 		f, err := os.Open(path)
@@ -220,18 +253,10 @@ func getProcess(cmd *cli.Command, c *libcontainer.Container) (*specs.Process, er
 		return &p, validateProcessSpec(&p)
 	}
 	// Process from config.json and CLI flags.
-	bundle, ok := utils.SearchLabels(c.Config().Labels, "bundle")
-	if !ok {
-		return nil, errors.New("bundle not found in labels")
-	}
-	if err := os.Chdir(bundle); err != nil {
-		return nil, err
-	}
-	spec, err := loadSpec(specConfig)
+	p, err := loadDefaultProcess(cmd, c)
 	if err != nil {
 		return nil, err
 	}
-	p := spec.Process
 	args := cmd.Args().Slice()
 	if len(args) < 2 {
 		return nil, errors.New("exec args cannot be empty")
