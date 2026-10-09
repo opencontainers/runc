@@ -379,7 +379,7 @@ const (
 )
 
 func startContainer(cmd *cli.Command, action CtAct, criuOpts *libcontainer.CriuOpts) (int, error) {
-	if err := revisePidFile(cmd); err != nil {
+	if err := revisePaths(cmd); err != nil {
 		return -1, err
 	}
 	spec, err := setupSpec(cmd)
