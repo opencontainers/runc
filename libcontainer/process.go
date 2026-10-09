@@ -59,6 +59,14 @@ type Process struct {
 	ConsoleWidth  uint16
 	ConsoleHeight uint16
 
+	// ConsoleClearONLCR, if set, makes runc clear the ONLCR flag (see
+	// termios(3)) on the console before sending it via ConsoleSocket.
+	//
+	// The receiver of the console could do it instead, but it would
+	// race with the process which may write to the console before
+	// the flag is cleared (see https://github.com/opencontainers/runc/issues/2425).
+	ConsoleClearONLCR bool
+
 	// Capabilities specify the capabilities to keep when executing the process.
 	// All capabilities not specified will be dropped from the processes capability mask.
 	//
