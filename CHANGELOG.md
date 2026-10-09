@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed ###
+- A container configuration which uses `--no-pivot` or sets
+  `linux.rootfsPropagation`, but does not have its own mount namespace, is now
+  refused. Previously, `--no-pivot` resulted in host's `/proc` and `/sys` being
+  unmounted, and `rootfsPropagation` changed the propagation of host mounts.
+  (#5535)
+
 ## [1.6.0-rc.1] - 2026-10-06
 
 > Lo bueno, si breve, dos veces bueno.

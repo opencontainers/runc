@@ -148,6 +148,16 @@ func mountns(config *configs.Config) error {
 			return fmt.Errorf("unable to make %s read-only without a private MNT namespace", m.Destination)
 		}
 	}
+	// Without pivot_root, the container rootfs is moved on top of /
+	// (and host's procfs and sysfs mounts are unmounted).
+	if config.NoPivotRoot {
+		return errors.New("unable to use no-pivot without a private MNT namespace")
+	}
+	// Rootfs propagation is applied to / and to the parent mount of
+	// the container rootfs.
+	if config.RootPropagation != 0 {
+		return errors.New("unable to set rootfs propagation without a private MNT namespace")
+	}
 
 	return nil
 }
