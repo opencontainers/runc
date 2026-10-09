@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   they are always empty since the removal of veth network strategy in runc
   1.0.0-rc6. (#5523)
 
+### Changed ###
+- `runc update --resources` and `runc exec --process` no longer ignore other
+  command line options. Instead, the options specified on the command line
+  override the values from the JSON file. (#1793, #3241, #5536)
+
 ## [1.6.0-rc.1] - 2026-10-06
 
 > Lo bueno, si breve, dos veces bueno.
