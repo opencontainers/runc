@@ -53,7 +53,11 @@ The accepted format is as follow (unchanged values can be omitted):
   },
   "blockIO": {
     "weight": 0
-  }
+  },
+  "pids": {
+    "limit": 0
+  },
+  "unified": {}
 }
 
 Note: if data is to be read from a file or the standard input, all

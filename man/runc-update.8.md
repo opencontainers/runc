@@ -20,25 +20,31 @@ In case **-r** is used, the JSON format is like this:
 	{
 		"memory": {
 			"limit": 0,
-				"reservation": 0,
-				"swap": 0,
-				"kernel": 0,
-				"kernelTCP": 0
+			"reservation": 0,
+			"swap": 0,
+			"checkBeforeUpdate": true
 		},
-			"cpu": {
-				"shares": 0,
-				"quota": 0,
-				"burst": 0,
-				"period": 0,
-				"realtimeRuntime": 0,
-				"realtimePeriod": 0,
-				"cpus": "",
-				"mems": ""
-			},
-			"blockIO": {
-				"blkioWeight": 0
-			}
+		"cpu": {
+			"shares": 0,
+			"quota": 0,
+			"burst": 0,
+			"period": 0,
+			"realtimeRuntime": 0,
+			"realtimePeriod": 0,
+			"cpus": "",
+			"mems": "",
+			"idle": 0
+		},
+		"blockIO": {
+			"weight": 0
+		},
+		"pids": {
+			"limit": 0
+		},
+		"unified": {}
 	}
+
+Unchanged values can be omitted.
 
 # OPTIONS
 **--resources**|**-r** _resources.json_
