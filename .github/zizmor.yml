@@ -24,3 +24,12 @@ rules:
     ignore:
       - test.yml
       - validate.yml
+
+  dangerous-triggers:
+    # These triggers are used deliberately, so that a pull request can not
+    # change the review policy check it is subject to (which it could if
+    # pull_request or pull_request_review were used). The workflow never
+    # checks out or runs the pull request code; it only uses the GitHub API
+    # to read pull request metadata and reviews, and to set a commit status.
+    ignore:
+      - review-policy.yml

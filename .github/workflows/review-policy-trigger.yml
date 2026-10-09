@@ -1,0 +1,23 @@
+# Run review-policy.yml (via its workflow_run trigger) whenever a review is
+# submitted or dismissed. This workflow does nothing by itself, since for pull
+# requests from forks it only gets a read-only token and so can't set a
+# commit status.
+#
+# Be careful when changing this file. As it is triggered by pull_request_review,
+# it is run from the pull request's merge commit, so a pull request can modify
+# it. This is harmless only as long as it stays a no-op: no permissions, no
+# secrets, no checkout. The actual work is done by review-policy.yml, which is
+# run from the default branch, and only accepts workflow_run triggered by
+# pull_request_review.
+name: review-policy-trigger
+on:
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+
+permissions: {}
+
+jobs:
+  trigger:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "Review state changed, review-policy will be re-evaluated."
