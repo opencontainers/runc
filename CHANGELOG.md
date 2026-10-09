@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed ###
+- Running a container which does not have its own mount namespace no longer
+  changes the propagation of host's `/` and of the parent mount of the
+  container rootfs (they were made private or slave). (#5537)
+- For a container which does not have its own mount namespace, the container
+  rootfs and all its mounts are now unmounted on container deletion. (#5538)
+
 ## [1.6.0-rc.1] - 2026-10-06
 
 > Lo bueno, si breve, dos veces bueno.

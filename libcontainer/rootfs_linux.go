@@ -1097,19 +1097,75 @@ func rootfsParentMountPropagation(path string, rootPropagation int) error {
 }
 
 func prepareRoot(config *configs.Config) error {
-	flag := unix.MS_SLAVE | unix.MS_REC
-	if config.RootPropagation != 0 {
-		flag = config.RootPropagation
-	}
-	if err := mount("", "/", "", uintptr(flag), ""); err != nil {
-		return err
+	hostMntns := !config.Namespaces.Contains(configs.NEWNS)
+	// In the host mount namespace, the propagation of existing mounts
+	// (except for the rootfs one, see below) must not be changed, as this
+	// would affect the host.
+	if !hostMntns {
+		flag := unix.MS_SLAVE | unix.MS_REC
+		if config.RootPropagation != 0 {
+			flag = config.RootPropagation
+		}
+		if err := mount("", "/", "", uintptr(flag), ""); err != nil {
+			return err
+		}
+
+		if err := rootfsParentMountPropagation(config.Rootfs, config.RootPropagation); err != nil {
+			return err
+		}
+	} else {
+		// If rootfs is a shared mount, the rootfs mount we create below
+		// is propagated to its peers. If any of these peers is the mount
+		// rootfs is mounted on (e.g. rootfs is bind mounted onto itself
+		// on a shared mount), the copy gets tucked under the rootfs mount,
+		// and unmounting our mount on destroy unmounts the rootfs mount,
+		// too. Make rootfs a slave to prevent that. EINVAL means rootfs
+		// is not a mount point, which is fine.
+		if err := mount("", config.Rootfs, "", unix.MS_SLAVE, ""); err != nil && !errors.Is(err, unix.EINVAL) {
+			return err
+		}
 	}
 
-	if err := rootfsParentMountPropagation(config.Rootfs, config.RootPropagation); err != nil {
+	if err := mount(config.Rootfs, config.Rootfs, "bind", unix.MS_BIND|unix.MS_REC, ""); err != nil {
 		return err
 	}
+	if hostMntns {
+		// Make the new rootfs mount a slave, so that container mounts
+		// do not propagate to the host (and other mount namespaces).
+		return mount("", config.Rootfs, "", unix.MS_SLAVE|unix.MS_REC, "")
+	}
+	return nil
+}
 
-	return mount(config.Rootfs, config.Rootfs, "bind", unix.MS_BIND|unix.MS_REC, "")
+// mountID returns the ID (as in /proc/self/mountinfo) of the mount the path
+// resides on, or 0 if it can not be obtained.
+func mountID(path string) uint64 {
+	var st unix.Statx_t
+	err := unix.Statx(unix.AT_FDCWD, path, unix.AT_SYMLINK_NOFOLLOW, unix.STATX_MNT_ID, &st)
+	if err != nil || st.Mask&unix.STATX_MNT_ID == 0 {
+		return 0
+	}
+	return st.Mnt_id
+}
+
+// unmountRootfs unmounts the container rootfs mount created by runc in the
+// host mount namespace (see prepareRoot), together with all the container
+// mounts under it. It is only done if the rootfs mount is still the one
+// created by runc, so that some other mount is never unmounted.
+func unmountRootfs(c *Container) {
+	if c.rootfsMountID == 0 {
+		return
+	}
+	rootfs := c.config.Rootfs
+	if mountID(rootfs) != c.rootfsMountID {
+		logrus.Debugf("not unmounting %s: mount ID mismatch", rootfs)
+		return
+	}
+	if err := unmount(rootfs, unix.MNT_DETACH); err != nil {
+		logrus.Warn(err)
+		return
+	}
+	c.rootfsMountID = 0
 }
 
 func setReadonly() error {
