@@ -747,6 +747,8 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 		CreateConsole:    process.ConsoleSocket != nil,
 		ConsoleWidth:     process.ConsoleWidth,
 		ConsoleHeight:    process.ConsoleHeight,
+
+		ConsoleClearONLCR: process.ConsoleClearONLCR,
 	}
 
 	// Overwrite config properties with ones from process.

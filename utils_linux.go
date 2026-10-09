@@ -112,6 +112,7 @@ func setupIO(process *libcontainer.Process, container *libcontainer.Container, c
 				return nil, err
 			}
 			process.ConsoleSocket = child
+			process.ConsoleClearONLCR = true
 			t.postStart = append(t.postStart, parent, child)
 			t.consoleC = make(chan error, 1)
 			go func() {

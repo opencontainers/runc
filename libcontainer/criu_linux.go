@@ -18,6 +18,7 @@ import (
 
 	"github.com/checkpoint-restore/go-criu/v8"
 	criurpc "github.com/checkpoint-restore/go-criu/v8/rpc"
+	"github.com/containerd/console"
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
@@ -1181,6 +1182,11 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 		master := os.NewFile(uintptr(fds[0]), "orphan-pts-master")
 		defer master.Close()
 
+		if process.ConsoleClearONLCR {
+			if err := console.ClearONLCR(master.Fd()); err != nil {
+				return err
+			}
+		}
 		// While we can access console.master, using the API is a good idea.
 		if err := cmsg.SendFile(process.ConsoleSocket, master); err != nil {
 			return err
