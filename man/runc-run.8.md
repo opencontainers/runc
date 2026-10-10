@@ -15,6 +15,12 @@ starts it.  You can think of **run** as a shortcut for **create** followed by
 **--bundle**|**-b** _path_
 : Path to the root of the bundle directory. Default is current directory.
 
+**--config** _path_
+: Path to the container specification file. Default is _config.json_ in the
+bundle directory. A relative _path_ is relative to the current directory.
+Note that relative paths in the specification file (such as **root.path**)
+are still relative to the bundle directory.
+
 **--console-socket** _path_
 : Path to an **AF_UNIX**  socket which will receive a file descriptor
 referencing the master end of the console's pseudoterminal.  See

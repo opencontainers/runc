@@ -76,7 +76,11 @@ func setupSpec(cmd *cli.Command) (*specs.Spec, error) {
 			return nil, err
 		}
 	}
-	spec, err := loadSpec(specConfig)
+	config := cmd.String("config")
+	if config == "" {
+		config = specConfig
+	}
+	spec, err := loadSpec(config)
 	if err != nil {
 		return nil, err
 	}
@@ -84,10 +88,11 @@ func setupSpec(cmd *cli.Command) (*specs.Spec, error) {
 }
 
 // revisePaths converts relative paths specified by --pid-file,
-// --console-socket, and --pidfd-socket to absolute ones, so that they
-// are relative to the current directory even after chdir to bundle.
+// --console-socket, --pidfd-socket, and --config to absolute ones,
+// so that they are relative to the current directory even after
+// chdir to bundle.
 func revisePaths(cmd *cli.Command) error {
-	for _, name := range []string{"pid-file", "console-socket", "pidfd-socket"} {
+	for _, name := range []string{"pid-file", "console-socket", "pidfd-socket", "config"} {
 		path := cmd.String(name)
 		if path == "" {
 			continue

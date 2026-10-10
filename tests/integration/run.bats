@@ -17,6 +17,23 @@ function teardown() {
 	run ! runc state test_hello
 }
 
+# https://github.com/opencontainers/runc/issues/3308
+@test "runc run --config" {
+	update_config '.process.args = ["sleep", "100"]'
+	bundle="$(pwd)"
+	mv config.json ../my-config.json
+	cd ..
+
+	# A relative --config path is relative to the current directory,
+	# while root.path is still relative to the bundle directory.
+	run -0 runc run -d -b "$bundle" --config my-config.json --console-socket "$CONSOLE_SOCKET" test_config
+	testcontainer test_config running
+
+	# runc exec does not need config.json.
+	run -0 runc exec test_config echo hello
+	assert_output "hello"
+}
+
 @test "runc run --keep" {
 	run -0 runc run --keep test_run_keep
 
