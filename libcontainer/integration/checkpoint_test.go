@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -31,12 +30,6 @@ func testCheckpoint(t *testing.T, userns bool) {
 
 	if _, err := exec.LookPath("criu"); err != nil {
 		t.Skipf("criu binary not found: %v", err)
-	}
-
-	// Workaround for https://github.com/opencontainers/runc/issues/3532.
-	out, err := exec.Command("rpm", "-q", "criu").CombinedOutput()
-	if err == nil && regexp.MustCompile(`^criu-3\.17-[123]\.el9`).Match(out) {
-		t.Skip("Test requires criu >= 3.17-4 on CentOS Stream 9.")
 	}
 
 	if userns && !criuFeature("userns") {
