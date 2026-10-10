@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added ###
+- `runc create` and `runc run` now support `--config` option to specify the
+  path to the container specification file, rather than using `config.json`
+  in the bundle directory. (#3308, #5542)
+
 ### Changed ###
 - `runc exec` now uses the process configuration from `config.json` as it was
   when the container was created (saved to the container state directory by
