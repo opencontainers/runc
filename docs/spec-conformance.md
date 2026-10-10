@@ -15,6 +15,10 @@ runc deviates from the spec in the following ways:
   is not validated: runc does not generate an error if it is missing, empty, not
   in SemVer format, or specifies a version not supported by runc (e.g. with a
   different major version).
+* If [`umask`](https://github.com/opencontainers/runtime-spec/blob/v1.3.0/config.md#user)
+  is not specified, the umask of the container init process is set to `0022`,
+  rather than left unchanged from the calling process' umask. For `runc exec`,
+  the umask is left unchanged.
 
 ## Architectures
 
