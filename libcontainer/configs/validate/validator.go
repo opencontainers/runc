@@ -69,6 +69,13 @@ func rootfs(config *configs.Config) error {
 	if filepath.Clean(config.Rootfs) != cleaned {
 		return errors.New("invalid rootfs: not an absolute path, or a symlink")
 	}
+	// Host's / can't be used as the container rootfs. With a private mount
+	// namespace, pivot_root (or MS_MOVE with no-pivot) fails. Without it,
+	// container mounts (such as proc, dev etc.) are mounted on top of the
+	// host ones.
+	if cleaned == "/" {
+		return errors.New("invalid rootfs: / is not allowed")
+	}
 	return nil
 }
 
