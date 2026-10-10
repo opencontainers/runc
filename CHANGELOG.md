@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   refused. Previously, `--no-pivot` resulted in host's `/proc` and `/sys` being
   unmounted, and `rootfsPropagation` changed the propagation of host mounts.
   (#5535)
+- Using `/` as container rootfs is now refused. Previously, it failed with a
+  mount namespace, and without one, container mounts (such as `/proc`) were
+  mounted on top of the host ones. (#5535)
 
 ## [1.6.0-rc.1] - 2026-10-06
 
