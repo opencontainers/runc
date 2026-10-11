@@ -53,9 +53,8 @@ RUN useradd -u1000 -m -d/home/rootless -s/bin/bash rootless
 # install bats
 ARG BATS_VERSION
 RUN cd /tmp \
-    && git clone https://github.com/bats-core/bats-core.git \
+    && git clone --depth 1 --branch "${BATS_VERSION}" https://github.com/bats-core/bats-core.git \
     && cd bats-core \
-    && git reset --hard "${BATS_VERSION}" \
     && ./install.sh /usr/local \
     && rm -rf /tmp/bats-core
 
