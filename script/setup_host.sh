@@ -56,15 +56,8 @@ fi
 if [ "$PLATFORM_ID" = "platform:el8" ]; then
 	# The packaged version of bats is too old: `BATS_ERROR_SUFFIX: unbound variable`, `bats_require_minimum_version: command not found`
 	git clone --depth 1 --branch "$BATS_VERSION" https://github.com/bats-core/bats-core /tmp/bats-core
-	/tmp/bats-core/install.sh /usr/local
+	/tmp/bats-core/install.sh /usr
 	rm -rf /tmp/bats-core
-	cat >>/etc/profile.d/sh.local <<'EOF'
-PATH="/usr/local/bin:$PATH"
-export PATH
-EOF
-	cat >/etc/sudoers.d/local <<'EOF'
-Defaults    secure_path = "/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
-EOF
 else
 	"${DNF[@]}" install bats
 fi
