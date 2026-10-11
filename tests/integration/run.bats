@@ -211,3 +211,10 @@ EOF
 	run -0 runc run test_busybox
 	assert_line --index 0 "/home/tempuser"
 }
+
+@test "runc run [rootfs is /] must fail" {
+	update_config '.root.path = "/"'
+
+	run -1 runc run test_hello
+	assert_output --partial "invalid rootfs: / is not allowed"
+}

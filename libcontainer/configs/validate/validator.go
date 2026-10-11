@@ -25,7 +25,8 @@ func Validate(config *configs.Config) error {
 		network,
 		netdevices,
 		uts,
-		security,
+		mountns,
+		selinuxCheck,
 		namespaces,
 		sysctl,
 		intelrdtCheck,
@@ -67,6 +68,13 @@ func rootfs(config *configs.Config) error {
 	}
 	if filepath.Clean(config.Rootfs) != cleaned {
 		return errors.New("invalid rootfs: not an absolute path, or a symlink")
+	}
+	// Host's / can't be used as the container rootfs. With a private mount
+	// namespace, pivot_root (or MS_MOVE with no-pivot) fails. Without it,
+	// container mounts (such as proc, dev etc.) are mounted on top of the
+	// host ones.
+	if cleaned == "/" {
+		return errors.New("invalid rootfs: / is not allowed")
 	}
 	return nil
 }
@@ -127,26 +135,41 @@ func uts(config *configs.Config) error {
 	return nil
 }
 
-func security(config *configs.Config) error {
-	// restrict sys without mount namespace
-	if (len(config.MaskPaths) > 0 || len(config.ReadonlyPaths) > 0) &&
-		!config.Namespaces.Contains(configs.NEWNS) {
+// mountns checks the configuration which requires a private mount namespace
+// (since otherwise it would affect the host).
+func mountns(config *configs.Config) error {
+	if config.Namespaces.Contains(configs.NEWNS) {
+		return nil
+	}
+	// Restricting sys entries is done by mounting over them.
+	if len(config.MaskPaths) > 0 || len(config.ReadonlyPaths) > 0 {
 		return errors.New("unable to restrict sys entries without a private MNT namespace")
 	}
-	// A read-only rootfs is implemented by remounting / read-only, which can
-	// only be done in a private mount namespace (otherwise it would affect
-	// the host).
-	if config.Readonlyfs && !config.Namespaces.Contains(configs.NEWNS) {
+	// A read-only rootfs is implemented by remounting / read-only.
+	if config.Readonlyfs {
 		return errors.New("unable to make rootfs read-only without a private MNT namespace")
 	}
 	// Same for mounts which can only be made read-only by a remount.
-	if !config.Namespaces.Contains(configs.NEWNS) {
-		for _, m := range config.Mounts {
-			if m.IsReadonlyDeferred() {
-				return fmt.Errorf("unable to make %s read-only without a private MNT namespace", m.Destination)
-			}
+	for _, m := range config.Mounts {
+		if m.IsReadonlyDeferred() {
+			return fmt.Errorf("unable to make %s read-only without a private MNT namespace", m.Destination)
 		}
 	}
+	// Without pivot_root, the container rootfs is moved on top of /
+	// (and host's procfs and sysfs mounts are unmounted).
+	if config.NoPivotRoot {
+		return errors.New("unable to use no-pivot without a private MNT namespace")
+	}
+	// Rootfs propagation is applied to / and to the parent mount of
+	// the container rootfs.
+	if config.RootPropagation != 0 {
+		return errors.New("unable to set rootfs propagation without a private MNT namespace")
+	}
+
+	return nil
+}
+
+func selinuxCheck(config *configs.Config) error {
 	if config.ProcessLabel != "" && !selinux.GetEnabled() {
 		return errors.New("selinux label is specified in config, but selinux is disabled or not supported")
 	}
