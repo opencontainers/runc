@@ -21,19 +21,19 @@ type check func(config *configs.Config) error
 func Validate(config *configs.Config) error {
 	checks := []check{
 		cgroupsCheck,
-		rootfs,
-		network,
-		netdevices,
-		uts,
-		security,
-		namespaces,
-		sysctl,
 		intelrdtCheck,
-		rootlessEUIDCheck,
-		mountsStrict,
-		scheduler,
 		ioPriority,
 		memoryPolicy,
+		mountsStrict,
+		namespaces,
+		netdevices,
+		network,
+		rootfs,
+		rootlessEUIDCheck,
+		scheduler,
+		security,
+		sysctl,
+		uts,
 	}
 	for _, c := range checks {
 		if err := c(config); err != nil {
