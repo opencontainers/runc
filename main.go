@@ -228,7 +228,7 @@ func configLogrus(cmd *cli.Command) error {
 	}
 
 	if file := cmd.String("log"); file != "" {
-		f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_SYNC, 0o644)
+		f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 		if err != nil {
 			return err
 		}
