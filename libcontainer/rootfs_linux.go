@@ -466,7 +466,7 @@ func doTmpfsCopyUp(m mountEntry, mountLabel string) (Err error) {
 	hostRootFd.Close()
 	defer func() {
 		if Err != nil {
-			if err := unmount(tmpDir, unix.MNT_DETACH); err != nil {
+			if err := unmount(tmpDir); err != nil {
 				logrus.Warnf("tmpcopyup: %v", err)
 			}
 		}
@@ -1189,7 +1189,7 @@ func pivotRoot(root *os.File) error {
 		return err
 	}
 	// Perform the unmount. MNT_DETACH allows us to unmount /proc/self/cwd.
-	if err := unmount(".", unix.MNT_DETACH); err != nil {
+	if err := unmount("."); err != nil {
 		return err
 	}
 
@@ -1243,7 +1243,7 @@ func msMoveRoot(rootfs string) error {
 			}
 			return err
 		}
-		if err := unmount(p, unix.MNT_DETACH); err != nil {
+		if err := unmount(p); err != nil {
 			if !errors.Is(err, unix.EINVAL) && !errors.Is(err, unix.EPERM) {
 				return err
 			} else {
