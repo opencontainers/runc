@@ -480,14 +480,9 @@ function can_fsopen() {
 	esac
 }
 
-# Check if criu is available and working.
+# Check if criu is available.
 function have_criu() {
-	command -v criu &>/dev/null || return 1
-
-	# Workaround for https://github.com/opencontainers/runc/issues/3532.
-	local ver
-	ver=$(rpm -q criu 2>/dev/null || true)
-	run ! grep -q '^criu-3\.17-[123]\.el9' <<<"$ver"
+	command -v criu &>/dev/null
 }
 
 # Check if criu version is at least $1 (e.g. "4.3").
