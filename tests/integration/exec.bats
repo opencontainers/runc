@@ -97,6 +97,30 @@ function teardown() {
 	assert_output --partial 'HOME='
 }
 
+@test "runc exec [process from config.json at create time]" {
+	update_config '.process.env += ["RUNC_TEST_VAR=create"]'
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+
+	# Modifying config.json after the container is created has no effect.
+	update_config '.process.env += ["RUNC_TEST_VAR=modified"]'
+	run -0 runc exec test_busybox env
+	assert_output --partial "RUNC_TEST_VAR=create"
+	refute_output --partial "RUNC_TEST_VAR=modified"
+
+	# Neither has removing it.
+	mv config.json config.json.bak
+	run -0 runc exec test_busybox env
+	assert_output --partial "RUNC_TEST_VAR=create"
+	refute_output --partial "RUNC_TEST_VAR=modified"
+	mv config.json.bak config.json
+
+	# Containers created by an older runc version do not have process.json,
+	# so config.json from the bundle is used.
+	rm "$ROOT/state/test_busybox/process.json"
+	run -0 runc exec test_busybox env
+	assert_output --partial "RUNC_TEST_VAR=modified"
+}
+
 @test "runc exec --user" {
 	# --user can't work in rootless containers that don't have idmap.
 	[ $EUID -ne 0 ] && requires rootless_idmap
