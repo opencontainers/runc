@@ -76,26 +76,36 @@ func setupSpec(cmd *cli.Command) (*specs.Spec, error) {
 			return nil, err
 		}
 	}
-	spec, err := loadSpec(specConfig)
+	config := cmd.String("config")
+	if config == "" {
+		config = specConfig
+	}
+	spec, err := loadSpec(config)
 	if err != nil {
 		return nil, err
 	}
 	return spec, nil
 }
 
-func revisePidFile(cmd *cli.Command) error {
-	pidFile := cmd.String("pid-file")
-	if pidFile == "" {
-		return nil
+// revisePaths converts relative paths specified by --pid-file,
+// --console-socket, --pidfd-socket, and --config to absolute ones,
+// so that they are relative to the current directory even after
+// chdir to bundle.
+func revisePaths(cmd *cli.Command) error {
+	for _, name := range []string{"pid-file", "console-socket", "pidfd-socket", "config"} {
+		path := cmd.String(name)
+		if path == "" {
+			continue
+		}
+		path, err := filepath.Abs(path)
+		if err != nil {
+			return fmt.Errorf("can't convert --%s argument to absolute path: %w", name, err)
+		}
+		if err := cmd.Set(name, path); err != nil {
+			return err
+		}
 	}
-
-	// convert pid-file to an absolute path so we can write to the right
-	// file after chdir to bundle
-	pidFile, err := filepath.Abs(pidFile)
-	if err != nil {
-		return err
-	}
-	return cmd.Set("pid-file", pidFile)
+	return nil
 }
 
 // reviseRootDir ensures that the --root option argument,
