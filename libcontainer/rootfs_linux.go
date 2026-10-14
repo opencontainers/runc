@@ -1097,19 +1097,32 @@ func rootfsParentMountPropagation(path string, rootPropagation int) error {
 }
 
 func prepareRoot(config *configs.Config) error {
-	flag := unix.MS_SLAVE | unix.MS_REC
-	if config.RootPropagation != 0 {
-		flag = config.RootPropagation
-	}
-	if err := mount("", "/", "", uintptr(flag), ""); err != nil {
-		return err
+	hostMntns := !config.Namespaces.Contains(configs.NEWNS)
+	// In the host mount namespace, the propagation of existing mounts
+	// must not be changed, as this would affect the host.
+	if !hostMntns {
+		flag := unix.MS_SLAVE | unix.MS_REC
+		if config.RootPropagation != 0 {
+			flag = config.RootPropagation
+		}
+		if err := mount("", "/", "", uintptr(flag), ""); err != nil {
+			return err
+		}
+
+		if err := rootfsParentMountPropagation(config.Rootfs, config.RootPropagation); err != nil {
+			return err
+		}
 	}
 
-	if err := rootfsParentMountPropagation(config.Rootfs, config.RootPropagation); err != nil {
+	if err := mount(config.Rootfs, config.Rootfs, "bind", unix.MS_BIND|unix.MS_REC, ""); err != nil {
 		return err
 	}
-
-	return mount(config.Rootfs, config.Rootfs, "bind", unix.MS_BIND|unix.MS_REC, "")
+	if hostMntns {
+		// Make the new rootfs mount a slave, so that container mounts
+		// do not propagate to the host (and other mount namespaces).
+		return mount("", config.Rootfs, "", unix.MS_SLAVE|unix.MS_REC, "")
+	}
+	return nil
 }
 
 func setReadonly() error {
