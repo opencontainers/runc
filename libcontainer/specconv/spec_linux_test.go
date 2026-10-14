@@ -538,7 +538,7 @@ func TestLinuxCgroupsPathNotSpecified(t *testing.T) {
 
 func TestSpecconvExampleValidate(t *testing.T) {
 	spec := Example()
-	spec.Root.Path = "/"
+	spec.Root.Path = t.TempDir()
 
 	opts := &CreateOpts{
 		CgroupName:       "ContainerID",
@@ -563,7 +563,7 @@ func TestSpecconvExampleValidate(t *testing.T) {
 
 func TestSpecconvNoLinuxSection(t *testing.T) {
 	spec := Example()
-	spec.Root.Path = "/"
+	spec.Root.Path = t.TempDir()
 	spec.Root.Readonly = false // Requires a mount namespace.
 	spec.Linux = nil
 	spec.Hostname = ""
@@ -650,7 +650,7 @@ func TestNonZeroEUIDCompatibleSpecconvValidate(t *testing.T) {
 	}
 
 	spec := Example()
-	spec.Root.Path = "/"
+	spec.Root.Path = t.TempDir()
 	ToRootless(spec)
 
 	opts := &CreateOpts{
