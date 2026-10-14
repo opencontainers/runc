@@ -208,14 +208,16 @@ func mountViaFds(source string, srcFile *mountSource, target, dstFd, fstype stri
 	return nil
 }
 
-// unmount is a simple unix.Unmount wrapper.
-func unmount(target string, flags int) error {
+// unmount is a simple unix.Unmount wrapper, doing a lazy unmount
+// (MNT_DETACH).
+func unmount(target string) error {
+	const flags = unix.MNT_DETACH
 	err := unix.Unmount(target, flags)
 	if err != nil {
 		return &mountError{
 			op:     "unmount",
 			target: target,
-			flags:  uintptr(flags),
+			flags:  flags,
 			err:    err,
 		}
 	}

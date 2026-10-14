@@ -43,6 +43,9 @@ type Container struct {
 	state                containerState
 	created              time.Time
 	fifo                 *os.File
+	// Mount ID of container's rootfs mount created by runc in the host
+	// mount namespace (if the container does not have its own one).
+	rootfsMountID uint64
 }
 
 // State represents a running container's state
@@ -77,6 +80,11 @@ type State struct {
 	// Empty if the container does not have aindividual dedicated monitoring
 	// group.
 	IntelRdtMonPath string `json:"intel_rdt_mon_path,omitempty"`
+
+	// Mount ID of container's rootfs mount, created by runc in the host
+	// mount namespace (only set if the container does not have its own
+	// mount namespace). Used to unmount it once the container is destroyed.
+	RootfsMountID uint64 `json:"rootfs_mount_id,omitempty"`
 }
 
 // ID returns the container's unique ID
@@ -991,6 +999,7 @@ func (c *Container) currentState() *State {
 		IntelRdtMonPath:     intelRdtMonPath,
 		NamespacePaths:      make(map[configs.NamespaceType]string),
 		ExternalDescriptors: externalDescriptors,
+		RootfsMountID:       c.rootfsMountID,
 	}
 	if pid > 0 {
 		for _, ns := range c.config.Namespaces {

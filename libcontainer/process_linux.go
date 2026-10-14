@@ -1014,6 +1014,12 @@ func (p *initProcess) start() (retErr error) {
 				return err
 			}
 		case procHooks:
+			// At this point, the container rootfs is mounted. In case
+			// this is done in the host mount namespace, remember the
+			// mount, so it can be unmounted on container destroy.
+			if !p.config.Config.Namespaces.Contains(configs.NEWNS) {
+				p.container.rootfsMountID = mountID(p.config.Config.Rootfs)
+			}
 			// Setup cgroup before prestart hook, so that the prestart hook could apply cgroup permissions.
 			if err := p.manager.Set(p.config.Config.Cgroups.Resources); err != nil {
 				return fmt.Errorf("error setting cgroup config for procHooks process: %w", err)

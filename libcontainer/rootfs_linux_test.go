@@ -208,3 +208,20 @@ func TestNeedsSetupDevStrangeSourceDest(t *testing.T) {
 		t.Fatal("expected needsSetupDev to be true, got false")
 	}
 }
+
+func TestMountIDFromMountinfo(t *testing.T) {
+	var st unix.Statx_t
+	if err := unix.Statx(unix.AT_FDCWD, "/", 0, unix.STATX_MNT_ID, &st); err != nil || st.Mask&unix.STATX_MNT_ID == 0 {
+		t.Skip("STATX_MNT_ID not supported")
+	}
+	for _, path := range []string{"/", "/proc", "/proc/self/fd", "/sys", "/sys/fs/cgroup", "/dev", "/dev/shm", "/etc", t.TempDir()} {
+		want := mountID(path)
+		if want == 0 {
+			t.Errorf("mountID(%q): got 0", path)
+			continue
+		}
+		if got := mountIDFromMountinfo(path); got != want {
+			t.Errorf("mountIDFromMountinfo(%q): got %d, want %d", path, got, want)
+		}
+	}
+}
