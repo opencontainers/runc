@@ -44,7 +44,7 @@ ifneq (,$(filter $(GOARCH),386 amd64 arm arm64 loong64 ppc64le riscv64 s390x))
 	endif
 endif
 GO_BUILD := $(GO) build $(TRIMPATH) $(GO_BUILDMODE) \
-	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) urfave_cli_no_template" \
+	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) urfave_cli_no_template godbus_no_tcp" \
 	-ldflags "$(LDFLAGS_COMMON) $(EXTRA_LDFLAGS)"
 
 GO_BUILDMODE_STATIC :=
@@ -60,7 +60,7 @@ ifneq (,$(filter $(GOARCH),arm64 amd64))
 endif
 # Enable static PIE binaries on supported platforms.
 GO_BUILD_STATIC := $(GO) build $(TRIMPATH) $(GO_BUILDMODE_STATIC) \
-	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) urfave_cli_no_template netgo osusergo" \
+	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) urfave_cli_no_template godbus_no_tcp netgo osusergo" \
 	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS_STATIC) $(EXTRA_LDFLAGS)"
 
 GPG_KEYID ?= cyphar@cyphar.com
