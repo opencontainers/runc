@@ -78,7 +78,7 @@ func initMaps() {
 			"async":         {true, unix.MS_SYNCHRONOUS},
 			"atime":         {true, unix.MS_NOATIME},
 			"bind":          {false, unix.MS_BIND},
-			"defaults":      {false, 0},
+			"defaults":      {false, 0}, // no-op, must not be passed as data
 			"dev":           {true, unix.MS_NODEV},
 			"diratime":      {true, unix.MS_NODIRATIME},
 			"dirsync":       {false, unix.MS_DIRSYNC},
@@ -1142,9 +1142,8 @@ func parseMountOptions(options []string) *configs.Mount {
 	initMaps()
 	for _, o := range options {
 		// If the option does not exist in the mountFlags table,
-		// or the flag is not supported on the platform,
 		// then it is a data value for a specific fs type.
-		if f, exists := mountFlags[o]; exists && f.flag != 0 {
+		if f, exists := mountFlags[o]; exists {
 			// FIXME: The *atime flags are special (they are more of an enum
 			// with quite hairy semantics) and thus arguably setting some of
 			// them should clear unrelated flags.

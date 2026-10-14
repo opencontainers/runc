@@ -1027,3 +1027,44 @@ func TestCreateNetDevices(t *testing.T) {
 		})
 	}
 }
+
+func TestParseMountOptions(t *testing.T) {
+	tests := []struct {
+		name    string
+		options []string
+		flags   int
+		cleared int
+		data    string
+	}{
+		{
+			name:    "defaults is not data",
+			options: []string{"defaults", "size=1m", "mode=777"},
+			data:    "size=1m,mode=777",
+		},
+		{
+			name:    "unknown options are data",
+			options: []string{"defaults", "notarealoption", "size=1m"},
+			data:    "notarealoption,size=1m",
+		},
+		{
+			name:    "flags are set and cleared",
+			options: []string{"ro", "nodev", "rw"},
+			flags:   unix.MS_NODEV,
+			cleared: unix.MS_RDONLY,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			m := parseMountOptions(tc.options)
+			if m.Flags != tc.flags {
+				t.Errorf("expected flags %#x, got %#x", tc.flags, m.Flags)
+			}
+			if m.ClearedFlags != tc.cleared {
+				t.Errorf("expected cleared flags %#x, got %#x", tc.cleared, m.ClearedFlags)
+			}
+			if m.Data != tc.data {
+				t.Errorf("expected data %q, got %q", tc.data, m.Data)
+			}
+		})
+	}
+}
