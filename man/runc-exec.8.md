@@ -6,7 +6,7 @@
 # SYNOPSIS
 **runc exec** [_option_ ...] _container-id_ [--] _command_ [_arg_ ...]
 
-**runc exec** [_option_ ...] **-p** _process.json_ _container-id_
+**runc exec** [_option_ ...] **-p** _process.json_ _container-id_ [[--] _command_ [_arg_ ...]]
 
 # OPTIONS
 **--console-socket** _path_
@@ -35,6 +35,8 @@ _gid_).
 get them from a _process.json_, a JSON file containing the process
 specification as defined by the
 [OCI runtime spec](https://github.com/opencontainers/runtime-spec/blob/master/config.md#process).
+Options specified on the command line (as well as _command_, if specified)
+override the values from _process.json_.
 
 **--detach**|**-d**
 : Detach from the container's process.
