@@ -121,6 +121,24 @@ func reviseRootDir(cmd *cli.Command) error {
 	return cmd.Set("root", root)
 }
 
+// reviseCgroupManager checks the --cgroup-manager option argument, and
+// converts the deprecated --systemd-cgroup option to --cgroup-manager=systemd.
+func reviseCgroupManager(cmd *cli.Command) error {
+	manager := cmd.String("cgroup-manager")
+	switch manager {
+	case "cgroupfs", "systemd":
+	default:
+		return fmt.Errorf("invalid --cgroup-manager value %q (must be 'cgroupfs' or 'systemd')", manager)
+	}
+	if !cmd.Bool("systemd-cgroup") {
+		return nil
+	}
+	if cmd.IsSet("cgroup-manager") && manager != "systemd" {
+		return fmt.Errorf("--systemd-cgroup conflicts with --cgroup-manager=%s", manager)
+	}
+	return cmd.Set("cgroup-manager", "systemd")
+}
+
 // parseBoolOrAuto returns (nil, nil) if s is empty or "auto"
 func parseBoolOrAuto(s string) (*bool, error) {
 	if s == "" || strings.ToLower(s) == "auto" {

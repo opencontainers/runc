@@ -1,9 +1,9 @@
 ## systemd cgroup driver
 
 By default, runc creates cgroups and sets cgroup limits on its own (this mode
-is known as fs cgroup driver). When `--systemd-cgroup` global option is given
-(as in e.g. `runc --systemd-cgroup run ...`), runc switches to systemd cgroup
-driver. This document describes its features and peculiarities.
+is known as fs cgroup driver). When `--cgroup-manager=systemd` global option is
+given (as in e.g. `runc --cgroup-manager=systemd run ...`), runc switches to
+systemd cgroup driver. This document describes its features and peculiarities.
 
 ### systemd unit name and placement
 

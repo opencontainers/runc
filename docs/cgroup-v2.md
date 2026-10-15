@@ -28,7 +28,7 @@ Kernel older than 5.2 is not recommended due to lack of freezer.
 Notably, kernel older than 4.15 MUST NOT be used (unless you are running containers with user namespaces), as it lacks support for controlling permissions of devices.
 
 ### Systemd
-On cgroup v2 hosts, it is highly recommended to run runc with the systemd cgroup driver (`runc --systemd-cgroup`), though not mandatory.
+On cgroup v2 hosts, it is highly recommended to run runc with the systemd cgroup driver (`runc --cgroup-manager=systemd`), though not mandatory.
 
 The recommended systemd version is 244 or later. Older systemd does not support delegation of `cpuset` controller.
 
@@ -45,7 +45,7 @@ On cgroup v2 hosts, rootless runc can talk to systemd to get cgroup permissions 
 ```bash
 runc spec --rootless
 jq '.linux.cgroupsPath="user.slice:runc:foo"' config.json | sponge config.json
-runc --systemd-cgroup run foo
+runc --cgroup-manager=systemd run foo
 ```
 
 The container processes are executed in a cgroup like `/user.slice/user-$(id -u).slice/user@$(id -u).service/user.slice/runc-foo.scope`.
