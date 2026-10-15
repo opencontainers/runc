@@ -178,7 +178,6 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 		s.IntelRdt.Schemata = is.Schemata
 	}
 
-	s.NetworkInterfaces = ls.Interfaces
 	return &s
 }
 
