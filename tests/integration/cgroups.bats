@@ -15,6 +15,27 @@ function setup() {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
 }
 
+@test "runc --cgroup-manager with an invalid value fails" {
+	run -1 runc --cgroup-manager=foo list
+	assert_output --partial 'invalid --cgroup-manager value'
+}
+
+@test "runc --systemd-cgroup conflicts with --cgroup-manager=cgroupfs" {
+	run -1 runc --systemd-cgroup --cgroup-manager=cgroupfs list
+	assert_output --partial "--systemd-cgroup conflicts with --cgroup-manager=cgroupfs"
+}
+
+@test "runc --systemd-cgroup is the same as --cgroup-manager=systemd" {
+	requires systemd
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+
+	set_cgroups_path
+
+	# Not using the runc wrapper, as it adds --cgroup-manager=systemd.
+	run -0 "$RUNC" --root "$ROOT/state" --systemd-cgroup run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_systemd
+	check_systemd_value "ActiveState" "active"
+}
+
 @test "runc create (rootless + no limits + cgrouppath + no permission) fails with permission error" {
 	requires rootless rootless_no_cgroup
 

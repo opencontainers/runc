@@ -71,7 +71,7 @@ dnf clean all
 # Setup rootless user.
 "$SCRIPTDIR"/setup_rootless.sh
 
-# Delegate all cgroup v2 controllers to rootless user via --systemd-cgroup
+# Delegate all cgroup v2 controllers to rootless user via --cgroup-manager=systemd
 if [ -e /sys/fs/cgroup/cgroup.controllers ]; then
 	mkdir -p /etc/systemd/system/user@.service.d
 	cat >/etc/systemd/system/user@.service.d/delegate.conf <<'EOF'
