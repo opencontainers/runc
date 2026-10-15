@@ -215,37 +215,24 @@ func IsCloned(exe *os.File) bool {
 // /proc/self/exe). This binary can then be used for "runc init" in order to
 // make sure the container process can never resolve the original runc binary.
 // For more details on why this is necessary, see CVE-2019-5736.
-func CloneSelfExe(tmpDir string) (*os.File, error) {
-	// Try to create a temporary overlayfs to produce a readonly version of
-	// /proc/self/exe that cannot be "unwrapped" by the container. In contrast
-	// to CloneBinary, this technique does not require any extra memory usage
-	// and does not have the (fairly noticeable) performance impact of copying
-	// a large binary file into a memfd.
-	//
-	// Based on some basic performance testing, the overlayfs approach has
-	// effectively no performance overhead (it is on par with both
-	// MS_BIND+MS_RDONLY and no binary cloning at all) while memfd copying adds
-	// around ~60% overhead during container startup.
-	overlayFile, err := sealedOverlayfs("/proc/self/exe", tmpDir)
-	if err == nil {
-		logrus.Debug("runc exeseal: using overlayfs for sealed /proc/self/exe") // used for tests
-		return overlayFile, nil
+func CloneSelfExe(tmpDir string, mode string) (*os.File, error) {
+	strategies := strategiesFor(mode)
+	if len(strategies) == 0 {
+		return nil, fmt.Errorf("internal: no strategies for clone-self-exe mode %q", mode)
 	}
-	logrus.WithError(err).Debugf("could not use overlayfs for /proc/self/exe sealing -- falling back to making a temporary copy")
 
-	selfExe, err := os.Open("/proc/self/exe")
-	if err != nil {
-		return nil, fmt.Errorf("opening current binary: %w", err)
+	var lastErr error
+	for i, strategy := range strategies {
+		f, err := strategy(tmpDir)
+		if err == nil {
+			return f, nil
+		}
+		lastErr = err
+		if i < len(strategies)-1 {
+			logrus.WithError(err).Debugf("clone-self-exe strategy %d/%d failed, trying next", i+1, len(strategies))
+		}
 	}
-	defer selfExe.Close()
-
-	stat, err := selfExe.Stat()
-	if err != nil {
-		return nil, fmt.Errorf("checking /proc/self/exe size: %w", err)
-	}
-	size := stat.Size()
-
-	return CloneBinary(selfExe, size, "/proc/self/exe", tmpDir)
+	return nil, fmt.Errorf("clone-self-exe failed (mode=%q): %w", mode, lastErr)
 }
 
 // IsSelfExeCloned returns whether /proc/self/exe is a cloned binary that can
