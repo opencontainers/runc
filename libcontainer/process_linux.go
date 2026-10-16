@@ -25,6 +25,7 @@ import (
 
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/cgroups/fs2"
+	"github.com/opencontainers/cgroups/fscommon"
 	"github.com/opencontainers/runc/internal/cmsg"
 	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -444,7 +445,12 @@ func (p *setnsProcess) startWithCgroupFD() error {
 
 	cmdCopy := cloneCmd(p.cmd)
 	err = p.startWithCPUAffinity()
-	if err != nil && p.cmd.SysProcAttr.UseCgroupFD {
+	// Do not retry on EAGAIN. The most probable cause is the container
+	// cgroup pids limit being hit, and retrying without CLONE_INTO_CGROUP
+	// would bypass the limit (since moving a process into a cgroup is not
+	// subject to the pids limit). Other causes (RLIMIT_NPROC, threads-max,
+	// pid_max) do not depend on CLONE_INTO_CGROUP, so retrying won't help.
+	if err != nil && p.cmd.SysProcAttr.UseCgroupFD && !errors.Is(err, unix.EAGAIN) {
 		logrus.Debugf("exec with CLONE_INTO_CGROUP failed: %v; retrying without", err)
 		// SysProcAttr.CgroupFD is never used when UseCgroupFD is unset.
 		cmdCopy.SysProcAttr.UseCgroupFD = false
@@ -456,11 +462,32 @@ func (p *setnsProcess) startWithCgroupFD() error {
 	return err
 }
 
+// pidsMaxCount returns the number of times a fork or clone failed
+// because the pids cgroup limit was reached.
+func pidsMaxCount(m cgroups.Manager) (uint64, error) {
+	path := m.Path("pids")
+	if path == "" {
+		return 0, errors.New("no pids cgroup")
+	}
+	return fscommon.GetValueByKey(path, "pids.events", "max")
+}
+
 func (p *setnsProcess) start() (retErr error) {
 	defer p.comm.closeParent()
 
-	// Get the "before" value of oom kill count.
+	// Get the "before" values of oom kill and pids limit hit counts.
 	oom, _ := p.manager.OOMKillCount()
+	pidsMax, pidsErr := pidsMaxCount(p.manager)
+
+	defer func() {
+		if retErr == nil || pidsErr != nil {
+			return
+		}
+		if newPidsMax, err := pidsMaxCount(p.manager); err == nil && newPidsMax != pidsMax {
+			// Someone in this cgroup failed to fork, this _might_ be us.
+			retErr = fmt.Errorf("%w (possibly hit pids limit)", retErr)
+		}
+	}()
 
 	if err := p.startWithCgroupFD(); err != nil {
 		return fmt.Errorf("error starting setns process: %w", err)
