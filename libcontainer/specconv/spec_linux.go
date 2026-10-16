@@ -639,12 +639,6 @@ func toConfigIDMap(specMaps []specs.LinuxIDMapping) []configs.IDMap {
 }
 
 func createLibcontainerMount(cwd string, m specs.Mount) (*configs.Mount, error) {
-	if !filepath.IsAbs(m.Destination) {
-		// Relax validation for backward compatibility
-		// TODO (runc v1.x.x): change warning to an error
-		// return nil, fmt.Errorf("mount destination %s is not absolute", m.Destination)
-		logrus.Warnf("mount destination %s is not absolute. Support for non-absolute mount destinations will be removed in a future release.", m.Destination)
-	}
 	mnt := parseMountOptions(m.Options)
 
 	mnt.Destination = m.Destination

@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/opencontainers/cgroups"
+	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	selinux "github.com/opencontainers/selinux/go-selinux"
@@ -424,6 +425,15 @@ func mountsWarn(config *configs.Config) error {
 	for _, m := range config.Mounts {
 		if !filepath.IsAbs(m.Destination) {
 			return fmt.Errorf("mount %+v: relative destination path is **deprecated**, using it as relative to /", m)
+		}
+		// For legacy reasons, a destination prefixed with the rootfs path
+		// is accepted, and the prefix is stripped. This is not described
+		// by the runtime spec, which says the destination is a path inside
+		// the container.
+		//
+		// TODO (runc v1.8): make it an error.
+		if config.Rootfs != "/" && pathrs.IsLexicallyInRoot(config.Rootfs, filepath.Clean(m.Destination)) {
+			return fmt.Errorf("mount %+v: destination path prefixed with rootfs is **deprecated** and will be removed in runc 1.8, stripping the prefix", m)
 		}
 	}
 	return nil

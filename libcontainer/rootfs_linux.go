@@ -530,6 +530,8 @@ func statfsToMountFlags(st unix.Statfs_t) int {
 
 func (m *mountEntry) createOpenMountpoint(root *os.File) (Err error) {
 	rootfs := root.Name()
+	// TODO (runc v1.8): remove support for destinations prefixed with rootfs
+	// (deprecated in runc v1.6, see mountsWarn in configs/validate).
 	unsafePath := pathrs.LexicallyStripRoot(rootfs, m.Destination)
 	dstFile, err := pathrs.OpenInRoot(root, unsafePath, unix.O_PATH)
 	defer func() {
@@ -618,6 +620,8 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		//       stop all of these symlink-exchange attacks.
 		rootfs := c.root.Name()
 		dest := filepath.Clean(m.Destination)
+		// TODO (runc v1.8): remove support for destinations prefixed with
+		// rootfs (deprecated in runc v1.6, see mountsWarn in configs/validate).
 		if !pathrs.IsLexicallyInRoot(rootfs, dest) {
 			// Do not use securejoin as it resolves symlinks.
 			dest = filepath.Join(rootfs, dest)
