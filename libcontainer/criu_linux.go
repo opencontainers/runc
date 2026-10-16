@@ -109,7 +109,7 @@ func (c *Container) checkCriuVersion(minVersion int) error {
 const descriptorsFilename = "descriptors.json"
 
 func (c *Container) addCriuDumpMount(req *criurpc.CriuReq, m *configs.Mount) {
-	mountDest := strings.TrimPrefix(m.Destination, c.config.Rootfs)
+	mountDest := m.Destination
 	if dest, err := securejoin.SecureJoin(c.config.Rootfs, mountDest); err == nil {
 		mountDest = dest[len(c.config.Rootfs):]
 	}
@@ -505,7 +505,7 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 }
 
 func (c *Container) addCriuRestoreMount(req *criurpc.CriuReq, m *configs.Mount) {
-	mountDest := strings.TrimPrefix(m.Destination, c.config.Rootfs)
+	mountDest := m.Destination
 	if dest, err := securejoin.SecureJoin(c.config.Rootfs, mountDest); err == nil {
 		mountDest = dest[len(c.config.Rootfs):]
 	}

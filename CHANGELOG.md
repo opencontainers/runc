@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking ###
+- A mount destination prefixed with the container rootfs path is no longer
+  treated specially (previously, the prefix was stripped). As the runtime spec
+  says, the destination is a path inside the container, and it is now used
+  as such. (#5556)
+
 ### Deprecated ###
 - `libcontainer.Stats.Interfaces` and `types.Stats.NetworkInterfaces` (shown
   as `network_interfaces` in `runc events --stats` output) are deprecated, as
