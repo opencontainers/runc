@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   as `network_interfaces` in `runc events --stats` output) are deprecated, as
   they are always empty since the removal of veth network strategy in runc
   1.0.0-rc6. (#5523)
+- A mount destination prefixed with the container rootfs path (which runc
+  strips) is deprecated, as the runtime spec says the destination is a path
+  inside the container. A warning is now printed, and the support will be
+  removed in runc 1.8. (#5556)
 
 ## [1.6.0-rc.1] - 2026-10-06
 

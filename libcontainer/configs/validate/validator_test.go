@@ -539,6 +539,40 @@ func TestValidateMounts(t *testing.T) {
 	}
 }
 
+func TestMountsWarn(t *testing.T) {
+	testCases := []struct {
+		isWarn bool
+		rootfs string
+		dest   string
+	}{
+		{isWarn: false, rootfs: "/var", dest: "/abs/path"},
+		{isWarn: false, rootfs: "/var", dest: "/variable"},
+		{isWarn: false, rootfs: "/", dest: "/abs/path"},
+		{isWarn: true, rootfs: "/var", dest: "rel/path"},
+		{isWarn: true, rootfs: "/var", dest: "/var"},
+		{isWarn: true, rootfs: "/var", dest: "/var/abs/path"},
+		{isWarn: true, rootfs: "/var", dest: "/var/abs/path/"},
+		{isWarn: true, rootfs: "/var", dest: "/abs/../var/path"},
+	}
+
+	for _, tc := range testCases {
+		config := &configs.Config{
+			Rootfs: tc.rootfs,
+			Mounts: []*configs.Mount{
+				{Destination: tc.dest},
+			},
+		}
+
+		err := mountsWarn(config)
+		if tc.isWarn && err == nil {
+			t.Errorf("rootfs: %s, mount dest: %s, expected warning, got nil", tc.rootfs, tc.dest)
+		}
+		if !tc.isWarn && err != nil {
+			t.Errorf("rootfs: %s, mount dest: %s, expected nil, got warning %v", tc.rootfs, tc.dest, err)
+		}
+	}
+}
+
 func TestValidateBindMounts(t *testing.T) {
 	testCases := []struct {
 		isErr bool
