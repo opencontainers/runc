@@ -1243,6 +1243,12 @@ func msMoveRoot(rootfs string) error {
 		}
 	}
 
+	// If "/" is shared (e.g. rootfsPropagation is set to "rshared"),
+	// the move below propagates to the host, mounting the container
+	// rootfs on top of the host's "/". Make "/" a slave to prevent that.
+	if err := mount("", "/", "", unix.MS_SLAVE, ""); err != nil {
+		return err
+	}
 	// Move the rootfs on top of "/" in our mount namespace.
 	if err := mount(rootfs, "/", "", unix.MS_MOVE, ""); err != nil {
 		return err
