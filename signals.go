@@ -11,7 +11,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const signalBufferSize = 2048
+const (
+	signalBufferSize = 2048
+	numSig           = 65 // Max signal number + 1 (_NSIG in the kernel).
+)
 
 // newSignalHandler returns a signal handler for processing SIGCHLD and SIGWINCH signals
 // while still forwarding all other signals to the process.
@@ -28,8 +31,23 @@ func newSignalHandler() chan *signalHandler {
 	// setup, except for SIGCHLD which is very important (see #5208).
 	signal.Notify(s, unix.SIGCHLD)
 	go func() {
-		// handle all signals for the process.
-		signal.Notify(s)
+		// Handle all signals for the process, except for SIGTTIN and
+		// SIGTTOU, which are sent by the kernel when runc, being in a
+		// background process group, reads from or writes to its
+		// controlling terminal. For these, the default action (stop)
+		// should be used, like for any other program, rather than
+		// forwarding them to the container (which results in a busy
+		// loop, as the read or write is retried).
+		//
+		// Note that signal.Reset can not be used here, since it does not
+		// restore the default action for these signals.
+		sigs := make([]os.Signal, 0, numSig)
+		for i := 1; i < numSig; i++ {
+			if sig := unix.Signal(i); sig != unix.SIGTTIN && sig != unix.SIGTTOU {
+				sigs = append(sigs, sig)
+			}
+		}
+		signal.Notify(s, sigs...)
 		handler <- &signalHandler{
 			signals: s,
 		}
