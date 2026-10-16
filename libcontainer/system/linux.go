@@ -87,6 +87,8 @@ func GetSubreaper() (int, error) {
 }
 
 func ExecutableMemfd(comment string, flags int) (*os.File, error) {
+	// Make sure we always set MFD_CLOEXEC.
+	flags |= unix.MFD_CLOEXEC
 	// Try to use MFD_EXEC first. On pre-6.3 kernels we get -EINVAL for this
 	// flag. On post-6.3 kernels, with vm.memfd_noexec=1 this ensures we get an
 	// executable memfd. For vm.memfd_noexec=2 this is a bit more complicated.
