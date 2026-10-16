@@ -42,6 +42,8 @@ func TestExecIn(t *testing.T) {
 	_ = stdinR.Close()
 	defer stdinW.Close()
 	ok(t, err)
+	// Make sure ps output below contains cat.
+	waitExec(t, process, "cat")
 
 	buffers := newStdBuffers()
 	ps := &libcontainer.Process{
@@ -253,6 +255,8 @@ func TestExecInTTY(t *testing.T) {
 		}
 	}()
 	ok(t, err)
+	// Make sure ps output below contains cat.
+	waitExec(t, process, "cat")
 
 	ps := &libcontainer.Process{
 		Cwd:  "/",
