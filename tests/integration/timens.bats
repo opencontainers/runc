@@ -14,7 +14,7 @@ function teardown() {
 	requires timens
 
 	update_config '.process.args = ["cat", "/proc/self/timens_offsets"]'
-	update_config '.linux.namespaces = .linux.namespace | map(select(.type != "time"))'
+	update_config '.linux.namespaces |= map(select(.type != "time"))'
 	update_config '.linux.timeOffsets = {
 			"monotonic": { "secs": 7881, "nanosecs": 2718281 },
 			"boottime": { "secs": 1337, "nanosecs": 3141519 }
