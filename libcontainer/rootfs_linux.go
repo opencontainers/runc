@@ -993,9 +993,7 @@ func createDeviceNode(rootFd *os.File, node *devices.Device, bind bool) error {
 		return bindMountDeviceNode(destDir, destName, node)
 	}
 	if err := mknodDevice(destDir, destName, node); err != nil {
-		if errors.Is(err, os.ErrExist) {
-			return nil
-		} else if errors.Is(err, os.ErrPermission) {
+		if errors.Is(err, os.ErrPermission) {
 			return bindMountDeviceNode(destDir, destName, node)
 		}
 		return err
@@ -1019,33 +1017,47 @@ func mknodDevice(destDir *os.File, destName string, node *devices.Device) error 
 	if err != nil {
 		return err
 	}
+	exists := false
 	if err := unix.Mknodat(int(destDir.Fd()), destName, uint32(fileMode), int(dev)); err != nil {
-		return &os.PathError{Op: "mknodat", Path: filepath.Join(destDir.Name(), destName), Err: err}
+		if !errors.Is(err, unix.EEXIST) {
+			return &os.PathError{Op: "mknodat", Path: filepath.Join(destDir.Name(), destName), Err: err}
+		}
+		// The inode already exists; the runtime spec requires an error
+		// if it does not match the requested device, so check it below.
+		exists = true
+	}
+	what := "new"
+	if exists {
+		what = "existing"
 	}
 
 	// Get a handle and verify that it matches the expected inode type and
 	// major:minor before we operate on it.
 	devFile, err := utils.Openat(destDir, destName, unix.O_NOFOLLOW|unix.O_PATH, 0)
 	if err != nil {
-		return fmt.Errorf("open new %c device inode %s: %w", node.Type, node.Path, err)
+		return fmt.Errorf("open %s %c device inode %s: %w", what, node.Type, node.Path, err)
 	}
 	defer devFile.Close()
 
 	if err := sys.VerifyInode(devFile, func(stat *unix.Stat_t, _ *unix.Statfs_t) error {
 		if stat.Mode&unix.S_IFMT != uint32(fileMode)&unix.S_IFMT {
-			return fmt.Errorf("new %c device inode %s has incorrect ftype: %#x doesn't match expected %#v",
-				node.Type, node.Path,
+			return fmt.Errorf("%s %c device inode %s has incorrect ftype: %#x doesn't match expected %#v",
+				what, node.Type, node.Path,
 				stat.Mode&unix.S_IFMT, fileMode&unix.S_IFMT)
 		}
-		if rdev := uint64(stat.Rdev); rdev != dev { //nolint:unconvert // Rdev is uint32 on MIPS.
-			return fmt.Errorf("new %c device inode %s has incorrect major:minor: %d:%d doesn't match expected %d:%d",
-				node.Type, node.Path,
+		if rdev := uint64(stat.Rdev); node.Type != devices.FifoDevice && rdev != dev { //nolint:unconvert // Rdev is uint32 on MIPS.
+			return fmt.Errorf("%s %c device inode %s has incorrect major:minor: %d:%d doesn't match expected %d:%d",
+				what, node.Type, node.Path,
 				unix.Major(rdev), unix.Minor(rdev),
 				unix.Major(dev), unix.Minor(dev))
 		}
 		return nil
 	}); err != nil {
 		return err
+	}
+	if exists {
+		// Leave the existing inode's mode and owner as is.
+		return nil
 	}
 
 	// Ensure permission bits (can be different because of umask).
