@@ -3,6 +3,8 @@ package libcontainer
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/sirupsen/logrus"
@@ -126,12 +128,6 @@ func devChangeNetNamespace(name, nsPath string, device configs.LinuxNetDevice) e
 	attr := nl.NewRtAttr(unix.IFLA_NET_NS_FD, val)
 	req.AddData(attr)
 
-	_, err = req.Execute(unix.NETLINK_ROUTE, 0)
-	// recover same behavior on vishvananda/netlink@1.2.1 and do not fail when the kernel returns NLM_F_DUMP_INTR.
-	if err != nil && !errors.Is(err, netlink.ErrDumpInterrupted) {
-		return fmt.Errorf("fail to move network device %s to network namespace %s: %w", name, nsPath, err)
-	}
-
 	// To avoid us the husle with goroutines when joining a netns,
 	// we let the library create the socket in the namespace for us.
 	nhNs, err := netlink.NewHandleAt(ns)
@@ -140,7 +136,29 @@ func devChangeNetNamespace(name, nsPath string, device configs.LinuxNetDevice) e
 	}
 	defer nhNs.Close()
 
-	nsLink, err := nhNs.LinkByName(newName)
+	// The kernel replaces %d in the new name with the lowest number not yet
+	// used in the target namespace, so record the names in use there to find
+	// the moved interface afterwards.
+	var usedNames map[string]bool
+	if strings.Contains(newName, "%d") {
+		usedNames, err = linkNames(nhNs)
+		if err != nil {
+			return fmt.Errorf("fail to list interfaces on namespace %s: %w", nsPath, err)
+		}
+	}
+
+	_, err = req.Execute(unix.NETLINK_ROUTE, 0)
+	// recover same behavior on vishvananda/netlink@1.2.1 and do not fail when the kernel returns NLM_F_DUMP_INTR.
+	if err != nil && !errors.Is(err, netlink.ErrDumpInterrupted) {
+		return fmt.Errorf("fail to move network device %s to network namespace %s: %w", name, nsPath, err)
+	}
+
+	var nsLink netlink.Link
+	if usedNames != nil {
+		nsLink, err = linkByTemplate(nhNs, newName, usedNames)
+	} else {
+		nsLink, err = nhNs.LinkByName(newName)
+	}
 	// recover same behavior on vishvananda/netlink@1.2.1 and do not fail when the kernel returns NLM_F_DUMP_INTR.
 	if err != nil && !errors.Is(err, netlink.ErrDumpInterrupted) {
 		return fmt.Errorf("link not found for interface %s on namespace %s : %w", newName, nsPath, err)
@@ -179,4 +197,40 @@ func devChangeNetNamespace(name, nsPath string, device configs.LinuxNetDevice) e
 	}
 
 	return nil
+}
+
+// linkNames returns the names of all links visible through h.
+func linkNames(h *netlink.Handle) (map[string]bool, error) {
+	links, err := h.LinkList()
+	// recover same behavior on vishvananda/netlink@1.2.1 and do not fail when the kernel returns NLM_F_DUMP_INTR.
+	if err != nil && !errors.Is(err, netlink.ErrDumpInterrupted) {
+		return nil, err
+	}
+	names := make(map[string]bool, len(links))
+	for _, link := range links {
+		names[link.Attrs().Name] = true
+	}
+	return names, nil
+}
+
+// linkByTemplate returns the link visible through h whose name is template
+// with %d replaced by a number, and which is not in usedNames.
+func linkByTemplate(h *netlink.Handle, template string, usedNames map[string]bool) (netlink.Link, error) {
+	links, err := h.LinkList()
+	// recover same behavior on vishvananda/netlink@1.2.1 and do not fail when the kernel returns NLM_F_DUMP_INTR.
+	if err != nil && !errors.Is(err, netlink.ErrDumpInterrupted) {
+		return nil, err
+	}
+	prefix, suffix, _ := strings.Cut(template, "%d")
+	for _, link := range links {
+		name := link.Attrs().Name
+		if usedNames[name] || len(name) <= len(prefix)+len(suffix) ||
+			!strings.HasPrefix(name, prefix) || !strings.HasSuffix(name, suffix) {
+			continue
+		}
+		if _, err := strconv.Atoi(name[len(prefix) : len(name)-len(suffix)]); err == nil {
+			return link, nil
+		}
+	}
+	return nil, fmt.Errorf("no new interface matching %s", template)
 }
