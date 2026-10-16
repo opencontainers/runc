@@ -16,7 +16,7 @@ function test_events() {
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 	set_cgroups_path
 
-	local status interval retry_every=1
+	local interval retry_every=1
 	if [ $# -eq 2 ]; then
 		interval="$1"
 		retry_every="$2"
@@ -35,9 +35,7 @@ function test_events() {
 	) &
 	wait # for both subshells to finish
 
-	[ -e events.log ]
-
-	output=$(head -1 events.log)
+	run -0 head -n 1 events.log
 	assert_output --regexp '^\{"type":"stats","id":"test_busybox",'
 	assert_output --partial "data"
 }
