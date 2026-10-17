@@ -111,7 +111,7 @@ static-bin:
 	$(GO_BUILD_STATIC) -o runc .
 
 .PHONY: releaseall
-releaseall: RELEASE_ARGS := "-a 386 -a amd64 -a arm64 -a armel -a armhf -a ppc64le -a riscv64 -a s390x"
+releaseall: RELEASE_ARGS := "-a amd64 -a arm64 -a armel -a armhf -a ppc64le -a riscv64 -a s390x"
 releaseall: release
 
 .PHONY: release

@@ -26,55 +26,58 @@ function get_platform() {
 	echo "$PLATFORM"
 }
 
-# set_cross_vars sets a few environment variables used for cross-compiling,
-# based on the architecture specified in $1.
+# set_cross_vars sets a few environment variables used for cross-compiling
+# (against musl libc, except for s390x), based on the architecture specified
+# in $1.
+#
+# It relies on Debian's gcc cross-compilers and musl-dev packages (for each
+# target architecture), and Linux kernel headers available to musl (see
+# Dockerfile).
 function set_cross_vars() {
 	GOARCH="$1" # default, may be overridden below
-	local cc_flags=""
+	local musl
 	unset GOARM
 
 	PLATFORM="$(get_platform)"
-	[[ "$PLATFORM" == *suse* ]] && is_suse=1
 
 	case "$1" in
-	386)
-		# Always use the 64-bit compiler to build the 386 binary, which works
-		# for the more common cross-build method for x86 (namely, the
-		# equivalent of dpkg --add-architecture).
-		local cpu_type
-		if [ -v is_suse ]; then
-			cpu_type=i586
-		else
-			cpu_type=i686
-		fi
-		HOST=x86_64-${PLATFORM}
-		# Pass these via CC rather than CFLAGS, so that autoconf
-		# still uses its default CFLAGS (-g -O2) when CFLAGS is unset.
-		cc_flags=" -m32 -march=$cpu_type"
-		;;
 	amd64)
 		HOST=x86_64-${PLATFORM}
+		musl=x86_64-linux-musl
 		;;
 	arm64)
 		HOST=aarch64-${PLATFORM}
+		musl=aarch64-linux-musl
 		;;
 	armel)
 		HOST=arm-${PLATFORM}eabi
+		musl=arm-linux-musleabi
 		GOARCH=arm
 		GOARM=5
 		;;
 	armhf)
 		HOST=arm-${PLATFORM}eabihf
+		musl=arm-linux-musleabihf
 		GOARCH=arm
 		GOARM=7
 		;;
 	ppc64le)
 		HOST=powerpc64le-${PLATFORM}
+		musl=powerpc64le-linux-musl
 		;;
 	riscv64)
 		HOST=riscv64-${PLATFORM}
+		musl=riscv64-linux-musl
 		;;
 	s390x)
+		# Use glibc, since for s390x-unknown-linux-musl (a Tier 3 Rust
+		# target) there is no prebuilt Rust standard library (needed to
+		# build libpathrs) nor unwinder, and libpathrs does not compile.
+		#
+		# TODO: switch to musl once a libpathrs release with the fix
+		# (https://github.com/cyphar/libpathrs/pull/426) is available,
+		# rebuilding the Rust standard library (-Zbuild-std) and building
+		# LLVM libunwind from the rust-src component.
 		HOST=s390x-${PLATFORM}
 		;;
 	*)
@@ -83,8 +86,8 @@ function set_cross_vars() {
 		;;
 	esac
 
-	CC="${HOST:+$HOST-}gcc${cc_flags}"
-	STRIP="${HOST:+$HOST-}strip"
+	CC="${HOST}-gcc${musl:+ -specs=/usr/lib/${musl}/musl-gcc.specs}"
+	STRIP="${HOST}-strip"
 
 	export HOST GOARM GOARCH CC STRIP
 }
