@@ -309,11 +309,127 @@ jobs:
     - name: "Run integration tests (fs driver, rootless)"
       run: ssh -tt lima-default sudo -i make -C /tmp/runc localrootlessintegration
 
+  podman:
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [e2e, system, system-rootless]
+    runs-on: ubuntu-26.04
+    name: podman (${{ matrix.suite }})
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    - name: install deps
+      # Ubuntu's podman package is only used to get its runtime dependencies
+      # (conmon, netavark, containers-common etc.); podman itself is built
+      # from source below. CRIU is needed for podman checkpoint/restore tests.
+      run: |
+        sudo apt update
+        sudo apt -y install libseccomp-dev libassuan-dev libbtrfs-dev libgpgme-dev libsystemd-dev \
+          podman conmon netavark aardvark-dns catatonit criu
+        criu --version
+
+    - name: use the original sudo
+      # Ubuntu 26.04 uses sudo-rs by default, which does not support -E
+      # (https://github.com/trifectatechfoundation/sudo-rs/issues/1299).
+      run: |
+        sudo apt -y install sudo
+        sudo update-alternatives --set sudo /usr/bin/sudo.ws
+
+    - name: install libpathrs ${{ env.LIBPATHRS_VERSION }}
+      run: |
+        sudo -E PATH="$PATH" ./script/build-libpathrs.sh "$LIBPATHRS_VERSION" /usr
+
+    - name: install go
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version: 1.x # Latest stable
+        check-latest: true
+
+    - name: build and install runc
+      # Podman tests expect the runtime to be named "runc", and /usr/bin/runc
+      # is the first location podman looks for it, so replace the one there.
+      run: |
+        make
+        sudo install -m0755 runc /usr/bin/runc
+
+    - name: setup podman test environment
+      run: |
+        # Remote API service interferes with some tests.
+        sudo systemctl disable --now podman.socket
+        # Used by podman run --rootfs tests.
+        echo containers:200000:268435456 | sudo tee -a /etc/subuid /etc/subgid
+
+    - name: checkout podman
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        repository: podman-container-tools/podman
+        path: podman
+        ref: v5.8.8
+        persist-credentials: false
+
+    - name: build podman
+      env:
+        # Don't use -Werror (set globally for runc) for podman.
+        CGO_CFLAGS: -g -O2
+      run: make -C podman binaries
+
+    - name: run podman e2e tests
+      if: matrix.suite == 'e2e'
+      run: sudo -E PATH="$PATH" ./tests/podman/run-tests.sh ./podman
+
+    - name: setup bats
+      if: matrix.suite != 'e2e'
+      uses: bats-core/bats-action@77d6fb60505b4d0d1d73e48bd035b55074bbfb43 # 4.0.0
+      with:
+        bats-version: 1.13.0
+        support-install: false
+        assert-install: false
+        detik-install: false
+        file-install: false
+
+    - name: configure podman to use runc by default
+      if: matrix.suite != 'e2e'
+      run: |
+        printf '[engine]\nruntime = "runc"\n' | sudo tee /etc/containers/containers.conf.d/50-runc.conf
+
+    - name: run podman system tests
+      if: matrix.suite == 'system'
+      run: sudo -E PATH="$PATH" ./tests/podman/run-system-tests.sh ./podman
+
+    - name: setup rootless
+      if: matrix.suite == 'system-rootless'
+      run: |
+        # Our podman binary is not covered by any AppArmor profile,
+        # so it is not allowed to create user namespaces otherwise.
+        sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+        # Delegate all cgroup v2 controllers to rootless user.
+        sudo mkdir -p /etc/systemd/system/user@.service.d
+        printf "[Service]\nDelegate=yes\n" | sudo tee /etc/systemd/system/user@.service.d/delegate.conf
+        sudo systemctl daemon-reload
+        sudo loginctl enable-linger "$USER"
+        grep -q "^$USER:" /etc/subuid || echo "$USER:100000:65536" | sudo tee -a /etc/subuid
+        grep -q "^$USER:" /etc/subgid || echo "$USER:100000:65536" | sudo tee -a /etc/subgid
+        # Wait for the user session bus.
+        timeout 30 sh -c "until [ -S /run/user/$(id -u)/bus ]; do sleep 1; done"
+
+    - name: run podman system tests (rootless)
+      if: matrix.suite == 'system-rootless'
+      run: |
+        XDG_RUNTIME_DIR=/run/user/$(id -u)
+        export XDG_RUNTIME_DIR
+        export DBUS_SESSION_BUS_ADDRESS=unix:path=$XDG_RUNTIME_DIR/bus
+        ./tests/podman/run-system-tests.sh ./podman
+
   all-done:
     needs:
     - test
     - cross-i386
     - lima
+    - podman
     runs-on: ubuntu-24.04
     steps:
     - run: echo "All jobs completed"
