@@ -26,6 +26,19 @@ type Rlimit struct {
 	Soft uint64 `json:"soft"`
 }
 
+// CheckRlimits returns an error if limits contain more than one entry
+// of the same type.
+func CheckRlimits(limits []Rlimit) error {
+	for i, limit := range limits {
+		for _, previous := range limits[:i] {
+			if previous.Type == limit.Type {
+				return fmt.Errorf("duplicate rlimit type: %d", limit.Type)
+			}
+		}
+	}
+	return nil
+}
+
 // IDMap represents UID/GID Mappings for User Namespaces.
 type IDMap struct {
 	ContainerID int64 `json:"container_id"`

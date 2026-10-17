@@ -366,3 +366,36 @@ EOF
 	run -0 runc exec -u 2000 test sh -c "echo \$HOME"
 	assert_line --index 0 "/home/tempuser"
 }
+
+# Duplicate rlimit types are rejected for new containers and for
+# "runc exec --process", but not for an existing container whose
+# config.json was created by an older runc.
+@test "runc exec [duplicate rlimits in existing container config]" {
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+
+	# Simulate a config.json from an older runc.
+	update_config '.process.rlimits = [
+		{"type": "RLIMIT_NOFILE", "soft": 32, "hard": 64},
+		{"type": "RLIMIT_NOFILE", "soft": 48, "hard": 64}
+	]'
+
+	run -0 runc exec test_busybox true
+
+	proc='{"terminal": false, "cwd": "/", "args": ["true"],
+		"rlimits": [
+			{"type": "RLIMIT_NOFILE", "soft": 32, "hard": 64},
+			{"type": "RLIMIT_NOFILE", "soft": 48, "hard": 64}
+		]}'
+	run ! runc exec --process <(echo "$proc") test_busybox
+	assert_output --partial "duplicate rlimit type"
+}
+
+@test "runc run [duplicate rlimits]" {
+	update_config '.process.rlimits = [
+		{"type": "RLIMIT_NOFILE", "soft": 32, "hard": 64},
+		{"type": "RLIMIT_NOFILE", "soft": 48, "hard": 64}
+	]'
+
+	run ! runc run test_busybox
+	assert_output --partial "duplicate rlimit type"
+}
