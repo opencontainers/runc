@@ -535,13 +535,19 @@ func (hooks *Hooks) MarshalJSON() ([]byte, error) {
 // Run executes all hooks for the given hook name.
 func (hooks Hooks) Run(name HookName, state *specs.State) error {
 	list := hooks[name]
+	var errs []error
 	for i, h := range list {
 		if err := h.Run(state); err != nil {
-			return fmt.Errorf("error running %s hook #%d: %w", name, i, err)
+			err = fmt.Errorf("error running %s hook #%d: %w", name, i, err)
+			if name != Poststop {
+				return err
+			}
+			// Poststop hooks must all be run, even if one fails.
+			errs = append(errs, err)
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // SetDefaultEnv sets the environment for those CommandHook entries
