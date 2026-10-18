@@ -36,7 +36,7 @@ func InitSeccomp(config *configs.Seccomp) (int, error) {
 
 	defaultAction, err := getAction(config.DefaultAction, config.DefaultErrnoRet)
 	if err != nil {
-		return -1, errors.New("error initializing seccomp - invalid default action")
+		return -1, fmt.Errorf("error initializing seccomp - invalid default action: %w", err)
 	}
 
 	// Ignore the error since pre-2.4 libseccomp is treated as API level 0.
@@ -197,6 +197,13 @@ func FlagSupported(flag specs.LinuxSeccompFlag) error {
 
 // Convert Libcontainer Action to Libseccomp ScmpAction
 func getAction(act configs.Action, errnoRet *uint) (libseccomp.ScmpAction, error) {
+	if errnoRet != nil && act != configs.Errno && act != configs.Trace {
+		switch act {
+		case configs.Kill, configs.Trap, configs.Allow, configs.Log, configs.Notify, configs.KillThread, configs.KillProcess:
+			return libseccomp.ActInvalid, errors.New("errnoRet is only supported for SCMP_ACT_ERRNO and SCMP_ACT_TRACE")
+		}
+	}
+
 	switch act {
 	case configs.Kill, configs.KillThread:
 		return libseccomp.ActKillThread, nil
