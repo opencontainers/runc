@@ -120,11 +120,26 @@ function build_libpathrs() {
 		libdir="$native_libdir"
 	fi
 
-	# Install native version for Dockerfile builds.
+	# Rebuild the Rust standard library without backtrace support, to make
+	# the library smaller. This requires the rust-src component, and nightly
+	# Rust or RUSTC_BOOTSTRAP=1. It is always done for static (release)
+	# builds (see below), and for other builds if rust-src is available.
+	local no_backtrace=(LIBPATHRS_LIBSTD_NO_BACKTRACE=1 RUSTC_BOOTSTRAP=1)
+	local make_flags=()
+	if [ -d "$(rustc --print sysroot)/lib/rustlib/src/rust/library" ]; then
+		make_flags=("${no_backtrace[@]}")
+	fi
+
+	# Install native version for Dockerfile builds. The target is set
+	# explicitly, since it is required to rebuild the standard library.
+	local host_target
+	host_target="$(rustc -vV | sed -n 's/^host: //p')"
 	make \
-		EXTRA_CARGO_FLAGS="${extra_cargo_flags[*]}" \
+		EXTRA_CARGO_FLAGS="${extra_cargo_flags[*]} --target=$host_target" \
+		"${make_flags[@]}" \
 		release
 	./install.sh \
+		--rust-target="$host_target" \
 		--prefix="$dest" \
 		--libdir="$libdir"
 	cargo clean
@@ -144,16 +159,19 @@ function build_libpathrs() {
 	for go_arch in "${go_arches[@]}"; do
 		local rust_target="${GOARCH_TO_RUST_TARGET[$go_arch]}"
 		local cargo_flags=("${extra_cargo_flags[@]}" "--target=$rust_target")
-		local make_target=release install_flags=()
+		local make_target=release target_make_flags=("${make_flags[@]}") install_flags=()
 		if [[ "$rust_target" == *-musl* ]]; then
 			# Only a static library is needed for static (release) builds.
 			# Building a shared library would also require libgcc_s for musl.
 			cargo_flags+=("--release")
 			make_target=target/release/libpathrs.a
 			install_flags=(--disable-shared)
+			# Always rebuild the standard library (see above).
+			target_make_flags=("${no_backtrace[@]}")
 		fi
 		make \
 			EXTRA_CARGO_FLAGS="${cargo_flags[*]}" \
+			"${target_make_flags[@]}" \
 			"$make_target"
 		./install.sh \
 			--rust-target="$rust_target" \
