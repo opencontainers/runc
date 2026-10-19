@@ -1,7 +1,8 @@
 ARG GO_VERSION=1.26
 ARG BATS_VERSION=v1.12.0
 ARG LIBSECCOMP_VERSION=2.6.1
-ARG LIBPATHRS_VERSION=0.2.6
+# Unreleased libpathrs (git commit from main branch).
+ARG LIBPATHRS_VERSION=ae5eb5c475f6c3dc52216c8a377e8d4e89fd0ee3
 
 FROM golang:${GO_VERSION}-trixie
 ARG DEBIAN_FRONTEND=noninteractive

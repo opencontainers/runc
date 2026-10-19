@@ -75,14 +75,23 @@ function build_libpathrs() {
 	local go_arches=("$@")
 	local tar="libpathrs-${ver}.tar.xz"
 
-	# Download, check, and extract.
-	curl -fsSL --retry 5 --remote-name-all \
-		"https://github.com/cyphar/libpathrs/releases/download/v${ver}/${tar}"{,.asc}
-	sha256sum --strict --check - <<<"${LIBPATHRS_SHA256[${ver}]} *${tar}"
-
 	local srcdir
 	srcdir="$(mktemp -d)"
-	tar xf "$tar" -C "$srcdir"
+	if [[ "$ver" =~ ^[0-9a-f]{40}$ ]]; then
+		# A git commit (an unreleased version): fetch, and create a
+		# source tarball from it.
+		local repo="$srcdir/libpathrs-$ver"
+		git init -q "$repo"
+		git -C "$repo" fetch -q --depth=1 https://github.com/cyphar/libpathrs "$ver"
+		git -C "$repo" checkout -q FETCH_HEAD
+		git -C "$repo" archive --prefix="libpathrs-$ver/" FETCH_HEAD | xz >"$tar"
+	else
+		# Download, check, and extract.
+		curl -fsSL --retry 5 --remote-name-all \
+			"https://github.com/cyphar/libpathrs/releases/download/v${ver}/${tar}"{,.asc}
+		sha256sum --strict --check - <<<"${LIBPATHRS_SHA256[${ver}]} *${tar}"
+		tar xf "$tar" -C "$srcdir"
+	fi
 	pushd "$srcdir/libpathrs-$ver" || return
 
 	# Use cargo-auditable if available.
@@ -142,7 +151,10 @@ function build_libpathrs() {
 	# Place the source tarball to $dest/src.
 	popd || return
 	mkdir -p "$dest"/src
-	mv "$tar"{,.asc} "$dest"/src
+	mv "$tar" "$dest"/src
+	if [ -f "$tar.asc" ]; then
+		mv "$tar.asc" "$dest"/src
+	fi
 }
 
 if [ $# -lt 2 ]; then
