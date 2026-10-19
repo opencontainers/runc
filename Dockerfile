@@ -12,7 +12,7 @@ ARG CRIU_REPO=https://download.opensuse.org/repositories/devel:/tools:/criu/Debi
 RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
     wget -nv $CRIU_REPO/Release.key -O- | gpg --dearmor > "$KEYFILE" \
     && echo "deb [signed-by=$KEYFILE] $CRIU_REPO/ /" > /etc/apt/sources.list.d/criu.list \
-    && printf "%s\n" armel armhf arm64 ppc64el riscv64 | xargs -t -n1 -- dpkg --add-architecture \
+    && printf "%s\n" armel armhf arm64 ppc64el riscv64 s390x | xargs -t -n1 -- dpkg --add-architecture \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
@@ -41,7 +41,7 @@ RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
         gcc-arm-linux-gnueabihf libc-dev-armhf-cross musl-dev:armhf \
         gcc-powerpc64le-linux-gnu libc-dev-ppc64el-cross musl-dev:ppc64el \
         gcc-riscv64-linux-gnu libc-dev-riscv64-cross musl-dev:riscv64 \
-        gcc-s390x-linux-gnu libc-dev-s390x-cross \
+        gcc-s390x-linux-gnu libc-dev-s390x-cross musl-dev:s390x \
     && apt-get clean \
     && rm -rf /var/cache/apt /var/lib/apt/lists/* /etc/apt/sources.list.d/*.list
 
@@ -54,7 +54,8 @@ RUN for d in linux asm-generic x86_64-linux-gnu/asm; do \
             arm-linux-gnueabi:arm-linux-musleabi \
             arm-linux-gnueabihf:arm-linux-musleabihf \
             powerpc64le-linux-gnu:powerpc64le-linux-musl \
-            riscv64-linux-gnu:riscv64-linux-musl; do \
+            riscv64-linux-gnu:riscv64-linux-musl \
+            s390x-linux-gnu:s390x-linux-musl; do \
         for d in linux asm asm-generic; do \
             ln -s "/usr/${t%:*}/include/$d" "/usr/include/${t#*:}/"; \
         done; \
@@ -62,11 +63,12 @@ RUN for d in linux asm-generic x86_64-linux-gnu/asm; do \
 
 # Install Rust, with standard library sources (used by libpathrs build for
 # release binaries to rebuild the standard library, see build-libpathrs.sh),
-# and prebuilt standard libraries for release targets (for libunwind.a).
+# and prebuilt standard libraries for release targets (for libunwind.a),
+# except for s390x (a Tier 3 target, for which there is none).
 ARG RUST_VERSION
 RUN rustup toolchain install "$RUST_VERSION" --profile minimal --no-self-update \
         --component rust-src \
-        --target x86_64-unknown-linux-musl,aarch64-unknown-linux-musl,armv5te-unknown-linux-musleabi,armv7-unknown-linux-musleabihf,powerpc64le-unknown-linux-musl,riscv64gc-unknown-linux-musl,s390x-unknown-linux-gnu \
+        --target x86_64-unknown-linux-musl,aarch64-unknown-linux-musl,armv5te-unknown-linux-musleabi,armv7-unknown-linux-musleabihf,powerpc64le-unknown-linux-musl,riscv64gc-unknown-linux-musl \
     && rustup default "$RUST_VERSION"
 
 # Add a dummy user for the rootless integration tests. While runC does

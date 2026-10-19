@@ -27,8 +27,7 @@ function get_platform() {
 }
 
 # set_cross_vars sets a few environment variables used for cross-compiling
-# (against musl libc, except for s390x), based on the architecture specified
-# in $1.
+# (against musl libc), based on the architecture specified in $1.
 #
 # It relies on Debian's gcc cross-compilers and musl-dev packages (for each
 # target architecture), and Linux kernel headers available to musl (see
@@ -70,10 +69,8 @@ function set_cross_vars() {
 		musl=riscv64-linux-musl
 		;;
 	s390x)
-		# Use glibc, since for s390x-unknown-linux-musl (a Tier 3 Rust
-		# target) there is no prebuilt Rust standard library (needed to
-		# build libpathrs) nor unwinder.
 		HOST=s390x-${PLATFORM}
+		musl=s390x-linux-musl
 		;;
 	*)
 		echo "set_cross_vars: unsupported architecture: $1" >&2

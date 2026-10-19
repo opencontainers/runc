@@ -21,9 +21,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 PLATFORM="$(get_platform)"
 
 # Cross-compiled libraries are used for static (release) builds against musl
-# (see set_cross_vars in lib.sh). The exceptions are s390x (see the comment in
-# set_cross_vars), and 386, which is not released, and is only used by CI to
-# check that runc builds on 32-bit.
+# (see set_cross_vars in lib.sh). The exception is 386, which is not released,
+# and is only used by CI to check that runc builds on 32-bit.
 declare -A GOARCH_TO_RUST_TARGET=(
 	["386"]=i686-unknown-linux-gnu
 	["amd64"]=x86_64-unknown-linux-musl
@@ -32,7 +31,7 @@ declare -A GOARCH_TO_RUST_TARGET=(
 	["armhf"]=armv7-unknown-linux-musleabihf
 	["ppc64le"]=powerpc64le-unknown-linux-musl
 	["riscv64"]=riscv64gc-unknown-linux-musl
-	["s390x"]=s390x-unknown-linux-gnu
+	["s390x"]=s390x-unknown-linux-musl
 )
 
 declare -A RUST_TARGET_TO_CC=(
@@ -43,7 +42,7 @@ declare -A RUST_TARGET_TO_CC=(
 	["armv7-unknown-linux-musleabihf"]="arm-${PLATFORM}eabihf-gcc"
 	["powerpc64le-unknown-linux-musl"]="powerpc64le-${PLATFORM}-gcc"
 	["riscv64gc-unknown-linux-musl"]="riscv64-${PLATFORM}-gcc"
-	["s390x-unknown-linux-gnu"]="s390x-${PLATFORM}-gcc"
+	["s390x-unknown-linux-musl"]="s390x-${PLATFORM}-gcc"
 )
 
 # sha256 checksums for libpathrs release tarballs.
@@ -63,6 +62,37 @@ function generate_cargo_config() {
 			rustflags = ["-L", "$(rustc --print sysroot)/lib/rustlib/$rust_target/lib"]
 		EOF
 	done
+}
+
+# build_libunwind builds LLVM libunwind (as a static library) from the
+# rust-src component, the same way Rust does it for its musl targets.
+# Parameters:
+#  $1 -- Rust target.
+#  $2 -- output file.
+function build_libunwind() {
+	local rust_target="$1" out="$2"
+	local src
+	src="$(rustc --print sysroot)/lib/rustlib/src/rust/src/llvm-project/libunwind"
+	local obj
+	obj="$(mktemp -d)"
+	# Debian's musl-dev:<arch> headers, e.g. /usr/include/s390x-linux-musl.
+	local flags=(
+		--target="$rust_target" -nostdlibinc
+		-isystem "/usr/include/${rust_target/-unknown/}" -I"$src/include"
+		-O2 -DNDEBUG -fPIC -fstrict-aliasing -funwind-tables
+		-fvisibility=hidden -D_LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS
+	)
+	local f
+	for f in UnwindLevel1.c UnwindLevel1-gcc-ext.c Unwind-sjlj.c \
+		UnwindRegistersRestore.S UnwindRegistersSave.S; do
+		clang "${flags[@]}" -std=c99 -c "$src/src/$f" -o "$obj/$f.o"
+	done
+	for f in libunwind.cpp Unwind-EHABI.cpp Unwind-seh.cpp; do
+		clang++ "${flags[@]}" -std=c++17 -nostdinc++ -fno-exceptions -fno-rtti \
+			-c "$src/src/$f" -o "$obj/$f.o"
+	done
+	ar rcs "$out" "$obj"/*.o
+	rm -rf "$obj"
 }
 
 # Due to libpathrs being MPLv2/LGPLv3 we must include its sources, so
@@ -166,7 +196,9 @@ function build_libpathrs() {
 			cargo_flags+=("--release")
 			make_target=target/release/libpathrs.a
 			install_flags=(--disable-shared)
-			# Always rebuild the standard library (see above).
+			# Always rebuild the standard library (see above). This also
+			# makes it possible to build for Tier 3 targets (s390x), for
+			# which there is no prebuilt standard library.
 			target_make_flags=("${no_backtrace[@]}")
 		fi
 		make \
@@ -180,9 +212,15 @@ function build_libpathrs() {
 		if [[ "$rust_target" == *-musl* ]]; then
 			# Rust standard library for musl needs an unwinder, and libgcc_eh
 			# from the distro's gcc cross-compilers can't be used, since it
-			# is built for glibc. Use the one which comes with Rust.
-			cp "$(rustc --print sysroot)/lib/rustlib/$rust_target/lib/self-contained/libunwind.a" \
-				"$dest/$go_arch/lib/"
+			# is built for glibc. Use the one which comes with Rust or, if
+			# there is none (Tier 3 targets), build it.
+			local unwind
+			unwind="$(rustc --print sysroot)/lib/rustlib/$rust_target/lib/self-contained/libunwind.a"
+			if [ -f "$unwind" ]; then
+				cp "$unwind" "$dest/$go_arch/lib/"
+			else
+				build_libunwind "$rust_target" "$dest/$go_arch/lib/libunwind.a"
+			fi
 			sed -i 's/^Libs: .*/& -lunwind/' "$dest/$go_arch/lib/pkgconfig/pathrs.pc"
 		fi
 		cargo clean
