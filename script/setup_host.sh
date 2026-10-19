@@ -6,7 +6,7 @@ set -eux -o pipefail
 : "${LIBPATHRS_VERSION:=0.2.6}"
 
 # BATS_VERSION is only consumed for the EL8 platform as its bats package is too old.
-: "${BATS_VERSION:=v1.12.0}"
+: "${BATS_VERSION:=v1.13.0}"
 
 SCRIPTDIR="$(dirname "${BASH_SOURCE[0]}")"
 
