@@ -8,10 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed ###
 - The static release binaries are now linked against musl libc instead of
-  glibc (except for s390x, which is still linked against glibc), and
-  libpathrs is built without backtrace support. This makes them smaller by
-  about 1.1 MB (12%) on amd64. The 386 release binary is no longer provided.
-  (#5517)
+  glibc, and libpathrs is built without backtrace support. This makes them
+  smaller by about 1.1 MB (12%) on amd64. The 386 release binary is no longer
+  provided. (#5517)
 
 ## [1.6.0-rc.2] - 2026-11-12
 
