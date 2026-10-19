@@ -6,7 +6,7 @@ set -eux -o pipefail
 : "${LIBPATHRS_VERSION:=0.2.6}"
 
 # BATS_VERSION is only consumed for the EL8 platform as its bats package is too old.
-: "${BATS_VERSION:=v1.13.0}"
+: "${BATS_VERSION:=1.13.0}"
 
 SCRIPTDIR="$(dirname "${BASH_SOURCE[0]}")"
 
@@ -55,9 +55,7 @@ fi
 # Install BATS
 if [ "$PLATFORM_ID" = "platform:el8" ]; then
 	# The packaged version of bats is too old: `BATS_ERROR_SUFFIX: unbound variable`, `bats_require_minimum_version: command not found`
-	git clone --depth 1 --branch "$BATS_VERSION" https://github.com/bats-core/bats-core /tmp/bats-core
-	/tmp/bats-core/install.sh /usr
-	rm -rf /tmp/bats-core
+	"$SCRIPTDIR"/install-bats.sh "$BATS_VERSION" /usr
 else
 	"${DNF[@]}" install bats
 fi

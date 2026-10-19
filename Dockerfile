@@ -1,5 +1,5 @@
 ARG GO_VERSION=1.26
-ARG BATS_VERSION=v1.13.0
+ARG BATS_VERSION=1.13.0
 ARG LIBSECCOMP_VERSION=2.6.1
 ARG LIBPATHRS_VERSION=0.2.6
 
@@ -52,11 +52,8 @@ RUN useradd -u1000 -m -d/home/rootless -s/bin/bash rootless
 
 # install bats
 ARG BATS_VERSION
-RUN cd /tmp \
-    && git clone --depth 1 --branch "${BATS_VERSION}" https://github.com/bats-core/bats-core.git \
-    && cd bats-core \
-    && ./install.sh /usr \
-    && rm -rf /tmp/bats-core
+COPY script/install-bats.sh /tmp/script/
+RUN /tmp/script/install-bats.sh "$BATS_VERSION" /usr
 
 ARG RELEASE_ARCHES="386 amd64 arm64 armel armhf ppc64le riscv64 s390x"
 ENV DYLIB_DIR=/opt/runc-dylibs

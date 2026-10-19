@@ -25,6 +25,7 @@ permissions:
 
 env:
   LIBPATHRS_VERSION: "0.2.6"
+  BATS_VERSION: "1.13.0" # Keep in sync with Dockerfile and script/setup_host.sh.
   # Don't ignore C warnings. Note that the output of "go env CGO_CFLAGS" by default is "-g -O2", so we keep them.
   CGO_CFLAGS: -g -O2 -Werror
   # Allow potentially unsafe tests.
@@ -147,14 +148,8 @@ jobs:
     - name: build
       run: sudo -E PATH="$PATH" make EXTRA_FLAGS="${{ matrix.race }}" all
 
-    - name: Setup Bats and bats libs
-      uses: bats-core/bats-action@77d6fb60505b4d0d1d73e48bd035b55074bbfb43 # 4.0.0
-      with:
-        bats-version: 1.13.0 # Known as BATS_VERSION in other places.
-        support-install: false
-        assert-install: false
-        detik-install: false
-        file-install: false
+    - name: install bats
+      run: sudo ./script/install-bats.sh "$BATS_VERSION" /usr/local
 
     - name: Allow userns for runc
       # https://discourse.ubuntu.com/t/ubuntu-24-04-lts-noble-numbat-release-notes/39890#unprivileged-user-namespace-restrictions-15
@@ -381,15 +376,9 @@ jobs:
       if: matrix.suite == 'e2e'
       run: sudo -E PATH="$PATH" ./tests/podman/run-tests.sh ./podman
 
-    - name: setup bats
+    - name: install bats
       if: matrix.suite != 'e2e'
-      uses: bats-core/bats-action@77d6fb60505b4d0d1d73e48bd035b55074bbfb43 # 4.0.0
-      with:
-        bats-version: 1.13.0
-        support-install: false
-        assert-install: false
-        detik-install: false
-        file-install: false
+      run: sudo ./script/install-bats.sh "$BATS_VERSION" /usr/local
 
     - name: configure podman to use runc by default
       if: matrix.suite != 'e2e'
