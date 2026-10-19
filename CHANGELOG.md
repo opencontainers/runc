@@ -50,9 +50,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   re-enables the linker's dead code elimination of exported methods. As a
   result, the runc binary shrunk by about 2 MB (15%) on amd64. (#5486, #5506)
 - The static release binaries are now linked against musl libc instead of
-  glibc (except for s390x, which is still linked against glibc). This makes
-  them smaller by about 890 KB (9.7%) on amd64. The 386 release binary is no
-  longer provided. (#5517)
+  glibc (except for s390x, which is still linked against glibc), and
+  libpathrs is built without backtrace support. This makes them smaller by
+  about 1.1 MB (12%) on amd64. The 386 release binary is no longer provided.
+  (#5517)
 - The `cpuAffinity` and NUMA `memoryPolicy` settings are no longer limited
   to 1024 CPUs/nodes, as runc now uses a dynamically-sized CPU mask. (#5343)
 - A container configuration which asks for a read-only rootfs

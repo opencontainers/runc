@@ -60,10 +60,12 @@ RUN for d in linux asm-generic x86_64-linux-gnu/asm; do \
         done; \
     done
 
-# Install Rust, with standard libraries for release targets (used by
-# libpathrs build for release binaries, see build-libpathrs.sh).
+# Install Rust, with standard library sources (used by libpathrs build for
+# release binaries to rebuild the standard library, see build-libpathrs.sh),
+# and prebuilt standard libraries for release targets (for libunwind.a).
 ARG RUST_VERSION
 RUN rustup toolchain install "$RUST_VERSION" --profile minimal --no-self-update \
+        --component rust-src \
         --target x86_64-unknown-linux-musl,aarch64-unknown-linux-musl,armv5te-unknown-linux-musleabi,armv7-unknown-linux-musleabihf,powerpc64le-unknown-linux-musl,riscv64gc-unknown-linux-musl,s390x-unknown-linux-gnu \
     && rustup default "$RUST_VERSION"
 
