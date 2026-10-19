@@ -1168,3 +1168,80 @@ func TestDevValidName(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateSeccompErrnoRet(t *testing.T) {
+	errno := uint(1)
+	testCases := []struct {
+		name    string
+		seccomp *configs.Seccomp
+		isErr   bool
+	}{
+		{
+			name: "defaultErrnoRet with SCMP_ACT_ERRNO",
+			seccomp: &configs.Seccomp{
+				DefaultAction:   configs.Errno,
+				DefaultErrnoRet: &errno,
+			},
+		},
+		{
+			name: "defaultErrnoRet with SCMP_ACT_TRACE",
+			seccomp: &configs.Seccomp{
+				DefaultAction:   configs.Trace,
+				DefaultErrnoRet: &errno,
+			},
+		},
+		{
+			name: "defaultErrnoRet with SCMP_ACT_ALLOW",
+			seccomp: &configs.Seccomp{
+				DefaultAction:   configs.Allow,
+				DefaultErrnoRet: &errno,
+			},
+			isErr: true,
+		},
+		{
+			name: "errnoRet with SCMP_ACT_ERRNO",
+			seccomp: &configs.Seccomp{
+				DefaultAction: configs.Allow,
+				Syscalls: []*configs.Syscall{
+					{Name: "mkdir", Action: configs.Errno, ErrnoRet: &errno},
+				},
+			},
+		},
+		{
+			name: "errnoRet with SCMP_ACT_KILL_PROCESS",
+			seccomp: &configs.Seccomp{
+				DefaultAction: configs.Allow,
+				Syscalls: []*configs.Syscall{
+					{Name: "mkdir", Action: configs.KillProcess, ErrnoRet: &errno},
+				},
+			},
+			isErr: true,
+		},
+		{
+			name: "errnoRet with redundant SCMP_ACT_ALLOW",
+			seccomp: &configs.Seccomp{
+				DefaultAction: configs.Allow,
+				Syscalls: []*configs.Syscall{
+					{Name: "mkdir", Action: configs.Allow, ErrnoRet: &errno},
+				},
+			},
+			isErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			config := &configs.Config{
+				Rootfs:  "/var",
+				Seccomp: tc.seccomp,
+			}
+			err := Validate(config)
+			if tc.isErr && err == nil {
+				t.Error("expected error, got nil")
+			}
+			if !tc.isErr && err != nil {
+				t.Errorf("expected nil, got error %v", err)
+			}
+		})
+	}
+}

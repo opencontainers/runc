@@ -32,6 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Running a container which does not have its own mount namespace no longer
   changes the propagation of host's `/` and of the parent mount of the
   container rootfs (they were made private or slave). (#5537)
+- runc now errors out when seccomp `defaultErrnoRet` or `errnoRet` is set for
+  an action which does not support it (i.e. anything other than
+  `SCMP_ACT_ERRNO` and `SCMP_ACT_TRACE`), as required by the runtime spec.
+  Previously, such values were silently ignored. (#5550, #5564)
 
 ## [1.6.0-rc.1] - 2026-10-06
 
