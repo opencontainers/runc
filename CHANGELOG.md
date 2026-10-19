@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   they are always empty since the removal of veth network strategy in runc
   1.0.0-rc6. (#5523)
 
+### Fixed ###
+- runc now errors out when seccomp `defaultErrnoRet` or `errnoRet` is set for
+  an action which does not support it (i.e. anything other than
+  `SCMP_ACT_ERRNO` and `SCMP_ACT_TRACE`), as required by the runtime spec.
+  Previously, such values were silently ignored. (#5550, #5564)
+
 ## [1.6.0-rc.1] - 2026-10-06
 
 > Lo bueno, si breve, dos veces bueno.
