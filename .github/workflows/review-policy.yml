@@ -13,6 +13,10 @@
 #  - if the check fails because of a review period, re-run it once the
 #    period is over.
 #
+# It also runs for merge_group, as all required checks must pass in the merge
+# queue. There it does nothing, since a pull request can only be added to the
+# queue once this check has passed for it.
+#
 # As with any pull_request_review workflow, this file is run from the pull
 # request, so a pull request can change it. Therefore it is a governance file
 # (see isGovernanceFile below), and changes to it must be reviewed carefully.
@@ -22,6 +26,7 @@ name: review-policy
 on:
   pull_request_review:
     types: [submitted, edited, dismissed]
+  merge_group:
 
 permissions: {}
 
@@ -32,7 +37,8 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      - if: github.event_name == 'pull_request_review'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const { owner, repo } = context.repo;
