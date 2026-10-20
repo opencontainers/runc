@@ -156,6 +156,7 @@ __runc_complete_capabilities() {
 _runc_exec() {
 	local boolean_options="
 	   --help
+	   -h
 	   --no-new-privs
 	   --tty
 	   -t
@@ -231,8 +232,6 @@ _runc_exec() {
 _runc_runc() {
 	local boolean_options="
 		$global_boolean_options
-		--help
-		--version -v
 		--debug
 		--systemd-cgroup
 	"
@@ -349,27 +348,22 @@ _runc_kill() {
 	local boolean_options="
 	   --help
 	   -h
-          --all
-          -a
 	"
 	local options_with_args=""
+
+	case "$cur" in
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		return
+		;;
+	esac
 
 	case "$prev" in
 	"kill")
 		__runc_list_all
-		return
 		;;
 	*)
 		__runc_list_signals
-		return
-		;;
-	esac
-	case "$cur" in
-	-*)
-		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-		;;
-	*)
-		__runc_list_all
 		;;
 	esac
 }
@@ -377,6 +371,7 @@ _runc_kill() {
 _runc_events() {
 	local boolean_options="
 	   --help
+	   -h
 	   --stats
 	"
 
@@ -403,6 +398,7 @@ _runc_events() {
 _runc_list() {
 	local boolean_options="
 	   --help
+	   -h
 	   --quiet
 	   -q
 	"
@@ -436,6 +432,7 @@ _runc_list() {
 _runc_spec() {
 	local boolean_options="
 	   --help
+	   -h
 	   --rootless
 	"
 
@@ -477,6 +474,7 @@ _runc_spec() {
 _runc_run() {
 	local boolean_options="
 	   --help
+	   -h
 	   --detach
 	   -d
 	   --keep
@@ -590,6 +588,7 @@ _runc_checkpoint() {
 _runc_create() {
 	local boolean_options="
 	   --help
+	   -h
 	   --no-pivot
 	   --no-new-keyring
 	"
@@ -759,9 +758,12 @@ _runc_start() {
 _runc_update() {
 	local boolean_options="
 	   --help
+	   -h
 	"
 
 	local options_with_args="
+	   --resources
+	   -r
 	   --blkio-weight
 	   --cpu-period
 	   --cpu-quota
@@ -781,6 +783,20 @@ _runc_update() {
 	"
 
 	case "$prev" in
+	--resources | -r)
+		case "$cur" in
+		'')
+			COMPREPLY=($(compgen -W '- /' -- "$cur"))
+			__runc_nospace
+			;;
+		/*)
+			_filedir
+			__runc_nospace
+			;;
+		esac
+		return
+		;;
+
 	$(__runc_to_extglob "$options_with_args"))
 		return
 		;;
@@ -818,7 +834,6 @@ _runc() {
 		state
 		update
 		help
-		h
 	)
 
 	# These options are valid as global options for all client commands
