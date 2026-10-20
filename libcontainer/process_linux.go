@@ -25,6 +25,7 @@ import (
 
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/cgroups/fs2"
+	"github.com/opencontainers/cgroups/fscommon"
 	"github.com/opencontainers/runc/internal/cmsg"
 	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -210,8 +211,8 @@ func tryResetCPUAffinity(pid int) {
 	}
 }
 
-// Starts setns process with specified initial CPU affinity.
-func (p *setnsProcess) startWithCPUAffinity() error {
+// Starts a container process with the specified initial CPU affinity.
+func (p *containerProcess) startWithCPUAffinity() error {
 	aff := p.config.CPUAffinity
 	if aff == nil || len(aff.Initial) == 0 {
 		return p.cmd.Start()
@@ -633,6 +634,93 @@ type initProcess struct {
 	intelRdtManager *intelrdt.Manager
 }
 
+// prepareCgroupFD creates the cgroup (if needed) and opens it for use with
+// CLONE_INTO_CGROUP. The optimization is only available for the fs2 manager,
+// and is skipped when an initial CPU affinity is requested: that affinity must
+// be applied before the process is constrained by the cgroup cpuset.
+func (p *initProcess) prepareCgroupFD() (*os.File, bool, error) {
+	if _, ok := p.manager.(*fs2.Manager); !ok {
+		return nil, false, nil
+	}
+	if affinity := p.config.CPUAffinity; affinity != nil && len(affinity.Initial) != 0 {
+		return nil, false, nil
+	}
+
+	existed := p.manager.Exists()
+	if err := p.manager.Apply(-1); err != nil {
+		// Keep the existing start-then-move behavior if cgroup creation is not
+		// available (for example, in a rootless cgroup delegation).
+		logrus.Debugf("can't pre-create cgroup for CLONE_INTO_CGROUP: %v", err)
+		return nil, false, nil
+	}
+	created := !existed
+
+	state, err := p.manager.GetFreezerState()
+	if err != nil {
+		return nil, created, fmt.Errorf("unable to get cgroup freezer state: %w", err)
+	}
+	if state == cgroups.Frozen {
+		return nil, created, errors.New("container's cgroup unexpectedly frozen")
+	}
+
+	const openFlags = unix.O_PATH | unix.O_DIRECTORY | unix.O_CLOEXEC
+	fd, err := cgroups.OpenFile(p.manager.Path(""), "", openFlags)
+	if err != nil {
+		// Some delegated cgroups cannot be used with clone3. The caller will
+		// fall back to starting the process outside and moving it afterwards.
+		logrus.Debugf("can't open cgroup for CLONE_INTO_CGROUP: %v", err)
+		return nil, created, nil
+	}
+	logrus.Debugf("using CLONE_INTO_CGROUP for init in %q", p.manager.Path(""))
+	return fd, created, nil
+}
+
+// startWithCgroupFD starts init in the cgroup opened by prepareCgroupFD. It
+// falls back to the previous start-then-move behavior when clone3 is unavailable
+// or the cgroup cannot be joined. EAGAIN is not retried because it can indicate
+// that the cgroup pids limit was reached.
+func (p *initProcess) startWithCgroupFD(fd *os.File) (bool, error) {
+	defer p.comm.closeChild()
+	if fd == nil {
+		return false, p.startWithCPUAffinity()
+	}
+	if p.cmd.SysProcAttr == nil {
+		p.cmd.SysProcAttr = &syscall.SysProcAttr{}
+	}
+	p.cmd.SysProcAttr.UseCgroupFD = true
+	p.cmd.SysProcAttr.CgroupFD = int(fd.Fd())
+
+	cmdCopy := cloneCmd(p.cmd)
+	err := p.startWithCPUAffinity()
+	if err != nil && !errors.Is(err, unix.EAGAIN) {
+		logrus.Debugf("exec with CLONE_INTO_CGROUP failed: %v; retrying without", err)
+		cmdCopy.SysProcAttr.UseCgroupFD = false
+		p.cmd = cmdCopy
+		err = p.startWithCPUAffinity()
+	}
+	return err == nil && p.cmd.SysProcAttr.UseCgroupFD, err
+}
+
+// pidsMaxCount returns the number of times a fork or clone failed because the
+// pids cgroup limit was reached.
+func initPidsMaxCount(m cgroups.Manager) (uint64, error) {
+	path := m.Path("pids")
+	if path == "" {
+		return 0, errors.New("no pids cgroup")
+	}
+	return fscommon.GetValueByKey(path, "pids.events", "max")
+}
+
+func possiblyInitPidsLimitError(err error, m cgroups.Manager, before uint64, beforeErr error) error {
+	if err == nil || beforeErr != nil {
+		return err
+	}
+	if after, e := initPidsMaxCount(m); e == nil && after != before {
+		return fmt.Errorf("%w (possibly hit pids limit)", err)
+	}
+	return err
+}
+
 // getChildPid receives the final child's pid over the provided pipe.
 func (p *initProcess) getChildPid() (int, error) {
 	var pid pid
@@ -777,17 +865,31 @@ func (p *initProcess) goCreateMountSources(ctx context.Context) (mountSourceRequ
 
 func (p *initProcess) start() (retErr error) {
 	defer p.comm.closeParent()
-	err := p.cmd.Start()
-	p.process.ops = p
-	// close the child-side of the pipes (controlled by child)
-	p.comm.closeChild()
+
+	fd, cgroupCreated, err := p.prepareCgroupFD()
 	if err != nil {
-		p.process.ops = nil
-		return fmt.Errorf("unable to start init: %w", err)
+		if cgroupCreated {
+			_ = p.manager.Destroy()
+		}
+		return fmt.Errorf("unable to prepare cgroup for init: %w", err)
 	}
+	pidsMax, pidsErr := initPidsMaxCount(p.manager)
+	startedInCgroup, err := p.startWithCgroupFD(fd)
+	if fd != nil {
+		_ = fd.Close()
+	}
+	if err != nil {
+		err = possiblyInitPidsLimitError(fmt.Errorf("unable to start init: %w", err), p.manager, pidsMax, pidsErr)
+		if cgroupCreated {
+			_ = p.manager.Destroy()
+		}
+		return err
+	}
+	p.process.ops = p
 
 	defer func() {
 		if retErr != nil {
+			retErr = possiblyInitPidsLimitError(retErr, p.manager, pidsMax, pidsErr)
 			// Find out if init is killed by the kernel's OOM killer.
 			// Get the count before killing init as otherwise cgroup
 			// might be removed by systemd.
@@ -823,18 +925,20 @@ func (p *initProcess) start() (retErr error) {
 	// Do this before syncing with child so that no children can escape the
 	// cgroup. We don't need to worry about not doing this and not being root
 	// because we'd be using the rootless cgroup manager in that case.
-	if err := p.manager.Apply(p.pid()); err != nil {
-		if errors.Is(err, cgroups.ErrRootless) {
-			// ErrRootless is to be ignored except when
-			// the container doesn't have private pidns.
-			if !p.config.Config.Namespaces.IsPrivate(configs.NEWPID) {
-				// TODO: make this an error in runc 1.3.
-				logrus.Warn("Creating a rootless container with no cgroup and no private pid namespace. " +
-					"Such configuration is strongly discouraged (as it is impossible to properly kill all container's processes) " +
-					"and will result in an error in a future runc version.")
+	if !startedInCgroup {
+		if err := p.manager.Apply(p.pid()); err != nil {
+			if errors.Is(err, cgroups.ErrRootless) {
+				// ErrRootless is to be ignored except when
+				// the container doesn't have private pidns.
+				if !p.config.Config.Namespaces.IsPrivate(configs.NEWPID) {
+					// TODO: make this an error in runc 1.3.
+					logrus.Warn("Creating a rootless container with no cgroup and no private pid namespace. " +
+						"Such configuration is strongly discouraged (as it is impossible to properly kill all container's processes) " +
+						"and will result in an error in a future runc version.")
+				}
+			} else {
+				return fmt.Errorf("unable to apply cgroup configuration: %w", err)
 			}
-		} else {
-			return fmt.Errorf("unable to apply cgroup configuration: %w", err)
 		}
 	}
 	// Reset the CPU affinity after cgroups are configured to make sure it
