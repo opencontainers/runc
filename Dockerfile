@@ -75,7 +75,9 @@ RUN mkdir -p $DYLIB_DIR \
     && /tmp/script/build-libpathrs.sh "$LIBPATHRS_VERSION" $DYLIB_DIR $RELEASE_ARCHES
 ENV LIBPATHRS_VERSION=$LIBPATHRS_VERSION
 
-ENV LD_LIBRARY_PATH=$DYLIB_DIR/lib
+# Use ldconfig rather than LD_LIBRARY_PATH, since runc init does not inherit
+# the environment.
+RUN echo "$DYLIB_DIR/lib" > /etc/ld.so.conf.d/runc-dylibs.conf && ldconfig
 ENV PKG_CONFIG_PATH=$DYLIB_DIR/lib/pkgconfig
 
 # Prevent the "fatal: detected dubious ownership in repository" git complain during build.

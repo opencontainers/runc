@@ -305,6 +305,8 @@ jobs:
       # needs it.
     - name: build docker image
       run: make runcimage
+    - name: smoke test docker image
+      run: make integration TESTPATH=/run.bats
     - name: make releaseall
       run: make releaseall
     - name: upload artifacts
