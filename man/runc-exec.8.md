@@ -14,6 +14,10 @@
 referencing the master end of the console's pseudoterminal.  See
 [docs/terminals](https://github.com/opencontainers/runc/blob/master/docs/terminals.md).
 
+**--pidfd-socket** _path_
+: Path to an **AF_UNIX** socket which will receive a PID file descriptor
+(see **pidfd_open**(2)) referencing the process being executed.
+
 **--cwd** _path_
 : Change to _path_ in the container before executing the command.
 
