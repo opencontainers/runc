@@ -555,9 +555,9 @@ EOF
 		AllowedMemoryNodes='unsupported'
 	fi
 
-	update_config ' .linux.resources.CPU |= {
-				"Cpus": "0",
-				"Mems": "0"
+	update_config ' .linux.resources.cpu += {
+				"cpus": "0",
+				"mems": "0"
 			}'
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 
@@ -567,8 +567,8 @@ EOF
 
 	run -0 runc update -r - test_update <<EOF
 {
-  "CPU": {
-    "Cpus": "1"
+  "cpu": {
+    "cpus": "1"
   }
 }
 EOF
@@ -585,8 +585,8 @@ EOF
 
 	run -0 runc update -r - test_update <<EOF
 {
-  "CPU": {
-    "Mems": "1"
+  "cpu": {
+    "mems": "1"
   }
 }
 EOF
