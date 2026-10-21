@@ -109,22 +109,22 @@ func (e *mountError) Error() string {
 	out := e.op + " "
 
 	if e.source != "" {
-		out += "src=" + e.source + ", "
+		out += "src=" + strconv.Quote(e.source) + ", "
 		if e.srcFile != nil && e.srcFile.file != nil {
 			out += "srcType=" + string(e.srcFile.Type) + ", "
 			out += "srcFd=" + strconv.Itoa(int(e.srcFile.file.Fd())) + ", "
 		}
 	}
-	out += "dst=" + e.target
+	out += "dst=" + strconv.Quote(e.target)
 	if e.dstFd != "" {
-		out += ", dstFd=" + e.dstFd
+		out += ", dstFd=" + strconv.Quote(e.dstFd)
 	}
 
 	if e.flags != uintptr(0) {
 		out += ", flags=" + stringifyMountFlags(e.flags)
 	}
 	if e.data != "" {
-		out += ", data=" + e.data
+		out += ", data=" + strconv.Quote(e.data)
 	}
 
 	out += ": " + e.err.Error()
