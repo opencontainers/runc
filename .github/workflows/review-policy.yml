@@ -22,11 +22,32 @@
 # (see isGovernanceFile below), and changes to it must be reviewed carefully.
 # Also, keep it read-only: do NOT add write permissions, secrets, or
 # actions/checkout.
+#
+# Other repositories can use this workflow via workflow_call, by having a
+# .github/workflows/review-policy.yml file like this:
+#
+#   name: review-policy
+#   on:
+#     pull_request_review:
+#       types: [submitted, edited, dismissed]
+#   permissions: {}
+#   jobs:
+#     review-policy:
+#       permissions:
+#         contents: read
+#         pull-requests: read
+#       uses: opencontainers/runc/.github/workflows/review-policy.yml@<sha>
+#
+# Always pin it to a commit SHA, so the rules can only be changed by a
+# governance change in the calling repository. The rules are the same as
+# here; the calling repository must document them in its MAINTAINERS_GUIDE.md.
+# Note the required status check name is then "review-policy / review-policy".
 name: review-policy
 on:
   pull_request_review:
     types: [submitted, edited, dismissed]
   merge_group:
+  workflow_call:
 
 permissions: {}
 
@@ -85,7 +106,7 @@ jobs:
 
             // Files defining the project rules, or enforcing them.
             function isGovernanceFile(f) {
-              return f === 'MAINTAINERS' ||
+              return f === 'MAINTAINERS' || f === 'CODEOWNERS' ||
                 (f.endsWith('.md') && !f.includes('/') &&
                   f !== 'README.md' && f !== 'CHANGELOG.md') ||
                 f.startsWith('.github/workflows/review-policy');
