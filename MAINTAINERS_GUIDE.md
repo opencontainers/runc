@@ -77,9 +77,10 @@ A pull request can be merged once it has:
   other maintainers a chance to review and object.
 
 A pull request is a governance change if it changes the rules of the project,
-or how they are enforced. That is, it changes `MAINTAINERS`, a top-level `*.md`
-file other than `README.md` and `CHANGELOG.md` (such as this document), or the
-`review-policy` workflow. A governance change always requires two LGTMs.
+or how they are enforced. That is, it changes `MAINTAINERS`, `CODEOWNERS`,
+a top-level `*.md` file other than `README.md` and `CHANGELOG.md` (such as this
+document), or the `review-policy` workflow. A governance change always requires
+two LGTMs.
 
 A pull request is a routine change if it is not a governance change, and it is
 either:
