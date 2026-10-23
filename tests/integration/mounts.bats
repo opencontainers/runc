@@ -188,6 +188,23 @@ test_mount_target() {
 	assert_line --index 0 --partial '/tmp/bind/config.json'
 }
 
+@test "runc run [bind mount with rootfs-prefixed destination]" {
+	# Mount destination is a path inside the container,
+	# even if it starts with the host path to rootfs.
+	dest="$(pwd -P)/rootfs/tmp/bind"
+	update_config '	  .mounts += [{
+					source: ".",
+					destination: "'"$dest"'",
+					options: ["bind"]
+				}]
+			| .process.args |= ["ls", "'"$dest"'/config.json"]'
+
+	run -0 runc run test_busybox
+	assert_line --index 0 --partial "$dest/config.json"
+	# The prefix is not stripped.
+	[ ! -e rootfs/tmp/bind ]
+}
+
 # https://github.com/opencontainers/runc/issues/2246
 @test "runc run [ro tmpfs mount]" {
 	update_config '	  .mounts += [{
