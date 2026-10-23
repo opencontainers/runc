@@ -259,3 +259,33 @@ function teardown() {
 	# is deleted during the namespace cleanup.
 	run ! ip link del dummy0
 }
+
+# https://github.com/opencontainers/runc/issues/1800
+@test "userns without root mapping" {
+	if [ $EUID -eq 0 ]; then
+		# Use the IDs which own the rootfs (see remap_rootfs in setup).
+		host_uid=100000
+		host_gid=200000
+	else
+		host_uid=$(id -u)
+		host_gid=$(id -g)
+	fi
+	update_config ' .linux.uidMappings = [{"hostID": '"$host_uid"', "containerID": 1000, "size": 1}]
+		| .linux.gidMappings = [{"hostID": '"$host_gid"', "containerID": 1000, "size": 1}]
+		| .process.user = {"uid": 1000, "gid": 1000}
+		| (.mounts[] | select(.destination == "/dev/pts") | .options) -= ["gid=5"]
+		| .process.terminal = false
+		| .process.args = ["sh", "-c", "id -u; id -g; cat /proc/self/uid_map"]'
+
+	run -0 runc run test_busybox
+	assert_line --index 0 "1000"
+	assert_line --index 1 "1000"
+	assert_line --index 2 --regexp "^ +1000 +$host_uid +1$"
+
+	# Check runc exec works, too.
+	update_config '.process.args = ["sleep", "infinity"]'
+	runc run -d test_busybox
+	run -0 runc exec test_busybox sh -c "id -u; id -g"
+	assert_line --index 0 "1000"
+	assert_line --index 1 "1000"
+}

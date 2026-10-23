@@ -93,6 +93,13 @@ struct nlconfig_t {
 	/* Time NS offsets. */
 	char *timensoffset;
 	size_t timensoffset_len;
+
+	/*
+	 * User and group to use in the user namespace, if root is not mapped
+	 * (otherwise both are 0).
+	 */
+	uint32_t setup_uid;
+	uint32_t setup_gid;
 };
 
 /*
@@ -110,6 +117,8 @@ struct nlconfig_t {
 #define UIDMAPPATH_ATTR		27288
 #define GIDMAPPATH_ATTR		27289
 #define TIMENSOFFSET_ATTR	27290
+#define SETUP_UID_ATTR		27291
+#define SETUP_GID_ATTR		27292
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -438,6 +447,12 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 		case SETGROUP_ATTR:
 			config->is_setgroup = readint8(current);
 			break;
+		case SETUP_UID_ATTR:
+			config->setup_uid = readint32(current);
+			break;
+		case SETUP_GID_ATTR:
+			config->setup_gid = readint32(current);
+			break;
 		case TIMENSOFFSET_ATTR:
 			config->timensoffset = current;
 			config->timensoffset_len = payload_len;
@@ -541,11 +556,30 @@ static nsset_t __open_namespaces(char *nsspec, struct namespace_t **ns_list, siz
 }
 
 /*
+ * Become root in the user namespace or, if root is not mapped there,
+ * the user and group to use instead (as provided by runc).
+ */
+static void become_root(struct nlconfig_t *config)
+{
+	if (config->setup_uid || config->setup_gid) {
+		write_log(DEBUG, "root is not mapped in user namespace, using uid %u gid %u",
+			  config->setup_uid, config->setup_gid);
+		if (setresgid(config->setup_gid, config->setup_gid, config->setup_gid) < 0)
+			bail("failed to switch to gid %u in user namespace", config->setup_gid);
+		if (setresuid(config->setup_uid, config->setup_uid, config->setup_uid) < 0)
+			bail("failed to switch to uid %u in user namespace", config->setup_uid);
+		return;
+	}
+	if (setresuid(0, 0, 0) < 0)
+		bail("failed to become root in user namespace");
+}
+
+/*
  * Try to join all namespaces that are in the "allow" nsset, and return the
  * set we were able to successfully join. If a permission error is returned
  * from nsset(2), the namespace is skipped (non-permission errors are fatal).
  */
-static nsset_t __join_namespaces(nsset_t allow, struct namespace_t *ns_list, size_t ns_len)
+static nsset_t __join_namespaces(nsset_t allow, struct namespace_t *ns_list, size_t ns_len, struct nlconfig_t *config)
 {
 	nsset_t joined = 0;
 
@@ -575,10 +609,8 @@ static nsset_t __join_namespaces(nsset_t allow, struct namespace_t *ns_list, siz
 		 * of things can break if we aren't the right user. See
 		 * <https://github.com/opencontainers/runc/issues/4466> for one example.
 		 */
-		if (type == CLONE_NEWUSER) {
-			if (setresuid(0, 0, 0) < 0)
-				bail("failed to become root in user namespace");
-		}
+		if (type == CLONE_NEWUSER)
+			become_root(config);
 
 		close(ns->fd);
 		ns->fd = -1;
@@ -637,7 +669,7 @@ static void __close_namespaces(nsset_t to_join, nsset_t joined, struct namespace
 	free(ns_list);
 }
 
-void join_namespaces(char *nsspec)
+void join_namespaces(char *nsspec, struct nlconfig_t *config)
 {
 	nsset_t to_join = 0, joined = 0;
 	struct namespace_t *ns_list;
@@ -664,9 +696,9 @@ void join_namespaces(char *nsspec)
 	 *
 	 * This is similar to what nsenter(1) seems to do in practice.
 	 */
-	joined |= __join_namespaces(to_join & ~(joined | CLONE_NEWUSER), ns_list, ns_len);
-	joined |= __join_namespaces(CLONE_NEWUSER, ns_list, ns_len);
-	joined |= __join_namespaces(to_join & ~(joined | CLONE_NEWUSER), ns_list, ns_len);
+	joined |= __join_namespaces(to_join & ~(joined | CLONE_NEWUSER), ns_list, ns_len, config);
+	joined |= __join_namespaces(CLONE_NEWUSER, ns_list, ns_len, config);
+	joined |= __join_namespaces(to_join & ~(joined | CLONE_NEWUSER), ns_list, ns_len, config);
 
 	/* Verify that we joined all of the namespaces. */
 	__close_namespaces(to_join, joined, ns_list, ns_len);
@@ -1030,7 +1062,7 @@ void nsexec(void)
 			 * using cmsg(3) but that's just annoying.
 			 */
 			if (config.namespaces)
-				join_namespaces(config.namespaces);
+				join_namespaces(config.namespaces, &config);
 
 			/*
 			 * Deal with user namespaces first. They are quite special, as they
@@ -1090,8 +1122,7 @@ void nsexec(void)
 				}
 
 				/* Become root in the namespace proper. */
-				if (setresuid(0, 0, 0) < 0)
-					bail("failed to become root in user namespace");
+				become_root(&config);
 			}
 
 			/*
@@ -1195,11 +1226,15 @@ void nsexec(void)
 			if (setsid() < 0)
 				bail("setsid failed");
 
-			if (setuid(0) < 0)
-				bail("setuid failed");
+			if (config.setup_uid || config.setup_gid) {
+				become_root(&config);
+			} else {
+				if (setuid(0) < 0)
+					bail("setuid failed");
 
-			if (setgid(0) < 0)
-				bail("setgid failed");
+				if (setgid(0) < 0)
+					bail("setgid failed");
+			}
 
 			if (!config.is_rootless_euid && config.is_setgroup) {
 				if (setgroups(0, NULL) < 0)
