@@ -123,9 +123,14 @@ func main() {
 			Value: root,
 			Usage: "root directory for storage of container state (this should be located in tmpfs)",
 		},
+		&cli.StringFlag{
+			Name:  "cgroup-manager",
+			Value: "cgroupfs",
+			Usage: "cgroup manager to use ('cgroupfs' or 'systemd'); the latter expects cgroupsPath to be of form \"slice:prefix:name\" for e.g. \"system.slice:runc:434234\"",
+		},
 		&cli.BoolFlag{
 			Name:  "systemd-cgroup",
-			Usage: "enable systemd cgroup support, expects cgroupsPath to be of form \"slice:prefix:name\" for e.g. \"system.slice:runc:434234\"",
+			Usage: "same as --cgroup-manager=systemd (deprecated)",
 		},
 		&cli.StringFlag{
 			Name:  "rootless",
@@ -167,6 +172,9 @@ func main() {
 			}
 		}
 		if err := reviseRootDir(cmd); err != nil {
+			return ctx, err
+		}
+		if err := reviseCgroupManager(cmd); err != nil {
 			return ctx, err
 		}
 

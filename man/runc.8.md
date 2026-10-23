@@ -106,10 +106,13 @@ These options can be used with any command, and must precede the **command**.
 located on tmpfs. Default is */run/runc*, or *$XDG_RUNTIME_DIR/runc* for
 rootless containers.
 
+**--cgroup-manager** **cgroupfs**|**systemd**
+: Set the cgroup manager to use (default is **cgroupfs**). With **systemd**,
+the container spec (_config.json_) is expected to have **cgroupsPath** value
+in the *slice:prefix:name* form (e.g. **system.slice:runc:434234**).
+
 **--systemd-cgroup**
-: Enable systemd cgroup support. If this is set, the container spec
-(_config.json_) is expected to have **cgroupsPath** value in the
-*slice:prefix:name* form (e.g. **system.slice:runc:434234**).
+: Same as **--cgroup-manager=systemd**. Deprecated.
 
 **--rootless** **true**|**false**|**auto**
 : Enable or disable rootless mode. Default is **auto**, meaning to auto-detect

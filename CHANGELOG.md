@@ -6,11 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added ###
+- New `--cgroup-manager` global option, to select the cgroup manager
+  (`cgroupfs` or `systemd`). This is compatible with crun. (#5570)
+
 ### Deprecated ###
 - `libcontainer.Stats.Interfaces` and `types.Stats.NetworkInterfaces` (shown
   as `network_interfaces` in `runc events --stats` output) are deprecated, as
   they are always empty since the removal of veth network strategy in runc
   1.0.0-rc6. (#5523)
+- The `--systemd-cgroup` global option is deprecated in favor of
+  `--cgroup-manager=systemd`. It still works, and there are no plans to
+  remove it. (#5570)
 
 ### Changed ###
 - A container configuration which uses `--no-pivot` or sets
