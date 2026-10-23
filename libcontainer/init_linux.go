@@ -77,6 +77,8 @@ type initConfig struct {
 	ConsoleHeight    uint16   `json:"console_height"`
 	PassedFilesCount int      `json:"passed_files_count"`
 
+	ConsoleClearONLCR bool `json:"console_clear_onlcr,omitempty"`
+
 	// Properties that exists both in the container config and the process,
 	// as merged by [Container.newInitConfig] (process properties has preference).
 
@@ -396,6 +398,12 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 			Width:  config.ConsoleWidth,
 		})
 		if err != nil {
+			return err
+		}
+	}
+
+	if config.ConsoleClearONLCR {
+		if err := console.ClearONLCR(pty.Fd()); err != nil {
 			return err
 		}
 	}
