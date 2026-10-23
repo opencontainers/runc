@@ -332,6 +332,28 @@ convert_hugetlb_size() {
 	check_systemd_value "TasksMax" "infinity" "18446744073709551615"
 }
 
+# https://github.com/opencontainers/runc/issues/1914.
+@test "runc exec (pids limit hit)" {
+	# With cgroup v2, runc init is placed into the container cgroup
+	# using CLONE_INTO_CGROUP, so the pids limit applies to it. This
+	# might not work for rootless (if there are no permissions to
+	# write to the common ancestor cgroup), in which case runc init
+	# is moved to the container cgroup later, and as migration is not
+	# subject to pids limit, exec succeeds.
+	requires root cgroups_v2 cgroups_pids
+
+	set_cgroups_path
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_pids
+
+	# Container init is the only process, so with the limit of 1, clone3
+	# fails, and with the limit of 2, there's not enough room for runc init.
+	for limit in 1 2; do
+		run -0 runc update --pids-limit "$limit" test_pids
+		run -255 runc exec test_pids true
+		assert_output --partial "(possibly hit pids limit)"
+	done
+}
+
 @test "runc run (cgroup v2 resources.unified only)" {
 	requires root cgroups_v2
 
