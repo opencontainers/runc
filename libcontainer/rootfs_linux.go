@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -1160,7 +1161,9 @@ func pivotRoot(root *os.File) error {
 	if err != nil {
 		return err
 	}
-	defer unix.Close(oldroot)
+	defer func() {
+		unix.Close(oldroot)
+	}()
 
 	// Change to the new root so that the pivot_root actually acts on it.
 	if err := unix.Fchdir(int(root.Fd())); err != nil {
@@ -1168,7 +1171,27 @@ func pivotRoot(root *os.File) error {
 	}
 
 	if err := unix.PivotRoot(".", "."); err != nil {
-		return &os.PathError{Op: "pivot_root", Path: ".", Err: err}
+		if !errors.Is(err, unix.EINVAL) {
+			return &os.PathError{Op: "pivot_root", Path: ".", Err: err}
+		}
+		// One of the reasons for EINVAL is the current root being
+		// initramfs, which can't be pivoted from on older kernels.
+		ok, err2 := initramfsPivotSetup(root.Name())
+		if err2 != nil {
+			return fmt.Errorf("pivot_root failed (%w), initramfs workaround failed: %w", err, err2)
+		}
+		if !ok {
+			return &os.PathError{Op: "pivot_root", Path: ".", Err: err}
+		}
+		// The root has changed; reopen it.
+		unix.Close(oldroot)
+		oldroot, err = linux.Open("/", unix.O_DIRECTORY|unix.O_RDONLY|unix.O_PATH, 0)
+		if err != nil {
+			return err
+		}
+		if err := unix.PivotRoot(".", "."); err != nil {
+			return &os.PathError{Op: "pivot_root (initramfs workaround)", Path: ".", Err: err}
+		}
 	}
 
 	// Currently our "." is oldroot (according to the current kernel code).
@@ -1198,6 +1221,98 @@ func pivotRoot(root *os.File) error {
 		return &os.PathError{Op: "chdir", Path: "/", Err: err}
 	}
 	return nil
+}
+
+// initramfsPivotSetup prepares for pivot_root(2) in case the current root
+// is the initramfs. Before Linux 7.0, pivot_root(2) fails with EINVAL if
+// the current root is the initramfs, because it has no parent mount (this
+// used to be worked around by using --no-pivot, which is insecure).
+//
+// The workaround is to create a recursive bind mount clone of / (which
+// does have a parent mount), and chroot into it, so that a subsequent
+// pivot_root(2) works. The container rootfs is used as a temporary mount
+// point for the clone, so it works with a read-only initramfs.
+//
+// The current directory must be the container rootfs. On success, the
+// current directory is the clone of the container rootfs.
+//
+// Returns false if the current root is not the initramfs.
+func initramfsPivotSetup(rootfs string) (bool, error) {
+	mounts, err := mountinfo.GetMounts(nil)
+	if err != nil {
+		return false, err
+	}
+	// The initramfs mount has no parent, and so it is its own parent.
+	rootID := -1
+	for _, m := range mounts {
+		if m.Mountpoint == "/" && m.ID == m.Parent {
+			rootID = m.ID
+			break
+		}
+	}
+	if rootID == -1 {
+		return false, nil
+	}
+	// Clone / on top of the container rootfs.
+	if err := mount("/", ".", "", unix.MS_BIND|unix.MS_REC, ""); err != nil {
+		return true, err
+	}
+	// Enter the clone. Note that chdir(".") would keep us in the
+	// underlying mount, so we have to use the full path.
+	if err := unix.Chdir(rootfs); err != nil {
+		return true, &os.PathError{Op: "chdir", Path: rootfs, Err: err}
+	}
+	// If / is shared, the move below propagates to its peers (e.g. the
+	// host). Make it a slave to prevent that.
+	if err := mount("", "/", "", unix.MS_SLAVE, ""); err != nil {
+		return true, err
+	}
+	// Move the clone on top of /.
+	if err := mount(".", "/", "", unix.MS_MOVE, ""); err != nil {
+		return true, err
+	}
+	// Now, the clone is on top of /, but the original mounts (including
+	// full procfs and sysfs mounts) are still attached to the initramfs,
+	// which stays in our mount namespace forever, and so they could be
+	// used to bypass procfs/sysfs mount restrictions. Detach them, last
+	// mounted first. Note that paths starting with / are resolved from
+	// our current root (the initramfs), not from the clone on top of it.
+	for _, m := range slices.Backward(mounts) {
+		if m.Parent != rootID || m.ID == rootID || m.Mountpoint == "/" {
+			continue
+		}
+		// Unmounting by path only detaches the topmost mount, so
+		// repeat until there are no more mounts stacked on this path.
+		for i := 0; ; i++ {
+			// Make sure the unmount is not propagated (e.g. to the
+			// clone). This fails with EINVAL if the path is not a
+			// mount point (i.e. all the mounts are detached).
+			err := mount("", m.Mountpoint, "", unix.MS_SLAVE|unix.MS_REC, "")
+			if err != nil {
+				if i > 0 && errors.Is(err, unix.EINVAL) {
+					break
+				}
+				return true, err
+			}
+			if err := unmount(m.Mountpoint, unix.MNT_DETACH); err != nil {
+				if errors.Is(err, unix.EINVAL) {
+					// The mount is locked, as our mount namespace is
+					// owned by a user namespace, so it can't be detached.
+					return true, fmt.Errorf("%w (running a container with user namespace from initramfs requires Linux >= 7.0)", err)
+				}
+				return true, err
+			}
+		}
+	}
+	// Make the clone our root.
+	if err := unix.Chroot("."); err != nil {
+		return true, &os.PathError{Op: "chroot", Path: ".", Err: err}
+	}
+	// Go to the clone of the container rootfs.
+	if err := unix.Chdir(rootfs); err != nil {
+		return true, &os.PathError{Op: "chdir", Path: rootfs, Err: err}
+	}
+	return true, nil
 }
 
 func msMoveRoot(rootfs string) error {
