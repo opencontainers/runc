@@ -639,7 +639,7 @@ func setupScheduler(config *initConfig) error {
 }
 
 func setupIOPriority(config *initConfig) error {
-	const ioprioWhoPgrp = 1
+	const ioprioWhoProcess = 1
 
 	ioprio := config.IOPriority
 	if ioprio == nil {
@@ -660,7 +660,7 @@ func setupIOPriority(config *initConfig) error {
 	// Combine class and priority into a single value
 	// https://github.com/torvalds/linux/blob/v5.18/include/uapi/linux/ioprio.h#L5-L17
 	iop := (class << 13) | ioprio.Priority
-	_, _, errno := unix.RawSyscall(unix.SYS_IOPRIO_SET, ioprioWhoPgrp, 0, uintptr(iop))
+	_, _, errno := unix.RawSyscall(unix.SYS_IOPRIO_SET, ioprioWhoProcess, 0, uintptr(iop))
 	if errno != 0 {
 		return fmt.Errorf("failed to set io priority: %w", errno)
 	}
