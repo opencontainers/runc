@@ -59,9 +59,8 @@ image files directory.
 : Disable the use of the subreaper used to reap reparented processes.
 
 **--no-pivot**
-: Do not use pivot root to jail process inside rootfs. This should not be used
-except in exceptional circumstances, and may be unsafe from the security
-standpoint.
+: Deprecated and ignored (**pivot_root**(2) is always used). See
+<https://github.com/opencontainers/runc/issues/4435>.
 
 **--empty-ns** _namespace_
 : Create a _namespace_, but don't restore its properties. See
