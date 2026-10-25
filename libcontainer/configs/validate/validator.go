@@ -70,9 +70,8 @@ func rootfs(config *configs.Config) error {
 		return errors.New("invalid rootfs: not an absolute path, or a symlink")
 	}
 	// Host's / can't be used as the container rootfs. With a private mount
-	// namespace, pivot_root (or MS_MOVE with no-pivot) fails. Without it,
-	// container mounts (such as proc, dev etc.) are mounted on top of the
-	// host ones.
+	// namespace, pivot_root fails. Without it, container mounts (such as
+	// proc, dev etc.) are mounted on top of the host ones.
 	if cleaned == "/" {
 		return errors.New("invalid rootfs: / is not allowed")
 	}
@@ -154,11 +153,6 @@ func mountns(config *configs.Config) error {
 		if m.IsReadonlyDeferred() {
 			return fmt.Errorf("unable to make %s read-only without a private MNT namespace", m.Destination)
 		}
-	}
-	// Without pivot_root, the container rootfs is moved on top of /
-	// (and host's procfs and sysfs mounts are unmounted).
-	if config.NoPivotRoot {
-		return errors.New("unable to use no-pivot without a private MNT namespace")
 	}
 	// Rootfs propagation is applied to / and to the parent mount of
 	// the container rootfs.

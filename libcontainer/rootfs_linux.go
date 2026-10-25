@@ -236,9 +236,7 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		}
 	}
 
-	if config.NoPivotRoot {
-		err = msMoveRoot(config.Rootfs)
-	} else if config.Namespaces.Contains(configs.NEWNS) {
+	if config.Namespaces.Contains(configs.NEWNS) {
 		err = pivotRoot(rootFd)
 	} else {
 		err = chroot()
@@ -1226,7 +1224,7 @@ func pivotRoot(root *os.File) error {
 // initramfsPivotSetup prepares for pivot_root(2) in case the current root
 // is the initramfs. Before Linux 7.0, pivot_root(2) fails with EINVAL if
 // the current root is the initramfs, because it has no parent mount (this
-// used to be worked around by using --no-pivot, which is insecure).
+// used to be worked around by using --no-pivot, which was insecure).
 //
 // The workaround is to create a recursive bind mount clone of / (which
 // does have a parent mount), and chroot into it, so that a subsequent
@@ -1313,69 +1311,6 @@ func initramfsPivotSetup(rootfs string) (bool, error) {
 		return true, &os.PathError{Op: "chdir", Path: rootfs, Err: err}
 	}
 	return true, nil
-}
-
-func msMoveRoot(rootfs string) error {
-	// Before we move the root and chroot we have to mask all "full" sysfs and
-	// procfs mounts which exist on the host. This is because while the kernel
-	// has protections against mounting procfs if it has masks, when using
-	// chroot(2) the *host* procfs mount is still reachable in the mount
-	// namespace and the kernel permits procfs mounts inside --no-pivot
-	// containers.
-	//
-	// Users shouldn't be using --no-pivot except in exceptional circumstances,
-	// but to avoid such a trivial security flaw we apply a best-effort
-	// protection here. The kernel only allows a mount of a pseudo-filesystem
-	// like procfs or sysfs if there is a *full* mount (the root of the
-	// filesystem is mounted) without any other locked mount points covering a
-	// subtree of the mount.
-	//
-	// So we try to unmount (or mount tmpfs on top of) any mountpoint which is
-	// a full mount of either sysfs or procfs (since those are the most
-	// concerning filesystems to us).
-	mountinfos, err := mountinfo.GetMounts(func(info *mountinfo.Info) (skip, stop bool) {
-		// Collect every sysfs and procfs filesystem, except for those which
-		// are non-full mounts or are inside the rootfs of the container.
-		if info.Root != "/" ||
-			(info.FSType != "proc" && info.FSType != "sysfs") ||
-			strings.HasPrefix(info.Mountpoint, rootfs) {
-			skip = true
-		}
-		return skip, stop
-	})
-	if err != nil {
-		return err
-	}
-	for _, info := range mountinfos {
-		p := info.Mountpoint
-		// Be sure umount events are not propagated to the host.
-		if err := mount("", p, "", unix.MS_SLAVE|unix.MS_REC, ""); err != nil {
-			if errors.Is(err, unix.ENOENT) {
-				// If the mountpoint doesn't exist that means that we've
-				// already blasted away some parent directory of the mountpoint
-				// and so we don't care about this error.
-				continue
-			}
-			return err
-		}
-		if err := unmount(p, unix.MNT_DETACH); err != nil {
-			if !errors.Is(err, unix.EINVAL) && !errors.Is(err, unix.EPERM) {
-				return err
-			} else {
-				// If we have not privileges for umounting (e.g. rootless), then
-				// cover the path.
-				if err := mount("tmpfs", p, "tmpfs", 0, ""); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	// Move the rootfs on top of "/" in our mount namespace.
-	if err := mount(rootfs, "/", "", unix.MS_MOVE, ""); err != nil {
-		return err
-	}
-	return chroot()
 }
 
 func chroot() error {
