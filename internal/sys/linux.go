@@ -46,45 +46,6 @@ func GetParentDeathSignal() (ParentDeathSignal, error) {
 	return ParentDeathSignal(sig), nil
 }
 
-func SetKeepCaps() error {
-	if err := unix.Prctl(unix.PR_SET_KEEPCAPS, 1, 0, 0, 0); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func ClearKeepCaps() error {
-	if err := unix.Prctl(unix.PR_SET_KEEPCAPS, 0, 0, 0, 0); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func Setctty() error {
-	if err := unix.IoctlSetInt(0, unix.TIOCSCTTY, 0); err != nil {
-		return err
-	}
-	return nil
-}
-
-// SetSubreaper sets the value i as the subreaper setting for the calling process
-func SetSubreaper(i int) error {
-	return unix.Prctl(unix.PR_SET_CHILD_SUBREAPER, uintptr(i), 0, 0, 0)
-}
-
-// GetSubreaper returns the subreaper setting for the calling process
-func GetSubreaper() (int, error) {
-	var i uintptr
-
-	if err := unix.Prctl(unix.PR_GET_CHILD_SUBREAPER, uintptr(unsafe.Pointer(&i)), 0, 0, 0); err != nil {
-		return -1, err
-	}
-
-	return int(i), nil
-}
-
 // Copy is like io.Copy except it uses sendfile(2) if the source and sink are
 // both (*os.File) as an optimisation to make copies faster.
 func Copy(dst io.Writer, src io.Reader) (copied int64, err error) {
@@ -122,34 +83,4 @@ func Copy(dst io.Writer, src io.Reader) (copied int64, err error) {
 
 fallback:
 	return io.Copy(dst, src)
-}
-
-// SetLinuxPersonality sets the Linux execution personality. For more information see the personality syscall documentation.
-// checkout getLinuxPersonalityFromStr() from libcontainer/specconv/spec_linux.go for type conversion.
-func SetLinuxPersonality(personality int) error {
-	_, _, errno := unix.Syscall(unix.SYS_PERSONALITY, uintptr(personality), 0, 0)
-	if errno != 0 {
-		return &os.SyscallError{Syscall: "set_personality", Err: errno}
-	}
-	return nil
-}
-
-// GetPtyPeer is a wrapper for ioctl(TIOCGPTPEER).
-func GetPtyPeer(ptyFd uintptr, unsafePeerPath string, flags int) (*os.File, error) {
-	// Make sure O_NOCTTY is always set -- otherwise runc might accidentally
-	// gain it as a controlling terminal. O_CLOEXEC also needs to be set to
-	// make sure we don't leak the handle either.
-	flags |= unix.O_NOCTTY | unix.O_CLOEXEC
-
-	// There is no nice wrapper for this kind of ioctl in unix.
-	peerFd, _, errno := unix.Syscall(
-		unix.SYS_IOCTL,
-		ptyFd,
-		uintptr(unix.TIOCGPTPEER),
-		uintptr(flags),
-	)
-	if errno != 0 {
-		return nil, os.NewSyscallError("ioctl TIOCGPTPEER", errno)
-	}
-	return os.NewFile(peerFd, unsafePeerPath), nil
 }

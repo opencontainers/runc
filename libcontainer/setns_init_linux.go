@@ -11,7 +11,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/internal/linux"
-	"github.com/opencontainers/runc/internal/sys"
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/keys"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
@@ -54,7 +53,7 @@ func (l *linuxSetnsInit) Init() error {
 		if err := setupConsole(l.consoleSocket, l.config, false); err != nil {
 			return err
 		}
-		if err := sys.Setctty(); err != nil {
+		if err := linux.Setctty(); err != nil {
 			return err
 		}
 	}

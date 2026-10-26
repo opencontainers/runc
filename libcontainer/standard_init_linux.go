@@ -99,7 +99,7 @@ func (l *linuxStandardInit) Init() error {
 		if err := setupConsole(l.consoleSocket, l.config, true); err != nil {
 			return err
 		}
-		if err := sys.Setctty(); err != nil {
+		if err := linux.Setctty(); err != nil {
 			return &os.SyscallError{Syscall: "ioctl(setctty)", Err: err}
 		}
 	}

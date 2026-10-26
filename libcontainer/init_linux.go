@@ -342,7 +342,7 @@ func finalizeNamespace(config *initConfig) error {
 		return fmt.Errorf("unable to apply bounding set: %w", err)
 	}
 	// preserve existing capabilities while we change users
-	if err := sys.SetKeepCaps(); err != nil {
+	if err := linux.SetKeepCaps(); err != nil {
 		return fmt.Errorf("unable to set keep caps: %w", err)
 	}
 	if err := setupUser(config); err != nil {
@@ -358,7 +358,7 @@ func finalizeNamespace(config *initConfig) error {
 	if err := verifyCwd(); err != nil {
 		return err
 	}
-	if err := sys.ClearKeepCaps(); err != nil {
+	if err := linux.ClearKeepCaps(); err != nil {
 		return fmt.Errorf("unable to clear keep caps: %w", err)
 	}
 	if err := w.ApplyCaps(); err != nil {
@@ -676,7 +676,7 @@ func setupMemoryPolicy(config *configs.Config) error {
 }
 
 func setupPersonality(config *configs.Config) error {
-	return sys.SetLinuxPersonality(config.Personality.Domain)
+	return linux.SetLinuxPersonality(config.Personality.Domain)
 }
 
 // signalAllProcesses freezes then iterates over all the processes inside the
