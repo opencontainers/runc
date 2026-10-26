@@ -63,8 +63,31 @@ func sealMemfd(f **os.File) error {
 
 // Memfd creates a sealable executable memfd (supported since Linux 3.17).
 func Memfd(comment string) (*os.File, SealFunc, error) {
-	file, err := system.ExecutableMemfd("runc_cloned:"+comment, unix.MFD_ALLOW_SEALING|unix.MFD_CLOEXEC)
-	return file, sealMemfd, err
+	const flags = unix.MFD_ALLOW_SEALING | unix.MFD_CLOEXEC
+	name := "runc_cloned:" + comment
+	// Try to use MFD_EXEC first. On pre-6.3 kernels we get -EINVAL for this
+	// flag. On post-6.3 kernels, with vm.memfd_noexec=1 this ensures we get an
+	// executable memfd. For vm.memfd_noexec=2 this is a bit more complicated.
+	// The original vm.memfd_noexec=2 implementation incorrectly silently
+	// allowed MFD_EXEC[1] -- this should be fixed in 6.6. On 6.6 and newer
+	// kernels, we will get -EACCES if we try to use MFD_EXEC with
+	// vm.memfd_noexec=2 (for 6.3-6.5, -EINVAL was the intended return value).
+	//
+	// The upshot is we only need to retry without MFD_EXEC on -EINVAL because
+	// it just so happens that passing MFD_EXEC bypasses vm.memfd_noexec=2 on
+	// kernels where -EINVAL is actually a security denial.
+	memfd, err := unix.MemfdCreate(name, flags|unix.MFD_EXEC)
+	if err == unix.EINVAL {
+		memfd, err = unix.MemfdCreate(name, flags)
+	}
+	if err != nil {
+		if err == unix.EACCES {
+			logrus.Info("memfd_create(MFD_EXEC) failed, possibly due to vm.memfd_noexec=2 -- falling back to less secure O_TMPFILE")
+		}
+		err := os.NewSyscallError("memfd_create", err)
+		return nil, nil, fmt.Errorf("failed to create executable memfd: %w", err)
+	}
+	return os.NewFile(uintptr(memfd), "/memfd:"+name), sealMemfd, nil
 }
 
 func sealFile(f **os.File) error {
