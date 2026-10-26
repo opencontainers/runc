@@ -101,12 +101,7 @@ func LexicallyStripRoot(root, path string) string {
 // pathrs-lite, so instead we use [securejoin.SecureJoin] to simply produce a
 // new candidate path for operations like [MkdirAllInRoot] so they can then
 // operate on the new unsafePath as if it was what the user requested.
-//
-// If unsafePath is already lexically inside root, it is stripped before
-// re-resolving it (this is done to ensure compatibility with legacy callers
-// within runc that call SecureJoin before calling into pathrs).
 func hallucinateUnsafePath(root, unsafePath string) (string, error) {
-	unsafePath = LexicallyStripRoot(root, unsafePath)
 	weirdPath, err := securejoin.SecureJoin(root, unsafePath)
 	if err != nil {
 		return "", err

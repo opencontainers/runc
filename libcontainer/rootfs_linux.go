@@ -530,7 +530,7 @@ func statfsToMountFlags(st unix.Statfs_t) int {
 
 func (m *mountEntry) createOpenMountpoint(root *os.File) (Err error) {
 	rootfs := root.Name()
-	unsafePath := pathrs.LexicallyStripRoot(rootfs, m.Destination)
+	unsafePath := pathrs.LexicallyCleanPath("/" + m.Destination)
 	dstFile, err := pathrs.OpenInRoot(root, unsafePath, unix.O_PATH)
 	defer func() {
 		if dstFile != nil && Err != nil {
@@ -617,11 +617,8 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		// TODO: This won't be necessary once we switch to libpathrs and we can
 		//       stop all of these symlink-exchange attacks.
 		rootfs := c.root.Name()
-		dest := filepath.Clean(m.Destination)
-		if !pathrs.IsLexicallyInRoot(rootfs, dest) {
-			// Do not use securejoin as it resolves symlinks.
-			dest = filepath.Join(rootfs, dest)
-		}
+		// Do not use securejoin as it resolves symlinks.
+		dest := filepath.Join(rootfs, m.Destination)
 		if err := checkProcMount(rootfs, dest, m); err != nil {
 			return err
 		}
@@ -632,7 +629,7 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		} else if !fi.IsDir() {
 			return fmt.Errorf("filesystem %q must be mounted on ordinary directory", m.Device)
 		}
-		dstFile, err := pathrs.MkdirAllInRoot(c.root, dest, 0o755)
+		dstFile, err := pathrs.MkdirAllInRoot(c.root, m.Destination, 0o755)
 		if err != nil {
 			return err
 		}

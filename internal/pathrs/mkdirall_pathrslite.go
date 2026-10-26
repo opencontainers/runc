@@ -37,16 +37,7 @@ import (
 // try to detect any symlink components in the path while we are doing the
 // MkdirAll.
 //
-// NOTE: If unsafePath is a subpath of root, we assume that you have already
-// called SecureJoin and so we use the provided path verbatim without resolving
-// any symlinks (this is done in a way that avoids symlink-exchange races).
-// This means that the path also must not contain ".." elements, otherwise an
-// error will occur.
-//
-// This uses (pathrs-lite).MkdirAllHandle under the hood, but it has special
-// handling if unsafePath has already been scoped within the rootfs (this is
-// needed for a lot of runc callers and fixing this would require reworking a
-// lot of path logic).
+// This uses (pathrs-lite).MkdirAllHandle under the hood.
 func MkdirAllInRoot(root *os.File, unsafePath string, mode os.FileMode) (*os.File, error) {
 	unsafePath, err := hallucinateUnsafePath(root.Name(), unsafePath)
 	if err != nil {
