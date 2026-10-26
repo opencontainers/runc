@@ -18,7 +18,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/keys"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
-	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
@@ -100,7 +99,7 @@ func (l *linuxStandardInit) Init() error {
 		if err := setupConsole(l.consoleSocket, l.config, true); err != nil {
 			return err
 		}
-		if err := system.Setctty(); err != nil {
+		if err := sys.Setctty(); err != nil {
 			return &os.SyscallError{Syscall: "ioctl(setctty)", Err: err}
 		}
 	}
@@ -153,7 +152,7 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 
-	pdeath, err := system.GetParentDeathSignal()
+	pdeath, err := sys.GetParentDeathSignal()
 	if err != nil {
 		return fmt.Errorf("can't get pdeath signal: %w", err)
 	}

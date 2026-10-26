@@ -24,9 +24,9 @@ import (
 	"github.com/opencontainers/runc/internal/cmsg"
 	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/internal/pathrs"
+	"github.com/opencontainers/runc/internal/sys"
 	"github.com/opencontainers/runc/libcontainer/capabilities"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
@@ -342,7 +342,7 @@ func finalizeNamespace(config *initConfig) error {
 		return fmt.Errorf("unable to apply bounding set: %w", err)
 	}
 	// preserve existing capabilities while we change users
-	if err := system.SetKeepCaps(); err != nil {
+	if err := sys.SetKeepCaps(); err != nil {
 		return fmt.Errorf("unable to set keep caps: %w", err)
 	}
 	if err := setupUser(config); err != nil {
@@ -358,7 +358,7 @@ func finalizeNamespace(config *initConfig) error {
 	if err := verifyCwd(); err != nil {
 		return err
 	}
-	if err := system.ClearKeepCaps(); err != nil {
+	if err := sys.ClearKeepCaps(); err != nil {
 		return fmt.Errorf("unable to clear keep caps: %w", err)
 	}
 	if err := w.ApplyCaps(); err != nil {
@@ -603,7 +603,7 @@ func setupRoute(config *configs.Config) error {
 func maybeClearRlimitNofileCache(limits []configs.Rlimit) {
 	for _, rlimit := range limits {
 		if rlimit.Type == syscall.RLIMIT_NOFILE {
-			system.ClearRlimitNofileCache(&syscall.Rlimit{
+			sys.ClearRlimitNofileCache(&syscall.Rlimit{
 				Cur: rlimit.Soft,
 				Max: rlimit.Hard,
 			})
@@ -676,7 +676,7 @@ func setupMemoryPolicy(config *configs.Config) error {
 }
 
 func setupPersonality(config *configs.Config) error {
-	return system.SetLinuxPersonality(config.Personality.Domain)
+	return sys.SetLinuxPersonality(config.Personality.Domain)
 }
 
 // signalAllProcesses freezes then iterates over all the processes inside the

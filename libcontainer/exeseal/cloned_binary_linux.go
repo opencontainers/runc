@@ -11,7 +11,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/internal/pathrs"
-	"github.com/opencontainers/runc/libcontainer/system"
+	"github.com/opencontainers/runc/internal/sys"
 )
 
 type SealFunc func(**os.File) error
@@ -206,7 +206,7 @@ func CloneBinary(src io.Reader, size int64, name, tmpDir string) (*os.File, erro
 	if err != nil {
 		return nil, err
 	}
-	copied, err := system.Copy(file, src)
+	copied, err := sys.Copy(file, src)
 	if err != nil {
 		file.Close()
 		return nil, fmt.Errorf("copy binary: %w", err)
