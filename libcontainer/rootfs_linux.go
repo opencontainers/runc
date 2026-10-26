@@ -568,7 +568,7 @@ func (m *mountEntry) createOpenMountpoint(root *os.File) (Err error) {
 			dstIsFile = !fi.IsDir()
 		}
 		if dstIsFile {
-			dstFile, err = pathrs.CreateInRoot(root, unsafePath, unix.O_CREAT|unix.O_EXCL|unix.O_NOFOLLOW, 0o644)
+			dstFile, err = pathrs.CreateInRoot(root, unsafePath, 0o644)
 		} else {
 			dstFile, err = pathrs.MkdirAllInRoot(root, unsafePath, 0o755)
 		}

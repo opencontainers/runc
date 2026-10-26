@@ -46,10 +46,9 @@ func OpenInRoot(root *os.File, subpath string, flags int) (*os.File, error) {
 
 // CreateInRoot creates a new file inside a root (as well as any missing parent
 // directories) and returns a handle to said file. This effectively has
-// open(O_CREAT|O_NOFOLLOW) semantics. If you want the creation to use O_EXCL,
-// include it in the passed flags. The fileMode argument uses unix.* mode bits,
-// *not* os.FileMode.
-func CreateInRoot(root *os.File, subpath string, flags int, fileMode uint32) (*os.File, error) {
+// open(O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC) semantics. The fileMode argument
+// uses unix.* mode bits, *not* os.FileMode.
+func CreateInRoot(root *os.File, subpath string, fileMode uint32) (*os.File, error) {
 	dirFd, filename, err := MkdirAllParentInRoot(root, subpath, 0o755)
 	if err != nil {
 		return nil, err
@@ -60,7 +59,7 @@ func CreateInRoot(root *os.File, subpath string, flags int, fileMode uint32) (*o
 	// dirFd is inside the root. O_NOFOLLOW will stop us from following
 	// trailing symlinks, so this is safe to do. libpathrs's Root::create_file
 	// works the same way.
-	flags |= unix.O_CREAT | unix.O_NOFOLLOW
+	const flags = unix.O_CREAT | unix.O_EXCL | unix.O_NOFOLLOW | unix.O_CLOEXEC
 	fd, err := linux.Openat(int(dirFd.Fd()), filename, flags, fileMode)
 	if err != nil {
 		return nil, err
