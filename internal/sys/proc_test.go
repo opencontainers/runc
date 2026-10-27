@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-var procdata = map[string]Stat_t{
+var procdata = map[string]StatT{
 	"4902 (gunicorn: maste) S 4885 4902 4902 0 -1 4194560 29683 29929 61 83 78 16 96 17 20 0 1 0 9126532 52965376 1903 18446744073709551615 4194304 7461796 140733928751520 140733928698072 139816984959091 0 0 16781312 137447943 1 0 0 17 3 0 0 9 0 0 9559488 10071156 33050624 140733928758775 140733928758945 140733928758945 140733928759264 0": {
 		Name:      "gunicorn: maste",
 		State:     'S',
@@ -117,7 +117,7 @@ func TestParseStatBadInput(t *testing.T) {
 
 func BenchmarkParseStat(b *testing.B) {
 	var (
-		st, exp Stat_t
+		st, exp StatT
 		line    string
 		err     error
 	)
@@ -137,7 +137,7 @@ func BenchmarkParseStat(b *testing.B) {
 
 func BenchmarkParseRealStat(b *testing.B) {
 	var (
-		st    Stat_t
+		st    StatT
 		err   error
 		total int
 	)

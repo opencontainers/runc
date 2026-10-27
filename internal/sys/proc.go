@@ -13,7 +13,8 @@ import (
 // State is the status of a process.
 type State rune
 
-const ( // Only values for Linux 3.14 and later are listed here
+// Process states. Only values for Linux 3.14 and later are listed here.
+const (
 	Dead        State = 'X'
 	DiskSleep   State = 'D'
 	Running     State = 'R'
@@ -52,10 +53,10 @@ func (s State) String() string {
 	}
 }
 
-// Stat_t represents the information from /proc/[pid]/stat, as
+// StatT represents the information from /proc/[pid]/stat, as
 // described in proc(5) with names based on the /proc/[pid]/status
 // fields.
-type Stat_t struct {
+type StatT struct {
 	// Name is the command run by the process.
 	Name string
 
@@ -67,9 +68,9 @@ type Stat_t struct {
 	StartTime uint64
 }
 
-// Stat returns a Stat_t instance for the specified process.
-func Stat(pid int) (Stat_t, error) {
-	var stat Stat_t
+// Stat returns a StatT instance for the specified process.
+func Stat(pid int) (StatT, error) {
+	var stat StatT
 
 	statFile, err := pathrs.ProcPidOpen(pid, "stat", os.O_RDONLY)
 	if err != nil {
@@ -84,7 +85,7 @@ func Stat(pid int) (Stat_t, error) {
 	return parseStat(string(bytes))
 }
 
-func parseStat(data string) (stat Stat_t, err error) {
+func parseStat(data string) (stat StatT, err error) {
 	// Example:
 	// 89653 (gunicorn: maste) S 89630 89653 89653 0 -1 4194560 29689 28896 0 3 146 32 76 19 20 0 1 0 2971844 52965376 3920 18446744073709551615 1 1 0 0 0 0 0 16781312 137447943 0 0 0 17 1 0 0 0 0 0 0 0 0 0 0 0 0 0
 	// The fields are space-separated, see full description in proc(5).

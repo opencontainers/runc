@@ -128,6 +128,7 @@ func GetPtyPeer(ptyFd uintptr, unsafePeerPath string, flags int) (*os.File, erro
 	return os.NewFile(peerFd, unsafePeerPath), nil
 }
 
+// SetKeepCaps sets the PR_SET_KEEPCAPS flag for the calling thread.
 func SetKeepCaps() error {
 	if err := unix.Prctl(unix.PR_SET_KEEPCAPS, 1, 0, 0, 0); err != nil {
 		return err
@@ -136,6 +137,7 @@ func SetKeepCaps() error {
 	return nil
 }
 
+// ClearKeepCaps clears the PR_SET_KEEPCAPS flag for the calling thread.
 func ClearKeepCaps() error {
 	if err := unix.Prctl(unix.PR_SET_KEEPCAPS, 0, 0, 0, 0); err != nil {
 		return err
@@ -144,6 +146,7 @@ func ClearKeepCaps() error {
 	return nil
 }
 
+// Setctty makes stdin the controlling terminal of the calling process.
 func Setctty() error {
 	if err := unix.IoctlSetInt(0, unix.TIOCSCTTY, 0); err != nil {
 		return err
@@ -151,7 +154,7 @@ func Setctty() error {
 	return nil
 }
 
-// SetSubreaper sets the value i as the subreaper setting for the calling process
+// SetSubreaper sets the value i as the subreaper setting for the calling process.
 func SetSubreaper(i int) error {
 	return unix.Prctl(unix.PR_SET_CHILD_SUBREAPER, uintptr(i), 0, 0, 0)
 }

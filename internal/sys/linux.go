@@ -11,8 +11,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// ParentDeathSignal is a parent death signal, as set by PR_SET_PDEATHSIG.
 type ParentDeathSignal int
 
+// Restore sets the parent death signal to p, unless p is 0 or the current
+// parent death signal is already p.
 func (p ParentDeathSignal) Restore() error {
 	if p == 0 {
 		return nil
@@ -27,10 +30,12 @@ func (p ParentDeathSignal) Restore() error {
 	return p.Set()
 }
 
+// Set sets the parent death signal of the calling thread to p.
 func (p ParentDeathSignal) Set() error {
 	return SetParentDeathSignal(uintptr(p))
 }
 
+// SetParentDeathSignal sets the parent death signal of the calling thread.
 func SetParentDeathSignal(sig uintptr) error {
 	if err := unix.Prctl(unix.PR_SET_PDEATHSIG, sig, 0, 0, 0); err != nil {
 		return err
@@ -38,6 +43,7 @@ func SetParentDeathSignal(sig uintptr) error {
 	return nil
 }
 
+// GetParentDeathSignal returns the parent death signal of the calling thread.
 func GetParentDeathSignal() (ParentDeathSignal, error) {
 	var sig int
 	if err := unix.Prctl(unix.PR_GET_PDEATHSIG, uintptr(unsafe.Pointer(&sig)), 0, 0, 0); err != nil {
