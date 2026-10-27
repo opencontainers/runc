@@ -108,16 +108,37 @@ func (c *Container) checkCriuVersion(minVersion int) error {
 
 const descriptorsFilename = "descriptors.json"
 
-func (c *Container) addCriuDumpMount(req *criurpc.CriuReq, m *configs.Mount) {
+// criuMountDest returns the destination of m resolved in the container rootfs.
+func (c *Container) criuMountDest(m *configs.Mount) string {
 	mountDest := m.Destination
 	if dest, err := securejoin.SecureJoin(c.config.Rootfs, mountDest); err == nil {
 		mountDest = dest[len(c.config.Rootfs):]
 	}
+	return mountDest
+}
+
+// addCriuExtMount adds an external mount to req.
+func addCriuExtMount(req *criurpc.CriuReq, key, val string) error {
+	// CRIU < 4.3.1 stores mounts internally as the string "mnt[KEY]:VAL"
+	// without escaping, and so we need to filter out problematic keys.
+	// Keys that contain "]:" would truncate the source mount path and
+	// would allow mounts outside the container to be restored. Empty keys
+	// would produce "mnt[]", which indicates to CRIU that external mounts
+	// should be autodetected.
+	if key == "" || strings.Contains(key, "]:") {
+		return fmt.Errorf("criu: invalid external mount destination %q", key)
+	}
 	extMnt := &criurpc.ExtMountMap{
-		Key: new(mountDest),
-		Val: new(mountDest),
+		Key: new(key),
+		Val: new(val),
 	}
 	req.Opts.ExtMnt = append(req.Opts.ExtMnt, extMnt)
+	return nil
+}
+
+func (c *Container) addCriuDumpMount(req *criurpc.CriuReq, m *configs.Mount) error {
+	mountDest := c.criuMountDest(m)
+	return addCriuExtMount(req, mountDest, mountDest)
 }
 
 func (c *Container) addMaskPaths(req *criurpc.CriuReq) error {
@@ -458,7 +479,9 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 		for _, m := range c.config.Mounts {
 			switch m.Device {
 			case "bind":
-				c.addCriuDumpMount(req, m)
+				if err := c.addCriuDumpMount(req, m); err != nil {
+					return err
+				}
 			case "cgroup":
 				if cgroups.IsCgroup2UnifiedMode() || hasCgroupns {
 					// real mount(s)
@@ -470,7 +493,9 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 					return err
 				}
 				for _, b := range binds {
-					c.addCriuDumpMount(req, b)
+					if err := c.addCriuDumpMount(req, b); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -480,8 +505,14 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 		}
 
 		for _, node := range c.config.Devices {
+			if node.Path == "" {
+				// The node only exists for cgroup reasons.
+				continue
+			}
 			m := &configs.Mount{Destination: node.Path, Source: node.Path}
-			c.addCriuDumpMount(req, m)
+			if err := c.addCriuDumpMount(req, m); err != nil {
+				return err
+			}
 		}
 
 		// Write the FD info to a file in the image directory
@@ -504,16 +535,8 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 	return nil
 }
 
-func (c *Container) addCriuRestoreMount(req *criurpc.CriuReq, m *configs.Mount) {
-	mountDest := m.Destination
-	if dest, err := securejoin.SecureJoin(c.config.Rootfs, mountDest); err == nil {
-		mountDest = dest[len(c.config.Rootfs):]
-	}
-	extMnt := &criurpc.ExtMountMap{
-		Key: new(mountDest),
-		Val: new(m.Source),
-	}
-	req.Opts.ExtMnt = append(req.Opts.ExtMnt, extMnt)
+func (c *Container) addCriuRestoreMount(req *criurpc.CriuReq, m *configs.Mount) error {
+	return addCriuExtMount(req, c.criuMountDest(m), m.Source)
 }
 
 func (c *Container) restoreNetwork(req *criurpc.CriuReq, criuOpts *CriuOpts) {
@@ -750,7 +773,9 @@ func (c *Container) Restore(process *Process, criuOpts *CriuOpts) error {
 	for _, m := range c.config.Mounts {
 		switch m.Device {
 		case "bind":
-			c.addCriuRestoreMount(req, m)
+			if err := c.addCriuRestoreMount(req, m); err != nil {
+				return err
+			}
 		case "cgroup":
 			if cgroups.IsCgroup2UnifiedMode() || hasCgroupns {
 				continue
@@ -761,19 +786,29 @@ func (c *Container) Restore(process *Process, criuOpts *CriuOpts) error {
 				return err
 			}
 			for _, b := range binds {
-				c.addCriuRestoreMount(req, b)
+				if err := c.addCriuRestoreMount(req, b); err != nil {
+					return err
+				}
 			}
 		}
 	}
 
 	if len(c.config.MaskPaths) > 0 {
 		m := &configs.Mount{Destination: "/dev/null", Source: "/dev/null"}
-		c.addCriuRestoreMount(req, m)
+		if err := c.addCriuRestoreMount(req, m); err != nil {
+			return err
+		}
 	}
 
 	for _, node := range c.config.Devices {
+		if node.Path == "" {
+			// The node only exists for cgroup reasons.
+			continue
+		}
 		m := &configs.Mount{Destination: node.Path, Source: node.Path}
-		c.addCriuRestoreMount(req, m)
+		if err := c.addCriuRestoreMount(req, m); err != nil {
+			return err
+		}
 	}
 
 	if criuOpts.EmptyNs&unix.CLONE_NEWNET == 0 {
