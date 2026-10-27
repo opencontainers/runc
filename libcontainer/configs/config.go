@@ -629,7 +629,7 @@ func (c *Command) Run(s *specs.State) error {
 		return err
 	case <-timerCh:
 		_ = cmd.Process.Kill()
-		<-errC
+		<-errC //nolint:errcheck // Wait error is expected after Kill.
 		return fmt.Errorf("hook ran past specified timeout of %.1fs", c.Timeout.Seconds())
 	}
 }

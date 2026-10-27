@@ -70,8 +70,8 @@ func expectBarrier(t *testing.T, conn *net.UnixConn, notifyHostChan <-chan error
 	case <-timer.C:
 		// this is the expected case
 		break
-	case <-notifyHostChan:
-		t.Fatal("runc has terminated before barrier was lifted")
+	case err := <-notifyHostChan:
+		t.Fatalf("runc has terminated before barrier was lifted (err: %v)", err)
 	}
 
 	// Lift the barrier
