@@ -59,7 +59,10 @@ func TestLogForwardingStopsAfterClosingTheWriter(t *testing.T) {
 	// Do not use finish() here as we check done pipe ourselves.
 	l.w.Close()
 	select {
-	case <-l.done:
+	case err := <-l.done:
+		if err != nil {
+			t.Fatal(err)
+		}
 	case <-time.After(10 * time.Second):
 		t.Fatal("log forwarding did not stop after closing the pipe")
 	}
