@@ -188,7 +188,7 @@ func createContainer(cmd *cli.Command, id string, spec *specs.Spec) (*libcontain
 	}
 	config, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
 		CgroupName:       id,
-		UseSystemdCgroup: cmd.Bool("systemd-cgroup"),
+		UseSystemdCgroup: cmd.String("cgroup-manager") == "systemd",
 		NoPivotRoot:      cmd.Bool("no-pivot"),
 		NoNewKeyring:     cmd.Bool("no-new-keyring"),
 		Spec:             spec,

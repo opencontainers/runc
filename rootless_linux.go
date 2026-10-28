@@ -37,7 +37,7 @@ func shouldUseRootlessCgroupManager(cmd *cli.Command) (bool, error) {
 	//
 	// On error, we assume we are root. An error may happen during shelling out to `busctl` CLI,
 	// mostly when $DBUS_SESSION_BUS_ADDRESS is unset.
-	if cmd.Bool("systemd-cgroup") {
+	if cmd.String("cgroup-manager") == "systemd" {
 		ownerUID, err := systemd.DetectUID()
 		if err != nil {
 			logrus.WithError(err).Debug("failed to get the OwnerUID value, assuming the value to be 0")

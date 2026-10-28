@@ -11,7 +11,7 @@
 set -u -e
 
 opts=()
-[ -v RUNC_USE_SYSTEMD ] && opts+=("--systemd-cgroup")
+[ -v RUNC_USE_SYSTEMD ] && opts+=("--cgroup-manager=systemd")
 [ -n "${ROOT:-}" ] && opts+=("--root" "$ROOT/state")
 
 exec "$RUNC" "${opts[@]}" "$@"
