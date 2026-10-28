@@ -1126,17 +1126,17 @@ func prepareRootInHostMountNS(config *configs.Config) error {
 }
 
 func setReadonly() error {
-	flags := uintptr(unix.MS_BIND | unix.MS_REMOUNT | unix.MS_RDONLY)
-
-	err := mount("", "/", "", flags, "")
-	if err == nil {
-		return nil
-	}
+	// A bind remount sets the per-mount flags to exactly those given, so
+	// keep the existing nosuid, nodev, noexec and nosymfollow (otherwise
+	// they are cleared, or the remount fails in a userns where they are
+	// locked). Atime flags are not passed, so the kernel preserves them.
 	var s unix.Statfs_t
 	if err := unix.Statfs("/", &s); err != nil {
 		return &os.PathError{Op: "statfs", Path: "/", Err: err}
 	}
-	flags |= uintptr(s.Flags)
+	keep := statfsToMountFlags(s) & (unix.MS_NOSUID | unix.MS_NODEV | unix.MS_NOEXEC | unix.MS_NOSYMFOLLOW)
+	flags := uintptr(keep | unix.MS_BIND | unix.MS_REMOUNT | unix.MS_RDONLY)
+
 	return mount("", "/", "", flags, "")
 }
 
