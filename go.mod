@@ -1,6 +1,6 @@
 module github.com/opencontainers/runc
 
-go 1.25.0
+go 1.26.0
 
 require (
 	cyphar.com/go-pathrs v0.2.6
@@ -24,8 +24,8 @@ require (
 	github.com/urfave/cli v1.22.17
 	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5
-	golang.org/x/net v0.55.0
-	golang.org/x/sys v0.46.0
+	golang.org/x/net v0.60.0
+	golang.org/x/sys v0.48.0
 )
 
 require (
