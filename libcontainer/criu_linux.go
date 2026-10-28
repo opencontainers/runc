@@ -568,6 +568,11 @@ func isOnTmpfs(path string, mounts []*configs.Mount) bool {
 	return false
 }
 
+func isReadonlyBind(m *configs.Mount) bool {
+	return m.Flags&unix.MS_RDONLY != 0 ||
+		(m.RecAttr != nil && m.RecAttr.Attr_set&unix.MOUNT_ATTR_RDONLY != 0)
+}
+
 // prepareCriuRestoreMounts tries to set up the rootfs of the
 // container to be restored in the same way runc does it for
 // initial container creation. Even for a read-only rootfs container
@@ -633,7 +638,14 @@ func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
 		// It is also not necessary to order the mount points
 		// because during initial container creation mounts are
 		// set up in the order they are configured.
-		if m.Device == "bind" {
+		//
+		// Read-only bind mounts are skipped here because during
+		// container creation the attempted creation of mountpoint
+		// path components would fail on read-only mounts. Permitting
+		// it here would effectively grant the restored container
+		// temporary write access when the original container did
+		// not have it.
+		if m.Device == "bind" && !isReadonlyBind(m) {
 			if err := utils.WithProcfdFile(me.dstFile, func(dstFd string) error {
 				return mountViaFds(m.Source, nil, m.Destination, dstFd, "", unix.MS_BIND|unix.MS_REC, "")
 			}); err != nil {
