@@ -259,3 +259,24 @@ function teardown() {
 	# is deleted during the namespace cleanup.
 	run ! ip link del dummy0
 }
+
+# newuidmap/newgidmap are given 3 arguments per mapping; make sure
+# a large number of mappings is passed to them correctly.
+@test "userns with many id mappings [rootless newuidmap]" {
+	# As root, uid_map and gid_map are written directly.
+	requires rootless_idmap
+
+	local n=16
+	# shellcheck disable=SC2016
+	update_config --argjson n "$n" \
+		--argjson uid "$(id -u)" --argjson ustart "$ROOTLESS_UIDMAP_START" \
+		--argjson gid "$(id -g)" --argjson gstart "$ROOTLESS_GIDMAP_START" '
+		  .linux.uidMappings = [{"hostID": $uid, "containerID": 0, "size": 1}]
+			+ [range(1; $n) | {"hostID": ($ustart + .), "containerID": ., "size": 1}]
+		| .linux.gidMappings = [{"hostID": $gid, "containerID": 0, "size": 1}]
+			+ [range(1; $n) | {"hostID": ($gstart + .), "containerID": ., "size": 1}]
+		| .process.args = ["sh", "-c", "cat /proc/self/uid_map /proc/self/gid_map"]'
+
+	run -0 runc run test_busybox
+	[ "${#lines[@]}" -eq $((2 * n)) ]
+}
