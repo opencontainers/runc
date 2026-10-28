@@ -32,6 +32,7 @@ func Validate(config *configs.Config) error {
 		rootfs,
 		rootlessEUIDCheck,
 		scheduler,
+		seccompCheck,
 		selinuxCheck,
 		sysctl,
 		uts,
@@ -540,6 +541,27 @@ func memoryPolicy(config *configs.Config) error {
 		// Zero or more nodes are allowed by the kernel.
 	default:
 		return fmt.Errorf("invalid memory policy mode: %d", mpol.Mode)
+	}
+	return nil
+}
+
+func seccompCheck(config *configs.Config) error {
+	sc := config.Seccomp
+	if sc == nil {
+		return nil
+	}
+	// The runtime spec requires an error if errnoRet
+	// is set for an action that does not support it.
+	supportsErrno := func(a configs.Action) bool {
+		return a == configs.Errno || a == configs.Trace
+	}
+	if sc.DefaultErrnoRet != nil && !supportsErrno(sc.DefaultAction) {
+		return errors.New("seccomp: defaultErrnoRet is only supported for SCMP_ACT_ERRNO and SCMP_ACT_TRACE actions")
+	}
+	for _, call := range sc.Syscalls {
+		if call != nil && call.ErrnoRet != nil && !supportsErrno(call.Action) {
+			return fmt.Errorf("seccomp: syscall %q: errnoRet is only supported for SCMP_ACT_ERRNO and SCMP_ACT_TRACE actions", call.Name)
+		}
 	}
 	return nil
 }
