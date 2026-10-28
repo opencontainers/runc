@@ -40,6 +40,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   changes the propagation of host's `/` and of the parent mount of the
   container rootfs (they were made private or slave). (#5537)
 
+### Changed ###
+- `runc exec` now uses the process configuration from `config.json` as it was
+  when the container was created (saved to the container state directory by
+  `runc create`, `run`, and `restore`), rather than reading `config.json` from
+  the bundle directory. (#5541)
+- Relative `--console-socket` and `--pidfd-socket` paths are now relative to
+  the current directory (rather than the bundle directory), same as
+  `--pid-file`. (#5541)
+
 ## [1.6.0-rc.1] - 2026-10-06
 
 > Lo bueno, si breve, dos veces bueno.
