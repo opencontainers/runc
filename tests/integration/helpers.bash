@@ -36,6 +36,9 @@ ARCH=$(uname -m)
 # Seccomp agent socket.
 SECCCOMP_AGENT_SOCKET="$BATS_TMPDIR/seccomp-agent.sock"
 
+# Assertion helpers (assert_output, refute_output, assert_line).
+load lib/assert
+
 # Wrapper around "run" that logs output to make tests easier to debug.
 function sane_run() {
 	local cmd="$1"
