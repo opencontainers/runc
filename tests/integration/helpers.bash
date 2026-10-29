@@ -36,6 +36,9 @@ ARCH=$(uname -m)
 # Seccomp agent socket.
 SECCCOMP_AGENT_SOCKET="$BATS_TMPDIR/seccomp-agent.sock"
 
+# Assertion helpers (assert_output, refute_output, assert_line).
+load lib/assert
+
 # Wrapper around "run" that logs output to make tests easier to debug.
 function sane_run() {
 	local cmd="$1"
@@ -54,6 +57,13 @@ function sane_run() {
 
 # Wrapper for runc.
 function runc() {
+	# Called via bats' run, as in "run -0 runc ..." (the style used in
+	# main branch)? Do not use sane_run then, as a nested run would hide
+	# the runc exit status from the outer one.
+	if [[ " ${FUNCNAME[*]:1} " == *" run "* ]]; then
+		__runc "$@"
+		return
+	fi
 	CMDNAME="$(basename "$RUNC")" sane_run __runc "$@"
 }
 
