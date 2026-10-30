@@ -14,8 +14,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - For users making use of the `libpathrs` build tag, runc now depends on
   [libpathrs v0.2.5] or later, and attempting to build with older versions will
   cause compilation errors. (#5291, #5333)
+- Switched to opencontainers/cgroups v0.1.0, which no longer uses the
+  high-level cilium/ebpf API to manage cgroup v2 device rules. As a result,
+  the runc binary shrunk by about 1 MiB (7.5%) on amd64. (#5403, #5583)
 
 [libpathrs v0.2.5]: https://github.com/cyphar/libpathrs/releases/tag/v0.2.5
+
+### Fixed ###
+- Worked around a Linux kernel bug (present since kernel v6.17, fixed in v7.2)
+  which caused the kernel to write past the end of the structure
+  provided by userspace (runc). This resulted in memory corruption inside runc
+  (manifesting as random crashes) when configuring device rules on cgroup v2
+  systems. (#5403, #5583)
+- `runc exec --cgroup` (and the equivalent libcontainer `Process.SubCgroupPaths`
+  API) no longer accepts a sub-cgroup path that escapes the container's cgroup
+  into a sibling cgroup sharing the same name prefix. Note that using
+  `--cgroup` requires the same privileges as running `runc exec` itself, so
+  this is a correctness rather than a security fix. (#5403, #5583)
+- Fixed a missing `O_CLOEXEC` when opening the cgroup v2 directory to set up
+  device rules. (#5403, #5583)
 
 
 ## [1.4.3] - 2026-06-13
