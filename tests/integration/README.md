@@ -81,4 +81,12 @@ Prefer these over `[ ... ]` or `[[ ... ]]` comparisons: when an assertion
 fails, the test log shows both the expected and the actual value, while a bare
 test expression only shows the expression itself.
 
+Tag tests which check runc specific behavior with
+
+```bash
+# bats test_tags=runc-specific
+```
+
+so that other runtimes can skip them.
+
 Please see existing tests for examples.

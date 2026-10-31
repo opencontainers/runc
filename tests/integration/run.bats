@@ -107,6 +107,8 @@ function teardown() {
 	assert_line --index 0 "410"
 }
 
+# Checks runc specific debug messages.
+# bats test_tags=runc-specific
 @test "runc run [/proc/self/exe clone]" {
 	run -0 runc --debug run test_hello
 	assert_output --partial "Hello World"
@@ -220,6 +222,8 @@ EOF
 }
 
 # https://github.com/opencontainers/runc/issues/5087
+# Relies on runc init calling write(2) after loading the seccomp filter.
+# bats test_tags=runc-specific
 @test "runc run [seccomp SCMP_ACT_KILL kills init]" {
 	# SCMP_ACT_KILL only kills the offending thread, leaving runc init with a
 	# zombie thread group leader and live threads holding its ends of the sync
