@@ -3,78 +3,63 @@
 package system
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/internal/linux"
+	"github.com/opencontainers/runc/internal/sys"
 )
 
-type ParentDeathSignal int
+// ParentDeathSignal is a parent death signal, as set by prctl(PR_SET_PDEATHSIG).
+//
+// Deprecated: This type is deprecated and has been moved to an internal
+// package. It will be removed in runc 1.7.
+type ParentDeathSignal = sys.ParentDeathSignal
 
-func (p ParentDeathSignal) Restore() error {
-	if p == 0 {
-		return nil
-	}
-	current, err := GetParentDeathSignal()
-	if err != nil {
-		return err
-	}
-	if p == current {
-		return nil
-	}
-	return p.Set()
-}
-
-func (p ParentDeathSignal) Set() error {
-	return SetParentDeathSignal(uintptr(p))
-}
-
+// Deprecated: This function is deprecated and has been moved to an internal
+// package. It will be removed in runc 1.7.
 func SetParentDeathSignal(sig uintptr) error {
-	if err := unix.Prctl(unix.PR_SET_PDEATHSIG, sig, 0, 0, 0); err != nil {
-		return err
-	}
-	return nil
+	return sys.SetParentDeathSignal(sig)
 }
 
+// Deprecated: This function is deprecated and has been moved to an internal
+// package. It will be removed in runc 1.7.
 func GetParentDeathSignal() (ParentDeathSignal, error) {
-	var sig int
-	if err := unix.Prctl(unix.PR_GET_PDEATHSIG, uintptr(unsafe.Pointer(&sig)), 0, 0, 0); err != nil {
-		return -1, err
-	}
-	return ParentDeathSignal(sig), nil
+	return sys.GetParentDeathSignal()
 }
 
+// Deprecated: This function is deprecated and has been moved to an internal
+// package. It will be removed in runc 1.7.
 func SetKeepCaps() error {
-	if err := unix.Prctl(unix.PR_SET_KEEPCAPS, 1, 0, 0, 0); err != nil {
-		return err
-	}
-
-	return nil
+	return linux.SetKeepCaps()
 }
 
+// Deprecated: This function is deprecated and has been moved to an internal
+// package. It will be removed in runc 1.7.
 func ClearKeepCaps() error {
-	if err := unix.Prctl(unix.PR_SET_KEEPCAPS, 0, 0, 0, 0); err != nil {
-		return err
-	}
-
-	return nil
+	return linux.ClearKeepCaps()
 }
 
+// Deprecated: This function is deprecated and has been moved to an internal
+// package. It will be removed in runc 1.7.
 func Setctty() error {
-	if err := unix.IoctlSetInt(0, unix.TIOCSCTTY, 0); err != nil {
-		return err
-	}
-	return nil
+	return linux.Setctty()
 }
 
 // SetSubreaper sets the value i as the subreaper setting for the calling process
+//
+// Deprecated: This function is deprecated and has been moved to an internal
+// package. It will be removed in runc 1.7.
 func SetSubreaper(i int) error {
-	return unix.Prctl(unix.PR_SET_CHILD_SUBREAPER, uintptr(i), 0, 0, 0)
+	return linux.SetSubreaper(i)
 }
 
 // GetSubreaper returns the subreaper setting for the calling process
+//
+// Deprecated: This function is deprecated and will be removed in runc 1.7.
 func GetSubreaper() (int, error) {
 	var i uintptr
 
@@ -87,69 +72,25 @@ func GetSubreaper() (int, error) {
 
 // Copy is like io.Copy except it uses sendfile(2) if the source and sink are
 // both (*os.File) as an optimisation to make copies faster.
+//
+// Deprecated: This function is deprecated and has been moved to an internal
+// package. It will be removed in runc 1.7.
 func Copy(dst io.Writer, src io.Reader) (copied int64, err error) {
-	dstFile, _ := dst.(*os.File)
-	srcFile, _ := src.(*os.File)
-
-	if dstFile != nil && srcFile != nil {
-		fi, err := srcFile.Stat()
-		if err != nil {
-			goto fallback
-		}
-		size := fi.Size()
-		for size > 0 {
-			n, err := unix.Sendfile(int(dstFile.Fd()), int(srcFile.Fd()), nil, int(size))
-			if n > 0 {
-				size -= int64(n)
-				copied += int64(n)
-			}
-			if err == unix.EINTR {
-				continue
-			}
-			if err != nil {
-				if copied == 0 {
-					// If we haven't copied anything so far, we can safely just
-					// fallback to io.Copy. We could always do the fallback but
-					// it's safer to error out in the case of a partial copy
-					// followed by an error (which should never happen).
-					goto fallback
-				}
-				return copied, fmt.Errorf("partial sendfile copy: %w", err)
-			}
-		}
-		return copied, nil
-	}
-
-fallback:
-	return io.Copy(dst, src)
+	return sys.Copy(dst, src)
 }
 
 // SetLinuxPersonality sets the Linux execution personality. For more information see the personality syscall documentation.
-// checkout getLinuxPersonalityFromStr() from libcontainer/specconv/spec_linux.go for type conversion.
+//
+// Deprecated: This function is deprecated and has been moved to an internal
+// package. It will be removed in runc 1.7.
 func SetLinuxPersonality(personality int) error {
-	_, _, errno := unix.Syscall(unix.SYS_PERSONALITY, uintptr(personality), 0, 0)
-	if errno != 0 {
-		return &os.SyscallError{Syscall: "set_personality", Err: errno}
-	}
-	return nil
+	return linux.SetLinuxPersonality(personality)
 }
 
 // GetPtyPeer is a wrapper for ioctl(TIOCGPTPEER).
+//
+// Deprecated: This function is deprecated and has been moved to an internal
+// package. It will be removed in runc 1.7.
 func GetPtyPeer(ptyFd uintptr, unsafePeerPath string, flags int) (*os.File, error) {
-	// Make sure O_NOCTTY is always set -- otherwise runc might accidentally
-	// gain it as a controlling terminal. O_CLOEXEC also needs to be set to
-	// make sure we don't leak the handle either.
-	flags |= unix.O_NOCTTY | unix.O_CLOEXEC
-
-	// There is no nice wrapper for this kind of ioctl in unix.
-	peerFd, _, errno := unix.Syscall(
-		unix.SYS_IOCTL,
-		ptyFd,
-		uintptr(unix.TIOCGPTPEER),
-		uintptr(flags),
-	)
-	if errno != 0 {
-		return nil, os.NewSyscallError("ioctl TIOCGPTPEER", errno)
-	}
-	return os.NewFile(peerFd, unsafePeerPath), nil
+	return linux.GetPtyPeer(ptyFd, unsafePeerPath, flags)
 }

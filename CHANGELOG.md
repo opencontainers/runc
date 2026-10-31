@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`cgroupfs` or `systemd`). This is compatible with crun. (#5570)
 
 ### Deprecated ###
+- The `libcontainer/system` and `libcontainer/system/kernelversion` packages
+  are deprecated, as they are only used by runc itself. They have been moved to
+  internal packages and will be removed in runc 1.7. (#5579)
 - `libcontainer.Stats.Interfaces` and `types.Stats.NetworkInterfaces` (shown
   as `network_interfaces` in `runc events --stats` output) are deprecated, as
   they are always empty since the removal of veth network strategy in runc

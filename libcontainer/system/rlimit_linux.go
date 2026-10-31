@@ -2,12 +2,15 @@ package system
 
 import (
 	"syscall"
+
+	"github.com/opencontainers/runc/internal/sys"
 )
 
 // ClearRlimitNofileCache clears go runtime's nofile rlimit cache. The argument
 // is process RLIMIT_NOFILE values. Relies on go.dev/cl/588076.
+//
+// Deprecated: This function is deprecated and has been moved to an internal
+// package. It will be removed in runc 1.7.
 func ClearRlimitNofileCache(lim *syscall.Rlimit) {
-	// Ignore the return values since we only need to clean the cache,
-	// the limit is going to be set via unix.Prlimit elsewhere.
-	_ = syscall.Setrlimit(syscall.RLIMIT_NOFILE, lim)
+	sys.ClearRlimitNofileCache(lim)
 }

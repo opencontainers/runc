@@ -14,7 +14,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/keys"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
-	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
@@ -54,7 +53,7 @@ func (l *linuxSetnsInit) Init() error {
 		if err := setupConsole(l.consoleSocket, l.config, false); err != nil {
 			return err
 		}
-		if err := system.Setctty(); err != nil {
+		if err := linux.Setctty(); err != nil {
 			return err
 		}
 	}

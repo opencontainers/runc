@@ -5,13 +5,13 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/opencontainers/runc/libcontainer/system"
+	"github.com/opencontainers/runc/internal/sys"
 )
 
 func newRestoredProcess(cmd *exec.Cmd, fds []string) (*restoredProcess, error) {
 	var err error
 	pid := cmd.Process.Pid
-	stat, err := system.Stat(pid)
+	stat, err := sys.Stat(pid)
 	if err != nil {
 		return nil, err
 	}

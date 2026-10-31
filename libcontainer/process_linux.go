@@ -27,11 +27,11 @@ import (
 	"github.com/opencontainers/cgroups/fs2"
 	"github.com/opencontainers/runc/internal/cmsg"
 	"github.com/opencontainers/runc/internal/linux"
+	"github.com/opencontainers/runc/internal/sys"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
 	"github.com/opencontainers/runc/libcontainer/logs"
-	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
@@ -131,7 +131,7 @@ func (p *containerProcess) pid() int {
 }
 
 func (p *containerProcess) startTime() (uint64, error) {
-	stat, err := system.Stat(p.pid())
+	stat, err := sys.Stat(p.pid())
 	return stat.StartTime, err
 }
 

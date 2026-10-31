@@ -15,13 +15,13 @@ import (
 	"github.com/urfave/cli/v3"
 	"golang.org/x/sys/unix"
 
+	"github.com/opencontainers/runc/internal/kernelversion"
+	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/internal/third_party/systemd/activation"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
-	"github.com/opencontainers/runc/libcontainer/system"
-	"github.com/opencontainers/runc/libcontainer/system/kernelversion"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
@@ -263,7 +263,7 @@ func (r *runner) run(config *specs.Process) (_ int, retErr error) {
 	// started.
 	if r.enableSubreaper {
 		// set us as the subreaper before registering the signal handler for the container
-		if err := system.SetSubreaper(1); err != nil {
+		if err := linux.SetSubreaper(1); err != nil {
 			logrus.Warn(err)
 		}
 	}

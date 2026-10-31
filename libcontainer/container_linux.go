@@ -20,10 +20,10 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/cgroups"
+	"github.com/opencontainers/runc/internal/sys"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/exeseal"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
-	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
@@ -309,8 +309,8 @@ func waitForFifoReadyPolling(f *os.File, pid int) error {
 		}
 		// If init is dead, fallthrough and let readFromExecFifo distinguish
 		// "wrote before dying" from "died before writing".
-		stat, err := system.Stat(pid)
-		if err != nil || stat.State == system.Zombie {
+		stat, err := sys.Stat(pid)
+		if err != nil || stat.State == sys.Zombie {
 			return nil
 		}
 	}
@@ -931,11 +931,11 @@ func (c *Container) hasInit() bool {
 		return false
 	}
 	pid := c.initProcess.pid()
-	stat, err := system.Stat(pid)
+	stat, err := sys.Stat(pid)
 	if err != nil {
 		return false
 	}
-	if stat.StartTime != c.initProcessStartTime || stat.State == system.Zombie || stat.State == system.Dead {
+	if stat.StartTime != c.initProcessStartTime || stat.State == sys.Zombie || stat.State == sys.Dead {
 		return false
 	}
 	return true
