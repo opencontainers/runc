@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -235,9 +236,7 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		}
 	}
 
-	if config.NoPivotRoot {
-		err = msMoveRoot(config.Rootfs)
-	} else if config.Namespaces.Contains(configs.NEWNS) {
+	if config.Namespaces.Contains(configs.NEWNS) {
 		err = pivotRoot(rootFd)
 	} else {
 		err = chroot()
@@ -1160,7 +1159,9 @@ func pivotRoot(root *os.File) error {
 	if err != nil {
 		return err
 	}
-	defer unix.Close(oldroot)
+	defer func() {
+		unix.Close(oldroot)
+	}()
 
 	// Change to the new root so that the pivot_root actually acts on it.
 	if err := unix.Fchdir(int(root.Fd())); err != nil {
@@ -1168,7 +1169,27 @@ func pivotRoot(root *os.File) error {
 	}
 
 	if err := unix.PivotRoot(".", "."); err != nil {
-		return &os.PathError{Op: "pivot_root", Path: ".", Err: err}
+		if !errors.Is(err, unix.EINVAL) {
+			return &os.PathError{Op: "pivot_root", Path: ".", Err: err}
+		}
+		// One of the reasons for EINVAL is the current root being
+		// initramfs, which can't be pivoted from on older kernels.
+		ok, err2 := initramfsPivotSetup(root.Name())
+		if err2 != nil {
+			return fmt.Errorf("pivot_root failed (%w), initramfs workaround failed: %w", err, err2)
+		}
+		if !ok {
+			return &os.PathError{Op: "pivot_root", Path: ".", Err: err}
+		}
+		// The root has changed; reopen it.
+		unix.Close(oldroot)
+		oldroot, err = linux.Open("/", unix.O_DIRECTORY|unix.O_RDONLY|unix.O_PATH, 0)
+		if err != nil {
+			return err
+		}
+		if err := unix.PivotRoot(".", "."); err != nil {
+			return &os.PathError{Op: "pivot_root (initramfs workaround)", Path: ".", Err: err}
+		}
 	}
 
 	// Currently our "." is oldroot (according to the current kernel code).
@@ -1200,67 +1221,96 @@ func pivotRoot(root *os.File) error {
 	return nil
 }
 
-func msMoveRoot(rootfs string) error {
-	// Before we move the root and chroot we have to mask all "full" sysfs and
-	// procfs mounts which exist on the host. This is because while the kernel
-	// has protections against mounting procfs if it has masks, when using
-	// chroot(2) the *host* procfs mount is still reachable in the mount
-	// namespace and the kernel permits procfs mounts inside --no-pivot
-	// containers.
-	//
-	// Users shouldn't be using --no-pivot except in exceptional circumstances,
-	// but to avoid such a trivial security flaw we apply a best-effort
-	// protection here. The kernel only allows a mount of a pseudo-filesystem
-	// like procfs or sysfs if there is a *full* mount (the root of the
-	// filesystem is mounted) without any other locked mount points covering a
-	// subtree of the mount.
-	//
-	// So we try to unmount (or mount tmpfs on top of) any mountpoint which is
-	// a full mount of either sysfs or procfs (since those are the most
-	// concerning filesystems to us).
-	mountinfos, err := mountinfo.GetMounts(func(info *mountinfo.Info) (skip, stop bool) {
-		// Collect every sysfs and procfs filesystem, except for those which
-		// are non-full mounts or are inside the rootfs of the container.
-		if info.Root != "/" ||
-			(info.FSType != "proc" && info.FSType != "sysfs") ||
-			strings.HasPrefix(info.Mountpoint, rootfs) {
-			skip = true
-		}
-		return skip, stop
-	})
+// initramfsPivotSetup prepares for pivot_root(2) in case the current root
+// is the initramfs. Before Linux 7.0, pivot_root(2) fails with EINVAL if
+// the current root is the initramfs, because it has no parent mount (this
+// used to be worked around by using --no-pivot, which was insecure).
+//
+// The workaround is to create a recursive bind mount clone of / (which
+// does have a parent mount), and chroot into it, so that a subsequent
+// pivot_root(2) works. The container rootfs is used as a temporary mount
+// point for the clone, so it works with a read-only initramfs.
+//
+// The current directory must be the container rootfs. On success, the
+// current directory is the clone of the container rootfs.
+//
+// Returns false if the current root is not the initramfs.
+func initramfsPivotSetup(rootfs string) (bool, error) {
+	mounts, err := mountinfo.GetMounts(nil)
 	if err != nil {
-		return err
+		return false, err
 	}
-	for _, info := range mountinfos {
-		p := info.Mountpoint
-		// Be sure umount events are not propagated to the host.
-		if err := mount("", p, "", unix.MS_SLAVE|unix.MS_REC, ""); err != nil {
-			if errors.Is(err, unix.ENOENT) {
-				// If the mountpoint doesn't exist that means that we've
-				// already blasted away some parent directory of the mountpoint
-				// and so we don't care about this error.
-				continue
-			}
-			return err
+	// The initramfs mount has no parent, and so it is its own parent.
+	rootID := -1
+	for _, m := range mounts {
+		if m.Mountpoint == "/" && m.ID == m.Parent {
+			rootID = m.ID
+			break
 		}
-		if err := unmount(p, unix.MNT_DETACH); err != nil {
-			if !errors.Is(err, unix.EINVAL) && !errors.Is(err, unix.EPERM) {
-				return err
-			} else {
-				// If we have not privileges for umounting (e.g. rootless), then
-				// cover the path.
-				if err := mount("tmpfs", p, "tmpfs", 0, ""); err != nil {
-					return err
+	}
+	if rootID == -1 {
+		return false, nil
+	}
+	// Clone / on top of the container rootfs.
+	if err := mount("/", ".", "", unix.MS_BIND|unix.MS_REC, ""); err != nil {
+		return true, err
+	}
+	// Enter the clone. Note that chdir(".") would keep us in the
+	// underlying mount, so we have to use the full path.
+	if err := unix.Chdir(rootfs); err != nil {
+		return true, &os.PathError{Op: "chdir", Path: rootfs, Err: err}
+	}
+	// If / is shared, the move below propagates to its peers (e.g. the
+	// host). Make it a slave to prevent that.
+	if err := mount("", "/", "", unix.MS_SLAVE, ""); err != nil {
+		return true, err
+	}
+	// Move the clone on top of /.
+	if err := mount(".", "/", "", unix.MS_MOVE, ""); err != nil {
+		return true, err
+	}
+	// Now, the clone is on top of /, but the original mounts (including
+	// full procfs and sysfs mounts) are still attached to the initramfs,
+	// which stays in our mount namespace forever, and so they could be
+	// used to bypass procfs/sysfs mount restrictions. Detach them, last
+	// mounted first. Note that paths starting with / are resolved from
+	// our current root (the initramfs), not from the clone on top of it.
+	for _, m := range slices.Backward(mounts) {
+		if m.Parent != rootID || m.ID == rootID || m.Mountpoint == "/" {
+			continue
+		}
+		// Unmounting by path only detaches the topmost mount, so
+		// repeat until there are no more mounts stacked on this path.
+		for i := 0; ; i++ {
+			// Make sure the unmount is not propagated (e.g. to the
+			// clone). This fails with EINVAL if the path is not a
+			// mount point (i.e. all the mounts are detached).
+			err := mount("", m.Mountpoint, "", unix.MS_SLAVE|unix.MS_REC, "")
+			if err != nil {
+				if i > 0 && errors.Is(err, unix.EINVAL) {
+					break
 				}
+				return true, err
+			}
+			if err := unmount(m.Mountpoint, unix.MNT_DETACH); err != nil {
+				if errors.Is(err, unix.EINVAL) {
+					// The mount is locked, as our mount namespace is
+					// owned by a user namespace, so it can't be detached.
+					return true, fmt.Errorf("%w (running a container with user namespace from initramfs requires Linux >= 7.0)", err)
+				}
+				return true, err
 			}
 		}
 	}
-
-	// Move the rootfs on top of "/" in our mount namespace.
-	if err := mount(rootfs, "/", "", unix.MS_MOVE, ""); err != nil {
-		return err
+	// Make the clone our root.
+	if err := unix.Chroot("."); err != nil {
+		return true, &os.PathError{Op: "chroot", Path: ".", Err: err}
 	}
-	return chroot()
+	// Go to the clone of the container rootfs.
+	if err := unix.Chdir(rootfs); err != nil {
+		return true, &os.PathError{Op: "chdir", Path: rootfs, Err: err}
+	}
+	return true, nil
 }
 
 func chroot() error {

@@ -186,10 +186,12 @@ func createContainer(cmd *cli.Command, id string, spec *specs.Spec) (*libcontain
 	if err != nil {
 		return nil, err
 	}
+	if cmd.Bool("no-pivot") {
+		logrus.Warn("--no-pivot is deprecated and ignored; see https://github.com/opencontainers/runc/issues/4435")
+	}
 	config, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
 		CgroupName:       id,
 		UseSystemdCgroup: cmd.String("cgroup-manager") == "systemd",
-		NoPivotRoot:      cmd.Bool("no-pivot"),
 		NoNewKeyring:     cmd.Bool("no-new-keyring"),
 		Spec:             spec,
 		RootlessEUID:     os.Geteuid() != 0,

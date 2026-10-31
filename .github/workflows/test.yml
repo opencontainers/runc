@@ -88,6 +88,20 @@ jobs:
         sudo apt update
         sudo apt -y install libseccomp-dev sshfs uidmap lld
 
+    - name: install qemu (for initramfs tests)
+      # Not using qemu-kvm virtual package, as on Ubuntu 26.04 it is provided
+      # by both qemu-system-<arch> and qemu-system-<arch>-hwe.
+      run: |
+        case "$(uname -m)" in
+        x86_64) pkg=qemu-system-x86 ;;
+        aarch64) pkg=qemu-system-arm ;;
+        *)
+          echo "::warning::no qemu package for $(uname -m), initramfs tests will be skipped"
+          exit 0
+          ;;
+        esac
+        sudo apt -y install "$pkg"
+
     - name: use the original sudo
       # Ubuntu 26.04 uses sudo-rs by default, which does not support -E
       # (https://github.com/trifectatechfoundation/sudo-rs/issues/1299).
