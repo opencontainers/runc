@@ -1,5 +1,8 @@
 #!/usr/bin/env bats
 
+# Checks the runc specific output format of "runc -v".
+# bats file_tags=runc-specific
+
 load helpers
 
 @test "runc version" {

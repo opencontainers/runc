@@ -18,6 +18,8 @@
 # to rootless containers while still testing the base features. In order to add
 # a new feature, please match the existing style. Add an entry to $ALL_FEATURES,
 # and add an enable_* and disable_* hook.
+#
+# Any arguments are passed on to bats (e.g. --filter-tags).
 
 set -e -u -o pipefail
 : "${ROOTLESS_TESTPATH:=}"
@@ -28,6 +30,7 @@ if [ -v RUNC_USE_SYSTEMD ]; then
 	ALL_FEATURES=("idmap")
 fi
 SRC_ROOT="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
+BATS_ARGS=(-t --print-output-on-failure "$@" "$SRC_ROOT/tests/integration$ROOTLESS_TESTPATH")
 
 # List of environment variables needed for the tests.
 # They are usually exported, but since we use ssh  below,
@@ -218,11 +221,10 @@ for ROOTLESS_FEATURES in $features_powerset; do
 		# Operation not permitted". Set the correct value explicitly.
 		ssh_env+=("XDG_RUNTIME_DIR=/run/user/$(id -u rootless)")
 		ssh -t -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$HOME/.ssh/rootless.key" \
-			rootless@localhost -- "${ssh_env[@]}" bats -t --print-output-on-failure "$SRC_ROOT/tests/integration$ROOTLESS_TESTPATH"
+			rootless@localhost -- "${ssh_env[@]}" bats "${BATS_ARGS[@]@Q}"
 	else
 		export "${ENV_LIST[@]}"
-		sudo -HE -u rootless PATH="$PATH" "$(command -v bats)" -t --print-output-on-failure \
-			"$SRC_ROOT/tests/integration$ROOTLESS_TESTPATH"
+		sudo -HE -u rootless PATH="$PATH" "$(command -v bats)" "${BATS_ARGS[@]}"
 	fi
 	cleanup
 done

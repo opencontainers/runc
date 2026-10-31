@@ -160,6 +160,8 @@ function check_exec_debug() {
 	[[ "$*" == *"setns_init: about to exec"* ]]
 }
 
+# Checks runc specific debug messages.
+# bats test_tags=runc-specific
 @test "runc --debug exec" {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test
 
@@ -168,6 +170,8 @@ function check_exec_debug() {
 	check_exec_debug "$output"
 }
 
+# Checks runc specific debug messages.
+# bats test_tags=runc-specific
 @test "runc --debug --log exec" {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test
 

@@ -98,6 +98,8 @@ function teardown() {
 	assert_line --index 0 --regexp 'mem(ory )?policy.*mode'
 }
 
+# Checks a runc specific error message.
+# bats test_tags=runc-specific
 @test "runc run memory policy calls syscall with invalid arguments" {
 	update_config '
 	.process.args = ["/bin/sh", "-c", "head -n 1 /proc/self/numa_maps | cut -d \" \" -f 2"]
