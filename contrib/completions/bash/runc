@@ -156,24 +156,34 @@ __runc_complete_capabilities() {
 _runc_exec() {
 	local boolean_options="
 	   --help
+	   -h
 	   --no-new-privs
-	   --tty, -t
-	   --detach, -d
+	   --tty
+	   -t
+	   --detach
+	   -d
+	   --ignore-paused
 	"
 
 	local options_with_args="
 	   --console-socket
+	   --pidfd-socket
 	   --cwd
-	   --env, -e
-	   --user, -u
-	   --additional-gids, -g
-	   --process, -p
+	   --env
+	   -e
+	   --user
+	   -u
+	   --additional-gids
+	   -g
+	   --process
+	   -p
 	   --pid-file
 	   --process-label
 	   --apparmor
-	   --cap, -c
+	   --cap
+	   -c
 	   --preserve-fds
-	   --ignore-paused
+	   --cgroup
 	"
 
 	local all_options="$options_with_args $boolean_options"
@@ -184,7 +194,7 @@ _runc_exec() {
 		return
 		;;
 
-	--console-socket | --cwd | --process | --apparmor)
+	--console-socket | --pidfd-socket | --cwd | --process | --pid-file | --apparmor)
 		case "$cur" in
 		*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
 		'')
@@ -222,8 +232,6 @@ _runc_exec() {
 _runc_runc() {
 	local boolean_options="
 		$global_boolean_options
-		--help
-		--version -v
 		--debug
 		--systemd-cgroup
 	"
@@ -284,6 +292,7 @@ _runc_pause() {
 	   --help
 	   -h
 	"
+	local options_with_args=""
 
 	case "$cur" in
 	-*)
@@ -301,8 +310,16 @@ _runc_ps() {
 	   -h
 	"
 	local options_with_args="
-	   --format, -f
+	   --format
+	   -f
 	"
+
+	case "$prev" in
+	--format | -f)
+		COMPREPLY=($(compgen -W 'table json' -- "$cur"))
+		return
+		;;
+	esac
 
 	case "$cur" in
 	-*)
@@ -318,8 +335,10 @@ _runc_delete() {
 	local boolean_options="
 	   --help
 	   -h
-	   --format, -f
+	   --force
+	   -f
 	"
+	local options_with_args=""
 
 	case "$cur" in
 	-*)
@@ -335,26 +354,22 @@ _runc_kill() {
 	local boolean_options="
 	   --help
 	   -h
-          --all
-          -a
 	"
+	local options_with_args=""
+
+	case "$cur" in
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		return
+		;;
+	esac
 
 	case "$prev" in
 	"kill")
 		__runc_list_all
-		return
 		;;
 	*)
 		__runc_list_signals
-		return
-		;;
-	esac
-	case "$cur" in
-	-*)
-		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-		;;
-	*)
-		__runc_list_all
 		;;
 	esac
 }
@@ -362,6 +377,7 @@ _runc_kill() {
 _runc_events() {
 	local boolean_options="
 	   --help
+	   -h
 	   --stats
 	"
 
@@ -388,6 +404,7 @@ _runc_events() {
 _runc_list() {
 	local boolean_options="
 	   --help
+	   -h
 	   --quiet
 	   -q
 	"
@@ -399,7 +416,7 @@ _runc_list() {
 
 	case "$prev" in
 	--format | -f)
-		COMPREPLY=($(compgen -W 'text json' -- "$cur"))
+		COMPREPLY=($(compgen -W 'table json' -- "$cur"))
 		return
 		;;
 
@@ -421,6 +438,7 @@ _runc_list() {
 _runc_spec() {
 	local boolean_options="
 	   --help
+	   -h
 	   --rootless
 	"
 
@@ -462,8 +480,10 @@ _runc_spec() {
 _runc_run() {
 	local boolean_options="
 	   --help
-	   --detatch
+	   -h
+	   --detach
 	   -d
+	   --keep
 	   --no-subreaper
 	   --no-pivot
 	   --no-new-keyring
@@ -473,12 +493,13 @@ _runc_run() {
 	   --bundle
 	   -b
 	   --console-socket
+	   --pidfd-socket
 	   --pid-file
 	   --preserve-fds
 	"
 
 	case "$prev" in
-	--bundle | -b | --console-socket | --pid-file)
+	--bundle | -b | --console-socket | --pidfd-socket | --pid-file)
 		case "$cur" in
 		'')
 			COMPREPLY=($(compgen -W '/' -- "$cur"))
@@ -573,6 +594,7 @@ _runc_checkpoint() {
 _runc_create() {
 	local boolean_options="
 	   --help
+	   -h
 	   --no-pivot
 	   --no-new-keyring
 	"
@@ -581,11 +603,12 @@ _runc_create() {
 	   --bundle
 	   -b
 	   --console-socket
+	   --pidfd-socket
 	   --pid-file
 	   --preserve-fds
 	"
 	case "$prev" in
-	--bundle | -b | --console-socket | --pid-file)
+	--bundle | -b | --console-socket | --pidfd-socket | --pid-file)
 		case "$cur" in
 		'')
 			COMPREPLY=($(compgen -W '/' -- "$cur"))
@@ -625,6 +648,7 @@ _runc_help() {
 _runc_restore() {
 	local boolean_options="
 	   --help
+	   -h
 	   --tcp-established
 	   --ext-unix-sk
 	   --shell-job
@@ -640,11 +664,14 @@ _runc_restore() {
 	local options_with_args="
 	   -b
 	   --bundle
+	   --console-socket
 	   --image-path
 	   --work-path
 	   --manage-cgroups-mode
 	   --pid-file
 	   --empty-ns
+	   --lsm-profile
+	   --lsm-mount-context
 	"
 
 	local all_options="$options_with_args $boolean_options"
@@ -655,7 +682,7 @@ _runc_restore() {
 		return
 		;;
 
-	--pid-file | --image-path | --work-path | --bundle | -b)
+	--pid-file | --console-socket | --image-path | --work-path | --bundle | -b)
 		case "$cur" in
 		*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
 		'')
@@ -690,6 +717,7 @@ _runc_resume() {
 	   --help
 	   -h
 	"
+	local options_with_args=""
 
 	case "$cur" in
 	-*)
@@ -706,6 +734,7 @@ _runc_state() {
 	   --help
 	   -h
 	"
+	local options_with_args=""
 
 	case "$cur" in
 	-*)
@@ -721,6 +750,7 @@ _runc_start() {
 	   --help
 	   -h
 	"
+	local options_with_args=""
 
 	case "$cur" in
 	-*)
@@ -734,9 +764,12 @@ _runc_start() {
 _runc_update() {
 	local boolean_options="
 	   --help
+	   -h
 	"
 
 	local options_with_args="
+	   --resources
+	   -r
 	   --blkio-weight
 	   --cpu-period
 	   --cpu-quota
@@ -756,6 +789,20 @@ _runc_update() {
 	"
 
 	case "$prev" in
+	--resources | -r)
+		case "$cur" in
+		'')
+			COMPREPLY=($(compgen -W '- /' -- "$cur"))
+			__runc_nospace
+			;;
+		/*)
+			_filedir
+			__runc_nospace
+			;;
+		esac
+		return
+		;;
+
 	$(__runc_to_extglob "$options_with_args"))
 		return
 		;;
@@ -793,7 +840,6 @@ _runc() {
 		state
 		update
 		help
-		h
 	)
 
 	# These options are valid as global options for all client commands
