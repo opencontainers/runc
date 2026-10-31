@@ -15,7 +15,6 @@ function teardown() {
 # This needs to be placed at the top of the bats file to work around
 # a shellcheck bug. See <https://github.com/koalaman/shellcheck/issues/2873>.
 function test_ro_cgroup_mount() {
-	local lines status
 	# shellcheck disable=SC2016
 	update_config '.process.args |= ["sh", "-euc", "for f in `grep /sys/fs/cgroup /proc/mounts | awk \"{print \\\\$2}\"| uniq`; do test -e $f && grep -w $f /proc/mounts | tail -n1; done"]'
 	run -0 runc run test_busybox
