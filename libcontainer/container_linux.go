@@ -577,7 +577,12 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &unix.SysProcAttr{}
 	}
-	cmd.Env = append(cmd.Env, "GOMAXPROCS="+os.Getenv("GOMAXPROCS"))
+	// Minimize the Go runtime work in runc init, which only needs a single
+	// thread (see [Init]):
+	//  - GOMAXPROCS=1 avoids allocating and then discarding a P per CPU;
+	//  - containermaxprocs=0 prevents the runtime from keeping an open fd
+	//    to the container cgroup's cpu.max file for the lifetime of runc init.
+	cmd.Env = append(cmd.Env, "GOMAXPROCS=1", "GODEBUG=containermaxprocs=0")
 	cmd.ExtraFiles = append(cmd.ExtraFiles, p.ExtraFiles...)
 	if p.ConsoleSocket != nil {
 		cmd.ExtraFiles = append(cmd.ExtraFiles, p.ConsoleSocket)
