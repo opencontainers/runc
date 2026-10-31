@@ -44,13 +44,14 @@ function build_libseccomp() {
 	make install
 	make clean
 
-	# Build and install for all requested architectures.
+	# Build and install for all requested architectures. These are only
+	# used for static (release) builds, so shared libraries are not needed.
 	local arch
 	for arch in "${arches[@]}"; do
 		set_cross_vars "$arch"
 		./configure --host "$HOST" \
 			--prefix="$dest/$arch" --libdir="$dest/$arch/lib" \
-			--enable-static --enable-shared
+			--enable-static --disable-shared
 		make install
 		make clean
 	done
