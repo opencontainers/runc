@@ -827,6 +827,9 @@ func (p *initProcess) start() (retErr error) {
 		if errors.Is(err, cgroups.ErrRootless) {
 			// ErrRootless is to be ignored except when
 			// the container doesn't have private pidns.
+			if !p.config.Config.Namespaces.Contains(configs.NEWPID) {
+				return fmt.Errorf("a container in the host pid namespace needs a cgroup to kill all its processes: %w", err)
+			}
 			if !p.config.Config.Namespaces.IsPrivate(configs.NEWPID) {
 				// TODO: make this an error in runc 1.3.
 				logrus.Warn("Creating a rootless container with no cgroup and no private pid namespace. " +

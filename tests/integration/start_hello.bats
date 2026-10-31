@@ -76,7 +76,9 @@ function teardown() {
 
 # https://github.com/opencontainers/runc/pull/2897
 @test "runc run [rootless with host pidns]" {
-	requires rootless_no_features
+	# A container in the host pid namespace needs a cgroup.
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+	set_cgroups_path
 
 	# Remove pid namespace, and replace /proc mount
 	# with a bind mount from the host.
