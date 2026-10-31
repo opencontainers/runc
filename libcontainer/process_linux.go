@@ -42,7 +42,7 @@ type parentProcess interface {
 	// start starts the process execution.
 	start() error
 
-	// send a SIGKILL to the process and wait for the exit.
+	// send a SIGKILL to the process and, if it is our child, wait for the exit.
 	terminate() error
 
 	// wait waits on the process returning the process state.
@@ -130,6 +130,20 @@ func (p *containerProcess) pid() int {
 	return p.cmd.Process.Pid
 }
 
+// setFinalPid makes p refer to the final "runc init" process, which nsexec
+// started and reported the pid of, rather than to the one we have started.
+func (p *containerProcess) setFinalPid(pid int) error {
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return err
+	}
+	p.cmd.Process = process
+	// Now that the final pid is known, let the sync socket use it to detect an
+	// init that dies without closing its end of the socket.
+	p.comm.syncSockParent.peerPid = pid
+	return nil
+}
+
 func (p *containerProcess) startTime() (uint64, error) {
 	stat, err := system.Stat(p.pid())
 	return stat.StartTime, err
@@ -164,7 +178,7 @@ func (p *containerProcess) terminate() error {
 	return err
 }
 
-func (p *containerProcess) wait() (*os.ProcessState, error) { //nolint:unparam
+func (p *containerProcess) wait() (*os.ProcessState, error) {
 	err := p.cmd.Wait()
 
 	// Return actual ProcessState even on Wait error
@@ -584,9 +598,10 @@ func (p *setnsProcess) start() (retErr error) {
 	if !seenProcReady && ierr == nil {
 		ierr = errors.New("procReady not received")
 	}
-	// Must be done after Shutdown so the child will exit and we can wait for it.
+	// Do not wait for the child here: it may be unable to exit on its own
+	// (for example, if only one of its threads was killed), and the deferred
+	// error handler above terminates and reaps it anyway.
 	if ierr != nil {
-		_, _ = p.wait()
 		return ierr
 	}
 	return nil
@@ -619,11 +634,9 @@ func (p *setnsProcess) execSetns() error {
 	// Ignore the error in case the child has already been reaped for any reason
 	_, _ = firstChildProcess.Wait()
 
-	process, err := os.FindProcess(pid.Pid)
-	if err != nil {
+	if err := p.setFinalPid(pid.Pid); err != nil {
 		return err
 	}
-	p.cmd.Process = process
 	p.process.ops = p
 	return nil
 }
@@ -662,11 +675,9 @@ func (p *initProcess) waitForChildExit(childPid int) error {
 		return &exec.ExitError{ProcessState: status}
 	}
 
-	process, err := os.FindProcess(childPid)
-	if err != nil {
+	if err := p.setFinalPid(childPid); err != nil {
 		return err
 	}
-	p.cmd.Process = process
 	p.process.ops = p
 	return nil
 }

@@ -18,6 +18,12 @@ import (
 type syncSocket struct {
 	f      *os.File
 	closed atomic.Bool
+	// peerPid is the pid of the process on the other end of the socket, if
+	// known. When set, ReadPacket does not block forever if that process
+	// dies without closing its end of the socket. Unlike closed, it needs
+	// no synchronization: a parent socket is only ever used by the
+	// goroutine that starts the process, and a child one has no peer pid.
+	peerPid int
 }
 
 func newSyncSocket(f *os.File) *syncSocket {
@@ -43,6 +49,13 @@ func (s *syncSocket) WritePacket(b []byte) (int, error) {
 }
 
 func (s *syncSocket) ReadPacket() ([]byte, error) {
+	if s.peerPid > 0 {
+		// A dead peer does not always result in a readable socket, so
+		// recvfrom(2) alone is not enough to avoid blocking forever.
+		if err := waitForInitWrite(int(s.f.Fd()), s.peerPid); err != nil {
+			return nil, err
+		}
+	}
 	size, _, err := linux.Recvfrom(int(s.f.Fd()), nil, unix.MSG_TRUNC|unix.MSG_PEEK)
 	if err != nil {
 		return nil, fmt.Errorf("fetch packet length from socket: %w", err)

@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/system"
 )
 
@@ -94,8 +96,10 @@ func (p *nonChildProcess) pid() int {
 	return p.processPid
 }
 
+// terminate only kills the process: as we are not its parent, it is someone
+// else's to reap.
 func (p *nonChildProcess) terminate() error {
-	return errors.New("restored process cannot be terminated")
+	return p.signal(unix.SIGKILL)
 }
 
 func (p *nonChildProcess) wait() (*os.ProcessState, error) {
