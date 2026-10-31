@@ -259,34 +259,27 @@ function simple_cr() {
 	mkdir image-dir
 	mkdir work-dir
 
-	# For lazy migration we need to know when CRIU is ready to serve
-	# the memory pages via TCP.
-	exec {pipe}<> <(:)
-	# shellcheck disable=SC2094
-	exec {lazy_r}</proc/self/fd/$pipe {lazy_w}>/proc/self/fd/$pipe
-	exec {pipe}>&-
-
 	# TCP port for lazy migration
 	port=27277
 
-	runc checkpoint \
-		--lazy-pages \
-		--page-server 0.0.0.0:${port} \
-		--status-fd ${lazy_w} \
-		--manage-cgroups-mode=ignore \
-		--work-path ./work-dir \
-		--image-path ./image-dir \
-		test_busybox &
-	cpt_pid=$!
+	# For lazy migration we need to know when CRIU is ready to serve
+	# the memory pages via TCP. Once it is, runc writes \0 to --status-fd
+	# (which is connected to the coprocess stdout) and closes it.
+	coproc CPT {
+		runc checkpoint \
+			--lazy-pages \
+			--page-server 0.0.0.0:${port} \
+			--status-fd 4 \
+			--manage-cgroups-mode=ignore \
+			--work-path ./work-dir \
+			--image-path ./image-dir \
+			test_busybox 4>&1 >/dev/null
+	}
+	# Save the PID, as bash unsets CPT_PID once the coprocess exits.
+	cpt_pid=${CPT_PID:?}
 
-	# wait for lazy page server to be ready
-	out=$(timeout 2 dd if=/proc/self/fd/${lazy_r} bs=1 count=1 2>/dev/null | od)
-	exec {lazy_r}>&-
-	exec {lazy_w}>&-
-	# shellcheck disable=SC2116,SC2086
-	out=$(echo $out) # rm newlines
-	# expecting \0 which od prints as
-	[ "$out" = "0000000 000000 0000001" ]
+	# Wait for lazy page server to be ready.
+	read -r -d '' -t 2 -u "${CPT[0]}" || fail "lazy page server not ready"
 
 	# Check if inventory.img was written
 	[ -e image-dir/inventory.img ]
@@ -309,7 +302,7 @@ function simple_cr() {
 		--lazy-pages \
 		--manage-cgroups-mode=ignore
 
-	wait $cpt_pid
+	wait "$cpt_pid"
 
 	wait $lp_pid
 
