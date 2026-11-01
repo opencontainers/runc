@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   treated specially (previously, the prefix was stripped). As the runtime spec
   says, the destination is a path inside the container, and it is now used
   as such. (#5556)
+- A rootless container that can not have a cgroup and does not create a private
+  PID namespace is now refused, as it is impossible to kill all its processes.
+  This includes containers which share the host PID namespace or join another
+  container's PID namespace. Previously, runc only warned, and `runc kill` and
+  `runc delete --force` left all container processes but init running.
 
 ### Added ###
 - New `--cgroup-manager` global option, to select the cgroup manager

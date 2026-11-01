@@ -149,11 +149,10 @@ is_allowed_fdtarget() {
                           ) // .)'
 	fi
 
-	exp="Such configuration is strongly discouraged"
-	run -0 runc create --console-socket "$CONSOLE_SOCKET" test
 	if [ $EUID -ne 0 ] && ! rootless_cgroup; then
-		assert_output --partial "$exp"
+		# Without a cgroup, it is impossible to kill all container's processes.
+		run ! runc create --console-socket "$CONSOLE_SOCKET" test
 	else
-		refute_output --partial "$exp"
+		run -0 runc create --console-socket "$CONSOLE_SOCKET" test
 	fi
 }
