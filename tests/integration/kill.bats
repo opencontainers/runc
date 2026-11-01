@@ -128,18 +128,38 @@ test_host_pidns_kill() {
 # https://github.com/opencontainers/runc/issues/4394 (cgroup v1, rootless)
 @test "kill KILL [shared pidns]" {
 	update_config '.process.args = ["sleep", "infinity"]'
+	if [ $EUID -eq 0 ] || rootless_cgroup; then
+		set_cgroups_path
+	fi
 
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" target_ctr
 	testcontainer target_ctr running
 	target_pid="$(runc state target_ctr | jq .pid)"
 	update_config '.linux.namespaces |= map(if .type == "user" or .type == "pid" then (.path = "/proc/'"$target_pid"'/ns/" + .type) else . end) | del(.linux.uidMappings) | del(.linux.gidMappings)'
 
-	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" attached_ctr
-	testcontainer attached_ctr running
+	if [ $EUID -ne 0 ] && ! rootless_cgroup; then
+		run ! runc run -d --console-socket "$CONSOLE_SOCKET" attached_ctr
+		assert_output --partial "cgroup"
+		run ! runc state attached_ctr
+	else
+		set_cgroups_path
+		run -0 runc run -d --console-socket "$CONSOLE_SOCKET" attached_ctr
+		testcontainer attached_ctr running
+		attached_pid="$(runc state attached_ctr | jq .pid)"
+		[ "$(readlink "/proc/$attached_pid/ns/pid")" = "$(readlink "/proc/$target_pid/ns/pid")" ]
 
-	run -0 runc kill attached_ctr 9
+		runc exec -d attached_ctr sleep infinity
+		mapfile -t pids <"$(get_cgroup_path "pids")/cgroup.procs"
+		[ "${#pids[@]}" -ge 2 ]
+		for pid in "${pids[@]}"; do
+			[ "$pid" -ne "$target_pid" ]
+		done
 
-	run -0 runc delete --force attached_ctr
+		run -0 runc kill attached_ctr 9
+		wait_pids_gone 10 0.2 "${pids[@]}"
+		run -0 runc delete --force attached_ctr
+	fi
 
+	testcontainer target_ctr running
 	run -0 runc delete --force target_ctr
 }
