@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"sync"
 
 	"golang.org/x/sys/unix"
 
@@ -86,6 +87,37 @@ type nonChildProcess struct {
 	processPid       int
 	processStartTime uint64
 	fds              []string
+
+	procOnce sync.Once
+	proc     *os.Process
+}
+
+// osProcess returns an [os.Process] for the container init, or nil if it is
+// gone (meaning its pid is either unused, or used by some other process).
+// Note a zombie is not gone here, unlike in [Container.hasInit]: killDeadInit
+// relies on being able to signal an init whose thread group leader has exited.
+//
+// Unlike the other parentProcess implementations, we have no [exec.Cmd] to
+// take it from, so it has to be looked up by pid. Unless the kernel is too old,
+// the result holds a pidfd, so once it is known to refer to the right process,
+// every operation on it is guaranteed to affect this very process, and never a
+// recycled pid.
+// To know that, the start time is checked after the lookup, not before it.
+//
+// The lookup is lazy because most things one can do with a loaded container
+// (state, list, ps, ...) never need it, and it costs an fd.
+func (p *nonChildProcess) osProcess() *os.Process {
+	p.procOnce.Do(func() {
+		// On Unix, FindProcess never fails.
+		proc, _ := os.FindProcess(p.processPid)
+		stat, err := system.Stat(p.processPid)
+		if err != nil || stat.StartTime != p.processStartTime {
+			_ = proc.Release()
+			return
+		}
+		p.proc = proc
+	})
+	return p.proc
 }
 
 func (p *nonChildProcess) start() error {
@@ -111,9 +143,9 @@ func (p *nonChildProcess) startTime() (uint64, error) {
 }
 
 func (p *nonChildProcess) signal(s os.Signal) error {
-	proc, err := os.FindProcess(p.processPid)
-	if err != nil {
-		return err
+	proc := p.osProcess()
+	if proc == nil {
+		return os.ErrProcessDone
 	}
 	return proc.Signal(s)
 }
