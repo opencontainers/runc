@@ -2,6 +2,7 @@ package configs_test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -152,6 +153,63 @@ func TestFuncHookRun(t *testing.T) {
 	err := fHook.Run(state)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestPoststopHooksRunAfterErrors(t *testing.T) {
+	state := &specs.State{Status: specs.StateStopped}
+	firstErr := errors.New("first hook failed")
+	lastErr := errors.New("last hook failed")
+	var executed []int
+
+	hooks := configs.Hooks{
+		configs.Poststop: configs.HookList{
+			configs.NewFunctionHook(func(*specs.State) error {
+				executed = append(executed, 1)
+				return firstErr
+			}),
+			configs.NewFunctionHook(func(*specs.State) error {
+				executed = append(executed, 2)
+				return nil
+			}),
+			configs.NewFunctionHook(func(*specs.State) error {
+				executed = append(executed, 3)
+				return lastErr
+			}),
+		},
+	}
+
+	err := hooks.Run(configs.Poststop, state)
+	if !reflect.DeepEqual(executed, []int{1, 2, 3}) {
+		t.Fatalf("expected every poststop hook to run, got %v", executed)
+	}
+	if !errors.Is(err, firstErr) || !errors.Is(err, lastErr) {
+		t.Fatalf("expected both hook errors to be returned, got %v", err)
+	}
+}
+
+func TestOtherHooksStopAfterError(t *testing.T) {
+	hookErr := errors.New("prestart hook failed")
+	executed := 0
+	hooks := configs.Hooks{
+		configs.Prestart: configs.HookList{
+			configs.NewFunctionHook(func(*specs.State) error {
+				executed++
+				return hookErr
+			}),
+			configs.NewFunctionHook(func(*specs.State) error {
+				executed++
+				return nil
+			}),
+		},
+	}
+
+	err := hooks.Run(configs.Prestart, &specs.State{})
+	if !errors.Is(err, hookErr) {
+		t.Fatalf("expected hook error %v, got %v", hookErr, err)
+	}
+	if executed != 1 {
+		t.Fatalf("expected later prestart hooks not to run, got %d hooks", executed)
 	}
 }
 
