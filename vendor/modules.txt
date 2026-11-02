@@ -46,8 +46,8 @@ github.com/docker/go-units
 # github.com/godbus/dbus/v5 v5.2.4
 ## explicit; go 1.20
 github.com/godbus/dbus/v5
-# github.com/moby/sys/capability v0.4.0
-## explicit; go 1.21
+# github.com/moby/sys/capability v0.5.0
+## explicit; go 1.24
 github.com/moby/sys/capability
 # github.com/moby/sys/mountinfo v0.7.2
 ## explicit; go 1.17
