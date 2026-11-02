@@ -37,6 +37,8 @@ func newSignalHandler() chan *signalHandler {
 			switch sig := unix.Signal(i); sig {
 			case unix.SIGCHLD:
 				// Already set up above.
+			case unix.SIGTTIN, unix.SIGTTOU:
+				// Job control: use the default action (stop), see #1430.
 			case unix.SIGURG:
 				// SIGURG is used by the Go runtime for asynchronous
 				// preemption, so runc receives it from time to time,
