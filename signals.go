@@ -11,7 +11,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const signalBufferSize = 2048
+const (
+	signalBufferSize = 2048
+	maxSignal        = 64 // Max signal number (_NSIG - 1 in the kernel).
+)
 
 // newSignalHandler returns a signal handler for processing SIGCHLD and SIGWINCH signals
 // while still forwarding all other signals to the process.
@@ -28,8 +31,23 @@ func newSignalHandler() chan *signalHandler {
 	// setup, except for SIGCHLD which is very important (see #5208).
 	signal.Notify(s, unix.SIGCHLD)
 	go func() {
-		// handle all signals for the process.
-		signal.Notify(s)
+		// Handle all signals for the process.
+		sigs := make([]os.Signal, 0, maxSignal)
+		for i := 1; i <= maxSignal; i++ {
+			switch sig := unix.Signal(i); sig {
+			case unix.SIGCHLD:
+				// Already set up above.
+			case unix.SIGTTIN, unix.SIGTTOU:
+				// Job control: use the default action (stop), see #1430.
+			case unix.SIGURG:
+				// SIGURG is used by the Go runtime for asynchronous
+				// preemption, so runc receives it from time to time,
+				// and it should not be forwarded to the container.
+			default:
+				sigs = append(sigs, sig)
+			}
+		}
+		signal.Notify(s, sigs...)
 		handler <- &signalHandler{
 			signals: s,
 		}
@@ -85,11 +103,6 @@ func (h *signalHandler) forward(process *libcontainer.Process, tty *tty) (int, e
 					return e.status, nil
 				}
 			}
-		case unix.SIGURG:
-			// SIGURG is used by go runtime for async preemptive
-			// scheduling, so runc receives it from time to time,
-			// and it should not be forwarded to the container.
-			// Do nothing.
 		default:
 			us := s.(unix.Signal)
 			logrus.Debugf("forwarding signal %d (%s) to %d", int(us), unix.SignalName(us), pid1)

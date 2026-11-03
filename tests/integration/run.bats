@@ -246,3 +246,28 @@ EOF
 	# can not be removed, and the next test to use this name would fail.
 	refute_output --partial "unable to destroy container"
 }
+
+@test "runc run [SIGTTIN and SIGTTOU are not caught]" {
+	update_config '.process.terminal = false | .process.args = ["sleep", "infinity"]'
+
+	runc run test_busybox </dev/null &
+	local pid=$!
+	wait_for_container 10 0.5 test_busybox running
+
+	# Make sure runc has set up the signal forwarding (SIGTERM is caught).
+	sig_caught() {
+		local cgt
+		cgt=$(awk '/^SigCgt:/ {print $2}' "/proc/$pid/status")
+		((0x$cgt >> ($1 - 1) & 1))
+	}
+	retry 10 0.5 sig_caught 15 # SIGTERM
+
+	# SIGTTIN and SIGTTOU should not be caught (and forwarded to the
+	# container), so runc in a background process group is stopped
+	# when accessing the terminal, see #1430.
+	run ! sig_caught 21 # SIGTTIN
+	run ! sig_caught 22 # SIGTTOU
+
+	runc kill test_busybox KILL
+	wait "$pid" || true
+}
