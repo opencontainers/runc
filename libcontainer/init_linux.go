@@ -486,14 +486,19 @@ func setupUser(config *initConfig) error {
 	}
 
 	// This isn't allowed in an unprivileged user namespace since Linux 3.19.
-	// There's nothing we can do about /etc/group entries, so we silently
-	// ignore setting groups here (since the user didn't explicitly ask us to
-	// set the group).
 	allowSupGroups := !config.Config.RootlessEUID && string(bytes.TrimSpace(setgroups)) != "deny"
 
 	if allowSupGroups {
 		if err := unix.Setgroups(config.AdditionalGroups); err != nil {
 			return &os.SyscallError{Syscall: "setgroups", Err: err}
+		}
+	} else {
+		// We can't set the groups, so fail if any of the requested groups
+		// would not be in effect. The primary group is in effect anyway.
+		for _, gid := range config.AdditionalGroups {
+			if gid != config.GID {
+				return fmt.Errorf("cannot set additional gid %d: setgroups is denied", gid)
+			}
 		}
 	}
 
