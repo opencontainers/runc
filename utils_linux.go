@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -176,6 +177,32 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	_, err = f.WriteString(strconv.Itoa(pid))
 	f.Close()
 	if err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
+}
+
+// processFile is the name of the file in the container state directory
+// which contains the process configuration from config.json, to be used
+// by runc exec as a default.
+const processFile = "process.json"
+
+// saveProcess saves the process configuration to the container state
+// directory, so runc exec does not have to read config.json from the
+// bundle (which might have been modified or removed since).
+func saveProcess(cmd *cli.Command, id string, p *specs.Process) error {
+	path := filepath.Join(cmd.String("root"), id, processFile)
+	tmpName := filepath.Join(filepath.Dir(path), "."+processFile)
+	f, err := os.OpenFile(tmpName, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
+	}
+	err = json.NewEncoder(f).Encode(p)
+	if cErr := f.Close(); err == nil {
+		err = cErr
+	}
+	if err != nil {
+		_ = os.Remove(tmpName)
 		return err
 	}
 	return os.Rename(tmpName, path)
@@ -379,7 +406,7 @@ const (
 )
 
 func startContainer(cmd *cli.Command, action CtAct, criuOpts *libcontainer.CriuOpts) (int, error) {
-	if err := revisePidFile(cmd); err != nil {
+	if err := revisePaths(cmd); err != nil {
 		return -1, err
 	}
 	spec, err := setupSpec(cmd)
@@ -400,6 +427,10 @@ func startContainer(cmd *cli.Command, action CtAct, criuOpts *libcontainer.CriuO
 	container, err := createContainer(cmd, id, spec)
 	if err != nil {
 		return -1, err
+	}
+	if err := saveProcess(cmd, id, spec.Process); err != nil {
+		_ = container.Destroy()
+		return -1, fmt.Errorf("unable to save process: %w", err)
 	}
 
 	if notifySocket != nil {
