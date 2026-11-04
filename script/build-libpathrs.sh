@@ -20,26 +20,29 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 PLATFORM="$(get_platform)"
 
+# Cross-compiled libraries are used for static (release) builds against musl
+# (see set_cross_vars in lib.sh). The exception is 386, which is not released,
+# and is only used by CI to check that runc builds on 32-bit.
 declare -A GOARCH_TO_RUST_TARGET=(
 	["386"]=i686-unknown-linux-gnu
-	["amd64"]=x86_64-unknown-linux-gnu
-	["arm64"]=aarch64-unknown-linux-gnu
-	["armel"]=armv5te-unknown-linux-gnueabi
-	["armhf"]=armv7-unknown-linux-gnueabihf
-	["ppc64le"]=powerpc64le-unknown-linux-gnu
-	["s390x"]=s390x-unknown-linux-gnu
-	["riscv64"]=riscv64gc-unknown-linux-gnu
+	["amd64"]=x86_64-unknown-linux-musl
+	["arm64"]=aarch64-unknown-linux-musl
+	["armel"]=armv5te-unknown-linux-musleabi
+	["armhf"]=armv7-unknown-linux-musleabihf
+	["ppc64le"]=powerpc64le-unknown-linux-musl
+	["riscv64"]=riscv64gc-unknown-linux-musl
+	["s390x"]=s390x-unknown-linux-musl
 )
 
 declare -A RUST_TARGET_TO_CC=(
 	["i686-unknown-linux-gnu"]="i686-${PLATFORM}-gcc"
-	["x86_64-unknown-linux-gnu"]="x86_64-${PLATFORM}-gcc"
-	["aarch64-unknown-linux-gnu"]="aarch64-${PLATFORM}-gcc"
-	["armv5te-unknown-linux-gnueabi"]="arm-${PLATFORM}eabi-gcc"
-	["armv7-unknown-linux-gnueabihf"]="arm-${PLATFORM}eabihf-gcc"
-	["powerpc64le-unknown-linux-gnu"]="powerpc64le-${PLATFORM}-gcc"
-	["s390x-unknown-linux-gnu"]="s390x-${PLATFORM}-gcc"
-	["riscv64gc-unknown-linux-gnu"]="riscv64-${PLATFORM}-gcc"
+	["x86_64-unknown-linux-musl"]="x86_64-${PLATFORM}-gcc"
+	["aarch64-unknown-linux-musl"]="aarch64-${PLATFORM}-gcc"
+	["armv5te-unknown-linux-musleabi"]="arm-${PLATFORM}eabi-gcc"
+	["armv7-unknown-linux-musleabihf"]="arm-${PLATFORM}eabihf-gcc"
+	["powerpc64le-unknown-linux-musl"]="powerpc64le-${PLATFORM}-gcc"
+	["riscv64gc-unknown-linux-musl"]="riscv64-${PLATFORM}-gcc"
+	["s390x-unknown-linux-musl"]="s390x-${PLATFORM}-gcc"
 )
 
 # sha256 checksums for libpathrs release tarballs.
@@ -61,6 +64,37 @@ function generate_cargo_config() {
 	done
 }
 
+# build_libunwind builds LLVM libunwind (as a static library) from the
+# rust-src component, the same way Rust does it for its musl targets.
+# Parameters:
+#  $1 -- Rust target.
+#  $2 -- output file.
+function build_libunwind() {
+	local rust_target="$1" out="$2"
+	local src
+	src="$(rustc --print sysroot)/lib/rustlib/src/rust/src/llvm-project/libunwind"
+	local obj
+	obj="$(mktemp -d)"
+	# Debian's musl-dev:<arch> headers, e.g. /usr/include/s390x-linux-musl.
+	local flags=(
+		--target="$rust_target" -nostdlibinc
+		-isystem "/usr/include/${rust_target/-unknown/}" -I"$src/include"
+		-O2 -DNDEBUG -fPIC -fstrict-aliasing -funwind-tables
+		-fvisibility=hidden -D_LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS
+	)
+	local f
+	for f in UnwindLevel1.c UnwindLevel1-gcc-ext.c Unwind-sjlj.c \
+		UnwindRegistersRestore.S UnwindRegistersSave.S; do
+		clang "${flags[@]}" -std=c99 -c "$src/src/$f" -o "$obj/$f.o"
+	done
+	for f in libunwind.cpp Unwind-EHABI.cpp Unwind-seh.cpp; do
+		clang++ "${flags[@]}" -std=c++17 -nostdinc++ -fno-exceptions -fno-rtti \
+			-c "$src/src/$f" -o "$obj/$f.o"
+	done
+	ar rcs "$out" "$obj"/*.o
+	rm -rf "$obj"
+}
+
 # Due to libpathrs being MPLv2/LGPLv3 we must include its sources, so
 # download, install and build against it.
 # Parameters:
@@ -75,14 +109,23 @@ function build_libpathrs() {
 	local go_arches=("$@")
 	local tar="libpathrs-${ver}.tar.xz"
 
-	# Download, check, and extract.
-	curl -fsSL --retry 5 --remote-name-all \
-		"https://github.com/cyphar/libpathrs/releases/download/v${ver}/${tar}"{,.asc}
-	sha256sum --strict --check - <<<"${LIBPATHRS_SHA256[${ver}]} *${tar}"
-
 	local srcdir
 	srcdir="$(mktemp -d)"
-	tar xf "$tar" -C "$srcdir"
+	if [[ "$ver" =~ ^[0-9a-f]{40}$ ]]; then
+		# A git commit (an unreleased version): fetch, and create a
+		# source tarball from it.
+		local repo="$srcdir/libpathrs-$ver"
+		git init -q "$repo"
+		git -C "$repo" fetch -q --depth=1 https://github.com/cyphar/libpathrs "$ver"
+		git -C "$repo" checkout -q FETCH_HEAD
+		git -C "$repo" archive --prefix="libpathrs-$ver/" FETCH_HEAD | xz >"$tar"
+	else
+		# Download, check, and extract.
+		curl -fsSL --retry 5 --remote-name-all \
+			"https://github.com/cyphar/libpathrs/releases/download/v${ver}/${tar}"{,.asc}
+		sha256sum --strict --check - <<<"${LIBPATHRS_SHA256[${ver}]} *${tar}"
+		tar xf "$tar" -C "$srcdir"
+	fi
 	pushd "$srcdir/libpathrs-$ver" || return
 
 	# Use cargo-auditable if available.
@@ -107,11 +150,26 @@ function build_libpathrs() {
 		libdir="$native_libdir"
 	fi
 
-	# Install native version for Dockerfile builds.
+	# Rebuild the Rust standard library without backtrace support, to make
+	# the library smaller. This requires the rust-src component, and nightly
+	# Rust or RUSTC_BOOTSTRAP=1. It is always done for static (release)
+	# builds (see below), and for other builds if rust-src is available.
+	local no_backtrace=(LIBPATHRS_LIBSTD_NO_BACKTRACE=1 RUSTC_BOOTSTRAP=1)
+	local make_flags=()
+	if [ -d "$(rustc --print sysroot)/lib/rustlib/src/rust/library" ]; then
+		make_flags=("${no_backtrace[@]}")
+	fi
+
+	# Install native version for Dockerfile builds. The target is set
+	# explicitly, since it is required to rebuild the standard library.
+	local host_target
+	host_target="$(rustc -vV | sed -n 's/^host: //p')"
 	make \
-		EXTRA_CARGO_FLAGS="${extra_cargo_flags[*]}" \
+		EXTRA_CARGO_FLAGS="${extra_cargo_flags[*]} --target=$host_target" \
+		"${make_flags[@]}" \
 		release
 	./install.sh \
+		--rust-target="$host_target" \
 		--prefix="$dest" \
 		--libdir="$libdir"
 	cargo clean
@@ -130,19 +188,51 @@ function build_libpathrs() {
 
 	for go_arch in "${go_arches[@]}"; do
 		local rust_target="${GOARCH_TO_RUST_TARGET[$go_arch]}"
+		local cargo_flags=("${extra_cargo_flags[@]}" "--target=$rust_target")
+		local make_target=release target_make_flags=("${make_flags[@]}") install_flags=()
+		if [[ "$rust_target" == *-musl* ]]; then
+			# Only a static library is needed for static (release) builds.
+			# Building a shared library would also require libgcc_s for musl.
+			cargo_flags+=("--release")
+			make_target=target/release/libpathrs.a
+			install_flags=(--disable-shared)
+			# Always rebuild the standard library (see above). This also
+			# makes it possible to build for Tier 3 targets (s390x), for
+			# which there is no prebuilt standard library.
+			target_make_flags=("${no_backtrace[@]}")
+		fi
 		make \
-			EXTRA_CARGO_FLAGS="${extra_cargo_flags[*]} --target=$rust_target" \
-			release
+			EXTRA_CARGO_FLAGS="${cargo_flags[*]}" \
+			"${target_make_flags[@]}" \
+			"$make_target"
 		./install.sh \
 			--rust-target="$rust_target" \
-			--prefix="$dest/$go_arch"
+			--prefix="$dest/$go_arch" \
+			"${install_flags[@]}"
+		if [[ "$rust_target" == *-musl* ]]; then
+			# Rust standard library for musl needs an unwinder, and libgcc_eh
+			# from the distro's gcc cross-compilers can't be used, since it
+			# is built for glibc. Use the one which comes with Rust or, if
+			# there is none (Tier 3 targets), build it.
+			local unwind
+			unwind="$(rustc --print sysroot)/lib/rustlib/$rust_target/lib/self-contained/libunwind.a"
+			if [ -f "$unwind" ]; then
+				cp "$unwind" "$dest/$go_arch/lib/"
+			else
+				build_libunwind "$rust_target" "$dest/$go_arch/lib/libunwind.a"
+			fi
+			sed -i 's/^Libs: .*/& -lunwind/' "$dest/$go_arch/lib/pkgconfig/pathrs.pc"
+		fi
 		cargo clean
 	done
 
 	# Place the source tarball to $dest/src.
 	popd || return
 	mkdir -p "$dest"/src
-	mv "$tar"{,.asc} "$dest"/src
+	mv "$tar" "$dest"/src
+	if [ -f "$tar.asc" ]; then
+		mv "$tar.asc" "$dest"/src
+	fi
 }
 
 if [ $# -lt 2 ]; then
