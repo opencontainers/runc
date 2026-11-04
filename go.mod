@@ -12,7 +12,7 @@ require (
 	github.com/godbus/dbus/v5 v5.2.4
 	github.com/moby/sys/capability v0.5.0
 	github.com/moby/sys/mountinfo v0.7.3
-	github.com/moby/sys/user v0.4.1
+	github.com/moby/sys/user v0.5.0
 	github.com/moby/sys/userns v0.2.1
 	github.com/mrunalp/fileutils v0.5.1
 	github.com/opencontainers/cgroups v0.1.0
