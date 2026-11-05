@@ -37,6 +37,8 @@ function cpus_to_mask() {
 	printf "0x%x" $mask
 }
 
+# Checks runc specific debug messages.
+# bats test_tags=runc-specific
 @test "runc exec [CPU affinity, only initial set from process.json]" {
 	first="$(first_cpu)"
 	second=$((first + 1)) # Hacky; might not work in all environments.
@@ -60,6 +62,8 @@ function cpus_to_mask() {
 	done
 }
 
+# Checks runc specific debug messages.
+# bats test_tags=runc-specific
 @test "runc exec [CPU affinity, initial and final set from process.json]" {
 	first="$(first_cpu)"
 	second=$((first + 1)) # Hacky; might not work in all environments.
@@ -86,6 +90,8 @@ function cpus_to_mask() {
 	done
 }
 
+# Checks runc specific debug messages.
+# bats test_tags=runc-specific
 @test "runc exec [CPU affinity, initial and final set from config.json]" {
 	initial="$(first_cpu)"
 	final=$((initial + 1)) # Hacky; might not work in all environments.

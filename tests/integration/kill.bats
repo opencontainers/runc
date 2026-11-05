@@ -73,6 +73,8 @@ test_host_pidns_kill() {
 	fi
 }
 
+# Checks a runc specific error message.
+# bats test_tags=runc-specific
 @test "kill detached busybox" {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
