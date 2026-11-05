@@ -52,3 +52,56 @@ func TestStringifyMountFlags(t *testing.T) {
 		}
 	}
 }
+
+func TestMountErrorHints(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		fstype   string
+		flags    uintptr
+		err      error
+		expected string
+	}{
+		{
+			name:     "unknown-fstype",
+			fstype:   "cosmos",
+			err:      unix.ENODEV,
+			expected: `mount src=/src, dst=/dst, type=cosmos: no such device (filesystem type "cosmos" is not supported by the kernel)`,
+		},
+		{
+			name:     "bind-fstype",
+			fstype:   "bind",
+			flags:    unix.MS_NOSUID,
+			err:      unix.ENODEV,
+			expected: `mount src=/src, dst=/dst, type=bind, flags=MS_NOSUID: no such device (to create a bind mount, add "bind" or "rbind" to mount options)`,
+		},
+		{
+			// With MS_BIND, fstype is ignored by mount(2), so we check
+			// that (1) it is not printed, and (2) no hint is added.
+			name:     "fstype-ignored",
+			fstype:   "bind",
+			flags:    unix.MS_BIND | unix.MS_REC,
+			err:      unix.ENODEV,
+			expected: `mount src=/src, dst=/dst, flags=MS_BIND|MS_REC: no such device`,
+		},
+		{
+			name:     "other-error",
+			fstype:   "tmpfs",
+			err:      unix.EPERM,
+			expected: `mount src=/src, dst=/dst, type=tmpfs: operation not permitted`,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			err := &mountError{
+				op:     "mount",
+				source: "/src",
+				target: "/dst",
+				fstype: test.fstype,
+				flags:  test.flags,
+				err:    test.err,
+			}
+			if got := err.Error(); got != test.expected {
+				t.Errorf("expected %q, got %q", test.expected, got)
+			}
+		})
+	}
+}
