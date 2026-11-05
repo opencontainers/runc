@@ -243,12 +243,10 @@ func (c *Container) exec() error {
 // the shared namespace case.
 func (c *Container) killDeadInit() {
 	// This can not go through c.signal, as hasInit (and so signalInit) treats
-	// a zombie init as not running. Compare the start time here instead, to
-	// make sure the pid was not reused.
-	stat, err := system.Stat(c.initProcess.pid())
-	if err != nil || stat.StartTime != c.initProcessStartTime {
-		return
-	}
+	// a zombie init as not running. Nor is there a need to check for pid
+	// reuse here: if init is our child, its pid can not be reused until we
+	// wait for it, and nonChildProcess makes sure to signal the right process.
+	//
 	// For "runc start", init is not our child, so it is only killed, and
 	// reaped by someone else later; its cgroup may thus briefly remain
 	// populated after we return.
