@@ -164,6 +164,26 @@ function teardown() {
 	ip netns exec "$ns_name" ip address show dev ctr_dummy0
 }
 
+@test "move network device to container network namespace and rename with %d" {
+	update_config ' .linux.netDevices |= { "dummy0": { "name" : "ctr_dummy%d" } }
+      		| .process.args |= ["ip", "address", "show", "dev", "ctr_dummy0"]'
+
+	run -0 runc run test_busybox
+}
+
+@test "move network device to precreated container network namespace and rename with %d" {
+	setup_netns
+	# Take the first name, so the kernel picks the next one.
+	ip netns exec "$ns_name" ip link add ctr_dummy0 type dummy
+	update_config ' .linux.netDevices |= { "dummy0": { "name" : "ctr_dummy%d" } }
+      		| .process.args |= ["ip", "address", "show", "dev", "ctr_dummy1"]'
+
+	run -0 runc run test_busybox
+
+	# Verify the interface is still present in the network namespace.
+	ip netns exec "$ns_name" ip address show dev ctr_dummy1
+}
+
 @test "move network device to precreated container network namespace and rename and set mtu and mac and ip address" {
 	setup_netns
 	update_config ' .linux.netDevices |= { "dummy0": { "name" : "ctr_dummy0" } }
