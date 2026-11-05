@@ -7,6 +7,7 @@ function setup() {
 }
 
 function teardown() {
+	umount -l "$ROOT/bundle/rootfs" 2>/dev/null || true
 	teardown_bundle
 }
 
@@ -400,4 +401,20 @@ test_mount_target() {
 	# Directory.
 	rm -rf rootfs/tmp/hosts
 	test_mount_target . /etc/hosts /tmp/hosts
+}
+
+@test "runc run [readonly rootfs keeps nosuid,nodev]" {
+	requires root
+
+	mount --bind rootfs rootfs
+	mount -o remount,bind,nosuid,nodev rootfs
+
+	update_config '.root.readonly = true'
+	# shellcheck disable=SC2016
+	update_config --arg prog '$5 == "/" {print "," $6 ","}' \
+		'.process.args = ["awk", $prog, "/proc/self/mountinfo"]'
+	run -0 runc run test_busybox
+	assert_output --partial ",ro,"
+	assert_output --partial ",nosuid,"
+	assert_output --partial ",nodev,"
 }
