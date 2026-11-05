@@ -33,6 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   this is a correctness rather than a security fix. (#5403, #5583)
 - Fixed a missing `O_CLOEXEC` when opening the cgroup v2 directory to set up
   device rules. (#5403, #5583)
+- Running a container which does not have its own mount namespace no longer
+  changes the propagation of host's `/` and of the parent mount of the
+  container rootfs (they were made private or slave). (#5537, #5582)
 
 
 ## [1.4.3] - 2026-06-13

@@ -17,6 +17,25 @@ function teardown() {
 	teardown_bundle
 }
 
+# This test goes first, since without the fix, any test which runs
+# a container in the host mount namespace changes the host mounts
+# propagation, so the bug would go unnoticed.
+@test "runc run [host mount ns] must not change host mounts propagation" {
+	update_config '	  .process.args = ["true"]
+			| .linux.namespaces -= [{"type": "mount"}]
+			| .linux.maskedPaths = []
+			| .linux.readonlyPaths = []
+			| .root.readonly = false'
+
+	# Check / and the mount the container bundle resides on.
+	before=$(findmnt -n -o TARGET,PROPAGATION / && findmnt -n -o TARGET,PROPAGATION -T "$ROOT/bundle")
+	run -0 runc run test_host_mntns
+	after=$(findmnt -n -o TARGET,PROPAGATION / && findmnt -n -o TARGET,PROPAGATION -T "$ROOT/bundle")
+	echo "before: $before"
+	echo "after: $after"
+	[ "$before" = "$after" ]
+}
+
 @test "runc run [host mount ns + hooks]" {
 	update_config '	  .process.args = ["/bin/echo", "Hello World"]
 			| .hooks |= . + {"createRuntime": [{"path": "/bin/sh", "args": ["/bin/sh", "-c", "touch createRuntimeHook.$$"]}]}
