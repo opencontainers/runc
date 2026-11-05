@@ -209,6 +209,24 @@ function simple_cr() {
 	simple_cr
 }
 
+@test "checkpoint and restore (userns)" {
+	criu_version_ge 4.3 || skip "requires CRIU >= 4.3"
+
+	update_config ' .linux.namespaces += [{"type": "user"}]
+		| .linux.uidMappings += [{"hostID": 100000, "containerID": 0, "size": 65534}]
+		| .linux.gidMappings += [{"hostID": 200000, "containerID": 0, "size": 65534}] '
+	remap_rootfs
+
+	# CRIU opens some images after entering the container's user namespace,
+	# so the images directory must be accessible to the container's root.
+	# TODO: remove once https://github.com/checkpoint-restore/criu/pull/3272
+	# is in a released CRIU version (and the version check is updated).
+	mkdir -m 700 checkpoint
+	chown 100000:200000 checkpoint
+
+	simple_cr
+}
+
 @test "checkpoint --pre-dump (bad --parent-path)" {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
