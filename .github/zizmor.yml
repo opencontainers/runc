@@ -9,7 +9,8 @@ rules:
     #
     #  - The only job producing release artifacts (release, in validate.yml)
     #    builds everything inside the runcimage container via "make releaseall",
-    #    and uses neither actions/setup-go nor actions/cache.
+    #    and uses neither actions/setup-go nor actions/cache. The draft-release
+    #    job only uploads what the release job has built.
     #
     #  - GitHub scopes caches per branch: a pull request can read the default
     #    branch's cache, but cannot write to it. So a pull request cannot plant
