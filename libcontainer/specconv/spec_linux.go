@@ -372,11 +372,13 @@ var AllowedDevices = []*devices.Device{
 type CreateOpts struct {
 	CgroupName       string
 	UseSystemdCgroup bool
-	NoPivotRoot      bool
 	NoNewKeyring     bool
 	Spec             *specs.Spec
 	RootlessEUID     bool
 	RootlessCgroups  bool
+
+	// Deprecated: NoPivotRoot is ignored.
+	NoPivotRoot bool
 }
 
 // CreateLibcontainerConfig creates a new libcontainer configuration from a
@@ -403,7 +405,6 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	}
 	config := &configs.Config{
 		Rootfs:          rootfsPath,
-		NoPivotRoot:     opts.NoPivotRoot,
 		Readonlyfs:      spec.Root.Readonly,
 		Hostname:        spec.Hostname,
 		Domainname:      spec.Domainname,
@@ -440,9 +441,6 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 			var exists bool
 			if config.RootPropagation, exists = mountPropagationMapping[spec.Linux.RootfsPropagation]; !exists {
 				return nil, fmt.Errorf("rootfsPropagation=%v is not supported", spec.Linux.RootfsPropagation)
-			}
-			if config.NoPivotRoot && (config.RootPropagation&unix.MS_PRIVATE != 0) {
-				return nil, errors.New("rootfsPropagation of [r]private is not safe without pivot_root")
 			}
 		}
 

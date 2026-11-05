@@ -24,13 +24,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `--systemd-cgroup` global option is deprecated in favor of
   `--cgroup-manager=systemd`. It still works, and there are no plans to
   remove it. (#5570)
+- `runc create`, `runc run`, and `runc restore` option `--no-pivot` is now
+  deprecated, hidden, and ignored (`pivot_root(2)` is always used), as it was
+  insecure and is no longer needed when running from initramfs. See #4435 for
+  details. (#5575)
+- `configs.Config.NoPivotRoot` and `specconv.CreateOpts.NoPivotRoot` are now
+  deprecated and ignored. (#5575)
 
 ### Changed ###
-- A container configuration which uses `--no-pivot` or sets
-  `linux.rootfsPropagation`, but does not have its own mount namespace, is now
-  refused. Previously, `--no-pivot` resulted in host's `/proc` and `/sys` being
-  unmounted, and `rootfsPropagation` changed the propagation of host mounts.
-  (#5535)
+- runc now uses `pivot_root(2)` when running from initramfs on kernels older
+  than v7.0, which used to require `--no-pivot` (on v7.0+, `pivot_root(2)`
+  works in initramfs natively). Note that on older kernels, a container with
+  a user namespace can no longer be run from initramfs. (#5575)
+- A container configuration which sets `linux.rootfsPropagation`, but does
+  not have its own mount namespace, is now refused. Previously, it changed the
+  propagation of host mounts. (#5535)
 - Using `/` as container rootfs is now refused. Previously, it failed with a
   mount namespace, and without one, container mounts (such as `/proc`) were
   mounted on top of the host ones. (#5535)
