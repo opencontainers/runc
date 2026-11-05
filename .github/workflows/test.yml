@@ -425,6 +425,11 @@ jobs:
         ./tests/podman/run-system-tests.sh ./podman
 
   all-done:
+    # Without a status function this job is skipped (not failed) when a needed
+    # job fails, and a skipped required check counts as passing. Run it anyway
+    # and fail if any of the needed jobs has failed or was cancelled (same as
+    # all-done-validate in validate.yml).
+    if: ${{ !cancelled() }}
     needs:
     - test
     - cross-i386
@@ -432,4 +437,15 @@ jobs:
     - podman
     runs-on: ubuntu-24.04
     steps:
-    - run: echo "All jobs completed"
+    - name: check that all jobs succeeded
+      env:
+        NEEDS: ${{ toJSON(needs) }}
+      run: |
+        failed=$(jq -r 'to_entries[]
+            | select(.value.result != "success" and .value.result != "skipped")
+            | "::error::Job \(.key) result: \(.value.result)"' <<<"$NEEDS")
+        if [ -n "$failed" ]; then
+          echo "$failed"
+          exit 1
+        fi
+        echo "All jobs completed"

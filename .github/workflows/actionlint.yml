@@ -32,8 +32,18 @@ jobs:
       - uses: kjanat/actionlint@08bb2c4f0d039744455b87aef1c647fb8b66d37b # v1.17.0
 
   all-done-actionlint:
+    # See all-done in test.yml.
+    if: ${{ !cancelled() }}
     needs:
     - actionlint
     runs-on: ubuntu-24.04
     steps:
-    - run: echo "All jobs completed"
+    - name: check that all jobs succeeded
+      env:
+        RESULT: ${{ needs.actionlint.result }}
+      run: |
+        if [ "$RESULT" != "success" ]; then
+          echo "::error::Job actionlint result: $RESULT"
+          exit 1
+        fi
+        echo "All jobs completed"
