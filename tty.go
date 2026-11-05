@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/signal"
 	"sync"
 
 	"github.com/containerd/console"
@@ -134,20 +133,11 @@ func (t *tty) recvtty(socket *os.File) (Err error) {
 	if err := t.hostConsole.SetRaw(); err != nil {
 		return fmt.Errorf("failed to set the terminal from the stdin: %w", err)
 	}
-	go handleInterrupt(t.hostConsole)
 
 	t.epoller = epoller
 	t.console = epollConsole
 	t.closers = []io.Closer{epollConsole}
 	return nil
-}
-
-func handleInterrupt(c console.Console) {
-	sigchan := make(chan os.Signal, 1)
-	signal.Notify(sigchan, os.Interrupt)
-	<-sigchan
-	_ = c.Reset()
-	os.Exit(0)
 }
 
 func (t *tty) waitConsole() error {
