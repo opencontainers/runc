@@ -4,11 +4,11 @@ cyphar.com/go-pathrs
 cyphar.com/go-pathrs/internal/fdutils
 cyphar.com/go-pathrs/internal/libpathrs
 cyphar.com/go-pathrs/procfs
-# github.com/aperturerobotics/protobuf-go-lite v0.15.0
+# github.com/aperturerobotics/protobuf-go-lite v0.19.0
 ## explicit; go 1.23
 github.com/aperturerobotics/protobuf-go-lite
-# github.com/checkpoint-restore/go-criu/v8 v8.4.0
-## explicit; go 1.25.0
+# github.com/checkpoint-restore/go-criu/v8 v8.5.0
+## explicit; go 1.26.0
 github.com/checkpoint-restore/go-criu/v8
 github.com/checkpoint-restore/go-criu/v8/internal/proto
 github.com/checkpoint-restore/go-criu/v8/rpc
