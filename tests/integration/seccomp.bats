@@ -60,6 +60,27 @@ function teardown() {
 	assert_output --partial "Network is down"
 }
 
+@test "runc run [seccomp] (errnoRet with unsupported action)" {
+	update_config '.process.args = ["/bin/true"]'
+
+	# defaultErrnoRet with a default action not supporting it.
+	update_config '.linux.seccomp = {
+				"defaultAction":"SCMP_ACT_ALLOW",
+				"defaultErrnoRet": 1
+			}'
+	run ! runc run test_busybox
+	assert_output --partial "defaultErrnoRet is only supported for"
+
+	# errnoRet with a syscall action not supporting it (the rule is
+	# redundant as it is the same as the default action).
+	update_config '.linux.seccomp = {
+				"defaultAction":"SCMP_ACT_ALLOW",
+				"syscalls":[{"names":["mkdir","mkdirat"], "action":"SCMP_ACT_ALLOW", "errnoRet": 1}]
+			}'
+	run ! runc run test_busybox
+	assert_output --regexp 'syscall .*mkdir.*: errnoRet is only supported for'
+}
+
 # Prints the numeric value of provided seccomp flags combination.
 # The parameter is flags string, as supplied in OCI spec, for example
 # '"SECCOMP_FILTER_FLAG_TSYNC","SECCOMP_FILTER_FLAG_LOG"'.
