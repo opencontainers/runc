@@ -139,6 +139,7 @@ func Load(root, id string) (*Container, error) {
 		intelRdtManager:      intelrdt.NewManager(&state.Config, id, state.IntelRdtPath),
 		stateDir:             stateDir,
 		created:              state.Created,
+		rootfsMountID:        state.RootfsMountID,
 	}
 	c.state = &loadedState{c: c}
 	if err := c.refreshState(); err != nil {

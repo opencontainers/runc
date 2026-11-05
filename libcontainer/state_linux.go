@@ -61,6 +61,7 @@ func destroy(c *Container) error {
 		return fmt.Errorf("unable to remove container state dir: %w", err)
 	}
 	c.initProcess = nil
+	unmountRootfs(c)
 	err := runPoststopHooks(c)
 	c.state = &stoppedState{c: c}
 	return err
