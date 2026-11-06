@@ -81,7 +81,8 @@ func rootfs(config *configs.Config) error {
 
 // https://elixir.bootlin.com/linux/v6.12/source/net/core/dev.c#L1066
 func devValidName(name string) bool {
-	if len(name) == 0 || len(name) > unix.IFNAMSIZ {
+	// IFNAMSIZ includes the terminating NUL byte.
+	if len(name) == 0 || len(name) >= unix.IFNAMSIZ {
 		return false
 	}
 	if name == "." || name == ".." {
