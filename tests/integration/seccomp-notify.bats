@@ -160,6 +160,8 @@ function scmp_act_notify_template() {
 }
 
 # Check that starting with no seccomp agent running fails with a clear error.
+# Checks a runc specific error message.
+# bats test_tags=runc-specific
 @test "runc run [seccomp] (SCMP_ACT_NOTIFY no seccompagent)" {
 	teardown_seccompagent
 

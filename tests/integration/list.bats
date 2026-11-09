@@ -15,6 +15,8 @@ function teardown() {
 	teardown_bundle
 }
 
+# Checks the runc specific output format of "runc list".
+# bats test_tags=runc-specific
 @test "list" {
 	bundle=$(pwd)
 	ROOT=$ALT_ROOT run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_box1

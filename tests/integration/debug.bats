@@ -1,5 +1,8 @@
 #!/usr/bin/env bats
 
+# The tests check runc specific debug messages.
+# bats file_tags=runc-specific
+
 load helpers
 
 function setup() {
