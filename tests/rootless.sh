@@ -215,7 +215,7 @@ for ROOTLESS_FEATURES in $features_powerset; do
 			rootless@localhost -- "${ssh_env[@]}" bats -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	else
 		export "${ENV_LIST[@]}"
-		sudo -HE -u rootless PATH="$PATH" "$(which bats)" -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
+		sudo -HE -u rootless PATH="$PATH" "$(command -v bats)" -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	fi
 	cleanup
 done
