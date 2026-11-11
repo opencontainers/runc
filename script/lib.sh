@@ -88,3 +88,24 @@ function set_cross_vars() {
 
 	export HOST GOARM GOARCH CC STRIP
 }
+
+# gha_group starts a GitHub Actions log group named $*, and gha_endgroup
+# ends it (outside of GHA, these just print a line). Both are silent
+# under set -x, except for the trace of the function call itself.
+function gha_group() {
+	{
+		local opts=$-
+		set +x
+	} 2>/dev/null
+	echo "::group::$*"
+	if [[ $opts == *x* ]]; then set -x; fi
+}
+
+function gha_endgroup() {
+	{
+		local opts=$-
+		set +x
+	} 2>/dev/null
+	echo "::endgroup::"
+	if [[ $opts == *x* ]]; then set -x; fi
+}
