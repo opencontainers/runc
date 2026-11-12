@@ -85,6 +85,8 @@ while getopts "H:hr:S:v:" opt; do
 done
 
 version="${version:-$(<"$root/VERSION")}"
+# Allow the version to be specified as a tag (with a leading v).
+version="${version#v}"
 releasedir="${releasedir:-release/$version}"
 hashcmd="${hashcmd:-sha256sum}"
 
@@ -133,10 +135,6 @@ $(gpg "${tmp_runc_gpgflags[@]}" --list-keys)
 EOF
 read -r
 
-# Only needed for local signing -- change the owner since by default it's built
-# inside a container which means it'll have the wrong owner and permissions.
-[ -w "$releasedir" ] || sudo chown -R "$(id -u):$(id -g)" "$releasedir"
-
 # Sign everything.
 for bin in "$releasedir/$project"*; do
 	[[ "$(basename "$bin")" == "$project.$hashcmd" ]] && continue # skip hash
@@ -163,3 +161,13 @@ gpg "${tmp_seccomp_gpgflags[@]}" --verify libseccomp*.asc
 gpg "${tmp_libpathrs_gpgflags[@]}" --verify libpathrs*.asc
 
 popd
+
+set +x
+cat >&2 <<EOT
+
+Signed the $project release in $releasedir. To upload the signatures and
+the signed checksums file to a (draft) GitHub release, run:
+
+	gh release upload v$version --repo opencontainers/$project --clobber \\
+		$releasedir/*.asc $releasedir/$project.$hashcmd
+EOT
