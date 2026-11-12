@@ -80,6 +80,7 @@ var featuresCommand = &cli.Command{
 				"bundle",
 				"org.systemd.property.", // prefix form
 				"org.criu.config",
+				"org.opencontainers.runc.clone-self-exe",
 			},
 		}
 
