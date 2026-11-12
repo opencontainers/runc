@@ -4,12 +4,46 @@ This file documents all notable changes made to this project since runc 1.0.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased 1.5.z]
+
+## [1.5.3] - 2026-11-12
+
+> Let me hear you make decisions without your television.
+
+### Security ###
+
+This release includes a fix for the following high-severity security issue:
+
+- [CVE-2026-119101][] allowed a malicious image, using crafted symlinks in
+  its rootfs, to confuse the way runc names external mounts for CRIU, and so
+  make `runc restore` bind-mount an arbitrary host directory into the restored
+  container, read-write. Only users who both checkpoint and later restore
+  containers running untrusted images are affected (checkpoint/restore
+  requires root, so rootless runc is not affected). The same issue was found
+  in crun ([CVE-2026-115520][]); CRIU itself is fixed in [CVE-2026-119614][].
+
+  In addition, `runc restore` no longer makes read-only bind mounts writable,
+  even temporarily, while preparing the container mounts.
+
+[CVE-2026-119101]: https://github.com/opencontainers/runc/security/advisories/GHSA-g2c3-j8g3-7gpw
+[CVE-2026-115520]: https://github.com/containers/crun/security/advisories/GHSA-2mxx-58qc-p466
+[CVE-2026-119614]: https://github.com/checkpoint-restore/criu/security/advisories/GHSA-7ww7-53q2-wrwx
 
 ### Fixed ###
 - Running a container which does not have its own mount namespace no longer
   changes the propagation of host's `/` and of the parent mount of the
-  container rootfs (they were made private or slave). (#5537)
+  container rootfs (they were made private or slave). (#5537, #5581)
+- When making the container rootfs read-only (`root.readonly`), runc no longer
+  clears the `nosuid`, `nodev`, `noexec` and `nosymfollow` flags of the rootfs
+  mount (this only happened when not using a user namespace). (#5588, #5601)
+- The `defaults` mount option is no longer passed to the kernel as
+  filesystem-specific mount data, which made mounting filesystems that do not
+  accept it (such as `tmpfs`) fail. (#5500, #5520, #5602)
+
+### Changed ###
+- Updated github.com/moby/sys/capability to v0.5.0. (#5598, #5600)
+- Various CI improvements. (#5481, #5482, #5488, #5574, #5586, #5590, #5609,
+  #5615)
 
 ## [1.5.2] - 2026-09-25
 
@@ -1807,7 +1841,6 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...HEAD
 [1.5.0]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...v1.5.0
 [1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
 [1.3.0]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...v1.3.0
@@ -1875,7 +1908,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1
 
 <!-- 1.5.z patch releases -->
-[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.2...release-1.5
+[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.3...release-1.5
+[1.5.3]: https://github.com/opencontainers/runc/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/opencontainers/runc/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/opencontainers/runc/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...v1.5.0
