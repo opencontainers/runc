@@ -304,11 +304,25 @@ problem is especially obvious when in a shell, where usually the terminal has
 been put into raw mode (where each individual key-press should cause `read(2)`
 to return).
 
-> **NOTE**: There is also currently a [known problem][issue-1721] where using
-> detached pass-through will result in the container hanging if the `stdout` or
-> `stderr` is a pipe (though this should be a temporary issue).
+Also, note that if `stdout` or `stderr` is a pipe, the container process holds
+its write end, so the reader of the pipe will not get EOF until the container
+process (and all other processes that inherited it) exits. This is normal pipe
+semantics, but it may look like a hang. For example, in
 
-[issue-1721]: https://github.com/opencontainers/runc/issues/1721
+```console
+$ runc create ctr | cat
+```
+
+`runc create` exits right away, but `cat` keeps waiting for input until the
+container is started (by `runc start ctr`) and its process exits. Similarly,
+when using Go's [`os/exec`][go-exec] to run `runc create` with `Stdout` or
+`Stderr` set to something other than an `*os.File` (for example, a
+`bytes.Buffer`), `Cmd.Wait` waits until the container process exits, not just
+`runc create`. To avoid that, pass an `*os.File` (for example, the write end of
+a pipe created by `os.Pipe`, which needs to be closed in the parent after
+starting `runc`), or use `Cmd.WaitDelay`.
+
+[go-exec]: https://pkg.go.dev/os/exec
 
 #### Detached New Terminal ####
 
