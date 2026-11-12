@@ -210,3 +210,48 @@ function teardown() {
 
 	run -0 runc kill test_busybox KILL
 }
+
+@test "runc run [tty, SIGINT is forwarded]" {
+	update_config '(.. | select(.[]? == "sh")) += ["-c", "trap \"exit 3\" INT; echo ready; while :; do sleep 0.1; done"]'
+
+	# A background command started by a non-interactive shell has SIGINT
+	# ignored, and a shell can't trap a signal ignored on entry. Since
+	# runc may pass the ignored SIGINT on to the container process,
+	# reset it to default (this works in a subshell, as it is not a new
+	# shell, but not via sh -c).
+	(
+		trap - INT
+		exec runc run test_busybox
+	) >"$ROOT/out.txt" &
+	local pid=$! ret=0
+
+	# Wait for the container to set up the trap.
+	retry 50 0.1 grep -q ready "$ROOT/out.txt"
+
+	# runc should forward SIGINT to the container (rather than
+	# exiting and leaving the container running), see #1624.
+	kill -INT "$pid"
+	wait_pids_gone 50 0.2 "$pid"
+	wait "$pid" || ret=$?
+	[ "$ret" -eq 3 ]
+}
+
+@test "runc exec [tty, SIGINT is forwarded]" {
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	testcontainer test_busybox running
+
+	# See the comment in "runc run [tty, SIGINT is forwarded]".
+	(
+		trap - INT
+		exec runc exec -t test_busybox sh -c 'echo ready; exec sleep 100'
+	) >"$ROOT/out.txt" &
+	local pid=$! ret=0
+
+	retry 50 0.1 grep -q ready "$ROOT/out.txt"
+
+	# Unlike container's init, the exec'd process is killed by SIGINT.
+	kill -INT "$pid"
+	wait_pids_gone 50 0.2 "$pid"
+	wait "$pid" || ret=$?
+	[ "$ret" -eq 130 ]
+}
