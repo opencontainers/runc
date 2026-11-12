@@ -83,3 +83,30 @@ func TestHostRootGIDWithUSERNS(t *testing.T) {
 		t.Fatalf("expected gid 1000 with no USERNS but received %d", uid)
 	}
 }
+
+func TestHostRootIDWithUSERNSNoRoot(t *testing.T) {
+	// Root is not mapped; the lowest mapped container ID (500) should be used.
+	idMap := []IDMap{
+		{ContainerID: 1000, HostID: 2000, Size: 1},
+		{ContainerID: 500, HostID: 3000, Size: 10},
+	}
+	config := &Config{
+		Namespaces:  Namespaces{{Type: NEWUSER}},
+		UIDMappings: idMap,
+		GIDMappings: idMap,
+	}
+	uid, err := config.HostRootUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if uid != 3000 {
+		t.Fatalf("expected uid 3000 but received %d", uid)
+	}
+	gid, err := config.HostRootGID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gid != 3000 {
+		t.Fatalf("expected gid 3000 but received %d", gid)
+	}
+}

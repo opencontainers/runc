@@ -22,6 +22,8 @@ const (
 	UidmapPathAttr   uint16 = 27288
 	GidmapPathAttr   uint16 = 27289
 	TimeOffsetsAttr  uint16 = 27290
+	SetupUIDAttr     uint16 = 27291
+	SetupGIDAttr     uint16 = 27292
 )
 
 type Int32msg struct {
