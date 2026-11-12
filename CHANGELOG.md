@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.4.z]
 
+## [1.4.4] - 2026-11-12
+
+> Never again is what you swore the time before.
+
+### Security ###
+
+This release includes a fix for the following high-severity security issue:
+
+- [CVE-2026-119101][] allowed a malicious image, using crafted symlinks in
+  its rootfs, to confuse the way runc names external mounts for CRIU, and so
+  make `runc restore` bind-mount an arbitrary host directory into the restored
+  container, read-write. Only users who both checkpoint and later restore
+  containers running untrusted images are affected (checkpoint/restore
+  requires root, so rootless runc is not affected). The same issue was found
+  in crun ([CVE-2026-115520][]); CRIU itself is fixed in [CVE-2026-119614][].
+
+  In addition, `runc restore` no longer makes read-only bind mounts writable,
+  even temporarily, while preparing the container mounts.
+
+[CVE-2026-119101]: https://github.com/opencontainers/runc/security/advisories/GHSA-g2c3-j8g3-7gpw
+[CVE-2026-115520]: https://github.com/containers/crun/security/advisories/GHSA-2mxx-58qc-p466
+[CVE-2026-119614]: https://github.com/checkpoint-restore/criu/security/advisories/GHSA-7ww7-53q2-wrwx
+
 ### Added ###
 - `runc version` and `runc features` now provide version information about
   libpathrs when runc is built with the `libpathrs` build tag. (#5291, #5328)
@@ -17,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Switched to opencontainers/cgroups v0.1.0, which no longer uses the
   high-level cilium/ebpf API to manage cgroup v2 device rules. As a result,
   the runc binary shrunk by about 1 MiB (7.5%) on amd64. (#5403, #5583)
+- Updated builds to Go 1.26. (#5413, #5583)
+- Updated github.com/moby/sys/capability to v0.5.0. (#5598, #5599)
+- Various CI improvements. (#5383, #5395, #5401, #5408, #5279, #5613)
 
 [libpathrs v0.2.5]: https://github.com/cyphar/libpathrs/releases/tag/v0.2.5
 
@@ -36,7 +62,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Running a container which does not have its own mount namespace no longer
   changes the propagation of host's `/` and of the parent mount of the
   container rootfs (they were made private or slave). (#5537, #5582)
-
+- Since runc 1.3.0, the `org.opencontainers.runc.version` annotation included
+  in `runc features` contained an extraneous `\n`, possibly causing issues with
+  tools that parse the output. It is now properly stripped. (#5329, #5330,
+  #5331, #5335, #5336)
+- On Ubuntu Focal (20.04), the `maskPaths` optimisation added in runc 1.4.3
+  failed, as mounting `tmpfs` with the `nr_inodes=1` option is rejected there
+  due to a downstream kernel patch. We now fall back to `nr_inodes=2` if the
+  operation fails. (#5348, #5353, #5356, #5358, #5360)
 
 ## [1.4.3] - 2026-06-13
 
@@ -1490,7 +1523,6 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.1...HEAD
 [1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
 [1.3.0]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...v1.3.0
 [1.2.0]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.1...v1.2.0
@@ -1542,7 +1574,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
 
 <!-- 1.4.z patch releases -->
-[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.3...release-1.4
+[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.4...release-1.4
+[1.4.4]: https://github.com/opencontainers/runc/compare/v1.4.3...v1.4.4
 [1.4.3]: https://github.com/opencontainers/runc/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/opencontainers/runc/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.4.1
