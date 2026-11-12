@@ -226,6 +226,42 @@ function teardown() {
 	assert_output "$netns_id"
 }
 
+@test "userns with setgroups denied [additionalGids]" {
+	requires root
+
+	# Create an external userns with setgroups denied, using the same
+	# mappings as in setup.
+	unshare -U --setgroups=deny sleep infinity 3>&- &
+	pid=$!
+	retry 10 0.1 grep -qx deny "/proc/$pid/setgroups"
+	echo "0 100000 65534" >"/proc/$pid/uid_map"
+	echo "0 200000 65534" >"/proc/$pid/gid_map"
+	userns_path="$(mktemp "$BATS_RUN_TMPDIR/userns.XXXXXX")"
+	mount --bind "/proc/$pid/ns/user" "$userns_path"
+	echo "$userns_path" >>"$to_umount_list"
+	kill -9 "$pid"
+	wait "$pid" || :
+
+	update_config '.linux.namespaces |= map(if .type == "user" then (.path = "'"$userns_path"'") else . end)
+		| del(.linux.uidMappings)
+		| del(.linux.gidMappings)
+		| .process.args = ["sleep", "infinity"]
+		| .process.user = {"uid": 0, "gid": 0, "additionalGids": [0, 1]}'
+	run -1 runc run -d --console-socket "$CONSOLE_SOCKET" ctr
+	assert_output --partial "setgroups is denied"
+
+	# The primary gid is in effect anyway.
+	update_config '.process.user.additionalGids = [0]'
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" ctr
+
+	proc='{"args": ["/bin/true"], "cwd": "/", "user": {"uid": 0, "gid": 0, "additionalGids": [0, 1]}}'
+	run -255 runc exec --process <(echo "$proc") ctr
+	assert_output --partial "setgroups is denied"
+
+	proc='{"args": ["/bin/true"], "cwd": "/", "user": {"uid": 0, "gid": 0, "additionalGids": [0]}}'
+	run -0 runc exec --process <(echo "$proc") ctr
+}
+
 @test "userns with network interface" {
 	requires root
 
