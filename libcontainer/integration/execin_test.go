@@ -230,7 +230,6 @@ func TestExecInTTY(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	t.Skip("racy; see https://github.com/opencontainers/runc/issues/2425")
 	config := newTemplateConfig(t, nil)
 	container, err := newContainer(t, config)
 	ok(t, err)
@@ -272,6 +271,7 @@ func TestExecInTTY(t *testing.T) {
 		parent, child, err := utils.NewSockPair("console")
 		ok(t, err)
 		ps.ConsoleSocket = child
+		ps.ConsoleClearONLCR = true
 
 		done := make(chan error)
 		go func() {
@@ -283,11 +283,6 @@ func TestExecInTTY(t *testing.T) {
 			c, err := console.ConsoleFromFile(f)
 			if err != nil {
 				done <- fmt.Errorf("ConsoleFromFile: %w", err)
-				return
-			}
-			err = console.ClearONLCR(c.Fd())
-			if err != nil {
-				done <- fmt.Errorf("ClearONLCR: %w", err)
 				return
 			}
 			// An error from io.Copy is expected once the terminal
