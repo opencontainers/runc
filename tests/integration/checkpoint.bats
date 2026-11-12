@@ -195,6 +195,42 @@ function simple_cr() {
 	simple_cr
 }
 
+@test "checkpoint and restore (bind mount, destination resolves to invalid CRIU key)" {
+	bind=$(mktemp -d -p .)
+	update_config '	  .mounts += [{
+					type: "bind",
+					source: "'"$bind"'",
+					destination: "/a/data",
+					options: ["bind"]
+				}]'
+
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	testcontainer test_busybox running
+
+	# A mount point cannot be renamed, but its parent directory can,
+	# also from inside the container.
+	mv rootfs/a rootfs/b
+	mkdir rootfs/a
+	for target in "/b/data]:/name" "/"; do
+		ln -sfn "$target" rootfs/a/data
+		run ! runc checkpoint --work-path ./work-dir test_busybox
+		assert_output --partial "invalid external mount destination"
+		testcontainer test_busybox running
+	done
+
+	rm rootfs/a/data
+	rmdir rootfs/a
+	mv rootfs/b rootfs/a
+	run -0 runc checkpoint --work-path ./work-dir test_busybox
+	testcontainer test_busybox checkpointed
+
+	mv rootfs/a rootfs/b
+	mkdir rootfs/a
+	ln -s "/b/data]:/name" rootfs/a/data
+	run ! runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+	assert_output --partial "invalid external mount destination"
+}
+
 @test "checkpoint and restore (with --debug)" {
 	simple_cr --debug
 }
