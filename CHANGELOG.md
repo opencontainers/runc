@@ -6,6 +6,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0-rc.2] - 2026-11-12
+
+> To celebrate the fact that we've seen the back of another black day.
+
+> [!NOTE]
+> runc v1.6.0-rc.2 includes all of the patches backported to runc v1.5.3.
+
+### Security ###
+
+This release includes a fix for the following high-severity security issue:
+
+- [CVE-2026-119101][] allowed a malicious image, using crafted symlinks in
+  its rootfs, to confuse the way runc names external mounts for CRIU, and so
+  make `runc restore` bind-mount an arbitrary host directory into the restored
+  container, read-write. Only users who both checkpoint and later restore
+  containers running untrusted images are affected (checkpoint/restore
+  requires root, so rootless runc is not affected). The same issue was found
+  in crun ([CVE-2026-115520][]); CRIU itself is fixed in [CVE-2026-119614][].
+
+  In addition, `runc restore` no longer makes read-only bind mounts writable,
+  even temporarily, while preparing the container mounts.
+
+[CVE-2026-119101]: https://github.com/opencontainers/runc/security/advisories/GHSA-g2c3-j8g3-7gpw
+[CVE-2026-115520]: https://github.com/containers/crun/security/advisories/GHSA-2mxx-58qc-p466
+[CVE-2026-119614]: https://github.com/checkpoint-restore/criu/security/advisories/GHSA-7ww7-53q2-wrwx
+
 ### Breaking ###
 - A mount destination prefixed with the container rootfs path is no longer
   treated specially (previously, the prefix was stripped). As the runtime spec
@@ -15,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added ###
 - New `--cgroup-manager` global option, to select the cgroup manager
   (`cgroupfs` or `systemd`). This is compatible with crun. (#5570)
+- docs/spec-conformance.md now documents the known deviations from the
+  runtime spec. (#1846, #5528)
 
 ### Deprecated ###
 - `libcontainer.Stats.Interfaces` and `types.Stats.NetworkInterfaces` (shown
@@ -34,15 +62,175 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Using `/` as container rootfs is now refused. Previously, it failed with a
   mount namespace, and without one, container mounts (such as `/proc`) were
   mounted on top of the host ones. (#5535)
+- Mount errors now quote the source, destination and mount data, so that
+  control characters in them can not hide or garble the error message.
+  (#5320, #5560)
+- The log file (`--log`) is no longer opened with `O_SYNC`, which made every
+  log write wait for the data to reach the disk. (#5547)
+- runc no longer prints CRIU requests and responses in debug logs (CRIU logs
+  what it does in its own log files anyway). Together with not linking in the
+  DNS resolver and godbus/dbus TCP transports (the new `godbus_no_tcp` build
+  tag), this makes the runc binary about 200 KB smaller. (#5515, #5516, #5546)
+- The bash completion file no longer has a shebang line, as it is sourced,
+  not executed. (#5526)
+- Updated dependencies: checkpoint-restore/go-criu to v8.5.0,
+  moby/sys/mountinfo to v0.7.3, moby/sys/user to v0.5.0, golang.org/x/net to
+  v0.62.0, and golang.org/x/sys to v0.49.0. (#5553, #5555, #5562, #5578,
+  #5603, #5604, #5607)
 
 ### Fixed ###
-- Running a container which does not have its own mount namespace no longer
-  changes the propagation of host's `/` and of the parent mount of the
-  container rootfs (they were made private or slave). (#5537)
 - runc now errors out when seccomp `defaultErrnoRet` or `errnoRet` is set for
   an action which does not support it (i.e. anything other than
   `SCMP_ACT_ERRNO` and `SCMP_ACT_TRACE`), as required by the runtime spec.
   Previously, such values were silently ignored. (#5550, #5564)
+- runc no longer hangs if `runc init` is partially killed (for example, by a
+  seccomp `SCMP_ACT_KILL` rule hitting its main thread). (#5087, #5431)
+- `runc run` and `runc exec` run as a background job of a shell no longer
+  occasionally busy-loop when reading from the terminal; instead, they are
+  stopped by `SIGTTIN`, as expected, and can be resumed with `fg`.
+  (#1430, #5525)
+- A network device name (`linux.netDevices`) of 16 bytes is now rejected
+  during validation. Previously, runc failed later, after the host interface
+  was already set down, leaving it down. (#5606)
+- Some file descriptors opened by runc were not marked close-on-exec, and so
+  could leak into the container processes (notably, an inotify fd used for
+  OOM notifications leaked into every `runc exec` process). (#5480)
+
+## [1.5.3] - 2026-11-12
+
+> Let me hear you make decisions without your television.
+
+### Security ###
+
+This release includes a fix for the following high-severity security issue:
+
+- [CVE-2026-119101][] allowed a malicious image, using crafted symlinks in
+  its rootfs, to confuse the way runc names external mounts for CRIU, and so
+  make `runc restore` bind-mount an arbitrary host directory into the restored
+  container, read-write. Only users who both checkpoint and later restore
+  containers running untrusted images are affected (checkpoint/restore
+  requires root, so rootless runc is not affected). The same issue was found
+  in crun ([CVE-2026-115520][]); CRIU itself is fixed in [CVE-2026-119614][].
+
+  In addition, `runc restore` no longer makes read-only bind mounts writable,
+  even temporarily, while preparing the container mounts.
+
+[CVE-2026-119101]: https://github.com/opencontainers/runc/security/advisories/GHSA-g2c3-j8g3-7gpw
+[CVE-2026-115520]: https://github.com/containers/crun/security/advisories/GHSA-2mxx-58qc-p466
+[CVE-2026-119614]: https://github.com/checkpoint-restore/criu/security/advisories/GHSA-7ww7-53q2-wrwx
+
+### Fixed ###
+- Running a container which does not have its own mount namespace no longer
+  changes the propagation of host's `/` and of the parent mount of the
+  container rootfs (they were made private or slave). (#5537, #5581)
+- When making the container rootfs read-only (`root.readonly`), runc no longer
+  clears the `nosuid`, `nodev`, `noexec` and `nosymfollow` flags of the rootfs
+  mount (this only happened when not using a user namespace). (#5588, #5601)
+- The `defaults` mount option is no longer passed to the kernel as
+  filesystem-specific mount data, which made mounting filesystems that do not
+  accept it (such as `tmpfs`) fail. (#5500, #5520, #5602)
+
+### Changed ###
+- Updated github.com/moby/sys/capability to v0.5.0. (#5598, #5600)
+- Various CI improvements. (#5481, #5482, #5488, #5574, #5586, #5590, #5609,
+  #5615)
+
+## [1.4.4] - 2026-11-12
+
+> Never again is what you swore the time before.
+
+### Security ###
+
+This release includes a fix for the following high-severity security issue:
+
+- [CVE-2026-119101][] allowed a malicious image, using crafted symlinks in
+  its rootfs, to confuse the way runc names external mounts for CRIU, and so
+  make `runc restore` bind-mount an arbitrary host directory into the restored
+  container, read-write. Only users who both checkpoint and later restore
+  containers running untrusted images are affected (checkpoint/restore
+  requires root, so rootless runc is not affected). The same issue was found
+  in crun ([CVE-2026-115520][]); CRIU itself is fixed in [CVE-2026-119614][].
+
+  In addition, `runc restore` no longer makes read-only bind mounts writable,
+  even temporarily, while preparing the container mounts.
+
+[CVE-2026-119101]: https://github.com/opencontainers/runc/security/advisories/GHSA-g2c3-j8g3-7gpw
+[CVE-2026-115520]: https://github.com/containers/crun/security/advisories/GHSA-2mxx-58qc-p466
+[CVE-2026-119614]: https://github.com/checkpoint-restore/criu/security/advisories/GHSA-7ww7-53q2-wrwx
+
+### Added ###
+- `runc version` and `runc features` now provide version information about
+  libpathrs when runc is built with the `libpathrs` build tag. (#5291, #5328)
+
+### Changed ###
+- For users making use of the `libpathrs` build tag, runc now depends on
+  [libpathrs v0.2.5] or later, and attempting to build with older versions will
+  cause compilation errors. (#5291, #5333)
+- Switched to opencontainers/cgroups v0.1.0, which no longer uses the
+  high-level cilium/ebpf API to manage cgroup v2 device rules. As a result,
+  the runc binary shrunk by about 1 MiB (7.5%) on amd64. (#5403, #5583)
+- Updated builds to Go 1.26. (#5413, #5583)
+- Updated github.com/moby/sys/capability to v0.5.0. (#5598, #5599)
+- Various CI improvements. (#5383, #5395, #5401, #5408, #5279, #5613)
+
+[libpathrs v0.2.5]: https://github.com/cyphar/libpathrs/releases/tag/v0.2.5
+
+### Fixed ###
+- Worked around a Linux kernel bug (present since kernel v6.17, fixed in v7.2)
+  which caused the kernel to write past the end of the structure
+  provided by userspace (runc). This resulted in memory corruption inside runc
+  (manifesting as random crashes) when configuring device rules on cgroup v2
+  systems. (#5403, #5583)
+- `runc exec --cgroup` (and the equivalent libcontainer `Process.SubCgroupPaths`
+  API) no longer accepts a sub-cgroup path that escapes the container's cgroup
+  into a sibling cgroup sharing the same name prefix. Note that using
+  `--cgroup` requires the same privileges as running `runc exec` itself, so
+  this is a correctness rather than a security fix. (#5403, #5583)
+- Fixed a missing `O_CLOEXEC` when opening the cgroup v2 directory to set up
+  device rules. (#5403, #5583)
+- Running a container which does not have its own mount namespace no longer
+  changes the propagation of host's `/` and of the parent mount of the
+  container rootfs (they were made private or slave). (#5537, #5582)
+- Since runc 1.3.0, the `org.opencontainers.runc.version` annotation included
+  in `runc features` contained an extraneous `\n`, possibly causing issues with
+  tools that parse the output. It is now properly stripped. (#5329, #5330,
+  #5331, #5335, #5336)
+- On Ubuntu Focal (20.04), the `maskPaths` optimisation added in runc 1.4.3
+  failed, as mounting `tmpfs` with the `nr_inodes=1` option is rejected there
+  due to a downstream kernel patch. We now fall back to `nr_inodes=2` if the
+  operation fails. (#5348, #5353, #5356, #5358, #5360)
+
+## [1.3.7] - 2026-11-12
+
+> Your optimistic eyes seem like paradise to someone like me.
+
+### Security ###
+
+This release includes a fix for the following high-severity security issue:
+
+- [CVE-2026-119101][] allowed a malicious image, using crafted symlinks in
+  its rootfs, to confuse the way runc names external mounts for CRIU, and so
+  make `runc restore` bind-mount an arbitrary host directory into the restored
+  container, read-write. Only users who both checkpoint and later restore
+  containers running untrusted images are affected (checkpoint/restore
+  requires root, so rootless runc is not affected). The same issue was found
+  in crun ([CVE-2026-115520][]); CRIU itself is fixed in [CVE-2026-119614][].
+
+  In addition, `runc restore` no longer makes read-only bind mounts writable,
+  even temporarily, while preparing the container mounts.
+
+[CVE-2026-119101]: https://github.com/opencontainers/runc/security/advisories/GHSA-g2c3-j8g3-7gpw
+[CVE-2026-115520]: https://github.com/containers/crun/security/advisories/GHSA-2mxx-58qc-p466
+[CVE-2026-119614]: https://github.com/checkpoint-restore/criu/security/advisories/GHSA-7ww7-53q2-wrwx
+
+### Fixed ###
+- The `org.opencontainers.runc.version` annotation reported by `runc features`
+  no longer contains a trailing newline (a regression in runc 1.3.0), and now
+  includes `EXTRA_VERSION`. (#5329, #5331, #5335, #5337)
+
+### Changed ###
+- Updated builds to Go 1.26. (#5413, #5409)
+- Various CI fixes. (#5339, #5401, #5427, #5279, #5409)
 
 ## [1.6.0-rc.1] - 2026-10-06
 
@@ -1978,7 +2166,7 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.6.0-rc.1...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.6.0-rc.2...HEAD
 [1.5.0]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...v1.5.0
 [1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
 [1.3.0]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...v1.3.0
@@ -2027,7 +2215,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.2.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.2.0-rc.1
 
 <!-- 1.3.z patch releases -->
-[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.6...release-1.3
+[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.7...release-1.3
+[1.3.7]: https://github.com/opencontainers/runc/compare/v1.3.6...v1.3.7
 [1.3.6]: https://github.com/opencontainers/runc/compare/v1.3.5...v1.3.6
 [1.3.5]: https://github.com/opencontainers/runc/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/opencontainers/runc/compare/v1.3.3...v1.3.4
@@ -2039,7 +2228,9 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
 
 <!-- 1.4.z patch releases -->
-[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.2...release-1.4
+[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.4...release-1.4
+[1.4.4]: https://github.com/opencontainers/runc/compare/v1.4.3...v1.4.4
+[1.4.3]: https://github.com/opencontainers/runc/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/opencontainers/runc/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
@@ -2048,7 +2239,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1
 
 <!-- 1.5.z patch releases -->
-[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.2...release-1.5
+[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.3...release-1.5
+[1.5.3]: https://github.com/opencontainers/runc/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/opencontainers/runc/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/opencontainers/runc/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...v1.5.0
@@ -2057,4 +2249,5 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.5.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.5.0-rc.1
 
 <!-- 1.6.z patch releases -->
+[1.6.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.6.0-rc.1...v1.6.0-rc.2
 [1.6.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.5.0...v1.6.0-rc.1
