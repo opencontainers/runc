@@ -97,6 +97,31 @@ function teardown() {
 	assert_output --partial 'HOME='
 }
 
+# https://github.com/opencontainers/runc/issues/3241
+@test "runc exec --process with command line options" {
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+
+	# shellcheck disable=SC2016 # Expanded by the shell inside the container.
+	proc='
+{
+	"terminal": false,
+	"args": [ "/bin/sh", "-c", "echo cwd=$(pwd) A=$A B=$B" ],
+	"env": [ "PATH=/bin", "A=json", "B=json" ],
+	"cwd": "/"
+}'
+	# No options: everything is taken from process.json.
+	run -0 runc exec --process <(echo "$proc") test_busybox
+	assert_output "cwd=/ A=json B=json"
+
+	# Options from the command line override process.json.
+	run -0 runc exec --process <(echo "$proc") --cwd /bin --env B=cli test_busybox
+	assert_output "cwd=/bin A=json B=cli"
+
+	# Command from the command line overrides args from process.json.
+	run -0 runc exec --process <(echo "$proc") test_busybox echo hello
+	assert_output "hello"
+}
+
 @test "runc exec --user" {
 	# --user can't work in rootless containers that don't have idmap.
 	[ $EUID -ne 0 ] && requires rootless_idmap
