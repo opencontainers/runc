@@ -61,6 +61,19 @@ function teardown() {
 	assert_line --index 1 --regexp '5'
 }
 
+@test "runc run/exec --console-socket [relative path]" {
+	bundle="$(pwd)"
+	# A relative path is relative to the current directory
+	# (rather than the bundle directory).
+	cd "$(dirname "$CONSOLE_SOCKET")"
+	sock="$(basename "$CONSOLE_SOCKET")"
+
+	run -0 runc run -d -b "$bundle" --console-socket "$sock" test_busybox
+	testcontainer test_busybox running
+
+	run -0 runc exec -t -d --console-socket "$sock" test_busybox sleep 10
+}
+
 @test "runc exec [stdin not a tty]" {
 	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 
