@@ -17,6 +17,11 @@ function teardown() {
 	run ! runc state test_hello
 }
 
+@test "runc run --preserve-fds with no inherited fd" {
+	run ! bash -c 'exec 3>&-; exec "$@"' bash runc run --preserve-fds=1 test_missing_fd
+	assert_output --partial "preserved-fd 0"
+}
+
 @test "runc run --keep" {
 	run -0 runc run --keep test_run_keep
 
