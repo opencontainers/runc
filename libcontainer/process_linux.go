@@ -554,7 +554,7 @@ func (p *setnsProcess) start() (retErr error) {
 			if err := json.Unmarshal(*sync.Arg, &srcFd); err != nil {
 				return fmt.Errorf("sync %q passed invalid fd arg: %w", sync.Type, err)
 			}
-			seccompFd, err := pidGetFd(p.pid(), srcFd)
+			seccompFd, err := pidGetFd(p.cmd.Process, srcFd)
 			if err != nil {
 				return fmt.Errorf("sync %q get fd %d from child failed: %w", sync.Type, srcFd, err)
 			}
@@ -959,7 +959,7 @@ func (p *initProcess) start() (retErr error) {
 			if err := json.Unmarshal(*sync.Arg, &srcFd); err != nil {
 				return fmt.Errorf("sync %q passed invalid fd arg: %w", sync.Type, err)
 			}
-			seccompFd, err := pidGetFd(p.pid(), srcFd)
+			seccompFd, err := pidGetFd(p.cmd.Process, srcFd)
 			if err != nil {
 				return fmt.Errorf("sync %q get fd %d from child failed: %w", sync.Type, srcFd, err)
 			}
@@ -1114,15 +1114,22 @@ func (p *initProcess) setupNetworkDevices() error {
 	return nil
 }
 
-func pidGetFd(pid, srcFd int) (*os.File, error) {
-	pidFd, err := unix.PidfdOpen(pid, 0)
-	if err != nil {
-		return nil, os.NewSyscallError("pidfd_open", err)
+// pidGetFd returns a copy of the file descriptor srcFd of process p.
+func pidGetFd(p *os.Process, srcFd int) (*os.File, error) {
+	var (
+		fd     int
+		getErr error
+	)
+	// Reuse the handle os.Process already holds, rather than opening another
+	// pidfd by pid. Note that pidfd_getfd(2) requires a 5.6 kernel, so a
+	// kernel that has no handle for us can't do this anyway.
+	if err := p.WithHandle(func(handle uintptr) {
+		fd, getErr = unix.PidfdGetfd(int(handle), srcFd, 0)
+	}); err != nil {
+		return nil, fmt.Errorf("pidfd_getfd: %w", err)
 	}
-	defer unix.Close(pidFd)
-	fd, err := unix.PidfdGetfd(pidFd, srcFd, 0)
-	if err != nil {
-		return nil, os.NewSyscallError("pidfd_getfd", err)
+	if getErr != nil {
+		return nil, os.NewSyscallError("pidfd_getfd", getErr)
 	}
 	return os.NewFile(uintptr(fd), "[pidfd_getfd]"), nil
 }
