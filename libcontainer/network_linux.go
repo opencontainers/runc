@@ -3,6 +3,8 @@ package libcontainer
 import (
 	"errors"
 	"fmt"
+	"math/rand/v2"
+	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/sirupsen/logrus"
@@ -58,7 +60,8 @@ func (l *loopback) detach(n *configs.Network) (err error) {
 // devChangeNetNamespace allows to move a device given by name to a network namespace given by nsPath
 // and optionally change the device name.
 // The device name will be kept the same if device.Name is the zero value.
-// This function ensures that the move and rename operations occur atomically.
+// The move and rename happen in one operation, except that a name with %d is
+// set after the move, inside the target network namespace.
 // It preserves existing interface attributes, including global IP addresses.
 func devChangeNetNamespace(name, nsPath string, device configs.LinuxNetDevice) error {
 	logrus.Debugf("attaching network device %s with attrs %+v to network namespace %s", name, device, nsPath)
@@ -84,7 +87,7 @@ func devChangeNetNamespace(name, nsPath string, device configs.LinuxNetDevice) e
 	}
 
 	// Do interface rename and namespace change in the same operation to avoid
-	// possible conflicts with the interface name.
+	// possible conflicts with the interface name (for %d, see below).
 	// NLM_F_REQUEST: "It must be set on all request messages."
 	// NLM_F_ACK: "Request for an acknowledgment on success."
 	// netlink(7) man page: https://man7.org/linux/man-pages/man7/netlink.7.html
@@ -112,7 +115,13 @@ func devChangeNetNamespace(name, nsPath string, device configs.LinuxNetDevice) e
 	if device.Name != "" {
 		newName = device.Name
 	}
-	nameData := nl.NewRtAttr(unix.IFLA_IFNAME, nl.ZeroTerminated(newName))
+	// The kernel replaces %d with the lowest free number in the target
+	// namespace, so move under a unique name and rename there by ifindex.
+	moveName := newName
+	if strings.Contains(newName, "%d") {
+		moveName = fmt.Sprintf("runc%08x", rand.Uint32())
+	}
+	nameData := nl.NewRtAttr(unix.IFLA_IFNAME, nl.ZeroTerminated(moveName))
 	req.AddData(nameData)
 
 	// Get the new network namespace.
@@ -140,10 +149,19 @@ func devChangeNetNamespace(name, nsPath string, device configs.LinuxNetDevice) e
 	}
 	defer nhNs.Close()
 
-	nsLink, err := nhNs.LinkByName(newName)
+	nsLink, err := nhNs.LinkByName(moveName)
 	// recover same behavior on vishvananda/netlink@1.2.1 and do not fail when the kernel returns NLM_F_DUMP_INTR.
 	if err != nil && !errors.Is(err, netlink.ErrDumpInterrupted) {
-		return fmt.Errorf("link not found for interface %s on namespace %s : %w", newName, nsPath, err)
+		return fmt.Errorf("link not found for interface %s on namespace %s : %w", moveName, nsPath, err)
+	}
+	if moveName != newName {
+		if err := nhNs.LinkSetName(nsLink, newName); err != nil {
+			return fmt.Errorf("fail to rename interface %s to %s on namespace %s: %w", moveName, newName, nsPath, err)
+		}
+		nsLink, err = nhNs.LinkByIndex(nsLink.Attrs().Index)
+		if err != nil {
+			return fmt.Errorf("link not found for interface %s on namespace %s : %w", newName, nsPath, err)
+		}
 	}
 
 	// Re-add the original IP addresses to the interface in the new namespace.
