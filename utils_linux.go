@@ -87,7 +87,7 @@ func newProcess(p *specs.Process) (*libcontainer.Process, error) {
 		}
 		lp.Rlimits = append(lp.Rlimits, rl)
 	}
-	aff, err := configs.ConvertCPUAffinity(p.ExecCPUAffinity)
+	aff, err := configs.ConvertCPUAffinity(p.ExecCPUAffinity) //nolint:staticcheck // SA1019: deprecated but still supported.
 	if err != nil {
 		return nil, err
 	}

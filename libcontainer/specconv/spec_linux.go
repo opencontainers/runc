@@ -612,7 +612,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 			ioPriority := *spec.Process.IOPriority
 			config.IOPriority = &ioPriority
 		}
-		config.ExecCPUAffinity, err = configs.ConvertCPUAffinity(spec.Process.ExecCPUAffinity)
+		config.ExecCPUAffinity, err = configs.ConvertCPUAffinity(spec.Process.ExecCPUAffinity) //nolint:staticcheck // SA1019: deprecated but still supported.
 		if err != nil {
 			return nil, err
 		}

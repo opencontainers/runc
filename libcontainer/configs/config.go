@@ -386,8 +386,8 @@ func cpuStrToRanges(str string) (maxID int, ranges []cpuRange, _ error) {
 	return maxID, ranges, nil
 }
 
-// ConvertCPUAffinity converts [specs.CPUAffinity] to [CPUAffinity].
-func ConvertCPUAffinity(sa *specs.CPUAffinity) (*CPUAffinity, error) {
+// ConvertCPUAffinity converts [specs.ExecCPUAffinity] to [CPUAffinity].
+func ConvertCPUAffinity(sa *specs.ExecCPUAffinity) (*CPUAffinity, error) {
 	if sa == nil {
 		return nil, nil
 	}

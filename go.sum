@@ -36,8 +36,8 @@ github.com/mrunalp/fileutils v0.5.1 h1:F+S7ZlNKnrwHfSwdlgNSkKo67ReVf8o9fel6C3dkm
 github.com/mrunalp/fileutils v0.5.1/go.mod h1:M1WthSahJixYnrXQl/DFQuteStB1weuxD2QJNHXfbSQ=
 github.com/opencontainers/cgroups v0.1.0 h1:6W05KiDvgj1yi/6D13SJCvYx8TAESz67szvHPxhfcrs=
 github.com/opencontainers/cgroups v0.1.0/go.mod h1:hPBRvnBhLZueEN0eJyozMeM3HeFGYlZW9KnO//px6G4=
-github.com/opencontainers/runtime-spec v1.3.0 h1:YZupQUdctfhpZy3TM39nN9Ika5CBWT5diQ8ibYCRkxg=
-github.com/opencontainers/runtime-spec v1.3.0/go.mod h1:jwyrGlmzljRJv/Fgzds9SsS/C5hL+LL3ko9hs6T5lQ0=
+github.com/opencontainers/runtime-spec v1.3.1-0.20261112175749-f6cd17e3a5f5 h1:AYJ9svrjR1JfnLVpJ53KwP20rPDwh++bmuLjwUfrH2c=
+github.com/opencontainers/runtime-spec v1.3.1-0.20261112175749-f6cd17e3a5f5/go.mod h1:ZVuteWxC/k7L8eVxaCQlvyrdlIkf0MxyYg/+Fu39BmE=
 github.com/opencontainers/selinux v1.15.1 h1:ERxeh5caJvCzNAKdI8WQbJmB1LDTn4BuaAg8wihLBpA=
 github.com/opencontainers/selinux v1.15.1/go.mod h1:LenyElirjUHszfxrjuFqC85HIeXZKumHcKMQtnaDlQQ=
 github.com/rogpeppe/go-internal v1.11.0 h1:cWPaGQEPrBb5/AsnsZesgZZ9yb1OQ+GOISoDNXVBh4M=
