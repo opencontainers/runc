@@ -240,6 +240,17 @@ type Config struct {
 
 	// ExecCPUAffinity is CPU affinity for a non-init process to be run in the container.
 	ExecCPUAffinity *CPUAffinity `json:"exec_cpu_affinity,omitempty"`
+
+	// CreateContainerCPUAffinity is CPU affinity for the container's init
+	// process, set right after it is moved into the container's cgroup.
+	// If nil, the affinity is reset to all CPUs (as limited by the cgroup
+	// cpuset, if any).
+	CreateContainerCPUAffinity *CPUMask `json:"create_container_cpu_affinity,omitempty"`
+
+	// StartContainerCPUAffinity is CPU affinity for the container's init
+	// process, set before running StartContainer hooks and the user
+	// specified process. If nil, the affinity is not changed.
+	StartContainerCPUAffinity *CPUMask `json:"start_container_cpu_affinity,omitempty"`
 }
 
 // Scheduler is based on the Linux sched_setattr(2) syscall.
@@ -303,8 +314,86 @@ func ToSchedAttr(scheduler *Scheduler) (*unix.SchedAttr, error) {
 
 type IOPriority = specs.LinuxIOPriority
 
+// CPUAffinity contains CPU affinity settings for a process started by
+// runc exec. A nil value means "do not change".
 type CPUAffinity struct {
-	Initial, Final unix.CPUSetDynamic
+	// Initial is CPU affinity of the process before it is moved into the
+	// container's cgroup.
+	Initial *CPUMask
+	// Final is CPU affinity of the process right after it is moved into
+	// the container's cgroup.
+	Final *CPUMask
+}
+
+// CPUMask is a CPU affinity mask.
+type CPUMask struct {
+	// All, if set, means all possible CPUs, and Set is ignored.
+	All bool
+	// Set is a set of CPUs.
+	Set unix.CPUSetDynamic
+}
+
+// CPUSet returns the CPU set to be used with [unix.SchedSetaffinityDynamic].
+func (m *CPUMask) CPUSet() unix.CPUSetDynamic {
+	if !m.All {
+		return m.Set
+	}
+	// We want to allow all possible CPUs in the system, including those
+	// not in cpuset.cpus, online or even present (hot-plugged) at call
+	// time. Using a cpumask any tighter than that may disallow using
+	// those CPUs if they are added to cpuset.cpus later.
+	//
+	// Note that sched_setaffinity(2) will implicitly:
+	//
+	//  * Clamp the cpumask so that it matches the number of CPUs
+	//    supported by the kernel.
+	//
+	//  * Mask out any CPUs that are not a member of the target task's
+	//    configured cgroup cpuset. This is for task's effective affinity,
+	//    without forgetting masked-out CPUs should the cgroup cpuset
+	//    change later.
+	//
+	// Therefore, preparing the cpumask, we can avoid reading
+	// /sys/devices/system/cpu/possible and kernel_max.
+	// Instead, we use a huge buffer similarly to go 1.25 runtime in
+	// getCPUCount().
+	s := unix.NewCPUSet(MaxCPU)
+	s.Fill()
+	return s
+}
+
+// MarshalJSON implements [json.Marshaler]. A mask with All set is
+// marshaled as "all", otherwise it is an array of numbers (the same
+// representation as was used for CPU sets by older runc versions).
+func (m CPUMask) MarshalJSON() ([]byte, error) {
+	if m.All {
+		return []byte(`"all"`), nil
+	}
+	return json.Marshal(m.Set)
+}
+
+// UnmarshalJSON implements [json.Unmarshaler].
+func (m *CPUMask) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, []byte(`"all"`)) {
+		*m = CPUMask{All: true}
+		return nil
+	}
+	*m = CPUMask{}
+	return json.Unmarshal(data, &m.Set)
+}
+
+// ParseCPUMask parses a string in runtime-spec CPU affinity format, which is
+// either a list of CPUs (e.g. "0-3,5,7-9", see [ToCPUSet]), or a special value
+// "all", meaning all possible CPUs. Empty string results in nil mask.
+func ParseCPUMask(str string) (*CPUMask, error) {
+	if str == "all" {
+		return &CPUMask{All: true}, nil
+	}
+	s, err := ToCPUSet(str)
+	if err != nil || s == nil {
+		return nil, err
+	}
+	return &CPUMask{Set: s}, nil
 }
 
 // MaxCPU is one past the highest CPU/NUMA node ID that [ToCPUSet] accepts,
@@ -386,18 +475,31 @@ func cpuStrToRanges(str string) (maxID int, ranges []cpuRange, _ error) {
 	return maxID, ranges, nil
 }
 
-// ConvertCPUAffinity converts [specs.ExecCPUAffinity] to [CPUAffinity].
-func ConvertCPUAffinity(sa *specs.ExecCPUAffinity) (*CPUAffinity, error) {
-	if sa == nil {
+// ConvertExecCPUAffinity returns exec CPU affinity settings from p, which is
+// taken from [specs.Process.CPUAffinity] (ExecRuntime and ExecContainer), if
+// set, or from the deprecated [specs.Process.ExecCPUAffinity] otherwise.
+func ConvertExecCPUAffinity(p *specs.Process) (*CPUAffinity, error) {
+	if p == nil {
 		return nil, nil
 	}
-	initial, err := ToCPUSet(sa.Initial)
-	if err != nil {
-		return nil, fmt.Errorf("bad CPUAffinity.Initial: %w", err)
+	var initialStr, finalStr, initialName, finalName string
+	switch {
+	case p.CPUAffinity != nil:
+		initialStr, finalStr = p.CPUAffinity.ExecRuntime, p.CPUAffinity.ExecContainer
+		initialName, finalName = "cpuAffinity.execRuntime", "cpuAffinity.execContainer"
+	case p.ExecCPUAffinity != nil: //nolint:staticcheck // SA1019: deprecated but still supported.
+		initialStr, finalStr = p.ExecCPUAffinity.Initial, p.ExecCPUAffinity.Final //nolint:staticcheck // Ditto.
+		initialName, finalName = "execCPUAffinity.initial", "execCPUAffinity.final"
+	default:
+		return nil, nil
 	}
-	final, err := ToCPUSet(sa.Final)
+	initial, err := ParseCPUMask(initialStr)
 	if err != nil {
-		return nil, fmt.Errorf("bad CPUAffinity.Final: %w", err)
+		return nil, fmt.Errorf("bad %s: %w", initialName, err)
+	}
+	final, err := ParseCPUMask(finalStr)
+	if err != nil {
+		return nil, fmt.Errorf("bad %s: %w", finalName, err)
 	}
 	if initial == nil && final == nil {
 		return nil, nil
