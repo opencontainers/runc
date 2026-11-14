@@ -86,3 +86,10 @@ function help_commands() {
 	diff -u <(help_commands | sort -u) <(complete_runc --root = /x "")
 	diff -u <(help_options "OPTIONS:" run) <(complete_runc --rootless auto run -)
 }
+
+@test "bash completion: option arguments" {
+	diff -u <(printf '%s\n' json text) <(complete_runc --log-format "")
+	# With "=", bash splits "--opt=val" into "--opt" "=" "val".
+	diff -u <(printf '%s\n' json text) <(complete_runc --log-format =)
+	diff -u <(echo json) <(complete_runc --log-format = j)
+}

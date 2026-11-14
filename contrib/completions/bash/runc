@@ -856,6 +856,13 @@ _runc() {
 	COMPREPLY=()
 	local cur prev words cword
 	_get_comp_words_by_ref -n : cur prev words cword
+	# Bash splits --opt=val into "--opt" "=" "val"; make cur and prev
+	# look like it was --opt val, so option arguments are completed.
+	if [ "$cur" = "=" ]; then
+		cur=
+	elif [ "$prev" = "=" ] && [ "$cword" -ge 2 ]; then
+		prev=${words[cword - 2]}
+	fi
 
 	local command='runc' command_pos=0 subcommand_pos
 	local counter=1
