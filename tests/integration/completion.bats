@@ -79,3 +79,10 @@ function help_commands() {
 	done
 	[ "$failed" -eq 0 ]
 }
+
+@test "bash completion: global options with arguments" {
+	diff -u <(help_commands | sort -u) <(complete_runc --root /x --log-format json "")
+	# With "=", bash splits "--root=/x" into "--root" "=" "/x".
+	diff -u <(help_commands | sort -u) <(complete_runc --root = /x "")
+	diff -u <(help_options "OPTIONS:" run) <(complete_runc --rootless auto run -)
+}

@@ -34,6 +34,8 @@ __runc_pos_first_nonflag() {
 	local counter=$((${subcommand_pos:-${command_pos}} + 1))
 	while [ $counter -le $cword ]; do
 		if [ -n "$argument_flags" ] && eval "case '${words[$counter]}' in $argument_flags) true ;; *) false ;; esac"; then
+			# Skip the argument, also in --opt=val form.
+			[ "${words[$counter + 1]}" = "=" ] && ((counter++))
 			((counter++))
 		else
 			case "${words[$counter]}" in
@@ -236,13 +238,7 @@ _runc_runc() {
 		--debug
 		--systemd-cgroup
 	"
-	local options_with_args="
-		--cgroup-manager
-		--log
-		--log-format
-		--root
-		--rootless
-	"
+	local options_with_args="$global_options_with_args"
 
 	case "$prev" in
 	--log | --root)
@@ -848,6 +844,15 @@ _runc() {
 		help
 	)
 
+	# Global options with arguments (also used by _runc_runc).
+	local global_options_with_args="
+		--cgroup-manager
+		--log
+		--log-format
+		--root
+		--rootless
+	"
+
 	COMPREPLY=()
 	local cur prev words cword
 	_get_comp_words_by_ref -n : cur prev words cword
@@ -856,6 +861,11 @@ _runc() {
 	local counter=1
 	while [ $counter -lt $cword ]; do
 		case "${words[$counter]}" in
+		$(__runc_to_extglob "$global_options_with_args"))
+			# Skip the option argument, unless it is given as --opt=val
+			# (the "=" case below handles that).
+			[ "${words[$counter + 1]}" != "=" ] && ((counter++))
+			;;
 		-*) ;;
 		=)
 			((counter++))
