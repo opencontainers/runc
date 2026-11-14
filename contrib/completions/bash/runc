@@ -221,8 +221,7 @@ _runc_exec() {
 # global options that may appear after the runc command
 _runc_runc() {
 	local boolean_options="
-		$global_boolean_options
-		--help
+		--help -h
 		--version -v
 		--debug
 		--systemd-cgroup
@@ -795,13 +794,6 @@ _runc() {
 		help
 		h
 	)
-
-	# These options are valid as global options for all client commands
-	# and valid as command options for `runc daemon`
-	local global_boolean_options="
-		--help -h
-		--version -v
-	"
 
 	COMPREPLY=()
 	local cur prev words cword
