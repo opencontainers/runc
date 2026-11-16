@@ -34,6 +34,8 @@ __runc_pos_first_nonflag() {
 	local counter=$((${subcommand_pos:-${command_pos}} + 1))
 	while [ $counter -le $cword ]; do
 		if [ -n "$argument_flags" ] && eval "case '${words[$counter]}' in $argument_flags) true ;; *) false ;; esac"; then
+			# Skip the argument, also in --opt=val form.
+			[ "${words[$counter + 1]}" = "=" ] && ((counter++))
 			((counter++))
 		else
 			case "${words[$counter]}" in
@@ -156,24 +158,34 @@ __runc_complete_capabilities() {
 _runc_exec() {
 	local boolean_options="
 	   --help
+	   -h
 	   --no-new-privs
-	   --tty, -t
-	   --detach, -d
+	   --tty
+	   -t
+	   --detach
+	   -d
+	   --ignore-paused
 	"
 
 	local options_with_args="
 	   --console-socket
+	   --pidfd-socket
 	   --cwd
-	   --env, -e
-	   --user, -u
-	   --additional-gids, -g
-	   --process, -p
+	   --env
+	   -e
+	   --user
+	   -u
+	   --additional-gids
+	   -g
+	   --process
+	   -p
 	   --pid-file
 	   --process-label
 	   --apparmor
-	   --cap, -c
+	   --cap
+	   -c
 	   --preserve-fds
-	   --ignore-paused
+	   --cgroup
 	"
 
 	local all_options="$options_with_args $boolean_options"
@@ -184,7 +196,7 @@ _runc_exec() {
 		return
 		;;
 
-	--console-socket | --cwd | --process | --apparmor)
+	--console-socket | --pidfd-socket | --cwd | --process | --pid-file | --apparmor)
 		case "$cur" in
 		*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
 		'')
@@ -221,19 +233,12 @@ _runc_exec() {
 # global options that may appear after the runc command
 _runc_runc() {
 	local boolean_options="
-		$global_boolean_options
-		--help
+		--help -h
 		--version -v
 		--debug
 		--systemd-cgroup
 	"
-	local options_with_args="
-		--cgroup-manager
-		--log
-		--log-format
-		--root
-		--rootless
-	"
+	local options_with_args="$global_options_with_args"
 
 	case "$prev" in
 	--log | --root)
@@ -261,6 +266,11 @@ _runc_runc() {
 		return
 		;;
 
+	--rootless)
+		COMPREPLY=($(compgen -W 'true false auto' -- "$cur"))
+		return
+		;;
+
 	$(__runc_to_extglob "$options_with_args"))
 		return
 		;;
@@ -284,6 +294,7 @@ _runc_pause() {
 	   --help
 	   -h
 	"
+	local options_with_args=""
 
 	case "$cur" in
 	-*)
@@ -301,8 +312,16 @@ _runc_ps() {
 	   -h
 	"
 	local options_with_args="
-	   --format, -f
+	   --format
+	   -f
 	"
+
+	case "$prev" in
+	--format | -f)
+		COMPREPLY=($(compgen -W 'table json' -- "$cur"))
+		return
+		;;
+	esac
 
 	case "$cur" in
 	-*)
@@ -318,8 +337,10 @@ _runc_delete() {
 	local boolean_options="
 	   --help
 	   -h
-	   --format, -f
+	   --force
+	   -f
 	"
+	local options_with_args=""
 
 	case "$cur" in
 	-*)
@@ -335,26 +356,22 @@ _runc_kill() {
 	local boolean_options="
 	   --help
 	   -h
-          --all
-          -a
 	"
+	local options_with_args=""
+
+	case "$cur" in
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		return
+		;;
+	esac
 
 	case "$prev" in
 	"kill")
 		__runc_list_all
-		return
 		;;
 	*)
 		__runc_list_signals
-		return
-		;;
-	esac
-	case "$cur" in
-	-*)
-		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-		;;
-	*)
-		__runc_list_all
 		;;
 	esac
 }
@@ -362,6 +379,7 @@ _runc_kill() {
 _runc_events() {
 	local boolean_options="
 	   --help
+	   -h
 	   --stats
 	"
 
@@ -388,6 +406,7 @@ _runc_events() {
 _runc_list() {
 	local boolean_options="
 	   --help
+	   -h
 	   --quiet
 	   -q
 	"
@@ -399,7 +418,7 @@ _runc_list() {
 
 	case "$prev" in
 	--format | -f)
-		COMPREPLY=($(compgen -W 'text json' -- "$cur"))
+		COMPREPLY=($(compgen -W 'table json' -- "$cur"))
 		return
 		;;
 
@@ -421,6 +440,7 @@ _runc_list() {
 _runc_spec() {
 	local boolean_options="
 	   --help
+	   -h
 	   --rootless
 	"
 
@@ -462,8 +482,10 @@ _runc_spec() {
 _runc_run() {
 	local boolean_options="
 	   --help
-	   --detatch
+	   -h
+	   --detach
 	   -d
+	   --keep
 	   --no-subreaper
 	   --no-pivot
 	   --no-new-keyring
@@ -473,12 +495,13 @@ _runc_run() {
 	   --bundle
 	   -b
 	   --console-socket
+	   --pidfd-socket
 	   --pid-file
 	   --preserve-fds
 	"
 
 	case "$prev" in
-	--bundle | -b | --console-socket | --pid-file)
+	--bundle | -b | --console-socket | --pidfd-socket | --pid-file)
 		case "$cur" in
 		'')
 			COMPREPLY=($(compgen -W '/' -- "$cur"))
@@ -573,6 +596,7 @@ _runc_checkpoint() {
 _runc_create() {
 	local boolean_options="
 	   --help
+	   -h
 	   --no-pivot
 	   --no-new-keyring
 	"
@@ -581,11 +605,12 @@ _runc_create() {
 	   --bundle
 	   -b
 	   --console-socket
+	   --pidfd-socket
 	   --pid-file
 	   --preserve-fds
 	"
 	case "$prev" in
-	--bundle | -b | --console-socket | --pid-file)
+	--bundle | -b | --console-socket | --pidfd-socket | --pid-file)
 		case "$cur" in
 		'')
 			COMPREPLY=($(compgen -W '/' -- "$cur"))
@@ -625,6 +650,7 @@ _runc_help() {
 _runc_restore() {
 	local boolean_options="
 	   --help
+	   -h
 	   --tcp-established
 	   --ext-unix-sk
 	   --shell-job
@@ -640,11 +666,14 @@ _runc_restore() {
 	local options_with_args="
 	   -b
 	   --bundle
+	   --console-socket
 	   --image-path
 	   --work-path
 	   --manage-cgroups-mode
 	   --pid-file
 	   --empty-ns
+	   --lsm-profile
+	   --lsm-mount-context
 	"
 
 	local all_options="$options_with_args $boolean_options"
@@ -655,7 +684,7 @@ _runc_restore() {
 		return
 		;;
 
-	--pid-file | --image-path | --work-path | --bundle | -b)
+	--pid-file | --console-socket | --image-path | --work-path | --bundle | -b)
 		case "$cur" in
 		*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
 		'')
@@ -690,6 +719,7 @@ _runc_resume() {
 	   --help
 	   -h
 	"
+	local options_with_args=""
 
 	case "$cur" in
 	-*)
@@ -706,6 +736,7 @@ _runc_state() {
 	   --help
 	   -h
 	"
+	local options_with_args=""
 
 	case "$cur" in
 	-*)
@@ -721,6 +752,7 @@ _runc_start() {
 	   --help
 	   -h
 	"
+	local options_with_args=""
 
 	case "$cur" in
 	-*)
@@ -734,9 +766,12 @@ _runc_start() {
 _runc_update() {
 	local boolean_options="
 	   --help
+	   -h
 	"
 
 	local options_with_args="
+	   --resources
+	   -r
 	   --blkio-weight
 	   --cpu-period
 	   --cpu-quota
@@ -756,6 +791,20 @@ _runc_update() {
 	"
 
 	case "$prev" in
+	--resources | -r)
+		case "$cur" in
+		'')
+			COMPREPLY=($(compgen -W '- /' -- "$cur"))
+			__runc_nospace
+			;;
+		/*)
+			_filedir
+			__runc_nospace
+			;;
+		esac
+		return
+		;;
+
 	$(__runc_to_extglob "$options_with_args"))
 		return
 		;;
@@ -793,24 +842,37 @@ _runc() {
 		state
 		update
 		help
-		h
 	)
 
-	# These options are valid as global options for all client commands
-	# and valid as command options for `runc daemon`
-	local global_boolean_options="
-		--help -h
-		--version -v
+	# Global options with arguments (also used by _runc_runc).
+	local global_options_with_args="
+		--cgroup-manager
+		--log
+		--log-format
+		--root
+		--rootless
 	"
 
 	COMPREPLY=()
 	local cur prev words cword
 	_get_comp_words_by_ref -n : cur prev words cword
+	# Bash splits --opt=val into "--opt" "=" "val"; make cur and prev
+	# look like it was --opt val, so option arguments are completed.
+	if [ "$cur" = "=" ]; then
+		cur=
+	elif [ "$prev" = "=" ] && [ "$cword" -ge 2 ]; then
+		prev=${words[cword - 2]}
+	fi
 
 	local command='runc' command_pos=0 subcommand_pos
 	local counter=1
 	while [ $counter -lt $cword ]; do
 		case "${words[$counter]}" in
+		$(__runc_to_extglob "$global_options_with_args"))
+			# Skip the option argument, unless it is given as --opt=val
+			# (the "=" case below handles that).
+			[ "${words[$counter + 1]}" != "=" ] && ((counter++))
+			;;
 		-*) ;;
 		=)
 			((counter++))
