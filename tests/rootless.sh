@@ -190,9 +190,10 @@ features_powerset="$(powerset "${ALL_FEATURES[@]}")"
 # Iterate over the powerset of all features.
 IFS=:
 idx=0
+total=$((1 << ${#ALL_FEATURES[@]}))
 for ROOTLESS_FEATURES in $features_powerset; do
 	((++idx))
-	printf "[%.2d] run rootless tests ... (${ROOTLESS_FEATURES%%+})\n" "$idx"
+	printf "::group::[%d/%d] run rootless tests ... (%s)\n" "$idx" "$total" "${ROOTLESS_FEATURES%%+}"
 
 	unset IFS
 	for feature in "${ALL_FEATURES[@]}"; do
@@ -227,4 +228,5 @@ for ROOTLESS_FEATURES in $features_powerset; do
 		sudo -HE -u rootless PATH="$PATH" "$(command -v bats)" "${BATS_ARGS[@]}"
 	fi
 	cleanup
+	echo "::endgroup::"
 done

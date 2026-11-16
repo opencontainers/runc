@@ -63,16 +63,19 @@ jobs:
 
     - name: Show host info
       run: |
+        source script/lib.sh
         set -x
         # Sync `set -x` outputs with command ouputs
         exec 2>&1
-        # Version
+        gha_group Version
         uname -a
         cat /etc/os-release
-        # Hardware
+        gha_endgroup
+        gha_group Hardware
         cat /proc/cpuinfo
         free -mt
-        # cgroup
+        gha_endgroup
+        gha_group cgroup
         ls -F /sys/fs/cgroup
         cat /proc/self/cgroup
         if [ -e /sys/fs/cgroup/cgroup.controllers ]; then
@@ -80,8 +83,10 @@ jobs:
           cat /sys/fs/cgroup/cgroup.subtree_control
           ls -F /sys/fs/cgroup"$(grep -oP '0::\K.*' /proc/self/cgroup)"
         fi
-        # kernel config
+        gha_endgroup
+        gha_group "Kernel config"
         script/check-config.sh
+        gha_endgroup
 
     - name: install deps
       run: |

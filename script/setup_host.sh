@@ -9,11 +9,18 @@ set -eux -o pipefail
 : "${BATS_VERSION:=v1.12.0}"
 
 SCRIPTDIR="$(dirname "${BASH_SOURCE[0]}")"
+# shellcheck source=./script/lib.sh
+source "$SCRIPTDIR/lib.sh"
+
+# Merge stderr (including set -x output) into stdout, so that the output
+# is not reordered and log groups are not mixed up.
+exec 2>&1
 
 # PLATFORM_ID is not available on Fedora
 PLATFORM_ID=
 grep -q ^PLATFORM_ID /etc/os-release && PLATFORM_ID="$(grep -oP '^PLATFORM_ID="\K[^"]+' /etc/os-release)"
 
+gha_group "Install packages"
 # Initialize DNF
 DNF=(dnf -y --setopt=install_weak_deps=False --setopt=tsflags=nodocs)
 case "$PLATFORM_ID" in
@@ -42,8 +49,9 @@ for i in $(seq 0 2); do
 done
 # shellcheck disable=SC2181
 [ $? -eq 0 ] # fail if dnf failed
+gha_endgroup
 
-# Install CRIU
+gha_group "Install CRIU"
 if [ "$PLATFORM_ID" = "platform:el8" ]; then
 	# Use newer criu (with https://github.com/checkpoint-restore/criu/pull/2545).
 	# Alas we have to disable container-tools for that.
@@ -51,8 +59,9 @@ if [ "$PLATFORM_ID" = "platform:el8" ]; then
 	"${DNF[@]}" copr enable adrian/criu-el8
 fi
 "${DNF[@]}" install criu
+gha_endgroup
 
-# Install BATS
+gha_group "Install bats"
 if [ "$PLATFORM_ID" = "platform:el8" ]; then
 	# The packaged version of bats is too old: `BATS_ERROR_SUFFIX: unbound variable`, `bats_require_minimum_version: command not found`
 	git clone --depth 1 --branch "$BATS_VERSION" https://github.com/bats-core/bats-core /tmp/bats-core
@@ -64,11 +73,13 @@ fi
 
 # Clean up DNF
 dnf clean all
+gha_endgroup
 
-# Install libpathrs
+gha_group "Install libpathrs"
 "$SCRIPTDIR"/build-libpathrs.sh "$LIBPATHRS_VERSION" /usr
+gha_endgroup
 
-# Setup rootless user.
+gha_group "Setup rootless user"
 "$SCRIPTDIR"/setup_rootless.sh
 
 # Delegate all cgroup v2 controllers to rootless user via --cgroup-manager=systemd
@@ -81,6 +92,7 @@ Delegate=yes
 EOF
 	systemctl daemon-reload
 fi
+gha_endgroup
 
 # Allow potentially unsafe tests.
 echo 'export RUNC_ALLOW_UNSAFE_TESTS=yes' >>/root/.bashrc
