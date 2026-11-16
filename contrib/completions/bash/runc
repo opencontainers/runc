@@ -170,6 +170,7 @@ _runc_exec() {
 	local options_with_args="
 	   --console-socket
 	   --pidfd-socket
+	   --exec-wait-fifo
 	   --cwd
 	   --env
 	   -e
@@ -196,7 +197,7 @@ _runc_exec() {
 		return
 		;;
 
-	--console-socket | --pidfd-socket | --cwd | --process | --pid-file | --apparmor)
+	--console-socket | --pidfd-socket | --exec-wait-fifo | --cwd | --process | --pid-file | --apparmor)
 		case "$cur" in
 		*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
 		'')
