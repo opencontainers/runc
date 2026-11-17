@@ -8,17 +8,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"unsafe"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/internal/rawfork"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 )
-
-/*
-#include <stdlib.h>
-extern int spawn_userns_cat(char *userns_path, char *path, int outfd, int errfd);
-*/
-import "C"
 
 func parseIdmapData(data []byte) (ms []configs.IDMap, err error) {
 	scanner := bufio.NewScanner(bytes.NewReader(data))
@@ -40,6 +35,12 @@ func parseIdmapData(data []byte) (ms []configs.IDMap, err error) {
 // efficiently. Returns the contents of the requested file from within the user
 // namespace.
 func spawnUserNamespaceCat(nsPath, path string) ([]byte, error) {
+	nsFile, err := os.Open(nsPath)
+	if err != nil {
+		return nil, fmt.Errorf("open userns path failed: %w", err)
+	}
+	defer nsFile.Close()
+
 	rdr, wtr, err := os.Pipe()
 	if err != nil {
 		return nil, fmt.Errorf("create pipe for userns spawn failed: %w", err)
@@ -47,65 +48,61 @@ func spawnUserNamespaceCat(nsPath, path string) ([]byte, error) {
 	defer rdr.Close()
 	defer wtr.Close()
 
-	errRdr, errWtr, err := os.Pipe()
+	// The child joins the user namespace, opens the file, and copies its
+	// contents to the pipe. Since the pipe is blocking and the child has no
+	// signal handlers, writes to it are never short.
+	var prog rawfork.Program
+	pathPtr, err := prog.String(path)
 	if err != nil {
-		return nil, fmt.Errorf("create error pipe for userns spawn failed: %w", err)
+		return nil, err
 	}
-	defer errRdr.Close()
-	defer errWtr.Close()
-
-	cNsPath := C.CString(nsPath)
-	defer C.free(unsafe.Pointer(cNsPath))
-	cPath := C.CString(path)
-	defer C.free(unsafe.Pointer(cPath))
-
-	childPid := C.spawn_userns_cat(cNsPath, cPath, C.int(wtr.Fd()), C.int(errWtr.Fd()))
-
-	if childPid < 0 {
-		return nil, fmt.Errorf("failed to spawn fork for userns")
-	} else if childPid == 0 {
-		// this should never happen
-		panic("runc executing inside fork child -- unsafe state!")
+	buf := make([]byte, 4096)
+	bufPtr := prog.Bytes(buf)
+	fdcwd := unix.AT_FDCWD
+	prog.Ops = []rawfork.Op{
+		{
+			Name: "setns " + nsPath,
+			Trap: unix.SYS_SETNS,
+			Args: [6]uintptr{nsFile.Fd(), unix.CLONE_NEWUSER},
+		},
+		{
+			Name: "open " + path,
+			Trap: unix.SYS_OPENAT,
+			Args: [6]uintptr{uintptr(fdcwd), pathPtr, unix.O_RDONLY | unix.O_CLOEXEC},
+			Ret:  rawfork.R1,
+		},
+		{ // 2
+			Name:    "read " + path,
+			Trap:    unix.SYS_READ,
+			Args:    [6]uintptr{0, bufPtr, uintptr(len(buf))},
+			ArgRegs: [6]rawfork.Reg{rawfork.R1},
+			Ret:     rawfork.R2,
+			Cond:    rawfork.IfZero,
+			Goto:    4, // EOF, exit.
+		},
+		{
+			Name:    "write to pipe",
+			Trap:    unix.SYS_WRITE,
+			Args:    [6]uintptr{wtr.Fd(), bufPtr},
+			ArgRegs: [6]rawfork.Reg{2: rawfork.R2},
+			Cond:    rawfork.Always,
+			Goto:    2, // Read more.
+		},
+	}
+	child, err := prog.Start()
+	if err != nil {
+		return nil, fmt.Errorf("failed to spawn fork for userns: %w", err)
 	}
 
 	// We are in the parent -- close the write end of the pipe before reading.
 	wtr.Close()
-	output, err := io.ReadAll(rdr)
-	rdr.Close()
-	if err != nil {
-		return nil, fmt.Errorf("reading from userns spawn failed: %w", err)
+	output, readErr := io.ReadAll(rdr)
+	if err := child.Wait(); err != nil {
+		return nil, fmt.Errorf("userns spawn: %w", err)
 	}
-
-	// Ditto for the error pipe.
-	errWtr.Close()
-	errOutput, err := io.ReadAll(errRdr)
-	errRdr.Close()
-	if err != nil {
-		return nil, fmt.Errorf("reading from userns spawn error pipe failed: %w", err)
+	if readErr != nil {
+		return nil, fmt.Errorf("reading from userns spawn failed: %w", readErr)
 	}
-	errOutput = bytes.TrimSpace(errOutput)
-
-	// Clean up the child.
-	child, err := os.FindProcess(int(childPid))
-	if err != nil {
-		return nil, fmt.Errorf("could not find userns spawn process: %w", err)
-	}
-	state, err := child.Wait()
-	if err != nil {
-		return nil, fmt.Errorf("failed to wait for userns spawn process: %w", err)
-	}
-	if !state.Success() {
-		errStr := string(errOutput)
-		if errStr == "" {
-			errStr = fmt.Sprintf("unknown error (status code %d)", state.ExitCode())
-		}
-		return nil, fmt.Errorf("userns spawn: %s", errStr)
-	} else if len(errOutput) > 0 {
-		// We can just ignore weird output in the error pipe if the process
-		// didn't bail(), but for completeness output for debugging.
-		logrus.Debugf("userns spawn succeeded but unexpected error message found: %s", string(errOutput))
-	}
-	// The subprocess succeeded, return whatever it wrote to the pipe.
 	return output, nil
 }
 
