@@ -36,7 +36,7 @@ function setup_sshfs() {
 		mkdir -p "$DIR"
 		# Make sure we clear all superblock flags to make sure bind-mounts can
 		# unset these flags.
-		if ! $sshfs -o rw,suid,dev,exec,atime rootless@localhost: "$DIR"; then
+		if ! $sshfs -o rw,suid,dev,exec rootless@localhost: "$DIR"; then
 			# fallback to tmpfs if running in without sshfs
 			mount -t tmpfs -o rw,suid,dev,exec,diratime,strictatime tmpfs "$DIR"
 		fi
@@ -92,32 +92,29 @@ function fail_sshfs_bind_flags() {
 @test "runc run [mount(8)-like behaviour: --bind with no options]" {
 	requires root
 
-	pass_sshfs_bind_flags "ro,noexec,nosymfollow,nodiratime" "bind"
-	# If no flags were specified alongside bind, we keep all existing flags.
-	# Unspecified flags must be cleared (rw default).
-	run -0 grep -wq ro <<<"$mnt_flags"
-	run ! grep -wq rw <<<"$mnt_flags"
-	run -0 grep -wq noexec <<<"$mnt_flags"
-	run -0 grep -wq nodiratime <<<"$mnt_flags"
-	# On old systems, mount doesn't know about nosymfollow, which turns the
-	# flag into a data argument (which is ignored by MS_REMOUNT).
-	if sshfs_has_flag nosymfollow; then run -0 grep -wq nosymfollow <<<"$mnt_flags"; fi
-
-	# Now try with a user namespace. The results should be the same as above.
-	update_config ' .linux.namespaces += [{"type": "user"}]
-		| .linux.uidMappings += [{"hostID": 100000, "containerID": 0, "size": 65534}]
-		| .linux.gidMappings += [{"hostID": 100000, "containerID": 0, "size": 65534}] '
-
-	pass_sshfs_bind_flags "ro,noexec,nosymfollow,nodiratime" "bind"
-	# If no flags were specified alongside bind, we keep all existing flags.
-	# Unspecified flags must be cleared (rw default).
-	run -0 grep -wq ro <<<"$mnt_flags"
-	run ! grep -wq rw <<<"$mnt_flags"
-	run -0 grep -wq noexec <<<"$mnt_flags"
-	run -0 grep -wq nodiratime <<<"$mnt_flags"
-	# On old systems, mount doesn't know about nosymfollow, which turns the
-	# flag into a data argument (which is ignored by MS_REMOUNT).
-	if sshfs_has_flag nosymfollow; then run -0 grep -wq nosymfollow <<<"$mnt_flags"; fi
+	local userns opts
+	for userns in "" "userns"; do
+		if [ -n "$userns" ]; then
+			# Now try with a user namespace. The results should be the same.
+			update_config ' .linux.namespaces += [{"type": "user"}]
+				| .linux.uidMappings += [{"hostID": 100000, "containerID": 0, "size": 65534}]
+				| .linux.gidMappings += [{"hostID": 100000, "containerID": 0, "size": 65534}] '
+		fi
+		# Neither recursive bind nor propagation options are mount flags,
+		# so these are all bind mounts with no flag options.
+		for opts in bind rbind bind,rprivate rbind,rprivate rbind,rslave; do
+			pass_sshfs_bind_flags "ro,noexec,nosymfollow,nodiratime" "$opts"
+			# If no flags were specified alongside bind, we keep all existing flags.
+			# Unspecified flags must be cleared (rw default).
+			run -0 grep -wq ro <<<"$mnt_flags"
+			run ! grep -wq rw <<<"$mnt_flags"
+			run -0 grep -wq noexec <<<"$mnt_flags"
+			run -0 grep -wq nodiratime <<<"$mnt_flags"
+			# On old systems, mount doesn't know about nosymfollow, which turns the
+			# flag into a data argument (which is ignored by MS_REMOUNT).
+			if sshfs_has_flag nosymfollow; then run -0 grep -wq nosymfollow <<<"$mnt_flags"; fi
+		done
+	done
 }
 
 # This behaviour does not match mount(8), but is preferable to the alternative.
