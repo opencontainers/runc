@@ -43,9 +43,9 @@ function teardown() {
 	assert_line --index 3 --regexp "test_box3.*[0-9].*running.*$bundle.*[0-9]"
 
 	ROOT=$ALT_ROOT run -0 runc list --format json
-	assert_line --index 0 --regexp '^\[\{"ociVersion":"[0-9]+\.[0-9]+\.[0-9]+","id":"test_box1","pid":[0-9]+,"status":"running","bundle":"[^"]*'"$bundle"'[^"]*","rootfs":"[^"]*","created":[^}]*\}'
-	assert_line --index 0 --regexp ',\{"ociVersion":"[0-9]+\.[0-9]+\.[0-9]+","id":"test_box2","pid":[0-9]+,"status":"running","bundle":"[^"]*'"$bundle"'[^"]*","rootfs":"[^"]*","created":[^}]*\}'
-	assert_line --index 0 --regexp ',\{"ociVersion":"[0-9]+\.[0-9]+\.[0-9]+","id":"test_box3","pid":[0-9]+,"status":"running","bundle":"[^"]*'"$bundle"'[^"]*","rootfs":"[^"]*","created":[^}]*\}\]$'
+	assert_line --index 0 --regexp '^\[\{"ociVersion":"[0-9]+\.[0-9]+\.[0-9]+[^"]*","id":"test_box1","pid":[0-9]+,"status":"running","bundle":"[^"]*'"$bundle"'[^"]*","rootfs":"[^"]*","created":[^}]*\}'
+	assert_line --index 0 --regexp ',\{"ociVersion":"[0-9]+\.[0-9]+\.[0-9]+[^"]*","id":"test_box2","pid":[0-9]+,"status":"running","bundle":"[^"]*'"$bundle"'[^"]*","rootfs":"[^"]*","created":[^}]*\}'
+	assert_line --index 0 --regexp ',\{"ociVersion":"[0-9]+\.[0-9]+\.[0-9]+[^"]*","id":"test_box3","pid":[0-9]+,"status":"running","bundle":"[^"]*'"$bundle"'[^"]*","rootfs":"[^"]*","created":[^}]*\}\]$'
 }
 
 @test "list with non-existent root fails" {

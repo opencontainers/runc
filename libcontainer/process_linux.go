@@ -196,38 +196,16 @@ type setnsProcess struct {
 // identified by pid to include all possible CPUs (notwithstanding cgroup
 // cpuset restrictions, isolated CPUs and CPU online status).
 func tryResetCPUAffinity(pid int) {
-	// When resetting the CPU affinity, we want to allow all
-	// possible CPUs in the system, including those not in
-	// cpuset.cpus, online or even present (hot-plugged) at call
-	// time. Using a cpumask any tighter this that may disallow
-	// using those CPUs if they are added to cpuset.cpus later.
-	//
-	// Note that sched_setaffinity(2) will implicitly:
-	//
-	//  * Clamp the cpumask so that it matches the number of CPUs
-	//    supported by the kernel.
-	//
-	//  * Mask out any CPUs that are not a member of the target task's
-	//    configured cgroup cpuset. This is for task's effective affinity,
-	//    without forgetting masked-out CPUs should the cgroup cpuset
-	//    change later.
-	//
-	// Therefore, preparing the cpumask, we can avoid reading
-	// /sys/devices/system/cpu/possible and kernel_max.
-	// Instead, we use a huge buffer similarly to go 1.25 runtime in
-	// getCPUCount().
-	buf := unix.NewCPUSet(configs.MaxCPU)
-	buf.Fill()
-	if err := linux.SchedSetaffinity(pid, buf); err != nil {
+	all := configs.CPUMask{All: true}
+	if err := linux.SchedSetaffinity(pid, all.CPUSet()); err != nil {
 		logrus.WithError(err).Warnf("resetting the CPU affinity of pid %d failed -- the container process may inherit runc's CPU affinity", pid)
-		return
 	}
 }
 
 // Starts setns process with specified initial CPU affinity.
 func (p *setnsProcess) startWithCPUAffinity() error {
 	aff := p.config.CPUAffinity
-	if aff == nil || len(aff.Initial) == 0 {
+	if aff == nil || aff.Initial == nil {
 		return p.cmd.Start()
 	}
 	errCh := make(chan error)
@@ -237,7 +215,7 @@ func (p *setnsProcess) startWithCPUAffinity() error {
 	go func() {
 		runtime.LockOSThread()
 		// Command inherits the CPU affinity.
-		if err := linux.SchedSetaffinity(unix.Gettid(), aff.Initial); err != nil {
+		if err := linux.SchedSetaffinity(unix.Gettid(), aff.Initial.CPUSet()); err != nil {
 			errCh <- fmt.Errorf("error setting initial CPU affinity: %w", err)
 			return
 		}
@@ -256,14 +234,14 @@ func (p *setnsProcess) setFinalCPUAffinity() error {
 	aff := p.config.CPUAffinity
 	// If there was no affinity configured at all, we want to reset
 	// the affinity to make sure we don't inherit an unexpected one.
-	if aff == nil || len(aff.Final) == 0 && len(aff.Initial) == 0 {
+	if aff == nil || aff.Final == nil && aff.Initial == nil {
 		tryResetCPUAffinity(p.pid())
 		return nil
 	}
-	if len(aff.Final) == 0 {
+	if aff.Final == nil {
 		return nil
 	}
-	if err := linux.SchedSetaffinity(p.pid(), aff.Final); err != nil {
+	if err := linux.SchedSetaffinity(p.pid(), aff.Final.CPUSet()); err != nil {
 		return fmt.Errorf("error setting final CPU affinity: %w", err)
 	}
 	return nil
@@ -848,9 +826,15 @@ func (p *initProcess) start() (retErr error) {
 			return fmt.Errorf("unable to apply cgroup configuration: %w", err)
 		}
 	}
-	// Reset the CPU affinity after cgroups are configured to make sure it
-	// matches any configured cpuset.
-	tryResetCPUAffinity(p.pid())
+	// Set the CPU affinity after cgroups are configured. If not configured,
+	// reset it to make sure it matches any configured cpuset.
+	if aff := p.config.Config.CreateContainerCPUAffinity; aff != nil {
+		if err := linux.SchedSetaffinity(p.pid(), aff.CPUSet()); err != nil {
+			return fmt.Errorf("error setting createContainer CPU affinity: %w", err)
+		}
+	} else {
+		tryResetCPUAffinity(p.pid())
+	}
 	if p.intelRdtManager != nil {
 		if err := p.intelRdtManager.Apply(p.pid()); err != nil {
 			return fmt.Errorf("unable to apply Intel RDT configuration: %w", err)

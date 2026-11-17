@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -15,6 +16,7 @@ import (
 	"github.com/urfave/cli/v3"
 	"golang.org/x/sys/unix"
 
+	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/internal/third_party/systemd/activation"
 	"github.com/opencontainers/runc/libcontainer"
@@ -87,7 +89,7 @@ func newProcess(p *specs.Process) (*libcontainer.Process, error) {
 		}
 		lp.Rlimits = append(lp.Rlimits, rl)
 	}
-	aff, err := configs.ConvertCPUAffinity(p.ExecCPUAffinity)
+	aff, err := configs.ConvertExecCPUAffinity(p)
 	if err != nil {
 		return nil, err
 	}
@@ -392,6 +394,10 @@ func startContainer(cmd *cli.Command, action CtAct, criuOpts *libcontainer.CriuO
 		return -1, errEmptyID
 	}
 
+	if err := setCreateRuntimeCPUAffinity(spec); err != nil {
+		return -1, err
+	}
+
 	notifySocket := newNotifySocket(cmd, os.Getenv("NOTIFY_SOCKET"), id)
 	if notifySocket != nil {
 		notifySocket.setupSpec(spec)
@@ -462,4 +468,31 @@ func maybeLogCgroupWarning(op string, err error) {
 	if errors.Is(err, fs.ErrPermission) {
 		logrus.Warn("runc " + op + " failure might be caused by lack of full access to cgroups")
 	}
+}
+
+// setCreateRuntimeCPUAffinity sets the CPU affinity as per spec's
+// process.cpuAffinity.createRuntime.
+//
+// Since sched_setaffinity(2) works on a single thread, it locks the calling
+// goroutine to its OS thread (for the rest of runc lifetime) and sets the
+// affinity of that thread. Both runc init and the hooks are started from
+// this goroutine, so they inherit the affinity. Other runc threads are not
+// affected.
+func setCreateRuntimeCPUAffinity(spec *specs.Spec) error {
+	if spec.Process == nil || spec.Process.CPUAffinity == nil {
+		return nil
+	}
+	aff, err := configs.ParseCPUMask(spec.Process.CPUAffinity.CreateRuntime)
+	if err != nil {
+		return fmt.Errorf("bad cpuAffinity.createRuntime: %w", err)
+	}
+	if aff == nil {
+		return nil
+	}
+	// Deliberately not unlocked.
+	runtime.LockOSThread()
+	if err := linux.SchedSetaffinity(0, aff.CPUSet()); err != nil {
+		return fmt.Errorf("error setting createRuntime CPU affinity: %w", err)
+	}
+	return nil
 }

@@ -171,6 +171,15 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 
+	// Set the CPU affinity for StartContainer hooks and the container
+	// process. Note this is done before seccomp is set up, as seccomp
+	// filters might block sched_setaffinity(2).
+	if aff := l.config.Config.StartContainerCPUAffinity; aff != nil {
+		if err := linux.SchedSetaffinity(0, aff.CPUSet()); err != nil {
+			return fmt.Errorf("error setting startContainer CPU affinity: %w", err)
+		}
+	}
+
 	// Set personality if specified.
 	if l.config.Config.Personality != nil {
 		if err := setupPersonality(l.config.Config); err != nil {

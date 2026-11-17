@@ -612,9 +612,19 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 			ioPriority := *spec.Process.IOPriority
 			config.IOPriority = &ioPriority
 		}
-		config.ExecCPUAffinity, err = configs.ConvertCPUAffinity(spec.Process.ExecCPUAffinity)
+		config.ExecCPUAffinity, err = configs.ConvertExecCPUAffinity(spec.Process)
 		if err != nil {
 			return nil, err
+		}
+		if aff := spec.Process.CPUAffinity; aff != nil {
+			config.CreateContainerCPUAffinity, err = configs.ParseCPUMask(aff.CreateContainer)
+			if err != nil {
+				return nil, fmt.Errorf("bad cpuAffinity.createContainer: %w", err)
+			}
+			config.StartContainerCPUAffinity, err = configs.ParseCPUMask(aff.StartContainer)
+			if err != nil {
+				return nil, fmt.Errorf("bad cpuAffinity.startContainer: %w", err)
+			}
 		}
 
 	}
