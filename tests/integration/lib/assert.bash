@@ -74,7 +74,6 @@ function refute_output() {
 	mode=$(__assert_mode "${1:-}")
 	[ "$mode" = exact ] || shift
 
-	# shellcheck disable=SC2154 # $output is set by bats' run helper.
 	__assert_matches "$mode" "$output" "$1" || return 0
 	__assert_fail "output should not match" "$mode" "$1" "$output"
 }
@@ -87,7 +86,6 @@ function assert_line() {
 	mode=$(__assert_mode "${1:-}")
 	[ "$mode" = exact ] || shift
 
-	# shellcheck disable=SC2154 # $lines is set by bats' run helper.
 	__assert_matches "$mode" "${lines[idx]:-}" "$1" && return 0
 	__assert_fail "line $idx does not match" "$mode" "$1" "${lines[idx]:-}"
 }
