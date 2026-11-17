@@ -93,8 +93,10 @@ type Syscall struct {
 
 // Config defines configuration options for executing a process inside a contained environment.
 type Config struct {
-	// NoPivotRoot will use MS_MOVE and a chroot to jail the process into the container's rootfs
-	// This is a common option when the container is running in ramdisk.
+	// NoPivotRoot is ignored.
+	//
+	// Deprecated: pivot_root is always used (it now works when running in
+	// initramfs). See https://github.com/opencontainers/runc/issues/4435.
 	NoPivotRoot bool `json:"no_pivot_root,omitempty"`
 
 	// ParentDeathSignal specifies the signal that is sent to the container's process in the case
