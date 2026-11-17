@@ -242,11 +242,8 @@ func (c *Container) exec() error {
 // kill the rest of its processes once init is gone; destroy() takes care of
 // the shared namespace case.
 func (c *Container) killDeadInit() {
-	// This can not go through c.signal, as hasInit (and so signalInit) treats
-	// a zombie init as not running. Compare the start time here instead, to
-	// make sure the pid was not reused.
-	stat, err := system.Stat(c.initProcess.pid())
-	if err != nil || stat.StartTime != c.initProcessStartTime {
+	// Make sure the pid was not reused.
+	if !c.hasInit() {
 		return
 	}
 	// For "runc start", init is not our child, so it is only killed, and
@@ -900,7 +897,14 @@ func (c *Container) hasInit() bool {
 	if err != nil {
 		return false
 	}
-	if stat.StartTime != c.initProcessStartTime || stat.State == system.Zombie || stat.State == system.Dead {
+	if stat.StartTime != c.initProcessStartTime || stat.State == system.Dead {
+		return false
+	}
+	// The state in /proc/PID/stat is that of the thread group leader. If
+	// it has exited while other threads are still running (e.g. init
+	// called pthread_exit from its main thread), it is a zombie, but the
+	// process is alive, and can be signaled.
+	if stat.State == system.Zombie && stat.NumThreads <= 1 {
 		return false
 	}
 	return true

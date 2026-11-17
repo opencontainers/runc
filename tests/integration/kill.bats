@@ -145,3 +145,27 @@ test_host_pidns_kill() {
 
 	run -0 runc delete --force target_ctr
 }
+
+# A process whose main thread has exited while other threads are running is a
+# zombie thread group leader, which looks dead in /proc/PID/stat but is not.
+function build_thread_exit() {
+	gcc -static -pthread -o rootfs/bin/thread_exit "${TESTDATA}/thread_exit.c"
+}
+
+@test "kill KILL [init with zombie leader]" {
+	build_thread_exit
+	update_config '.process.args = ["/bin/thread_exit"]'
+	set_cgroups_path
+
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	cgpath=$(get_cgroup_path "pids")
+	pid=$(cat "$cgpath"/cgroup.procs)
+	# Wait for the main thread to exit.
+	retry 10 0.2 grep -q '^State:.*zombie' "/proc/$pid/status"
+	testcontainer test_busybox running
+
+	run -0 runc kill test_busybox KILL
+	wait_pids_gone 10 0.2 "$pid"
+	testcontainer test_busybox stopped
+	run -0 runc delete test_busybox
+}
