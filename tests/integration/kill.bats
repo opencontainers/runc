@@ -169,3 +169,41 @@ function build_thread_exit() {
 	testcontainer test_busybox stopped
 	run -0 runc delete test_busybox
 }
+
+@test "kill KILL [shared pidns, process with zombie leader]" {
+	requires cgroups_v2
+	build_thread_exit
+	update_config '.process.args = ["sleep", "infinity"]'
+
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" target_ctr
+	testcontainer target_ctr running
+	target_pid="$(runc state target_ctr | jq .pid)"
+	update_config '.linux.namespaces |= map(if .type == "user" or .type == "pid" then (.path = "/proc/'"$target_pid"'/ns/" + .type) else . end) | del(.linux.uidMappings) | del(.linux.gidMappings)'
+	set_cgroups_path
+
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	testcontainer test_busybox running
+	cgpath=$(get_cgroup_path "pids")
+	if [ ! -e "$cgpath/cgroup.kill" ]; then
+		skip "requires cgroup.kill"
+	fi
+
+	runc exec -d test_busybox thread_exit
+	mapfile -t pids < <(cat "$cgpath"/cgroup.procs)
+	echo "pids:" "${pids[@]}"
+	[ ${#pids[@]} -eq 2 ]
+	for p in "${pids[@]}"; do
+		if grep -q '^Threads:[[:space:]]*2$' "/proc/$p/status"; then
+			zpid=$p
+		fi
+	done
+	retry 10 0.2 grep -q '^State:.*zombie' "/proc/$zpid/status"
+
+	# With a shared PID namespace, every process in the cgroup is killed,
+	# so this uses cgroup.kill.
+	run -0 runc kill test_busybox KILL
+	wait_pids_gone 10 0.2 "${pids[@]}"
+
+	run -0 runc delete test_busybox
+	run -0 runc delete --force target_ctr
+}

@@ -689,7 +689,10 @@ func signalAllProcesses(m cgroups.Manager, s unix.Signal) error {
 	if s == unix.SIGKILL {
 		if p := m.Path(""); p != "" { // Either cgroup v2 or hybrid.
 			err := cgroups.WriteFile(p, "cgroup.kill", "1")
-			if err == nil || !errors.Is(err, os.ErrNotExist) {
+			if err == nil {
+				return killLeftovers(m)
+			}
+			if !errors.Is(err, os.ErrNotExist) {
 				return err
 			}
 			// Fallback to old implementation.
@@ -716,6 +719,57 @@ func signalAllProcesses(m cgroups.Manager, s unix.Signal) error {
 		logrus.Warn(err)
 	}
 
+	return nil
+}
+
+// killLeftovers sends SIGKILL to the processes which are still in the cgroup
+// after a write to cgroup.kill.
+//
+// The kernel signals each thread group leader in the cgroup in a way that only
+// works if the leader is alive. If it has exited while other threads of the
+// process are still running (e.g. the main thread called pthread_exit), it is
+// a zombie, the signal is not passed on to the other threads, and the process
+// survives. Unlike that, kill(2) on its pid signals the whole thread group.
+//
+// To not send a signal to a recycled pid, a pidfd is obtained for each pid
+// before re-reading the list of processes in the cgroup, and only those still
+// in the list are signaled. If a pid was recycled before its pidfd was opened,
+// it now belongs to a process outside of the cgroup, so it is not in the list
+// (unless it is in the cgroup, in which case killing it is fine).
+func killLeftovers(m cgroups.Manager) error {
+	pids, err := m.GetAllPids()
+	if err != nil || len(pids) == 0 {
+		return err
+	}
+	procs := make([]*os.Process, 0, len(pids))
+	defer func() {
+		for _, p := range procs {
+			_ = p.Release()
+		}
+	}()
+	for _, pid := range pids {
+		p, err := os.FindProcess(pid) // Never fails on Unix.
+		if err != nil {
+			continue
+		}
+		procs = append(procs, p)
+	}
+	pids, err = m.GetAllPids()
+	if err != nil {
+		return err
+	}
+	inCgroup := make(map[int]struct{}, len(pids))
+	for _, pid := range pids {
+		inCgroup[pid] = struct{}{}
+	}
+	for _, p := range procs {
+		if _, ok := inCgroup[p.Pid]; !ok {
+			continue
+		}
+		if err := p.Signal(unix.SIGKILL); err != nil && !errors.Is(err, os.ErrProcessDone) {
+			logrus.Warnf("kill %d: %v", p.Pid, err)
+		}
+	}
 	return nil
 }
 
