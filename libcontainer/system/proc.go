@@ -62,6 +62,9 @@ type Stat_t struct {
 	// State is the state of the process.
 	State State
 
+	// NumThreads is the number of threads in the process.
+	NumThreads int64
+
 	// StartTime is the number of clock ticks after system boot (since
 	// Linux 2.6).
 	StartTime uint64
@@ -93,6 +96,7 @@ func parseStat(data string) (stat Stat_t, err error) {
 	//  * field 2: process name. It is the only field enclosed into
 	//    parenthesis, as it can contain spaces (and parenthesis) inside.
 	//  * field 3: process state, a single character (%c)
+	//  * field 20: number of threads, a long integer (%ld)
 	//  * field 22: process start time, a long unsigned integer (%llu).
 
 	// 1. Look for the first '(' and the last ')' first, what's in between is Name.
@@ -116,19 +120,18 @@ func parseStat(data string) (stat Stat_t, err error) {
 	data = data[last+2:]
 	stat.State = State(data[0])
 
-	// 3. StartTime is field 22, data is at field 3 now, so we need to skip 19 spaces.
-	skipSpaces := 22 - 3
-	for first = 0; skipSpaces > 0 && first < len(data); first++ {
-		if data[first] == ' ' {
-			skipSpaces--
-		}
-	}
-	// Now first points to StartTime; look for space right after.
-	i := strings.IndexByte(data[first:], ' ')
-	if i < 0 {
+	// 3. Split the rest into fields; data is at field 3 now. The last
+	//    element is whatever is after StartTime (field 22) and a space.
+	const fieldsNeeded = 22 - 3 + 2
+	fields := strings.SplitN(data, " ", fieldsNeeded)
+	if len(fields) < fieldsNeeded {
 		return stat, fmt.Errorf("invalid stat data (too short): %q", data)
 	}
-	stat.StartTime, err = strconv.ParseUint(data[first:first+i], 10, 64)
+	stat.NumThreads, err = strconv.ParseInt(fields[20-3], 10, 64)
+	if err != nil {
+		return stat, fmt.Errorf("invalid stat data (bad number of threads): %w", err)
+	}
+	stat.StartTime, err = strconv.ParseUint(fields[22-3], 10, 64)
 	if err != nil {
 		return stat, fmt.Errorf("invalid stat data (bad start time): %w", err)
 	}
