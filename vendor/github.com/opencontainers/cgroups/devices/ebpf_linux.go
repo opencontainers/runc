@@ -2,6 +2,7 @@ package devices
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/cilium/ebpf/asm"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -17,6 +17,37 @@ import (
 // bpfMaxRetries is the maximum number of times a BPF_PROG_LOAD is retried
 // after being interrupted by a signal (EAGAIN).
 const bpfMaxRetries = 30
+
+const bpfInstructionSize = 8
+
+// bpfInstruction holds a single-width eBPF instruction. Device filters do not
+// need wide immediates, relocations, or any of the other assembler features.
+type bpfInstruction struct {
+	code     uint8
+	dst, src uint8
+	offset   int16
+	imm      int32
+}
+
+type bpfInstructions []bpfInstruction
+
+func (insns bpfInstructions) marshal(bo binary.ByteOrder) []byte {
+	data := make([]byte, len(insns)*bpfInstructionSize)
+	littleEndian := bo.Uint16([]byte{1, 0}) == 1
+	for i, ins := range insns {
+		raw := data[i*bpfInstructionSize : (i+1)*bpfInstructionSize]
+		raw[0] = ins.code
+		// The register bitfields reverse order on big-endian architectures.
+		if littleEndian {
+			raw[1] = ins.src<<4 | ins.dst
+		} else {
+			raw[1] = ins.dst<<4 | ins.src
+		}
+		bo.PutUint16(raw[2:4], uint16(ins.offset))
+		bo.PutUint32(raw[4:8], uint32(ins.imm))
+	}
+	return data
+}
 
 func bpf(cmd uintptr, attr unsafe.Pointer, size uintptr) (uintptr, error) {
 	// Prevent the Go profiler from repeatedly interrupting the verifier.
@@ -65,12 +96,8 @@ func bpfFD(cmd uintptr, attr unsafe.Pointer, size uintptr) (int, error) {
 //
 // It is roughly equivalent to [github.com/cilium/ebpf/internal/sys.ProgLoad],
 // and the "retry with verifier log" is taken from [github.com/cilium/ebpf.NewProgram].
-func bpfProgLoad(insns asm.Instructions, license string) (int, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, insns.Size()))
-	if err := insns.Marshal(buf, nativeEndian); err != nil {
-		return -1, err
-	}
-	insnsBytes := buf.Bytes()
+func bpfProgLoad(insns bpfInstructions, license string) (int, error) {
+	insnsBytes := insns.marshal(binary.NativeEndian)
 
 	licensePtr, err := unix.BytePtrFromString(license)
 	if err != nil {
@@ -90,7 +117,7 @@ func bpfProgLoad(insns asm.Instructions, license string) (int, error) {
 		logBuf   uint64 // pointer
 	}{
 		progType: unix.BPF_PROG_TYPE_CGROUP_DEVICE,
-		insnCnt:  uint32(len(insnsBytes) / asm.InstructionSize),
+		insnCnt:  uint32(len(insns)),
 		insns:    uint64(uintptr(unsafe.Pointer(&insnsBytes[0]))),
 		license:  uint64(uintptr(unsafe.Pointer(licensePtr))),
 	}
@@ -290,9 +317,9 @@ var (
 // https://github.com/cilium/ebpf/blob/v0.6.0/link/syscalls.go.
 func haveBpfProgReplace() bool {
 	haveBpfProgReplaceOnce.Do(func() {
-		progFd, err := bpfProgLoad(asm.Instructions{
-			asm.Mov.Imm(asm.R0, 0),
-			asm.Return(),
+		progFd, err := bpfProgLoad(bpfInstructions{
+			{code: unix.BPF_ALU64 | unix.BPF_MOV | unix.BPF_K, dst: 0, imm: 0},
+			{code: unix.BPF_JMP | unix.BPF_EXIT},
 		}, "MIT")
 		if err != nil {
 			logrus.Warnf("checking for BPF_F_REPLACE support: bpfProgLoad failed: %v", err)
@@ -337,7 +364,7 @@ func haveBpfProgReplace() bool {
 // Requires the system to be running in cgroup2 unified-mode with kernel >= 4.15 .
 //
 // https://github.com/torvalds/linux/commit/ebc614f687369f9df99828572b1d85a7c2de3d92
-func loadAttachCgroupDeviceFilter(insts asm.Instructions, license string, dirFd int) error {
+func loadAttachCgroupDeviceFilter(insts bpfInstructions, license string, dirFd int) error {
 	// Increase `ulimit -l` limit to avoid BPF_PROG_LOAD error (#2167).
 	// This limit is not inherited into the container.
 	memlockLimit := &unix.Rlimit{
