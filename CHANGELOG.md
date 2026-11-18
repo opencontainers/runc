@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed ###
-- Switched to opencontainers/cgroups v0.1.1, which no longer depends on
+- Switched to opencontainers/cgroups v0.1.2, which no longer depends on
   cilium/ebpf. As a result, the runc binary shrunk by about 500 KB (6.8%) on
   amd64, and it no longer includes any crypto packages, so runc built with a
   Go toolchain that uses system crypto library by default (such as Microsoft

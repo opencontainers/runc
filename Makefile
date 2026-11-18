@@ -262,6 +262,22 @@ verify-dce:
 		| { ! grep -q '<ReflectMethod>' \
 		|| { echo "error: linker dead code elimination is disabled; use github.com/aarzilli/whydeadcode to find out why"; exit 1; }; }
 
+# Packages (and their subpackages) runc must not depend on (regex alternation):
+#  - crypto, golang.org/x/crypto: see #4916, #5612;
+#  - regexp: see #3460.
+FORBIDDEN_PKGS := crypto|golang[.]org/x/crypto|regexp
+
+# On failure, show which other packages import forbidden ones.
+.PHONY: verify-forbidden-pkgs
+verify-forbidden-pkgs:
+	@set -o pipefail; \
+	re='^(vendor/)?($(FORBIDDEN_PKGS))(/|$$)'; \
+	$(GO) list -tags "$(BUILDTAGS) urfave_cli_no_template godbus_no_tcp" -deps \
+		-f '{{$$p := .ImportPath}}{{range .Imports}}{{$$p}} {{.}}{{"\n"}}{{end}}' . \
+		| awk -v re="$$re" '$$1 !~ re && $$2 ~ re { print "  " $$1 " imports " $$2; n++ } \
+			END { if (n) { print "error: runc depends on forbidden packages (see above)"; exit 1 } }' \
+		&& echo "runc does not depend on forbidden packages."
+
 .PHONY: validate-keyring
 validate-keyring:
 	script/keyring_validate.sh
