@@ -33,6 +33,9 @@ func (l *linuxSetnsInit) getSessionRingName() string {
 }
 
 func (l *linuxSetnsInit) Init() error {
+	if err := reOpenDevNull(); err != nil {
+		return fmt.Errorf("error reopening /dev/null inside container: %w", err)
+	}
 	if !l.config.Config.NoNewKeyring {
 		if l.config.ProcessLabel != "" {
 			if err := selinux.SetKeyLabel(l.config.ProcessLabel); err != nil {

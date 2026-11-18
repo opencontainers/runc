@@ -370,3 +370,25 @@ EOF
 	run -0 runc exec -u 2000 test sh -c "echo \$HOME"
 	assert_line --index 0 "/home/tempuser"
 }
+
+@test "runc exec [stdio /dev/null is reopened in container]" {
+	requires root
+
+	run -0 runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+
+	# The /dev/null of the host must not be passed to the container,
+	# as container root could chmod or chown it. Use -d, as otherwise
+	# runc exec relays stdio via pipes.
+	runc exec -d --pid-file pid.txt test_busybox sleep 1h </dev/null >/dev/null
+	pid=$(cat pid.txt)
+	init_pid=$(runc state test_busybox | jq .pid)
+
+	host=$(stat -c %d:%i /dev/null)
+	ctr=$(stat -c %d:%i "/proc/$init_pid/root/dev/null")
+	# Sanity check.
+	[ "$host" != "$ctr" ]
+
+	for fd in 0 1; do
+		[ "$(stat -L -c %d:%i "/proc/$pid/fd/$fd")" = "$ctr" ]
+	done
+}

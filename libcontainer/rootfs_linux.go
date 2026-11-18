@@ -927,29 +927,42 @@ func setupDevSymlinks(rootFd *os.File) error {
 	return nil
 }
 
-// If stdin, stdout, and/or stderr are pointing to `/dev/null` in the parent's rootfs
-// this method will make them point to `/dev/null` in this container's rootfs.  This
-// needs to be called after we chroot/pivot into the container's rootfs so that any
-// symlinks are resolved locally.
+// reOpenDevNull makes stdin, stdout, and/or stderr which point to /dev/null
+// (presumably the one of the host, as they are inherited from the parent) point
+// to /dev/null of the container instead. This needs to be called after we
+// chroot/pivot into the container's rootfs (or join its mount namespace), so
+// that the path is resolved there.
+//
+// Otherwise, root in a container without a user namespace can change the mode
+// and the owner of the host's /dev/null via such a descriptor.
 func reOpenDevNull() error {
-	file, err := os.OpenFile("/dev/null", os.O_RDWR, 0)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	if err := verifyDevNull(file); err != nil {
-		return fmt.Errorf("can't reopen /dev/null: %w", err)
-	}
+	var file *os.File
+	defer func() {
+		if file != nil {
+			_ = file.Close()
+		}
+	}()
 	for fd := range 3 {
 		var stat unix.Stat_t
 		if err := unix.Fstat(fd, &stat); err != nil {
 			return &os.PathError{Op: "fstat", Path: "fd " + strconv.Itoa(fd), Err: err}
 		}
-		if isDevNull(&stat) {
-			// Close and re-open the fd.
-			if err := linux.Dup3(int(file.Fd()), fd, 0); err != nil {
+		if !isDevNull(&stat) {
+			continue
+		}
+		if file == nil {
+			var err error
+			file, err = os.OpenFile("/dev/null", os.O_RDWR, 0)
+			if err != nil {
 				return err
 			}
+			if err := verifyDevNull(file); err != nil {
+				return fmt.Errorf("can't reopen /dev/null: %w", err)
+			}
+		}
+		// Close and re-open the fd.
+		if err := linux.Dup3(int(file.Fd()), fd, 0); err != nil {
+			return err
 		}
 	}
 	return nil
