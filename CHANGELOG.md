@@ -6,12 +6,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-27
+
+> All's well that ends well.
+
+> [!NOTE]
+> runc v1.6.0 includes all of the patches backported to runc v1.5.3.
+
+### Security ###
+
+This release includes github.com/moby/sys/user v0.5.1, which fixes the
+following medium-severity security issue:
+
+- [CVE-2026-135844][] allowed unbounded reads when parsing user and group
+  files. In runc, a malicious image with a huge `/etc/passwd` could make
+  `runc init` consume excessive memory and CPU while looking up the user's
+  home directory (which is done when `HOME` is not set in the process
+  environment). (#5631)
+
+[CVE-2026-135844]: https://github.com/moby/sys/security/advisories/GHSA-ffh6-8jcg-cjmw
+
+### Added ###
+- `THREAT_MODEL.md` describes what runc does and does not consider a security
+  vulnerability, to help security researchers and automated scanners. It is
+  linked from `SECURITY.md`. (#5361, #5566)
+
+### Fixed ###
+- When the container does not have its own cgroup namespace, runc no longer
+  mounts a new cgroup v2 filesystem instance for `/sys/fs/cgroup`, as doing so
+  could change host cgroupfs mount options such as `nsdelegate`. Instead, the
+  existing cgroup v2 hierarchy is bind mounted. (#5258, #5267)
+- Fixed a buffer overflow in runc init when more than 5 user namespace ID
+  mappings are set using `newuidmap`/`newgidmap` (as it happens with rootless
+  runc), which resulted in a `failed to execv: Bad address` error. Up to 340
+  mappings (the kernel limit) are now supported. (#5507)
+- The bash completion is now in sync with runc commands and options, and
+  a CI test ensures it stays that way. (#5299, #5568)
+- The `--pidfd-socket` option is now documented in `runc-create(8)`,
+  `runc-exec(8)` and `runc-run(8)` man pages. (#5568)
+
 ### Changed ###
 - Switched to opencontainers/cgroups v0.1.2, which no longer depends on
-  cilium/ebpf. As a result, the runc binary shrunk by about 500 KB (6.8%) on
-  amd64, and it no longer includes any crypto packages, so runc built with a
-  Go toolchain that uses system crypto library by default (such as Microsoft
-  Go) no longer fails to exec into containers lacking libcrypto.so. (#5623)
+  cilium/ebpf and, indirectly, crypto packages. The new version also fixes
+  CPU quota overflow and `cpu.max` rounding in the systemd driver, and adds
+  support for zswap unified resources. (#5612, #5623)
+- Updated dependencies: golang.org/x/sys to v0.50.0, golang.org/x/net to
+  v0.63.0. (#5618, #5632)
 
 ## [1.6.0-rc.2] - 2026-11-12
 
@@ -2173,7 +2213,8 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.6.0-rc.2...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/opencontainers/runc/compare/v1.6.0-rc.2...v1.6.0
 [1.5.0]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...v1.5.0
 [1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
 [1.3.0]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...v1.3.0
