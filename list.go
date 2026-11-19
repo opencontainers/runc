@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/user"
 	"strconv"
+	"sync"
 	"syscall"
 	"text/tabwriter"
 	"time"
@@ -40,6 +41,17 @@ type containerState struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// The owner of the state directory (the owner of the container).
 	Owner string `json:"owner"`
+}
+
+type listResult struct {
+	state   *containerState
+	warning string
+	err     error
+}
+
+type ownerEntry struct {
+	once sync.Once
+	name string
 }
 
 var listCommand = &cli.Command{
@@ -127,58 +139,102 @@ func getContainers(cmd *cli.Command) ([]containerState, error) {
 		// Report other errors, including non-existent custom --root.
 		return nil, err
 	}
-	var s []containerState
-	for _, item := range list {
-		if !item.IsDir() {
-			continue
+	var ownerMu sync.Mutex
+	owners := make(map[uint32]*ownerEntry)
+	lookupOwner := func(uid uint32) string {
+		ownerMu.Lock()
+		owner := owners[uid]
+		if owner == nil {
+			owner = &ownerEntry{}
+			owners[uid] = owner
 		}
-		st, err := item.Info()
-		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				// Possible race with runc delete.
-				continue
+		ownerMu.Unlock()
+		owner.once.Do(func() {
+			owner.name = "#" + strconv.Itoa(int(uid))
+			if u, err := user.LookupId(owner.name[1:]); err == nil {
+				owner.name = u.Username
 			}
-			return nil, err
-		}
-		// This cast is safe on Linux.
-		uid := st.Sys().(*syscall.Stat_t).Uid
-		owner := "#" + strconv.Itoa(int(uid))
-		u, err := user.LookupId(owner[1:])
-		if err == nil {
-			owner = u.Username
-		}
-
-		container, err := libcontainer.Load(root, item.Name())
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "load container %s: %v\n", item.Name(), err)
-			continue
-		}
-		containerStatus, err := container.Status()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "status for %s: %v\n", item.Name(), err)
-			continue
-		}
-		state, err := container.State()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "state for %s: %v\n", item.Name(), err)
-			continue
-		}
-		pid := state.BaseState.InitProcessPid
-		if containerStatus == libcontainer.Stopped {
-			pid = 0
-		}
-		bundle, annotations := utils.Annotations(state.Config.Labels)
-		s = append(s, containerState{
-			Version:        state.BaseState.Config.Version,
-			ID:             state.BaseState.ID,
-			InitProcessPid: pid,
-			Status:         containerStatus.String(),
-			Bundle:         bundle,
-			Rootfs:         state.BaseState.Config.Rootfs,
-			Created:        state.BaseState.Created,
-			Annotations:    annotations,
-			Owner:          owner,
 		})
+		return owner.name
+	}
+
+	const maxWorkers = 8
+	// Keep results in directory order so output and errors stay stable.
+	results := make([]listResult, len(list))
+	jobs := make(chan int)
+	var workers sync.WaitGroup
+	for range min(len(list), maxWorkers) {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			for i := range jobs {
+				results[i] = getContainerState(root, list[i], lookupOwner)
+			}
+		}()
+	}
+	for i := range list {
+		jobs <- i
+	}
+	close(jobs)
+	workers.Wait()
+
+	var s []containerState
+	for _, result := range results {
+		if result.err != nil {
+			return nil, result.err
+		}
+		if result.warning != "" {
+			fmt.Fprint(os.Stderr, result.warning)
+		}
+		if result.state != nil {
+			s = append(s, *result.state)
+		}
 	}
 	return s, nil
+}
+
+func getContainerState(root string, item os.DirEntry, lookupOwner func(uint32) string) listResult {
+	if !item.IsDir() {
+		return listResult{}
+	}
+	st, err := item.Info()
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			// Possible race with runc delete.
+			return listResult{}
+		}
+		return listResult{err: err}
+	}
+	// This cast is safe on Linux.
+	uid := st.Sys().(*syscall.Stat_t).Uid
+	owner := lookupOwner(uid)
+
+	container, err := libcontainer.Load(root, item.Name())
+	if err != nil {
+		return listResult{warning: fmt.Sprintf("load container %s: %v\n", item.Name(), err)}
+	}
+	containerStatus, err := container.Status()
+	if err != nil {
+		return listResult{warning: fmt.Sprintf("status for %s: %v\n", item.Name(), err)}
+	}
+	state, err := container.State()
+	if err != nil {
+		return listResult{warning: fmt.Sprintf("state for %s: %v\n", item.Name(), err)}
+	}
+	pid := state.BaseState.InitProcessPid
+	if containerStatus == libcontainer.Stopped {
+		pid = 0
+	}
+	bundle, annotations := utils.Annotations(state.Config.Labels)
+	return listResult{state: &containerState{
+		Version:        state.BaseState.Config.Version,
+		ID:             state.BaseState.ID,
+		InitProcessPid: pid,
+		Status:         containerStatus.String(),
+		Bundle:         bundle,
+		Rootfs:         state.BaseState.Config.Rootfs,
+		Created:        state.BaseState.Created,
+		Annotations:    annotations,
+		Owner:          owner,
+	}}
 }
