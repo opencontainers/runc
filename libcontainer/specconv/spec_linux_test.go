@@ -536,6 +536,45 @@ func TestLinuxCgroupsPathNotSpecified(t *testing.T) {
 	}
 }
 
+func TestLinuxCgroupCPUShares(t *testing.T) {
+	testCases := []struct {
+		name    string
+		shares  uint64
+		wantErr bool
+	}{
+		{name: "unset", shares: 0},
+		{name: "minimum", shares: 2},
+		{name: "default", shares: 1024},
+		{name: "maximum", shares: 262144},
+		{name: "below minimum", shares: 1, wantErr: true},
+		{name: "above maximum", shares: 262145, wantErr: true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			spec := &specs.Spec{
+				Linux: &specs.Linux{
+					Resources: &specs.LinuxResources{
+						CPU: &specs.LinuxCPU{Shares: &tc.shares},
+					},
+				},
+			}
+			opts := &CreateOpts{
+				CgroupName: "ContainerID",
+				Spec:       spec,
+			}
+
+			_, err := CreateCgroupConfig(opts, nil)
+			if tc.wantErr && err == nil {
+				t.Error("Expected an error for an out-of-range cpu shares value")
+			}
+			if !tc.wantErr && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+		})
+	}
+}
+
 func TestSpecconvExampleValidate(t *testing.T) {
 	spec := Example()
 	spec.Root.Path = t.TempDir()

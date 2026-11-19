@@ -14,6 +14,7 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
+	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli/v3"
 )
@@ -332,6 +333,9 @@ other options are ignored.
 
 		config.Cgroups.Resources.CpuBurst = r.CPU.Burst // can be nil
 		if r.CPU.Shares != nil {
+			if err := specconv.ValidateCPUShares(*r.CPU.Shares); err != nil {
+				return err
+			}
 			config.Cgroups.Resources.CpuShares = *r.CPU.Shares
 			// CpuWeight is used for cgroupv2 and should be converted
 			config.Cgroups.Resources.CpuWeight = cgroups.ConvertCPUSharesToCgroupV2Value(*r.CPU.Shares)

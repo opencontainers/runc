@@ -769,6 +769,21 @@ func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
 	return sp, nil
 }
 
+const (
+	// The kernel accepts CPU shares in the range [2, 262144] (MAX_SHARES).
+	minCPUShares = 2
+	maxCPUShares = 262144
+)
+
+// ValidateCPUShares checks that shares is within the range supported by the
+// kernel. A value of zero means "unset" and is always accepted.
+func ValidateCPUShares(shares uint64) error {
+	if shares == 0 || (shares >= minCPUShares && shares <= maxCPUShares) {
+		return nil
+	}
+	return fmt.Errorf("invalid cpu shares %d: must be between %d and %d", shares, minCPUShares, maxCPUShares)
+}
+
 func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*cgroups.Cgroup, error) {
 	var (
 		myCgroupPath string
@@ -883,6 +898,9 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*cgrou
 			}
 			if r.CPU != nil {
 				if r.CPU.Shares != nil {
+					if err := ValidateCPUShares(*r.CPU.Shares); err != nil {
+						return nil, err
+					}
 					c.Resources.CpuShares = *r.CPU.Shares
 
 					// CpuWeight is used for cgroupv2 and should be converted
