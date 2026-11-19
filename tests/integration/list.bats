@@ -57,3 +57,21 @@ function teardown() {
 	test -d /root/runc && skip "requires missing /root/runc"
 	ROOT='' run -0 runc list
 }
+
+@test "list while containers are created and deleted" {
+	(
+		for i in 1 2 3 4 5; do
+			ROOT=$ALT_ROOT runc run -d --console-socket "$CONSOLE_SOCKET" "test_list_$i" || exit 1
+			ROOT=$ALT_ROOT runc delete -f "test_list_$i" || exit 1
+		done
+	) &
+	writer=$!
+
+	for i in {1..20}; do
+		ROOT=$ALT_ROOT runc list -q >/dev/null || {
+			wait "$writer"
+			return 1
+		}
+	done
+	wait "$writer"
+}

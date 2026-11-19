@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/user"
 	"strconv"
@@ -139,9 +140,16 @@ func getContainers(cmd *cli.Command) ([]containerState, error) {
 		// Report other errors, including non-existent custom --root.
 		return nil, err
 	}
+	lookupOwner := newOwnerLookup(user.LookupId)
+	return collectContainerStates(list, func(item os.DirEntry) listResult {
+		return getContainerState(root, item, lookupOwner)
+	}, os.Stderr)
+}
+
+func newOwnerLookup(lookupUser func(string) (*user.User, error)) func(uint32) string {
 	var ownerMu sync.Mutex
 	owners := make(map[uint32]*ownerEntry)
-	lookupOwner := func(uid uint32) string {
+	return func(uid uint32) string {
 		ownerMu.Lock()
 		owner := owners[uid]
 		if owner == nil {
@@ -151,14 +159,16 @@ func getContainers(cmd *cli.Command) ([]containerState, error) {
 		ownerMu.Unlock()
 		owner.once.Do(func() {
 			owner.name = "#" + strconv.Itoa(int(uid))
-			if u, err := user.LookupId(owner.name[1:]); err == nil {
+			if u, err := lookupUser(owner.name[1:]); err == nil {
 				owner.name = u.Username
 			}
 		})
 		return owner.name
 	}
+}
 
-	const maxWorkers = 8
+func collectContainerStates(list []os.DirEntry, getState func(os.DirEntry) listResult, warnings io.Writer) ([]containerState, error) {
+	const maxWorkers = 4
 	// Keep results in directory order so output and errors stay stable.
 	results := make([]listResult, len(list))
 	jobs := make(chan int)
@@ -168,7 +178,7 @@ func getContainers(cmd *cli.Command) ([]containerState, error) {
 		go func() {
 			defer workers.Done()
 			for i := range jobs {
-				results[i] = getContainerState(root, list[i], lookupOwner)
+				results[i] = getState(list[i])
 			}
 		}()
 	}
@@ -184,7 +194,7 @@ func getContainers(cmd *cli.Command) ([]containerState, error) {
 			return nil, result.err
 		}
 		if result.warning != "" {
-			fmt.Fprint(os.Stderr, result.warning)
+			fmt.Fprint(warnings, result.warning)
 		}
 		if result.state != nil {
 			s = append(s, *result.state)
