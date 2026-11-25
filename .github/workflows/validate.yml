@@ -93,6 +93,8 @@ jobs:
         run: make RUNC_BUILDTAGS="runc_nocriu"
       - name: verify linker dead code elimination is not disabled
         run: make verify-dce
+      - name: verify runc does not depend on forbidden packages
+        run: make verify-forbidden-pkgs
 
   binary-size:
     if: github.event_name == 'pull_request'

@@ -15,7 +15,7 @@ require (
 	github.com/moby/sys/user v0.5.1
 	github.com/moby/sys/userns v0.2.1
 	github.com/mrunalp/fileutils v0.5.1
-	github.com/opencontainers/cgroups v0.1.0
+	github.com/opencontainers/cgroups v0.1.2
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/opencontainers/selinux v1.15.1
 	github.com/seccomp/libseccomp-golang v0.12.0
@@ -27,7 +27,4 @@ require (
 	golang.org/x/sys v0.50.0
 )
 
-require (
-	github.com/aperturerobotics/protobuf-go-lite v0.19.0 // indirect
-	github.com/cilium/ebpf v0.17.3 // indirect
-)
+require github.com/aperturerobotics/protobuf-go-lite v0.19.0 // indirect
