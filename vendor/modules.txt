@@ -12,14 +12,6 @@ github.com/aperturerobotics/protobuf-go-lite
 github.com/checkpoint-restore/go-criu/v8
 github.com/checkpoint-restore/go-criu/v8/internal/proto
 github.com/checkpoint-restore/go-criu/v8/rpc
-# github.com/cilium/ebpf v0.17.3
-## explicit; go 1.22
-github.com/cilium/ebpf/asm
-github.com/cilium/ebpf/internal
-github.com/cilium/ebpf/internal/linux
-github.com/cilium/ebpf/internal/sys
-github.com/cilium/ebpf/internal/testutils/fdtrace
-github.com/cilium/ebpf/internal/unix
 # github.com/containerd/console v1.0.5
 ## explicit; go 1.13
 github.com/containerd/console
@@ -61,14 +53,15 @@ github.com/moby/sys/userns
 # github.com/mrunalp/fileutils v0.5.1
 ## explicit; go 1.13
 github.com/mrunalp/fileutils
-# github.com/opencontainers/cgroups v0.1.0
-## explicit; go 1.24.0
+# github.com/opencontainers/cgroups v0.1.1
+## explicit; go 1.25.0
 github.com/opencontainers/cgroups
 github.com/opencontainers/cgroups/devices
 github.com/opencontainers/cgroups/devices/config
 github.com/opencontainers/cgroups/fs
 github.com/opencontainers/cgroups/fs2
 github.com/opencontainers/cgroups/fscommon
+github.com/opencontainers/cgroups/internal/delegate
 github.com/opencontainers/cgroups/internal/path
 github.com/opencontainers/cgroups/manager
 github.com/opencontainers/cgroups/systemd
