@@ -36,9 +36,12 @@ GOARCH := $(shell $(GO) env GOARCH)
 # This enables someone to override by doing `make runc TRIMPATH= ` etc.
 TRIMPATH := -trimpath
 
+# Architectures for which Go supports -buildmode=pie.
+GO_PIE_ARCHES := 386 amd64 arm arm64 loong64 ppc64le riscv64 s390x
+
 GO_BUILDMODE :=
 # Enable dynamic PIE executables on supported platforms.
-ifneq (,$(filter $(GOARCH),386 amd64 arm arm64 loong64 ppc64le riscv64 s390x))
+ifneq (,$(filter $(GOARCH),$(GO_PIE_ARCHES)))
 	ifeq (,$(findstring -race,$(EXTRA_FLAGS)))
 		GO_BUILDMODE := "-buildmode=pie"
 	endif
@@ -47,19 +50,21 @@ GO_BUILD := $(GO) build $(TRIMPATH) $(GO_BUILDMODE) \
 	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) urfave_cli_no_template godbus_no_tcp" \
 	-ldflags "$(LDFLAGS_COMMON) $(EXTRA_LDFLAGS)"
 
-GO_BUILDMODE_STATIC :=
-LDFLAGS_STATIC := -extldflags -static
-# Enable static PIE executables on supported platforms.
-# This (among the other things) requires libc support (rcrt1.o), which seems
-# to be available only for arm64 and amd64 (Debian Bullseye).
-ifneq (,$(filter $(GOARCH),arm64 amd64))
-	ifeq (,$(findstring -race,$(EXTRA_FLAGS)))
-		GO_BUILDMODE_STATIC := -buildmode=pie
-		LDFLAGS_STATIC := -linkmode external -extldflags -static-pie
-	endif
-endif
-# Enable static PIE binaries on supported platforms.
-GO_BUILD_STATIC := $(GO) build $(TRIMPATH) $(GO_BUILDMODE_STATIC) \
+# Enable static PIE executables on supported platforms. In addition to Go
+# support, this requires libc support (rcrt1.o), which musl has for all
+# architectures, but glibc may not, so check if the C compiler can do it.
+#
+# These are recursively expanded, so the check is only done when needed.
+STATIC_PIE = $(if $(filter $(GOARCH),$(GO_PIE_ARCHES)), \
+	$(if $(findstring -race,$(EXTRA_FLAGS)),, \
+	$(shell echo 'int main(void) { return 0; }' | \
+		$(shell $(GO) env CC) -x c -fPIE -static-pie -o /dev/null - \
+		>/dev/null 2>&1 && echo 1)))
+GO_BUILDMODE_STATIC = $(if $(strip $(STATIC_PIE)),-buildmode=pie)
+LDFLAGS_STATIC = $(if $(strip $(STATIC_PIE)), \
+	-linkmode external -extldflags -static-pie, \
+	-extldflags -static)
+GO_BUILD_STATIC = $(GO) build $(TRIMPATH) $(GO_BUILDMODE_STATIC) \
 	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) urfave_cli_no_template godbus_no_tcp netgo osusergo" \
 	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS_STATIC) $(EXTRA_LDFLAGS)"
 

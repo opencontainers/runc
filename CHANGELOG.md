@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed ###
+- `make static` now produces static PIE binaries on all architectures where
+  the C toolchain supports it, rather than only on amd64 and arm64. In
+  particular, 386, riscv64 and s390x release binaries are now static PIE.
+  (#5627)
+
 ## [1.6.0-rc.2] - 2026-11-12
 
 > To celebrate the fact that we've seen the back of another black day.
