@@ -96,8 +96,13 @@ type Process struct {
 	SelinuxLabel string `json:"selinuxLabel,omitempty" platform:"linux"`
 	// IOPriority contains the I/O priority settings for the cgroup.
 	IOPriority *LinuxIOPriority `json:"ioPriority,omitempty" platform:"linux"`
-	// ExecCPUAffinity specifies CPU affinity for exec processes.
-	ExecCPUAffinity *CPUAffinity `json:"execCPUAffinity,omitempty" platform:"linux"`
+	// ExecCPUAffinity is Deprecated. ExecCPUAffinity specifies CPU affinity for exec processes.
+	//
+	// Deprecated: use [Process.CPUAffinity] instead, which allows more granular control
+	// during the create, start and exec phases.
+	ExecCPUAffinity *ExecCPUAffinity `json:"execCPUAffinity,omitempty" platform:"linux"`
+	// CPUAffinity specifies CPU affinity for executing processes
+	CPUAffinity *CPUAffinity `json:"cpuAffinity,omitempty" platform:"linux"`
 }
 
 // LinuxCapabilities specifies the list of allowed capabilities that are kept for a process.
@@ -131,10 +136,19 @@ const (
 	IOPRIO_CLASS_IDLE IOPriorityClass = "IOPRIO_CLASS_IDLE"
 )
 
-// CPUAffinity specifies process' CPU affinity.
-type CPUAffinity struct {
+// ExecCPUAffinity specifies process' CPU affinity during runtime exec operation.
+type ExecCPUAffinity struct {
 	Initial string `json:"initial,omitempty"`
 	Final   string `json:"final,omitempty"`
+}
+
+// CPUAffinity specifies process' CPU affinity.
+type CPUAffinity struct {
+	CreateRuntime   string `json:"createRuntime,omitempty"`
+	CreateContainer string `json:"createContainer,omitempty"`
+	StartContainer  string `json:"startContainer,omitempty"`
+	ExecRuntime     string `json:"execRuntime,omitempty"`
+	ExecContainer   string `json:"execContainer,omitempty"`
 }
 
 // Box specifies dimensions of a rectangle. Used for specifying the size of a console.
@@ -725,7 +739,7 @@ type VM struct {
 	// Image specifies guest image related configuration for virtual-machine-based containers.
 	Image VMImage `json:"image,omitempty"`
 	// Hardware configuration that should be passed to the VM.
-	HwConfig *HWConfig `json:"hwconfig,omitempty"`
+	HwConfig *HWConfig `json:"hwConfig,omitempty"`
 }
 
 // VMHypervisor contains information about the hypervisor to use for a virtual machine.
@@ -899,7 +913,7 @@ type LinuxMemoryPolicy struct {
 
 	// Nodes representing the nodemask for the set_mempolicy syscall in comma separated ranges format.
 	// Format: "<node0>-<node1>,<node2>,<node3>-<node4>,..."
-	Nodes string `json:"nodes"`
+	Nodes string `json:"nodes,omitempty"`
 
 	// Flags for the set_mempolicy syscall.
 	Flags []MemoryPolicyFlagType `json:"flags,omitempty"`
@@ -990,7 +1004,7 @@ const (
 	SchedFlagKeepParams LinuxSchedulerFlag = "SCHED_FLAG_KEEP_PARAMS"
 	// SchedFlagUtilClampMin represents the utilization clamp minimum scheduling flag
 	SchedFlagUtilClampMin LinuxSchedulerFlag = "SCHED_FLAG_UTIL_CLAMP_MIN"
-	// SchedFlagUtilClampMin represents the utilization clamp maximum scheduling flag
+	// SchedFlagUtilClampMax represents the utilization clamp maximum scheduling flag
 	SchedFlagUtilClampMax LinuxSchedulerFlag = "SCHED_FLAG_UTIL_CLAMP_MAX"
 )
 

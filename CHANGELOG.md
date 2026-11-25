@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### libcontainer API ###
+- `configs.ConvertCPUAffinity` is replaced by `configs.ConvertExecCPUAffinity`,
+  and the `Initial`/`Final` fields of `configs.CPUAffinity` are now of the new
+  `*configs.CPUMask` type, which can also represent "all CPUs". (#5617)
+
+### Added ###
+- Support for runtime-spec `process.cpuAffinity` (`createRuntime`,
+  `createContainer`, `startContainer`, `execRuntime`, and `execContainer`),
+  including the special value `all`. If `process.cpuAffinity` is set, the
+  deprecated `process.execCPUAffinity` is ignored. (#5617)
+
 ## [1.6.0-rc.2] - 2026-11-12
 
 > To celebrate the fact that we've seen the back of another black day.

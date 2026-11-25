@@ -31,9 +31,7 @@ function teardown() {
 	(cd runtime-spec && git reset --hard "$SPEC_REF")
 
 	cd runtime-spec/schema
-	go mod init runtime-spec
-	go mod tidy
-	go build ./validate.go
+	make validate
 
-	./validate config-schema.json ../../config.json
+	./validate/validate config-schema.json ../../config.json
 }

@@ -72,8 +72,8 @@ github.com/opencontainers/cgroups/fscommon
 github.com/opencontainers/cgroups/internal/path
 github.com/opencontainers/cgroups/manager
 github.com/opencontainers/cgroups/systemd
-# github.com/opencontainers/runtime-spec v1.3.0
-## explicit
+# github.com/opencontainers/runtime-spec v1.3.1-0.20261112175749-f6cd17e3a5f5
+## explicit; go 1.21
 github.com/opencontainers/runtime-spec/specs-go
 github.com/opencontainers/runtime-spec/specs-go/features
 # github.com/opencontainers/selinux v1.15.1
