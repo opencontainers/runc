@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -43,6 +44,10 @@ following will output a list of processes running in the container:
 		&cli.StringFlag{
 			Name:  "pidfd-socket",
 			Usage: "path to an AF_UNIX socket which will receive a file descriptor referencing the exec process",
+		},
+		&cli.StringFlag{
+			Name:  "exec-wait-fifo",
+			Usage: "path to a caller-owned FIFO; the exec process blocks opening it for writing just before execve, until an external reader opens the read end and reads the acknowledgment byte",
 		},
 		&cli.StringFlag{
 			Name:  "cwd",
@@ -180,6 +185,16 @@ func execProcess(cmd *cli.Command) (int, error) {
 	if status == libcontainer.Paused && !cmd.Bool("ignore-paused") {
 		return -1, errors.New("cannot exec in a paused container (use --ignore-paused to override)")
 	}
+
+	// getProcess may change directories to the bundle.
+	execWaitFifo := cmd.String("exec-wait-fifo")
+	if execWaitFifo != "" {
+		execWaitFifo, err = filepath.Abs(execWaitFifo)
+		if err != nil {
+			return -1, err
+		}
+	}
+
 	p, err := getProcess(cmd, container)
 	if err != nil {
 		return -1, err
@@ -196,6 +211,7 @@ func execProcess(cmd *cli.Command) (int, error) {
 		container:       container,
 		consoleSocket:   cmd.String("console-socket"),
 		pidfdSocket:     cmd.String("pidfd-socket"),
+		execWaitFifo:    execWaitFifo,
 		detach:          cmd.Bool("detach"),
 		pidFile:         cmd.String("pid-file"),
 		action:          CT_ACT_RUN,
