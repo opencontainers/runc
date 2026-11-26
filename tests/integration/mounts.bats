@@ -224,6 +224,39 @@ function get_cgroup_mount_flags() {
 	assert_line --index 0 --partial 'ro,'
 }
 
+# Same as above, but with the new mount API disabled, to make sure the legacy
+# mount(2) fallback still works (see _LIBCONTAINER_NEWMOUNTAPI).
+@test "runc run [ro tmpfs mount, new mount API disabled]" {
+	update_config '	  .mounts += [{
+					source: "tmpfs",
+					destination: "/mnt",
+					type: "tmpfs",
+					options: ["ro", "nodev", "nosuid", "mode=755"]
+				}]
+			| .process.args |= ["grep", "^tmpfs /mnt", "/proc/mounts"]'
+
+	_LIBCONTAINER_NEWMOUNTAPI=0 run -0 runc run test_busybox
+	assert_line --index 0 --partial 'ro,'
+}
+
+# Check that the flags of a bind mount are applied, both by mount_setattr(2) and
+# by the legacy MS_BIND|MS_REMOUNT fallback (see _LIBCONTAINER_NEWMOUNTAPI).
+@test "runc run [bind mount with flags]" {
+	update_config '	  .mounts += [{
+					source: ".",
+					destination: "/tmp/bind",
+					options: ["bind", "nodev", "noexec", "ro"]
+				}]
+			| .process.args |= ["grep", " /tmp/bind ", "/proc/mounts"]'
+
+	for new_mount_api in 1 0; do
+		_LIBCONTAINER_NEWMOUNTAPI="$new_mount_api" run -0 runc run test_busybox
+		assert_output --partial 'ro,'
+		assert_output --partial 'nodev'
+		assert_output --partial 'noexec'
+	done
+}
+
 # https://github.com/opencontainers/runc/issues/3248
 @test "runc run [ro /dev mount]" {
 	update_config '   .mounts |= map((select(.destination == "/dev") | .options += ["ro"]) // .)

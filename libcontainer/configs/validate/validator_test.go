@@ -582,6 +582,43 @@ func TestValidateBindMounts(t *testing.T) {
 	}
 }
 
+func TestValidatePropagationFlags(t *testing.T) {
+	testCases := []struct {
+		isErr bool
+		flags []int
+	}{
+		{isErr: false, flags: nil},
+		{isErr: false, flags: []int{unix.MS_PRIVATE}},
+		{isErr: false, flags: []int{unix.MS_PRIVATE | unix.MS_REC}},
+		{isErr: false, flags: []int{unix.MS_SHARED}},
+		{isErr: false, flags: []int{unix.MS_SLAVE | unix.MS_REC}},
+		{isErr: false, flags: []int{unix.MS_UNBINDABLE}},
+
+		{isErr: true, flags: []int{unix.MS_PRIVATE, unix.MS_SHARED}},
+		{isErr: true, flags: []int{unix.MS_SHARED, unix.MS_SHARED | unix.MS_REC}},
+	}
+
+	for _, tc := range testCases {
+		config := &configs.Config{
+			Rootfs: "/var",
+			Mounts: []*configs.Mount{
+				{
+					Destination:      "/",
+					PropagationFlags: tc.flags,
+				},
+			},
+		}
+
+		err := Validate(config)
+		if tc.isErr && err == nil {
+			t.Errorf("propagation flags:%v, expected error, got nil", tc.flags)
+		}
+		if !tc.isErr && err != nil {
+			t.Errorf("propagation flags:%v, expected nil, got error %v", tc.flags, err)
+		}
+	}
+}
+
 func TestValidateIDMapMounts(t *testing.T) {
 	mapping := []configs.IDMap{
 		{
