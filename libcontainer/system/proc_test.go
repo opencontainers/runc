@@ -11,35 +11,48 @@ import (
 
 var procdata = map[string]Stat_t{
 	"4902 (gunicorn: maste) S 4885 4902 4902 0 -1 4194560 29683 29929 61 83 78 16 96 17 20 0 1 0 9126532 52965376 1903 18446744073709551615 4194304 7461796 140733928751520 140733928698072 139816984959091 0 0 16781312 137447943 1 0 0 17 3 0 0 9 0 0 9559488 10071156 33050624 140733928758775 140733928758945 140733928758945 140733928759264 0": {
-		Name:      "gunicorn: maste",
-		State:     'S',
-		StartTime: 9126532,
+		Name:       "gunicorn: maste",
+		State:      'S',
+		NumThreads: 1,
+		StartTime:  9126532,
 	},
 	"9534 (cat) R 9323 9534 9323 34828 9534 4194304 95 0 0 0 0 0 0 0 20 0 1 0 9214966 7626752 168 18446744073709551615 4194304 4240332 140732237651568 140732237650920 140570710391216 0 0 0 0 0 0 0 17 1 0 0 0 0 0 6340112 6341364 21553152 140732237653865 140732237653885 140732237653885 140732237656047 0": {
-		Name:      "cat",
-		State:     'R',
-		StartTime: 9214966,
+		Name:       "cat",
+		State:      'R',
+		NumThreads: 1,
+		StartTime:  9214966,
 	},
 	"12345 ((ugly )pr()cess() R 9323 9534 9323 34828 9534 4194304 95 0 0 0 0 0 0 0 20 0 1 0 9214966 7626752 168 18446744073709551615 4194304 4240332 140732237651568 140732237650920 140570710391216 0 0 0 0 0 0 0 17 1 0 0 0 0 0 6340112 6341364 21553152 140732237653865 140732237653885 140732237653885 140732237656047 0": {
-		Name:      "(ugly )pr()cess(",
-		State:     'R',
-		StartTime: 9214966,
+		Name:       "(ugly )pr()cess(",
+		State:      'R',
+		NumThreads: 1,
+		StartTime:  9214966,
 	},
 	"24767 (irq/44-mei_me) S 2 0 0 0 -1 2129984 0 0 0 0 0 0 0 0 -51 0 1 0 8722075 0 0 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 0 0 0 17 1 50 1 0 0 0 0 0 0 0 0 0 0 0": {
-		Name:      "irq/44-mei_me",
-		State:     'S',
-		StartTime: 8722075,
+		Name:       "irq/44-mei_me",
+		State:      'S',
+		NumThreads: 1,
+		StartTime:  8722075,
 	},
 	"0 () I 3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0": {
-		Name:      "",
-		State:     'I',
-		StartTime: 0,
+		Name:       "",
+		State:      'I',
+		NumThreads: 0,
+		StartTime:  0,
 	},
 	// Not entirely correct, but minimally viable input (StartTime and a space after).
 	"1 (woo hoo) S 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 ": {
-		Name:      "woo hoo",
-		State:     'S',
-		StartTime: 4,
+		Name:       "woo hoo",
+		State:      'S',
+		NumThreads: 0,
+		StartTime:  4,
+	},
+	// A zombie thread group leader with other threads still running.
+	"1 (multi) Z 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 3 0 42 ": {
+		Name:       "multi",
+		State:      'Z',
+		NumThreads: 3,
+		StartTime:  42,
 	},
 }
 
@@ -96,7 +109,11 @@ func TestParseStatBadInput(t *testing.T) {
 		},
 		{
 			"bad stime 2", // would be valid if not -1
-			"123 (cmd) S                   -1 ",
+			"123 (cmd) S                 1  -1 ",
+		},
+		{
+			"bad number of threads",
+			"123 (cmd) S 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 x 0 1 ",
 		},
 		{
 			"a tad short",
