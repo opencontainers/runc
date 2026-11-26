@@ -875,6 +875,132 @@ function teardown_loopdevs() {
 	truncate --size=0 "$LOOPBACK_DEVICE_LIST"
 }
 
+# Prepare to run a qemu VM with the host kernel (see run_qemu), or skip the
+# test if it is not possible. Temporary files (if any) are created in $1,
+# which the caller should remove in teardown.
+function setup_qemu() {
+	local dir="$1" qemu
+	case "$ARCH" in
+	x86_64)
+		qemu="qemu-system-x86_64"
+		QEMU_MACHINE=pc
+		QEMU_CONSOLE=ttyS0
+		;;
+	aarch64)
+		qemu="qemu-system-aarch64"
+		QEMU_MACHINE=virt,gic-version=max
+		QEMU_CONSOLE=ttyAMA0
+		;;
+	*)
+		skip "unsupported architecture $ARCH"
+		;;
+	esac
+	# Note qemu-kvm is the native qemu on RHEL and similar distros.
+	QEMU=$(type -P "$qemu" qemu-kvm /usr/libexec/qemu-kvm | head -1) || true
+	[ -n "$QEMU" ] || skip "requires qemu"
+	QEMU_KERNEL="/boot/vmlinuz-$KERNEL_VERSION"
+	[ -r "$QEMU_KERNEL" ] || skip "requires $QEMU_KERNEL"
+	unpack_zboot "$dir"
+}
+
+# Some kernels (e.g. Ubuntu arm64 since v7.0) use EFI zboot image format,
+# which qemu can't load if it is not gzip-compressed. Unpack it if needed.
+# See linux/drivers/firmware/efi/libstub/zboot-header.S for the format.
+function unpack_zboot() {
+	local dir="$1"
+	[ "$(dd if="$QEMU_KERNEL" bs=1 skip=4 count=4 2>/dev/null)" = "zimg" ] || return 0
+
+	local offset size comp
+	offset=$(od -An -t u4 -j 8 -N 4 "$QEMU_KERNEL")
+	size=$(od -An -t u4 -j 12 -N 4 "$QEMU_KERNEL")
+	comp=$(dd if="$QEMU_KERNEL" bs=1 skip=24 count=32 2>/dev/null | tr -d '\0')
+	case "$comp" in
+	gzip | zstd) ;;
+	*) skip "unsupported zboot compression: $comp" ;;
+	esac
+	type -P "$comp" >/dev/null || skip "requires $comp to unpack $QEMU_KERNEL"
+
+	tail -c +$((offset + 1)) "$QEMU_KERNEL" | head -c "$size" |
+		"$comp" -d >"$dir/Image"
+	QEMU_KERNEL="$dir/Image"
+}
+
+# Boot a qemu VM (prepared by setup_qemu) with the initramfs image $1,
+# using bats' run (so the console output is in $output).
+function run_qemu() {
+	local initrd="$1"
+	run -0 timeout -s KILL 3m "$QEMU" \
+		-machine "$QEMU_MACHINE,accel=kvm:tcg" -cpu max -m 512M \
+		-kernel "$QEMU_KERNEL" -initrd "$initrd" \
+		-append "console=$QEMU_CONSOLE quiet panic=1" \
+		-nographic -no-reboot </dev/null
+}
+
+# Prepare an initramfs to be run by run_initramfs in a qemu VM with the host
+# kernel (or skip the test if it is not possible). The initramfs contains
+# busybox userland, runc binary (with the libraries it needs), and a bundle
+# in /bundle, with a separate copy of busybox as its rootfs, and a /CONTAINER
+# marker file in it to tell it from initramfs. Changes the current directory
+# to the bundle, so update_config can be used.
+#
+# Note this does not require root, as the VM is unprivileged, and the
+# initramfs files are owned by root (via cpio -R).
+function setup_initramfs() {
+	INITRAMFS=$(mktemp -d "$BATS_RUN_TMPDIR/initramfs.XXXXXX")
+	setup_qemu "$INITRAMFS"
+
+	local root="$INITRAMFS/root"
+	mkdir "$root"
+	tar --exclude './dev/*' -C "$root" -xf "$BUSYBOX_IMAGE"
+	# runc may be built with a newer glibc than the one in busybox image.
+	# Note that /lib64 is a symlink to /lib in busybox image.
+	cp "$RUNC" "$root/bin/runc"
+	ldd "$RUNC" | grep -Eo '/[^ ]+\.so[^ ]*' | xargs -r cp -t "$root/lib/"
+
+	mkdir -p "$root/bundle/rootfs"
+	tar --exclude './dev/*' -C "$root/bundle/rootfs" -xf "$BUSYBOX_IMAGE"
+	touch "$root/bundle/rootfs/CONTAINER"
+	cd "$root/bundle" || return
+	# Not using runc_spec, as runc in the VM is always run as root.
+	run -0 runc spec
+	update_config '.process.terminal = false'
+}
+
+function teardown_initramfs() {
+	[ ! -v INITRAMFS ] && return 0 # nothing to teardown
+
+	cd "$INTEGRATION_ROOT" || return
+	rm -rf "$INITRAMFS"
+}
+
+# Run the commands given as arguments from /init of the initramfs (prepared
+# by setup_initramfs) in a VM, in /bundle directory. Uses bats' run, so the
+# VM console output is in $output.
+function run_initramfs() {
+	local root="$INITRAMFS/root"
+
+	cat >"$root/init" <<-EOF
+		#!/bin/sh
+		set -eu
+		mkdir -p /proc /sys /dev /tmp
+		mount -t proc proc /proc
+		mount -t sysfs sysfs /sys
+		mount -t cgroup2 cgroup2 /sys/fs/cgroup
+		mount -t devtmpfs devtmpfs /dev
+		mount -t tmpfs tmpfs /tmp
+		cd /bundle
+		echo "==START=="
+		$(printf '%s\n' "$@")
+		echo "==END=="
+		poweroff -f
+	EOF
+	chmod +x "$root/init"
+	(cd "$root" && find . | cpio -o -H newc -R 0:0 --quiet) >"$INITRAMFS/initrd.cpio"
+
+	run_qemu "$INITRAMFS/initrd.cpio"
+	assert_output --partial "==END=="
+}
+
 function setup_bundle() {
 	local image="$1"
 
